@@ -1,23 +1,23 @@
 #include <fstream>
 
+#include "ast.h"
+
 #ifndef CEOS_GENERATOR_H
 #define CEOS_GENERATOR_H
 
 namespace ceos {
 
-  class AST;
-
   class Generator {
     public:
-      Generator(const AST &ast, const std::ofstream &output) :
+      Generator(const AST::Program &ast, std::ofstream &output) :
         m_ast(ast),
         m_output(output) {}
 
       bool generate(void) const;
 
     private:
-      const AST &m_ast;
-      const std::ofstream &m_output;
+      const AST::Program &m_ast;
+      std::ofstream &m_output;
   };
 
 }

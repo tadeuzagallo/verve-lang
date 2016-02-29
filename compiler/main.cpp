@@ -9,13 +9,15 @@
 int main(int argc, char **argv) {
   assert(argc == 3);
 
-  const std::ifstream input(argv[1]);
-  const std::ofstream output(argv[2]);
+  std::ifstream input(argv[1]);
+  std::ofstream output(argv[2]);
 
-  const ceos::Lexer lexer(input);
-  const ceos::Parser parser(lexer);
-  const ceos::AST &ast = parser.parse();
-  const ceos::Generator generator(ast, output);
+  ceos::Lexer lexer(input);
+  ceos::Parser parser(lexer);
+
+  ceos::AST::Program ast = parser.parse();
+
+  ceos::Generator generator(ast, output);
 
   if (generator.generate()) {
     return EXIT_SUCCESS;

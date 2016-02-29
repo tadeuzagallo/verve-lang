@@ -17,5 +17,22 @@ $(TARGET): $(OBJECTS)
 %.o: %.cpp $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# TESTS
+
+TESTS = $(patsubst %.in,%.test,$(wildcard tests/*.in))
+
+.PHONY: test %.test
+
+test: $(TARGET) $(TESTS)
+
+%.test: %.in %.out
+	@./$(TARGET) $< $@_
+	@diff $@_ $(word 2, $^) && echo $@: OK! || echo $@: FAIL!
+
+# CLEAN
+
 clean:
-	-rm -rf $(OBJECTS) $(TARGET) $(TARGET).dSYM
+	-rm -rf $(OBJECTS) $(TARGET) $(TARGET).dSYM $(wildcard tests/*.test_)
+
+.PHONY: clean
+

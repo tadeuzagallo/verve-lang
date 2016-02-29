@@ -1,2 +1,3 @@
 *.o
 compiler/ceos-build
+**/tests/*.test_

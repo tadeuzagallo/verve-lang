@@ -1,3 +1,7 @@
+#include <memory>
+
+#include "ast.h"
+
 #ifndef CEOS_PARSER_H
 #define CEOS_PARSER_H
 
@@ -8,12 +12,15 @@ namespace ceos {
 
   class Parser {
     public:
-      Parser(const Lexer &lexer) : m_lexer(lexer) {}
+      Parser(Lexer &lexer) : m_lexer(lexer), m_ast(AST::Program()) {}
 
-      const AST &parse(void) const;
+      AST::Program parse(void);
 
     private:
-      const Lexer &m_lexer;
+      void parseFunction(void);
+
+      Lexer &m_lexer;
+      AST::Program m_ast;
   };
 
 }
