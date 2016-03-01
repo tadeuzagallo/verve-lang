@@ -16,15 +16,15 @@ namespace ceos {
 
     switch (c) {
       case '(':
-        m_token = std::make_shared<Token>(Token::L_PAREN);
+        m_token = std::make_shared<Token>(Token::Type::L_PAREN);
         break;
 
       case ')':
-        m_token = std::make_shared<Token>(Token::R_PAREN);
+        m_token = std::make_shared<Token>(Token::Type::R_PAREN);
         break;
 
       case EOF:
-        m_token = std::make_shared<Token>(Token::END);
+        m_token = std::make_shared<Token>(Token::Type::END);
         break;
 
       default:
@@ -36,7 +36,7 @@ namespace ceos {
 
           m_input.unget();
 
-          m_token = std::make_shared<class Token::ID>(id.str());
+          m_token = std::make_shared<Token::ID>(id.str());
         }
     }
 
