@@ -3,6 +3,7 @@
 #include "token.h"
 
 #include <cassert>
+#include <iostream>
 #include <sstream>
 
 namespace ceos {
@@ -54,7 +55,14 @@ namespace ceos {
   }
 
   void Lexer::ensure(Token::Type type) {
-    assert(m_token->type == type);
+    assertType(m_token->type, type);
     nextToken();
+  }
+
+  void Lexer::assertType(Token::Type a, Token::Type b) {
+    if (a != b) {
+      std::cerr << "Invalid type found: expected `" << Token::typeName(a) << "` to be `" << Token::typeName(b) << "`" << "\n";
+      throw "Parser error";
+    }
   }
 }
