@@ -1,3 +1,5 @@
+#include "macros.h"
+
 #ifndef CEOS_TOKEN_H
 #define CEOS_TOKEN_H
 
@@ -7,26 +9,12 @@ namespace ceos {
     public:
       class ID;
 
-      enum class Type {
-        END = 1,
-        L_PAREN,
-        R_PAREN,
-        ID,
-      };
-
+      ENUM_CLASS(Type, END, L_PAREN, R_PAREN, ID)
 
       Token(Type t) : type(t) {}
+
       Type type;
 
-      static const char *typeName(Type t) {
-        return (const char *[]) {
-          "",
-          "END",
-          "L_PAREN",
-          "R_PAREN",
-          "ID",
-        }[(int)t];
-      }
   };
 
   class Token::ID : public Token {
