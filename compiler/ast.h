@@ -9,13 +9,24 @@ namespace ceos {
   
   class AST {
     public:
+      enum class Type {
+        Program = 1,
+        Call,
+      };
+
       class Program;
       class Call;
+
+      Type type;
+
+      AST(Type t) : type(t) {}
 
   };
 
   class AST::Program : public AST {
     public:
+      Program() : AST(Type::Program) {}
+
       void addNode(std::shared_ptr<AST> node) {
         m_nodes.push_back(node);
       }
@@ -28,7 +39,7 @@ namespace ceos {
 
   class AST::Call : public AST {
     public:
-      Call(std::string c) : callee(c) {}
+      Call(std::string c) : AST(Type::Call), callee(c) {}
 
       std::string callee;
       std::vector<std::shared_ptr<AST>> params;
