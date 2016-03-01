@@ -26,8 +26,8 @@ TESTS = $(patsubst %.in,%.test,$(wildcard tests/*.in))
 test: $(TARGET) $(TESTS)
 
 %.test: %.in %.out
-	@./$(TARGET) $< $@_
-	@diff $@_ $(word 2, $^) && echo $@: OK! || echo $@: FAIL!
+	-@./$(TARGET) $< $@_; \
+	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
 
 # CLEAN
 
@@ -35,4 +35,3 @@ clean:
 	-rm -rf $(OBJECTS) $(TARGET) $(TARGET).dSYM $(wildcard tests/*.test_)
 
 .PHONY: clean
-

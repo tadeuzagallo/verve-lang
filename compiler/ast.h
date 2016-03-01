@@ -12,10 +12,12 @@ namespace ceos {
       enum class Type {
         Program = 1,
         Call,
+        Number,
       };
 
       class Program;
       class Call;
+      class Number;
 
       Type type;
 
@@ -43,6 +45,13 @@ namespace ceos {
 
       std::string callee;
       std::vector<std::shared_ptr<AST>> params;
+  };
+
+  class AST::Number : public AST {
+    public:
+      Number(int v) : AST(Type::Number), value(v) {}
+
+      int value;
   };
 
 }

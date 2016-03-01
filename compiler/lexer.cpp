@@ -29,7 +29,17 @@ namespace ceos {
         break;
 
       default:
-        if (isalpha(c)) {
+        if (isnumber(c)) {
+          int number = 0;
+          do {
+            number *= 10;
+            number += c - '0';
+          } while (isnumber(c = m_input.get()));
+
+          m_input.unget();
+
+          m_token = std::make_shared<Token::Number>(number);
+        } else if (isalpha(c)) {
           std::stringstream id;
           do {
             id << c;
@@ -54,9 +64,16 @@ namespace ceos {
     return m_token;
   }
 
-  void Lexer::ensure(Token::Type type) {
+  void Lexer::ensure(Token::Type type, bool skip) {
     assertType(m_token->type, type);
-    nextToken();
+
+    if (skip) {
+      nextToken();
+    }
+  }
+
+  void Lexer::ensure(Token::Type type) {
+    ensure(type, true);
   }
 
   void Lexer::assertType(Token::Type a, Token::Type b) {
