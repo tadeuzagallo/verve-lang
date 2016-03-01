@@ -12,15 +12,15 @@ namespace ceos {
 
   class Parser {
     public:
-      Parser(Lexer &lexer) : m_lexer(lexer), m_ast(AST::Program()) {}
+      Parser(Lexer &lexer) : m_lexer(lexer) {}
 
-      AST::Program parse(void);
+      std::shared_ptr<AST::Program> parse(void);
 
     private:
       void parseFunction(void);
 
       Lexer &m_lexer;
-      AST::Program m_ast;
+      std::shared_ptr<AST::Program> m_ast;
   };
 
 }

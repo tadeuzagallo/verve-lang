@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   ceos::Lexer lexer(input);
   ceos::Parser parser(lexer);
 
-  ceos::AST::Program ast = parser.parse();
+  std::shared_ptr<ceos::AST::Program> ast = parser.parse();
 
   ceos::Generator generator(ast, output);
 

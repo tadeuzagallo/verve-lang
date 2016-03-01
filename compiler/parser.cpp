@@ -5,7 +5,9 @@
 
 namespace ceos {
 
-  AST::Program Parser::parse(void) {
+  std::shared_ptr<AST::Program> Parser::parse(void) {
+    m_ast = std::make_shared<AST::Program>();
+
     while (m_lexer.nextToken()->type != Token::END) {
       parseFunction();
     }

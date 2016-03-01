@@ -9,14 +9,18 @@ namespace ceos {
 
   class Generator {
     public:
-      Generator(const AST::Program &ast, std::ofstream &output) :
+      Generator(std::shared_ptr<AST::Program> ast, std::ofstream &output) :
         m_ast(ast),
         m_output(output) {}
 
       bool generate(void) const;
 
     private:
-      const AST::Program &m_ast;
+      void generateNode(std::shared_ptr<AST>) const;
+      void generateCall(std::shared_ptr<AST::Call>) const;
+      void generateProgram(std::shared_ptr<AST::Program>) const;
+
+      std::shared_ptr<AST::Program> m_ast;
       std::ofstream &m_output;
   };
 
