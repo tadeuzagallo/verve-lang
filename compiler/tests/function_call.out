@@ -1,1 +1,2 @@
+push $0
 call foo
