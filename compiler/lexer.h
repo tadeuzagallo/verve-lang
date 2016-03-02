@@ -20,8 +20,6 @@ namespace ceos {
 
       void ensure(Token::Type);
 
-      void ensure(Token::Type, bool);
-
       static void assertType(Token::Type, Token::Type);
 
     private:

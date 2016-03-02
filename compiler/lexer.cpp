@@ -64,16 +64,9 @@ namespace ceos {
     return m_token;
   }
 
-  void Lexer::ensure(Token::Type type, bool skip) {
-    assertType(m_token->type, type);
-
-    if (skip) {
-      nextToken();
-    }
-  }
-
   void Lexer::ensure(Token::Type type) {
-    ensure(type, true);
+    assertType(m_token->type, type);
+    nextToken();
   }
 
   void Lexer::assertType(Token::Type a, Token::Type b) {

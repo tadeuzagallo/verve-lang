@@ -3,8 +3,6 @@
 #include "lexer.h"
 #include "token.h"
 
-#include <iostream>
-
 namespace ceos {
 
   std::shared_ptr<AST::Program> Parser::parse(void) {
@@ -46,7 +44,7 @@ namespace ceos {
       call->params.push_back(parseFactor());
     }
 
-    m_lexer.ensure(Token::Type::R_PAREN, false);
+    m_lexer.ensure(Token::Type::R_PAREN);
 
     return call;
   }
