@@ -22,9 +22,24 @@ namespace ceos {
     }
   }
 
+  bool Generator::handleSpecialCall(std::shared_ptr<AST::Call> call) const {
+    if (call->arguments[0]->type == AST::Type::ID) {
+      std::string callee = AST::asID(call->arguments[0])->name;
+
+      if (callee == "defn") {
+        m_ast->functions.push_back(call);
+        return true;
+      } else if (callee == "if") {
+        generateIf(call);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   void Generator::generateCall(std::shared_ptr<AST::Call> call) const {
-    if (call->isDefn()) {
-      m_ast->functions.push_back(call);
+    if (handleSpecialCall(call)) {
       return;
     }
 
@@ -53,6 +68,22 @@ namespace ceos {
     }
     
     generateNode(fn->arguments[3]);
+  }
+
+  void Generator::generateIf(std::shared_ptr<AST::Call> iff) const {
+    unsigned size = iff->arguments.size();
+    assert(size == 3 || size == 4);
+
+    generateNode(iff->arguments[1]);
+
+    m_output << "if " << 9 << "\n";
+
+    generateNode(iff->arguments[2]);
+
+    if (size == 4) {
+      m_output << "jump " << 7 << "\n";
+      generateNode(iff->arguments[3]);
+    }
   }
   
   void Generator::generateProgram(std::shared_ptr<AST::Program> program) const {

@@ -73,11 +73,6 @@ namespace ceos {
     public:
       Call() : AST(Type::Call) {}
 
-      bool isDefn(void) {
-        return arguments[0]->type == Type::ID &&
-          std::static_pointer_cast<ID>(arguments[0])->name == "defn";
-      }
-
       std::vector<std::shared_ptr<AST>> arguments;
   };
 

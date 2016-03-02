@@ -1,0 +1,15 @@
+push $1
+push $1
+push $equals
+push $3
+call
+if 9
+push $1
+push $print
+push $2
+call
+jump 7
+push $2
+push $print
+push $2
+call
