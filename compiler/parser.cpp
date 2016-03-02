@@ -22,6 +22,8 @@ namespace ceos {
         return parseCall();
       case Token::Type::NUMBER:
         return parseNumber();
+      case Token::Type::ID:
+        return parseID();
       default:
         Lexer::assertType(m_lexer.token()->type, Token::Type::END);
         throw "Unexpected token";
@@ -31,6 +33,11 @@ namespace ceos {
   std::shared_ptr<AST::Number> Parser::parseNumber() {
     auto number = std::static_pointer_cast<Token::Number>(m_lexer.token(Token::Type::NUMBER));
     return std::make_shared<AST::Number>(number->value);
+  }
+
+  std::shared_ptr<AST::ID> Parser::parseID() {
+    auto id = std::static_pointer_cast<Token::ID>(m_lexer.token(Token::Type::ID));
+    return std::make_shared<AST::ID>(id->name);
   }
 
   std::shared_ptr<AST::Call> Parser::parseCall(void) {

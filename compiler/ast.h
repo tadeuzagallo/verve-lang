@@ -13,11 +13,13 @@ namespace ceos {
         Program = 1,
         Call,
         Number,
+        ID,
       };
 
       class Program;
       class Call;
       class Number;
+      class ID;
 
       Type type;
 
@@ -54,6 +56,12 @@ namespace ceos {
       int value;
   };
 
+  class AST::ID : public AST {
+    public:
+      ID(std::string n) : AST(Type::ID), name(n) {}
+
+      std::string name;
+  };
 }
 
 #endif

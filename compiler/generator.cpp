@@ -14,6 +14,9 @@ namespace ceos {
       case AST::Type::Number:
         generateNumber(std::static_pointer_cast<AST::Number>(node));
         break;
+      case AST::Type::ID:
+        generateID(std::static_pointer_cast<AST::ID>(node));
+        break;
       default:
         throw "Unhandled Type";
     }
@@ -30,6 +33,10 @@ namespace ceos {
 
   void Generator::generateNumber(std::shared_ptr<AST::Number> number) const {
     m_output << "push $" << number->value << "\n";
+  }
+
+  void Generator::generateID(std::shared_ptr<AST::ID> id) const {
+    m_output << "push $" << id->name << "\n";
   }
   
   void Generator::generateProgram(std::shared_ptr<AST::Program> program) const {

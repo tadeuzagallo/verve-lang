@@ -19,6 +19,7 @@ namespace ceos {
     private:
       std::shared_ptr<AST::Call> parseCall(void);
       std::shared_ptr<AST::Number> parseNumber(void);
+      std::shared_ptr<AST::ID> parseID(void);
       std::shared_ptr<AST> parseFactor(void);
 
       Lexer &m_lexer;

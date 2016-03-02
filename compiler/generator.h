@@ -19,6 +19,7 @@ namespace ceos {
       void generateNode(std::shared_ptr<AST>) const;
       void generateCall(std::shared_ptr<AST::Call>) const;
       void generateNumber(std::shared_ptr<AST::Number>) const;
+      void generateID(std::shared_ptr<AST::ID>) const;
       void generateProgram(std::shared_ptr<AST::Program>) const;
 
       std::shared_ptr<AST::Program> m_ast;
