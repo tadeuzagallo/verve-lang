@@ -49,6 +49,8 @@ namespace ceos {
 
       std::vector<std::shared_ptr<AST>> nodes() const { return m_nodes; }
 
+      std::vector<std::shared_ptr<AST::Call>> functions;
+
     private:
       std::vector<std::shared_ptr<AST>> m_nodes;
   };
@@ -70,6 +72,11 @@ namespace ceos {
   class AST::Call : public AST {
     public:
       Call() : AST(Type::Call) {}
+
+      bool isDefn(void) {
+        return arguments[0]->type == Type::ID &&
+          std::static_pointer_cast<ID>(arguments[0])->name == "defn";
+      }
 
       std::vector<std::shared_ptr<AST>> arguments;
   };
