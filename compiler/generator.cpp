@@ -23,12 +23,12 @@ namespace ceos {
   }
 
   void Generator::generateCall(std::shared_ptr<AST::Call> call) const {
-    for (unsigned i = call->params.size(); i > 0;) {
-      generateNode(call->params[--i]);
+    for (unsigned i = call->arguments.size(); i > 0;) {
+      generateNode(call->arguments[--i]);
     }
 
-    m_output << "push $" << call->params.size() << "\n";
-    m_output << "call " << call->callee << "\n";
+    m_output << "push $" << call->arguments.size() << "\n";
+    m_output << "call\n";
   }
 
   void Generator::generateNumber(std::shared_ptr<AST::Number> number) const {

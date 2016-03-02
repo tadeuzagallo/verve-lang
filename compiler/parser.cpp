@@ -43,12 +43,10 @@ namespace ceos {
   std::shared_ptr<AST::Call> Parser::parseCall(void) {
     m_lexer.ensure(Token::Type::L_PAREN);
 
-    auto callee = std::static_pointer_cast<Token::ID>(m_lexer.token(Token::Type::ID));
-
-    auto call = std::make_shared<AST::Call>(callee->name);
+    auto call = std::make_shared<AST::Call>();
 
     while (m_lexer.token()->type != Token::Type::R_PAREN) {
-      call->params.push_back(parseFactor());
+      call->arguments.push_back(parseFactor());
     }
 
     m_lexer.ensure(Token::Type::R_PAREN);

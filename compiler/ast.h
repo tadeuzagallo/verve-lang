@@ -41,14 +41,6 @@ namespace ceos {
       std::vector<std::shared_ptr<AST>> m_nodes;
   };
 
-  class AST::Call : public AST {
-    public:
-      Call(std::string c) : AST(Type::Call), callee(c) {}
-
-      std::string callee;
-      std::vector<std::shared_ptr<AST>> params;
-  };
-
   class AST::Number : public AST {
     public:
       Number(int v) : AST(Type::Number), value(v) {}
@@ -62,6 +54,14 @@ namespace ceos {
 
       std::string name;
   };
+
+  class AST::Call : public AST {
+    public:
+      Call() : AST(Type::Call) {}
+
+      std::vector<std::shared_ptr<AST>> arguments;
+  };
+
 }
 
 #endif

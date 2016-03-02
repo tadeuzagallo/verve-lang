@@ -1,2 +1,3 @@
-push $0
-call foo
+push $foo
+push $1
+call

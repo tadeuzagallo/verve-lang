@@ -1,7 +1,9 @@
 push $5
 push $1
 push $2
-push $2
-call add
-push $2
-call mul
+push $add
+push $3
+call
+push $mul
+push $3
+call
