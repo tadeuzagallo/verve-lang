@@ -1,25 +1,37 @@
+#include "macros.h"
+
+#include <cassert>
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #ifndef CEOS_AST_H
 #define CEOS_AST_H
+
+
+#define AST_TYPES(__name, __options...) \
+  ENUM_CLASS(__name, __options) \
+  EVAL(MAP(DECLARE_CLASS, __options)) \
+  EVAL(MAP(DECLARE_CONVERTER, __options))
+
+#define DECLARE_CLASS(__class) class __class;
+
+#define DECLARE_CONVERTER(__class) \
+  static std::shared_ptr<AST::__class> as##__class(std::shared_ptr<AST> __n) { \
+    assert(__n->type == Type::__class); \
+    return std::static_pointer_cast<AST::__class>(__n); \
+  }
 
 namespace ceos {
   
   class AST {
     public:
-      enum class Type {
-        Program = 1,
+      AST_TYPES(Type, 
+        Program,
         Call,
         Number,
-        ID,
-      };
-
-      class Program;
-      class Call;
-      class Number;
-      class ID;
+        ID
+      );
 
       Type type;
 
