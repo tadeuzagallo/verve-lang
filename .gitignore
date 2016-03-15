@@ -1,3 +1,4 @@
 *.o
 compiler/ceos-build
+compiler/ceos-build.dSYM
 **/tests/*.test_
