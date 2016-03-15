@@ -1,9 +1,11 @@
 push $5
 push $1
 push $2
-push $add
+load_string $2
+lookup
 push $3
 call
-push $mul
+load_string $1
+lookup
 push $3
 call

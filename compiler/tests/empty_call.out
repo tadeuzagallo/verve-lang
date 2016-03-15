@@ -1,3 +1,4 @@
-push $foo
+load_string $1
+lookup
 push $1
 call

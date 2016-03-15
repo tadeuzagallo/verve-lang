@@ -37,8 +37,8 @@
 
 #define EMPTY(...)
 
-#define ENUM_CLASS(__name, __options...) \
-  enum class __name { \
+#define ENUM_COMMON(__prefix, __name, __options...) \
+  enum __prefix __name { \
     __options  \
   }; \
  \
@@ -47,3 +47,6 @@
       EVAL(MAP(APPEND_COMMA, __options)) \
     }[(int)t]; \
   }
+
+#define ENUM(...) ENUM_COMMON(, __VA_ARGS__)
+#define ENUM_CLASS(...) ENUM_COMMON(class, __VA_ARGS__)

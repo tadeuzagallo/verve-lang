@@ -64,9 +64,13 @@ namespace ceos {
 
   class AST::ID : public AST {
     public:
-      ID(std::string n) : AST(Type::ID), name(n) {}
+      ID(std::string n) : AST(Type::ID), name(n) {
+        static unsigned m_uid = 0;
+        uid = ++m_uid;
+      }
 
       std::string name;
+      unsigned uid;
   };
 
   class AST::Call : public AST {

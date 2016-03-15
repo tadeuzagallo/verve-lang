@@ -1,15 +1,18 @@
 push $1
 push $1
-push $equals
+load_string $2
+lookup
 push $3
 call
-if 9
+jz 9
 push $1
-push $print
+load_string $3
+lookup
 push $2
 call
-jump 7
+jmp 7
 push $2
-push $print
+load_string $4
+lookup
 push $2
 call

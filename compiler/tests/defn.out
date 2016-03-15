@@ -1,1 +1,8 @@
 FUNCTIONS:
+fn square(1):
+pop $n
+push $n
+push $n
+push $mul
+push $3
+call

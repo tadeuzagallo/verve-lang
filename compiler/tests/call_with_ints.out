@@ -1,5 +1,6 @@
 push $5
 push $4
-push $bar
+load_string $1
+lookup
 push $3
 call
