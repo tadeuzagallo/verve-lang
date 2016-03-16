@@ -7,21 +7,37 @@
 #include "./generator.h"
 
 int main(int argc, char **argv) {
-  assert(argc == 3);
+  char *first = argv[1];
+  bool isDebug = strcmp(first, "-d") == 0;
+  bool isCompile = strcmp(first, "-c") == 0;
 
-  std::ifstream input(argv[1]);
-  std::ofstream output(argv[2], std::ios_base::binary);
+  if (isCompile) {
+    assert(argc == 4);
+  } else if (isDebug) {
+    assert(argc == 3);
+  } else {
+    assert(argc == 2);
+  }
+
+  std::ifstream input(isDebug || isCompile ? argv[2] : argv[1]);
 
   ceos::Lexer lexer(input);
   ceos::Parser parser(lexer);
 
   std::shared_ptr<ceos::AST::Program> ast = parser.parse();
 
-  ceos::Generator generator(ast, output);
+  ceos::Generator generator(ast);
 
-  if (generator.generate(true)) {
-    return EXIT_SUCCESS;
+  std::stringstream &bytecode = generator.generate();
+
+  if (isDebug) {
+    ceos::Generator::disassemble(bytecode);
+  } else if (isCompile) {
+    std::ofstream output(argv[3], std::ios_base::binary);
+    output << bytecode.str();
   } else {
-    return EXIT_FAILURE;
+    // TODO
   }
+
+  return EXIT_SUCCESS;
 }

@@ -1,17 +1,15 @@
 #include "opcodes.h"
 #include "generator.h"
 
+#include <iostream>
+
 #define FUNCTION_MAGIC_NUMBER 0xF00C
 
 namespace ceos {
-  bool Generator::generate(bool isDisassembly) {
+  std::stringstream &Generator::generate() {
     generateProgram(m_ast);
-    if (isDisassembly) {
-      disassemble();
-    } else {
-      m_fileOutput << m_output.str();
-    }
-    return true;
+    m_output.seekg(0);
+    return m_output;
   }
 
   void Generator::generateNode(std::shared_ptr<AST> node) {
@@ -126,17 +124,27 @@ namespace ceos {
     }
   }
 
-  void Generator::disassemble() {
+  void Generator::disassemble(std::stringstream &bytecode) {
 #define READ_INT(INT_NAME) \
       int INT_NAME; \
-      m_output.get(reinterpret_cast<char *>(&INT_NAME), 5);
+      { \
+      union { \
+        char c[4]; \
+        int i; \
+      } tmp; \
+      bytecode.get(tmp.c[0]); \
+      bytecode.get(tmp.c[1]); \
+      bytecode.get(tmp.c[2]); \
+      bytecode.get(tmp.c[3]); \
+      INT_NAME = tmp.i; \
+      }
 
-#define WRITE(...) m_fileOutput << __VA_ARGS__ << "\n"
+#define WRITE(...) std::cout << __VA_ARGS__ << "\n"
 
-    m_output.seekg(0);
-
-    while (!m_output.eof()) {
+    while (true) {
       READ_INT(opcode);
+
+      if (bytecode.eof()) break;
 
       switch (opcode) {
         case Opcode::push: {

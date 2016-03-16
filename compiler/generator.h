@@ -11,14 +11,12 @@ namespace ceos {
 
   class Generator {
     public:
-      Generator(std::shared_ptr<AST::Program> ast, std::ofstream &output) :
-        m_ast(ast),
-        m_fileOutput(output) {}
+      Generator(std::shared_ptr<AST::Program> ast) :
+        m_ast(ast) {}
 
-      bool generate(void);
-      bool generate(bool);
+      std::stringstream &generate(void);
 
-      void disassemble();
+      static void disassemble(std::stringstream &);
 
     private:
       void generateNode(std::shared_ptr<AST>);
@@ -35,7 +33,6 @@ namespace ceos {
       void write(const std::string &);
 
       std::shared_ptr<AST::Program> m_ast;
-      std::ofstream &m_fileOutput;
       std::stringstream m_output;
   };
 
