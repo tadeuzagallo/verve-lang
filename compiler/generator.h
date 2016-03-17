@@ -32,6 +32,8 @@ namespace ceos {
       void write(int);
       void write(const std::string &);
 
+      static void printOpcode(std::stringstream &, Opcode::Type);
+
       std::shared_ptr<AST::Program> m_ast;
       std::stringstream m_output;
   };

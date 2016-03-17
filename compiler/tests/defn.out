@@ -1,8 +1,16 @@
-FUNCTIONS:
+section STRINGS:
+defn
+square
+n
+mul
+n
+n
+section FUNCTIONS:
 fn square(1):
 pop $n
 push $n
 push $n
-push $mul
+load_string $3
+lookup
 push $3
 call

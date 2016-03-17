@@ -84,8 +84,8 @@ namespace ceos {
   }
 
   void Generator::generateFunction(std::shared_ptr<AST::Call> fn) {
-    m_output << "fn " << AST::asID(fn->arguments[1])->name;
-    m_output << "(" << AST::asCall(fn->arguments[2])->arguments.size() << "):\n";
+    write(AST::asID(fn->arguments[1])->name);
+    write(AST::asCall(fn->arguments[2])->arguments.size());
 
     for (auto arg : AST::asCall(fn->arguments[2])->arguments) {
       emitOpcode(Opcode::pop);
@@ -114,6 +114,13 @@ namespace ceos {
   }
 
   void Generator::generateProgram(std::shared_ptr<AST::Program> program) {
+    for (auto node : program->nodes()) {
+      generateNode(node);
+    }
+
+    auto text = m_output.str();
+    m_output = std::stringstream();
+    
     if (program->strings.size()) {
       write(Section::Header);
       write(Section::Strings);
@@ -128,17 +135,15 @@ namespace ceos {
       write(Section::Functions);
 
       for (auto fn : program->functions) {
+        write(Section::FunctionHeader);
         generateFunction(fn);
       }
     }
 
-    if (program->nodes().size()) {
+    if (text.length()) {
       write(Section::Header);
-      write(Section::Code);
-
-      for (auto node : program->nodes()) {
-        generateNode(node);
-      }
+      write(Section::Text);
+      m_output << text;
     }
   }
 
@@ -158,6 +163,10 @@ namespace ceos {
       } \
       if (bytecode.eof()) return
 
+#define READ_STR(STR_NAME) \
+    const char *STR_NAME = bytecode.str().c_str() + bytecode.tellg(); \
+    bytecode.seekg(strlen(STR_NAME) + 1, bytecode.cur)
+
 #define WRITE(...) std::cout << __VA_ARGS__ << "\n"
 
 read_section:
@@ -171,10 +180,9 @@ read_section:
         goto section_strings;
         break;
       case Section::Functions:
-        // TODO
-        assert(0);
+        goto section_functions;
         break;
-      case Section::Code:
+      case Section::Text:
         goto section_code;
         break;
     }
@@ -187,53 +195,79 @@ section_strings:
       if (ceos == 0xCE05)  {
         goto read_section;
       }
-      const char *str = bytecode.str().c_str() + bytecode.tellg();
-      bytecode.seekg(strlen(str) + 1, bytecode.cur);
+      READ_STR(str);
       WRITE(str);
+    }
+
+section_functions: {
+      READ_INT(fn_header);
+      assert(fn_header == Section::FunctionHeader);
+
+      READ_STR(fn_name);
+      READ_INT(arg_count);
+      WRITE("fn " << fn_name << "(" << arg_count << "):");
+
+      while (true) {
+        READ_INT(header);
+        bytecode.seekg(-4, bytecode.cur);
+        if (header == Section::FunctionHeader) {
+          goto section_functions;
+        } else if (header == Section::Header) {
+          goto read_section;
+        }
+
+        READ_INT(opcode);
+        printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
+      }
     }
 
 section_code:
     WRITE("section TEXT:");
     while (true) {
       READ_INT(opcode);
-
-
-      switch (opcode) {
-        case Opcode::push: {
-          READ_INT(value);
-          WRITE("push $" << value);
-          break;
-        }
-        case Opcode::call: {
-          WRITE("call");
-          break;
-        }
-        case Opcode::load_string: {
-          READ_INT(stringID);
-          WRITE("load_string $" << stringID);
-          break;
-        }
-        case Opcode::lookup: {
-          WRITE("lookup");
-          break;
-        }
-        case Opcode::jmp:  {
-          READ_INT(target);
-          WRITE("jmp " << target);
-          break;
-        }
-        case Opcode::jz: {
-          READ_INT(target);
-          WRITE("jz " << target);
-          break;
-        }
-        default:
-          break;
-      }
+      printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
     }
     goto read_section;
+  }
 
+  void Generator::printOpcode(std::stringstream &bytecode, Opcode::Type opcode) {
+    switch (opcode) {
+      case Opcode::push: {
+        READ_INT(value);
+        WRITE("push $" << value);
+        break;
+      }
+      case Opcode::call: {
+        WRITE("call");
+        break;
+      }
+      case Opcode::load_string: {
+        READ_INT(stringID);
+        WRITE("load_string $" << stringID);
+        break;
+      }
+      case Opcode::lookup: {
+        WRITE("lookup");
+        break;
+      }
+      case Opcode::jmp:  {
+        READ_INT(target);
+        WRITE("jmp " << target);
+        break;
+      }
+      case Opcode::jz: {
+        READ_INT(target);
+        WRITE("jz " << target);
+        break;
+      }
+      case Opcode::pop: {
+        READ_STR(reg);
+        WRITE("pop $" << reg);
+      }
+      default:
+        break;
+    }
+  }
 #undef READ_INT
 #undef WRITE
-  }
 }
