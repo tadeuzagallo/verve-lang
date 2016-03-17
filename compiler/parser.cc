@@ -8,7 +8,8 @@ namespace ceos {
   std::shared_ptr<AST::Program> Parser::parse(void) {
     m_ast = std::make_shared<AST::Program>();
 
-    while (m_lexer.nextToken()->type != Token::Type::END) {
+    m_lexer.nextToken();
+    while (m_lexer.token()->type != Token::Type::END) {
       std::shared_ptr<AST> node = parseFactor();
       m_ast->addNode(node);
     }
