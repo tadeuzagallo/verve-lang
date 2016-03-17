@@ -5,6 +5,7 @@
 #include "./lexer.h"
 #include "./parser.h"
 #include "./generator.h"
+#include "./vm.h"
 
 int main(int argc, char **argv) {
   char *first = argv[1];
@@ -36,7 +37,8 @@ int main(int argc, char **argv) {
     std::ofstream output(argv[3], std::ios_base::binary);
     output << bytecode.str();
   } else {
-    // TODO
+    ceos::VM vm(bytecode);
+    vm.execute();
   }
 
   return EXIT_SUCCESS;
