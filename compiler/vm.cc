@@ -22,10 +22,35 @@ static void print(ceos::VM &vm, int argv) {
   }
 }
 
+#define BASIC_MATH(NAME, OP) \
+  static void NAME(ceos::VM &vm, int argv) { \
+    assert(argv == 2); \
+ \
+    int a = vm.stack_pop(); \
+    int b = vm.stack_pop(); \
+ \
+    vm.stack_push(a OP b); \
+  }
+
+BASIC_MATH(add, +)
+BASIC_MATH(sub, -)
+BASIC_MATH(mul, *)
+BASIC_MATH(div, /)
+
+#undef BASIC_MATH
+
 namespace ceos {
 
   void VM::registerBuiltins() {
-    m_functionTable["print"] = print;
+#define REGISTER(NAME) m_functionTable[#NAME] = NAME
+
+    REGISTER(print);
+    REGISTER(add);
+    REGISTER(sub);
+    REGISTER(mul);
+    REGISTER(div);
+
+#undef REGISTER
   }
 
   void VM::stack_push(uintptr_t value) {
@@ -39,18 +64,14 @@ namespace ceos {
   }
 
 #define READ_INT(INT_NAME) \
-        int INT_NAME; \
-        { \
-        union { \
-          char c[4]; \
-          int i; \
-        } tmp; \
-        m_bytecode.get(tmp.c[0]); \
-        m_bytecode.get(tmp.c[1]); \
-        m_bytecode.get(tmp.c[2]); \
-        m_bytecode.get(tmp.c[3]); \
-        INT_NAME = tmp.i; \
-        }
+      int INT_NAME; \
+      m_bytecode.read(reinterpret_cast<char *>(&INT_NAME), sizeof(INT_NAME)); \
+
+#define READ_STR(STR_NAME) \
+    std::stringstream STR_NAME##_; \
+    m_bytecode.get(*STR_NAME##_.rdbuf(), '\0'); \
+    std::string STR_NAME = STR_NAME##_.str(); \
+    m_bytecode.ignore(1);
 
   void VM::execute() {
     while (true) {
@@ -84,8 +105,7 @@ namespace ceos {
         break;
       }
 
-      const char *str = m_bytecode.str().c_str() + m_bytecode.tellg();
-      m_bytecode.seekg(strlen(str) + 1, m_bytecode.cur);
+      READ_STR(str);
       m_stringTable.push_back(str);
     }
   }
@@ -105,6 +125,9 @@ namespace ceos {
         case Opcode::call: {
           int nargs = stack_pop();
           void (*fn)(VM &, int) = reinterpret_cast<__typeof__(fn)>(stack_pop());
+
+          assert(fn != nullptr);
+
           fn(*this, nargs - 1);
           break;
         }
@@ -134,7 +157,6 @@ namespace ceos {
       }
     }
   }
-
 #undef READ_INT
 
 }
