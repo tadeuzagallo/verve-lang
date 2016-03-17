@@ -8,6 +8,7 @@
 #ifndef CEOS_AST_H
 #define CEOS_AST_H
 
+static unsigned str_uid = 0;
 
 #define AST_TYPES(__name, __options...) \
   ENUM_CLASS(__name, __options) \
@@ -30,7 +31,8 @@ namespace ceos {
         Program,
         Call,
         Number,
-        ID
+        ID,
+        String
       );
 
       Type type;
@@ -66,8 +68,17 @@ namespace ceos {
   class AST::ID : public AST {
     public:
       ID(std::string n) : AST(Type::ID), name(n) {
-        static unsigned m_uid = 0;
-        uid = m_uid++;
+        uid = str_uid++;
+      }
+
+      std::string name;
+      unsigned uid;
+  };
+
+  class AST::String : public AST {
+    public:
+      String(std::string n) : AST(Type::String), name(n) {
+        uid = str_uid++;
       }
 
       std::string name;

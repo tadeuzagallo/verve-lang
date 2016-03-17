@@ -6,9 +6,19 @@
 #include <cassert>
 #include <iostream>
 
+#define MASK 0x8000000000000000
+#define MASK_STR(STR) ((STR) | (MASK))
+#define UNMASK_STR(STR) ((STR) & ~(MASK))
+#define IS_STR(STR) ((STR) & (MASK))
+
 static void print(ceos::VM &vm, int argv) {
   while (argv--) {
-    std::cout << vm.stack_pop() << "\n";
+    uintptr_t arg = vm.stack_pop();
+    if (IS_STR(arg)) {
+      std::cout << (reinterpret_cast<std::string *>(UNMASK_STR(arg)))->c_str() << "\n";
+    } else {
+      std::cout << static_cast<int>(arg) << "\n";
+    }
   }
 }
 
@@ -66,9 +76,18 @@ namespace ceos {
   } 
 
   void VM::loadStrings() {
-    const char *str = m_bytecode.str().c_str() + m_bytecode.tellg();
-    m_stringTable.push_back(str);
-    m_bytecode.seekg(strlen(str) + 1, m_bytecode.cur);
+    while (true) {
+      READ_INT(header);
+      m_bytecode.seekg(-4, m_bytecode.cur);
+
+      if (header == Section::Header) {
+        break;
+      }
+
+      const char *str = m_bytecode.str().c_str() + m_bytecode.tellg();
+      m_bytecode.seekg(strlen(str) + 1, m_bytecode.cur);
+      m_stringTable.push_back(str);
+    }
   }
 
   void VM::run() {
@@ -91,11 +110,11 @@ namespace ceos {
         }
         case Opcode::load_string: {
           READ_INT(stringID);
-          stack_push(reinterpret_cast<uintptr_t>(&m_stringTable[stringID]));
+          stack_push(MASK_STR(reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
           break;
         }
         case Opcode::lookup: {
-          std::string *fnName = reinterpret_cast<std::string *>(stack_pop());
+          std::string *fnName = reinterpret_cast<std::string *>(UNMASK_STR(stack_pop()));
           stack_push(reinterpret_cast<uintptr_t>(m_functionTable[*fnName]));
           break;
         }
@@ -112,8 +131,6 @@ namespace ceos {
           }
           break;
         }
-        default:
-          break;
       }
     }
   }

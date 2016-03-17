@@ -28,6 +28,14 @@ namespace ceos {
         m_token = std::make_shared<Token>(Token::Type::END);
         break;
 
+      case '"': {
+        std::stringstream str;
+        while ((c = m_input.get()) != '"') {
+          str.put(c);
+        }
+        m_token = std::make_shared<Token::String>(str.str());
+      }
+
       default:
         if (isnumber(c)) {
           int number = 0;

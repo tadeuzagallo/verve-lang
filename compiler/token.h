@@ -9,8 +9,9 @@ namespace ceos {
     public:
       class ID;
       class Number;
+      class String;
 
-      ENUM_CLASS(Type, END, L_PAREN, R_PAREN, ID, NUMBER)
+      ENUM_CLASS(Type, END, L_PAREN, R_PAREN, ID, NUMBER, STRING)
 
       Token(Type t) : type(t) {}
 
@@ -27,9 +28,16 @@ namespace ceos {
 
   class Token::Number : public Token {
     public:
-      Number(int v) : Token(Type::NUMBER), value(v) {};
+      Number(int v) : Token(Type::NUMBER), value(v) {}
 
       int value;
+  };
+
+  class Token::String : public Token {
+    public:
+      String(std::string str) : Token(Type::STRING), value(str) {}
+
+      std::string value;
   };
 }
 

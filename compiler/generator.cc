@@ -24,6 +24,9 @@ namespace ceos {
       case AST::Type::ID:
         generateID(std::static_pointer_cast<AST::ID>(node));
         break;
+      case AST::Type::String:
+        generateString(std::static_pointer_cast<AST::String>(node));
+        break;
       default:
         throw "Unhandled Type";
     }
@@ -81,6 +84,11 @@ namespace ceos {
     emitOpcode(Opcode::load_string);
     write(id->uid);
     emitOpcode(Opcode::lookup);
+  }
+
+  void Generator::generateString(std::shared_ptr<AST::String> str) {
+    emitOpcode(Opcode::load_string);
+    write(str->uid);
   }
 
   void Generator::generateFunction(std::shared_ptr<AST::Call> fn) {

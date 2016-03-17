@@ -23,6 +23,7 @@ namespace ceos {
       void generateCall(std::shared_ptr<AST::Call>);
       void generateNumber(std::shared_ptr<AST::Number>);
       void generateID(std::shared_ptr<AST::ID>);
+      void generateString(std::shared_ptr<AST::String>);
       bool handleSpecialCall(std::shared_ptr<AST::Call> call);
       void generateFunction(std::shared_ptr<AST::Call>);
       void generateIf(std::shared_ptr<AST::Call>);
