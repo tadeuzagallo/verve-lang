@@ -1,11 +1,15 @@
+section STRINGS:
+mul
+add
+section TEXT:
 push $5
 push $1
 push $2
-load_string $2
+load_string $1
 lookup
 push $3
 call
-load_string $1
+load_string $0
 lookup
 push $3
 call

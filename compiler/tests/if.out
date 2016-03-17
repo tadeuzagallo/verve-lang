@@ -1,18 +1,24 @@
+section STRINGS:
+if
+equals
+print
+print
+section TEXT:
 push $1
 push $1
-load_string $2
+load_string $1
 lookup
 push $3
 call
 jz 9
 push $1
-load_string $3
+load_string $2
 lookup
 push $2
 call
 jmp 7
 push $2
-load_string $4
+load_string $3
 lookup
 push $2
 call

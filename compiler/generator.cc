@@ -1,5 +1,6 @@
-#include "opcodes.h"
 #include "generator.h"
+#include "opcodes.h"
+#include "sections.h"
 
 #include <iostream>
 
@@ -90,7 +91,7 @@ namespace ceos {
       emitOpcode(Opcode::pop);
       write(AST::asID(arg)->name);
     }
-    
+
     generateNode(fn->arguments[3]);
   }
 
@@ -111,26 +112,32 @@ namespace ceos {
       generateNode(iff->arguments[3]);
     }
   }
-  
+
   void Generator::generateProgram(std::shared_ptr<AST::Program> program) {
-    write(0xCE05);
-    write(0x0001);
+    if (program->strings.size()) {
+      write(Section::Header);
+      write(Section::Strings);
 
-    for (auto string : program->strings) {
-      write(string);
-    }
-
-    write(0xCE05);
-    write(0x0002);
-
-    for (auto node : program->nodes()) {
-      generateNode(node);
+      for (auto string : program->strings) {
+        write(string);
+      }
     }
 
     if (program->functions.size()) {
-      write(FUNCTION_MAGIC_NUMBER);
+      write(Section::Header);
+      write(Section::Functions);
+
       for (auto fn : program->functions) {
-        //generateFunction(fn);
+        generateFunction(fn);
+      }
+    }
+
+    if (program->nodes().size()) {
+      write(Section::Header);
+      write(Section::Code);
+
+      for (auto node : program->nodes()) {
+        generateNode(node);
       }
     }
   }
@@ -148,14 +155,48 @@ namespace ceos {
       bytecode.get(tmp.c[2]); \
       bytecode.get(tmp.c[3]); \
       INT_NAME = tmp.i; \
-      }
+      } \
+      if (bytecode.eof()) return
 
 #define WRITE(...) std::cout << __VA_ARGS__ << "\n"
 
+read_section:
+    READ_INT(ceos);
+    assert(ceos == 0xCE05);
+
+    READ_INT(section);
+
+    switch (section) {
+      case Section::Strings:
+        goto section_strings;
+        break;
+      case Section::Functions:
+        // TODO
+        assert(0);
+        break;
+      case Section::Code:
+        goto section_code;
+        break;
+    }
+
+section_strings:
+    WRITE("section STRINGS:");
+    while (true) {
+      READ_INT(ceos);
+      bytecode.seekg(-4, bytecode.cur);
+      if (ceos == 0xCE05)  {
+        goto read_section;
+      }
+      const char *str = bytecode.str().c_str() + bytecode.tellg();
+      bytecode.seekg(strlen(str) + 1, bytecode.cur);
+      WRITE(str);
+    }
+
+section_code:
+    WRITE("section TEXT:");
     while (true) {
       READ_INT(opcode);
 
-      if (bytecode.eof()) break;
 
       switch (opcode) {
         case Opcode::push: {
@@ -189,8 +230,8 @@ namespace ceos {
         default:
           break;
       }
-
     }
+    goto read_section;
 
 #undef READ_INT
 #undef WRITE

@@ -1,4 +1,7 @@
-load_string $1
+section STRINGS:
+foo
+section TEXT:
+load_string $0
 lookup
 push $1
 call
