@@ -4,7 +4,7 @@ LIBS =
 
 HEADERS = $(wildcard *.h)
 SOURCES = $(wildcard *.cc)
-OBJECTS = $(patsubst %.cpp,%.o,$(SOURCES))
+OBJECTS = $(patsubst %.cc,%.o,$(SOURCES))
 TARGET = ceos-build
 
 default: $(TARGET)
@@ -14,7 +14,7 @@ default: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
 
-%.o: %.cpp $(HEADERS)
+%.o: %.cc $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # TESTS
