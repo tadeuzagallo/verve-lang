@@ -1,5 +1,7 @@
 #include "vm.h"
+
 #include "opcodes.h"
+#include "sections.h"
 
 #include <cassert>
 #include <iostream>
@@ -47,17 +49,17 @@ namespace ceos {
       if (m_bytecode.eof()) break;
 
       // section marker
-      assert(ceos == 0xCE05);
+      assert(ceos == Section::Header);
 
       READ_INT(section);
       switch (section) {
-        case 0x0001: // strings
+        case Section::Strings:
           loadStrings();
           break;
-        case 0x0002: //text
+        case Section::Text:
           run();
           break;
-        default:
+        case Section::Functions:
           assert(0);
       }
     }
