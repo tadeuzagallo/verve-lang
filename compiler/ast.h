@@ -50,6 +50,7 @@ namespace ceos {
       std::vector<std::shared_ptr<AST>> nodes() const { return m_nodes; }
 
       std::vector<std::shared_ptr<AST::Call>> functions;
+      std::vector<std::string> strings;
 
     private:
       std::vector<std::shared_ptr<AST>> m_nodes;
@@ -66,7 +67,7 @@ namespace ceos {
     public:
       ID(std::string n) : AST(Type::ID), name(n) {
         static unsigned m_uid = 0;
-        uid = ++m_uid;
+        uid = m_uid++;
       }
 
       std::string name;

@@ -50,6 +50,7 @@ namespace ceos {
 
   void Generator::write(const std::string &data) {
     m_output << data;
+    m_output.put('\0');
   }
 
   void Generator::emitOpcode(Opcode::Type opcode) {
@@ -112,6 +113,16 @@ namespace ceos {
   }
   
   void Generator::generateProgram(std::shared_ptr<AST::Program> program) {
+    write(0xCE05);
+    write(0x0001);
+
+    for (auto string : program->strings) {
+      write(string);
+    }
+
+    write(0xCE05);
+    write(0x0002);
+
     for (auto node : program->nodes()) {
       generateNode(node);
     }
@@ -173,10 +184,6 @@ namespace ceos {
         case Opcode::jz: {
           READ_INT(target);
           WRITE("jz " << target);
-          break;
-        }
-        case FUNCTION_MAGIC_NUMBER: {
-          WRITE("FUNCTIONS:");
           break;
         }
         default:

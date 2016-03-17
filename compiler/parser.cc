@@ -37,7 +37,11 @@ namespace ceos {
 
   std::shared_ptr<AST::ID> Parser::parseID() {
     auto id = std::static_pointer_cast<Token::ID>(m_lexer.token(Token::Type::ID));
-    return std::make_shared<AST::ID>(id->name);
+    auto astID = std::make_shared<AST::ID>(id->name);
+
+    m_ast->strings.push_back(id->name);
+
+    return astID;
   }
 
   std::shared_ptr<AST::Call> Parser::parseCall(void) {
