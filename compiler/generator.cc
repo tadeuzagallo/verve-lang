@@ -200,6 +200,8 @@ section_strings:
     }
 
 section_functions: {
+    WRITE("section FUNCTIONS:");
+
       READ_INT(fn_header);
       assert(fn_header == Section::FunctionHeader);
 
