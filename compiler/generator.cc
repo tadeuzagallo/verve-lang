@@ -158,22 +158,14 @@ namespace ceos {
   void Generator::disassemble(std::stringstream &bytecode) {
 #define READ_INT(INT_NAME) \
       int INT_NAME; \
-      { \
-      union { \
-        char c[4]; \
-        int i; \
-      } tmp; \
-      bytecode.get(tmp.c[0]); \
-      bytecode.get(tmp.c[1]); \
-      bytecode.get(tmp.c[2]); \
-      bytecode.get(tmp.c[3]); \
-      INT_NAME = tmp.i; \
-      } \
+      bytecode.read(reinterpret_cast<char *>(&INT_NAME), sizeof(INT_NAME)); \
       if (bytecode.eof()) return
 
 #define READ_STR(STR_NAME) \
-    const char *STR_NAME = bytecode.str().c_str() + bytecode.tellg(); \
-    bytecode.seekg(strlen(STR_NAME) + 1, bytecode.cur)
+    std::stringstream STR_NAME##_; \
+    bytecode.get(*STR_NAME##_.rdbuf(), '\0'); \
+    std::string STR_NAME = STR_NAME##_.str(); \
+    bytecode.ignore(1);
 
 #define WRITE(...) std::cout << __VA_ARGS__ << "\n"
 
