@@ -23,9 +23,9 @@ TESTS = $(patsubst %.in,%.test,$(wildcard tests/*.in))
 
 .PHONY: test %.test
 
-test: $(TARGET) $(TESTS)
+test: $(TESTS)
 
-%.test: %.in %.out
+%.test: %.in %.out $(TARGET)
 	-@./$(TARGET) -d $< > $@_; \
 	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
 
