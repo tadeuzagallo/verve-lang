@@ -13,13 +13,11 @@
 
 #define JS_FUNCTION(FN_NAME) static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
 
-#define ARG(index) vm.stack[vm.ebp - index - 2]
-
 #define BASIC_MATH(NAME, OP) \
   JS_FUNCTION(NAME) { \
     assert(argv == 2); \
  \
-    return ARG(0) OP ARG(1); \
+    return vm.arg(0) OP vm.arg(1); \
   }
 
 BASIC_MATH(add, +)
@@ -29,7 +27,7 @@ BASIC_MATH(div, /)
 
 JS_FUNCTION(print) {
   for (unsigned i = 0; i < argv; i++) {
-    uintptr_t arg = ARG(i);
+    uintptr_t arg = vm.arg(i);
     if (IS_STR(arg)) {
       std::cout << (reinterpret_cast<std::string *>(UNMASK_STR(arg)))->c_str() << "\n";
     } else {
@@ -45,7 +43,7 @@ JS_FUNCTION(print) {
 namespace ceos {
 
   void VM::registerBuiltins() {
-#define REGISTER(NAME) m_functionTable[#NAME] = NAME
+#define REGISTER(NAME) uintptr_t (*NAME##_)(VM &, unsigned) = NAME; m_functionTable[#NAME] = (uintptr_t)NAME##_
 
     REGISTER(print);
     REGISTER(add);
@@ -68,6 +66,11 @@ namespace ceos {
     return value;
   }
 
+  uintptr_t VM::arg(unsigned index) {
+    // 2 because the pointers are always 1 ahead and ebp is on top of the stack
+    return stack[ebp - index - 2];
+  }
+
   void VM::execute() {
     READ_INT(m_bytecode, ceos);
 
@@ -81,11 +84,12 @@ namespace ceos {
         case Section::Strings:
           loadStrings();
           break;
-        case Section::Text:
-          run();
-          break;
         case Section::Functions:
-          assert(0);
+          loadFunctions();
+          break;
+        case Section::Text:
+          run(m_bytecode);
+          break;
       }
     }
   } 
@@ -104,27 +108,59 @@ namespace ceos {
     }
   }
 
-  void VM::run() {
+  void VM::loadFunctions() {
+    READ_INT(m_bytecode, initialHeader);
+    assert(initialHeader == Section::FunctionHeader);
+
     while (true) {
-      READ_INT(m_bytecode, opcode);
+      READ_STR(m_bytecode, name);
+      READ_INT(m_bytecode, nargs);
+
+      m_userFunctions.push_back(Function(name, nargs));
+      Function *fn = &m_userFunctions.back();
+      m_functionTable[name] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
+
+      while (true) {
+        READ_INT(m_bytecode, opcode);
+        if (opcode == Section::Header) {
+          return;
+        } else if (opcode == Section::FunctionHeader) {
+          break;
+        }
+
+        fn->bytecode.write(reinterpret_cast<char *>(&opcode), sizeof(opcode));
+      }
+    }
+  }
+
+  void VM::run(std::stringstream &bytecode) {
+    while (true) {
+      READ_INT(bytecode, opcode);
 
       switch (opcode) {
         case Opcode::push: {
-          READ_INT(m_bytecode, value);
+          READ_INT(bytecode, value);
           stack_push(value);
           break;
         }
         case Opcode::call: {
           int nargs = stack_pop();
+          uintptr_t fn_address = stack_pop();
 
-          uintptr_t (*fn)(VM &, unsigned) = reinterpret_cast<__typeof__(fn)>(stack_pop());
-          assert(fn != nullptr);
+          //assert(fn != nullptr);
           --nargs; //pop'd the callee
 
           stack_push(ebp);
           ebp = esp;
 
-          auto ret = fn(*this, nargs);
+          uintptr_t ret;
+          if (IS_STR(fn_address)) {
+            Function *fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
+            ret = (*fn)(*this, nargs);
+          } else {
+            uintptr_t (*fn)(VM &, unsigned) = reinterpret_cast<__typeof__(fn)>(fn_address);
+            ret = fn(*this, nargs);
+          }
 
           esp = ebp;
           ebp = stack_pop();
@@ -136,7 +172,7 @@ namespace ceos {
           break;
         }
         case Opcode::load_string: {
-          READ_INT(m_bytecode, stringID);
+          READ_INT(bytecode, stringID);
           stack_push(MASK_STR(reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
           break;
         }
@@ -146,16 +182,21 @@ namespace ceos {
           break;
         }
         case Opcode::jmp:  {
-          READ_INT(m_bytecode, target);
-          m_bytecode.seekg(target, m_bytecode.cur);
+          READ_INT(bytecode, target);
+          bytecode.seekg(target, bytecode.cur);
           break;
         }
         case Opcode::jz: {
-          READ_INT(m_bytecode, target);
+          READ_INT(bytecode, target);
           int value = static_cast<int>(stack_pop());
           if (value == 0) {
-            m_bytecode.seekg(target, m_bytecode.cur);
+            bytecode.seekg(target, bytecode.cur);
           }
+          break;
+        }
+        case Opcode::push_arg: {
+          READ_INT(bytecode, index);
+          stack_push(arg(index));
           break;
         }
       }

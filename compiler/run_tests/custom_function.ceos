@@ -1,0 +1,3 @@
+(defn square (n) (mul n n))
+
+(print (square 4))
