@@ -9,7 +9,7 @@
 namespace ceos {
   class VM;
 
-  typedef std::binary_function<VM &, unsigned, uintptr_t> JSFunctionType;
+  typedef uintptr_t (*JSFunctionType)(VM &, unsigned);
 
   class VM {
     public:
@@ -32,7 +32,7 @@ namespace ceos {
 
     private:
 
-      struct Function : JSFunctionType {
+      struct Function : std::binary_function<VM &, unsigned, uintptr_t> {
         Function(std::string n, unsigned args) : name(n), nargs(args) {}
 
         uintptr_t operator()(VM &vm, __unused unsigned argv) {

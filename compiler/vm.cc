@@ -75,7 +75,7 @@ JS_FUNCTION(list) {
 namespace ceos {
 
   void VM::registerBuiltins() {
-#define REGISTER(NAME) uintptr_t (*NAME##_)(VM &, unsigned) = NAME; m_functionTable[#NAME] = (uintptr_t)NAME##_
+#define REGISTER(NAME) JSFunctionType NAME##_ = NAME; m_functionTable[#NAME] = (uintptr_t)NAME##_
 
     REGISTER(print);
     REGISTER(list);
@@ -197,7 +197,7 @@ namespace ceos {
             Function *fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
             ret = (*fn)(*this, nargs);
           } else {
-            uintptr_t (*fn)(VM &, unsigned) = reinterpret_cast<__typeof__(fn)>(fn_address);
+            JSFunctionType fn = reinterpret_cast<__typeof__(fn)>(fn_address);
             ret = fn(*this, nargs);
           }
 
