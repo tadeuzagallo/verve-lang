@@ -3,6 +3,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #ifndef CEOS_AST_H
@@ -68,9 +69,7 @@ namespace ceos {
 
   class AST::ID : public AST {
     public:
-      ID(std::string n) : AST(Type::ID), name(n) {
-        uid = str_uid++;
-      }
+      ID(std::string n, unsigned id) : AST(Type::ID), name(n), uid(id) { }
 
       std::string name;
       unsigned uid;
@@ -78,9 +77,7 @@ namespace ceos {
 
   class AST::String : public AST {
     public:
-      String(std::string n) : AST(Type::String), name(n) {
-        uid = str_uid++;
-      }
+      String(std::string n, unsigned id) : AST(Type::String), name(n), uid(id) { }
 
       std::string name;
       unsigned uid;

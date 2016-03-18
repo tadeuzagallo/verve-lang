@@ -40,20 +40,32 @@ namespace ceos {
 
   std::shared_ptr<AST::ID> Parser::parseID() {
     auto id = std::static_pointer_cast<Token::ID>(m_lexer.token(Token::Type::ID));
-    auto astID = std::make_shared<AST::ID>(id->name);
 
-    m_ast->strings.push_back(id->name);
+    unsigned uid;
+    auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), id->name);
+    if (it != m_ast->strings.end()) {
+      uid = it - m_ast->strings.begin();
+    } else {
+      uid = str_uid++;
+      m_ast->strings.push_back(id->name);
+    }
 
-    return astID;
+    return std::make_shared<AST::ID>(m_ast->strings[uid], uid);
   }
 
   std::shared_ptr<AST::String> Parser::parseString() {
     auto string = std::static_pointer_cast<Token::String>(m_lexer.token(Token::Type::STRING));
-    auto astString = std::make_shared<AST::String>(string->value);
 
-    m_ast->strings.push_back(string->value);
+    int uid;
+    auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), string->value);
+    if (it != m_ast->strings.end()) {
+      uid = it - m_ast->strings.begin();
+    } else {
+      uid = str_uid++;
+      m_ast->strings.push_back(string->value);
+    }
 
-    return astString;
+    return std::make_shared<AST::String>(m_ast->strings[uid], uid);
   }
 
   std::shared_ptr<AST::Call> Parser::parseCall(void) {

@@ -3,8 +3,6 @@ defn
 square
 n
 mul
-n
-n
 section FUNCTIONS:
 fn square(1):
 push_arg $0
