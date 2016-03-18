@@ -7,7 +7,6 @@ section FUNCTIONS:
 fn square(1):
 push_arg $0
 push_arg $0
-load_string $3
-lookup
+lookup $3
 push $3
 call

@@ -3,7 +3,6 @@ bar
 section TEXT:
 push $5
 push $4
-load_string $0
-lookup
+lookup $0
 push $3
 call

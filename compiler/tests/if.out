@@ -5,19 +5,16 @@ print
 section TEXT:
 push $1
 push $1
-load_string $1
-lookup
+lookup $1
 push $3
 call
 jz 9
 push $1
-load_string $2
-lookup
+lookup $2
 push $2
 call
 jmp 7
 push $2
-load_string $2
-lookup
+lookup $2
 push $2
 call

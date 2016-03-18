@@ -177,8 +177,9 @@ namespace ceos {
           break;
         }
         case Opcode::lookup: {
-          std::string *fnName = reinterpret_cast<std::string *>(UNMASK_STR(stack_pop()));
-          stack_push(reinterpret_cast<uintptr_t>(m_functionTable[*fnName]));
+          READ_INT(bytecode, id);
+          auto fnName = m_stringTable[id];
+          stack_push(reinterpret_cast<uintptr_t>(m_functionTable[fnName]));
           break;
         }
         case Opcode::jmp:  {

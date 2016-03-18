@@ -86,9 +86,8 @@ namespace ceos {
     if (v) {
       generateNode(v);
     } else {
-      emitOpcode(Opcode::load_string);
-      write(id->uid);
       emitOpcode(Opcode::lookup);
+      write(id->uid);
     }
   }
 
@@ -252,7 +251,8 @@ section_code:
         break;
       }
       case Opcode::lookup: {
-        WRITE("lookup");
+        READ_INT(bytecode, id);
+        WRITE("lookup $" << id);
         break;
       }
       case Opcode::jmp:  {

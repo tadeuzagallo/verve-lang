@@ -1,7 +1,6 @@
 section STRINGS:
 foo
 section TEXT:
-load_string $0
-lookup
+lookup $0
 push $1
 call
