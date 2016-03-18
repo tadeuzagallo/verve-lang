@@ -21,7 +21,7 @@
 #define UNMASK_ARRAY(ARRAY) UNMASK(ARRAY_MASK, ARRAY)
 #define IS_ARRAY(ARRAY) IS_MASK(ARRAY_MASK, ARRAY)
 
-#define JS_FUNCTION(FN_NAME) static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
+#define JS_FUNCTION(FN_NAME) __used static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
 
 #define EACH_ARG(IT) \
   for (uintptr_t I = 0, IT; (IT = vm.arg(I)), I < argv; I++)
@@ -37,6 +37,11 @@ BASIC_MATH(add, +)
 BASIC_MATH(sub, -)
 BASIC_MATH(mul, *)
 BASIC_MATH(div, /)
+BASIC_MATH(lt, <)
+BASIC_MATH(gt, >)
+BASIC_MATH(lte, <=)
+BASIC_MATH(gte, >=)
+BASIC_MATH(equals, ==)
 
 JS_FUNCTION(print) {
   for (unsigned i = 0; i < argv; i++) {
@@ -73,11 +78,17 @@ namespace ceos {
 #define REGISTER(NAME) uintptr_t (*NAME##_)(VM &, unsigned) = NAME; m_functionTable[#NAME] = (uintptr_t)NAME##_
 
     REGISTER(print);
+    REGISTER(list);
+
     REGISTER(add);
     REGISTER(sub);
     REGISTER(mul);
     REGISTER(div);
-    REGISTER(list);
+    REGISTER(lt);
+    REGISTER(gt);
+    REGISTER(lte);
+    REGISTER(gte);
+    REGISTER(equals);
 
 #undef REGISTER
   }
