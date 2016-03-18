@@ -21,6 +21,7 @@ namespace ceos {
       void ensure(Token::Type);
 
       static void assertType(Token::Type, Token::Type);
+      static void invalidType(Token::Type);
 
     private:
       std::ifstream &m_input;

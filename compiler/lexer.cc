@@ -83,4 +83,9 @@ namespace ceos {
       throw "Parser error";
     }
   }
+
+  void Lexer::invalidType(Token::Type type) {
+    std::cerr << "Invalid type found: `" << Token::typeName(type) << "`\n";
+    throw "Type error";
+  }
 }
