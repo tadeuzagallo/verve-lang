@@ -4,8 +4,6 @@
 
 #include <iostream>
 
-#define FUNCTION_MAGIC_NUMBER 0xF00C
-
 namespace ceos {
   std::stringstream &Generator::generate() {
     generateProgram(m_ast);
@@ -171,24 +169,14 @@ namespace ceos {
   }
 
   void Generator::disassemble(std::stringstream &bytecode) {
-#define READ_INT(INT_NAME) \
-      int INT_NAME; \
-      bytecode.read(reinterpret_cast<char *>(&INT_NAME), sizeof(INT_NAME)); \
-      if (bytecode.eof()) return
-
-#define READ_STR(STR_NAME) \
-    std::stringstream STR_NAME##_; \
-    bytecode.get(*STR_NAME##_.rdbuf(), '\0'); \
-    std::string STR_NAME = STR_NAME##_.str(); \
-    bytecode.ignore(1);
 
 #define WRITE(...) std::cout << __VA_ARGS__ << "\n"
 
 read_section:
-    READ_INT(ceos);
+    READ_INT(bytecode, ceos);
     assert(ceos == 0xCE05);
 
-    READ_INT(section);
+    READ_INT(bytecode, section);
 
     switch (section) {
       case Section::Strings:
@@ -205,27 +193,27 @@ read_section:
 section_strings:
     WRITE("section STRINGS:");
     while (true) {
-      READ_INT(ceos);
+      READ_INT(bytecode, ceos);
       bytecode.seekg(-4, bytecode.cur);
       if (ceos == 0xCE05)  {
         goto read_section;
       }
-      READ_STR(str);
+      READ_STR(bytecode, str);
       WRITE(str);
     }
 
 section_functions: {
     WRITE("section FUNCTIONS:");
 
-      READ_INT(fn_header);
+      READ_INT(bytecode, fn_header);
       assert(fn_header == Section::FunctionHeader);
 
-      READ_STR(fn_name);
-      READ_INT(arg_count);
+      READ_STR(bytecode, fn_name);
+      READ_INT(bytecode, arg_count);
       WRITE("fn " << fn_name << "(" << arg_count << "):");
 
       while (true) {
-        READ_INT(header);
+        READ_INT(bytecode, header);
         bytecode.seekg(-4, bytecode.cur);
         if (header == Section::FunctionHeader) {
           goto section_functions;
@@ -233,7 +221,7 @@ section_functions: {
           goto read_section;
         }
 
-        READ_INT(opcode);
+        READ_INT(bytecode, opcode);
         printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
       }
     }
@@ -241,7 +229,7 @@ section_functions: {
 section_code:
     WRITE("section TEXT:");
     while (true) {
-      READ_INT(opcode);
+      READ_INT(bytecode, opcode);
       printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
     }
     goto read_section;
@@ -250,7 +238,7 @@ section_code:
   void Generator::printOpcode(std::stringstream &bytecode, Opcode::Type opcode) {
     switch (opcode) {
       case Opcode::push: {
-        READ_INT(value);
+        READ_INT(bytecode, value);
         WRITE("push $" << value);
         break;
       }
@@ -259,7 +247,7 @@ section_code:
         break;
       }
       case Opcode::load_string: {
-        READ_INT(stringID);
+        READ_INT(bytecode, stringID);
         WRITE("load_string $" << stringID);
         break;
       }
@@ -268,17 +256,17 @@ section_code:
         break;
       }
       case Opcode::jmp:  {
-        READ_INT(target);
+        READ_INT(bytecode, target);
         WRITE("jmp " << target);
         break;
       }
       case Opcode::jz: {
-        READ_INT(target);
+        READ_INT(bytecode, target);
         WRITE("jz " << target);
         break;
       }
       case Opcode::push_arg: {
-        READ_INT(arg);
+        READ_INT(bytecode, arg);
         WRITE("push_arg $" << arg);
         break;
       }
@@ -286,6 +274,5 @@ section_code:
         break;
     }
   }
-#undef READ_INT
 #undef WRITE
 }

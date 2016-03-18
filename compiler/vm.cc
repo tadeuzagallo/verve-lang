@@ -68,26 +68,14 @@ namespace ceos {
     return value;
   }
 
-#define READ_INT(INT_NAME) \
-      int INT_NAME; \
-      m_bytecode.read(reinterpret_cast<char *>(&INT_NAME), sizeof(INT_NAME)); \
-
-#define READ_STR(STR_NAME) \
-    std::stringstream STR_NAME##_; \
-    m_bytecode.get(*STR_NAME##_.rdbuf(), '\0'); \
-    std::string STR_NAME = STR_NAME##_.str(); \
-    m_bytecode.ignore(1);
-
   void VM::execute() {
-    READ_INT(ceos);
+    READ_INT(m_bytecode, ceos);
 
     // section marker
     assert(ceos == Section::Header);
 
     while (true) {
-      READ_INT(section);
-
-      if (m_bytecode.eof()) break;
+      READ_INT(m_bytecode, section);
 
       switch (section) {
         case Section::Strings:
@@ -104,27 +92,25 @@ namespace ceos {
 
   void VM::loadStrings() {
     while (true) {
-      READ_INT(header);
+      READ_INT(m_bytecode, header);
 
       if (header == Section::Header) {
         break;
       }
 
       m_bytecode.seekg(-4, m_bytecode.cur);
-      READ_STR(str);
+      READ_STR(m_bytecode, str);
       m_stringTable.push_back(str);
     }
   }
 
   void VM::run() {
     while (true) {
-      READ_INT(opcode);
-
-      if (m_bytecode.eof()) break;
+      READ_INT(m_bytecode, opcode);
 
       switch (opcode) {
         case Opcode::push: {
-          READ_INT(value);
+          READ_INT(m_bytecode, value);
           stack_push(value);
           break;
         }
@@ -150,7 +136,7 @@ namespace ceos {
           break;
         }
         case Opcode::load_string: {
-          READ_INT(stringID);
+          READ_INT(m_bytecode, stringID);
           stack_push(MASK_STR(reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
           break;
         }
@@ -160,12 +146,12 @@ namespace ceos {
           break;
         }
         case Opcode::jmp:  {
-          READ_INT(target);
+          READ_INT(m_bytecode, target);
           m_bytecode.seekg(target, m_bytecode.cur);
           break;
         }
         case Opcode::jz: {
-          READ_INT(target);
+          READ_INT(m_bytecode, target);
           int value = static_cast<int>(stack_pop());
           if (value == 0) {
             m_bytecode.seekg(target, m_bytecode.cur);
@@ -175,6 +161,5 @@ namespace ceos {
       }
     }
   }
-#undef READ_INT
 
 }
