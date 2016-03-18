@@ -6,12 +6,25 @@
 #include <cassert>
 #include <iostream>
 
-#define MASK 0x8000000000000000
-#define MASK_STR(STR) ((STR) | (MASK))
-#define UNMASK_STR(STR) ((STR) & ~(MASK))
-#define IS_STR(STR) ((STR) & (MASK))
+#define STR_MASK 0x8000000000000000
+#define ARRAY_MASK 0x4000000000000000
+
+#define MASK(MASK, V) ((V) | (MASK))
+#define UNMASK(MASK, V) ((V) & ~(MASK))
+#define IS_MASK(MASK, V) ((V) & (MASK))
+
+#define MASK_STR(STR) MASK(STR_MASK, STR)
+#define UNMASK_STR(STR) UNMASK(STR_MASK, STR)
+#define IS_STR(STR) IS_MASK(STR_MASK, STR)
+
+#define MASK_ARRAY(ARRAY) MASK(ARRAY_MASK, ARRAY)
+#define UNMASK_ARRAY(ARRAY) UNMASK(ARRAY_MASK, ARRAY)
+#define IS_ARRAY(ARRAY) IS_MASK(ARRAY_MASK, ARRAY)
 
 #define JS_FUNCTION(FN_NAME) static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
+
+#define EACH_ARG(IT) \
+  for (uintptr_t I = 0, IT; (IT = vm.arg(I)), I < argv; I++)
 
 #define BASIC_MATH(NAME, OP) \
   JS_FUNCTION(NAME) { \
@@ -30,12 +43,26 @@ JS_FUNCTION(print) {
     uintptr_t arg = vm.arg(i);
     if (IS_STR(arg)) {
       std::cout << (reinterpret_cast<std::string *>(UNMASK_STR(arg)))->c_str() << "\n";
+    } else if (IS_ARRAY(arg)) {
+      std::vector<uintptr_t> *array = reinterpret_cast<__typeof__(array)>(UNMASK_ARRAY(arg));
+      for (auto a : *array) {
+        std::cout << a << " ";
+      }
+      std::cout << "\n";
     } else {
       std::cout << static_cast<int>(arg) << "\n";
     }
   }
   
   return 0;
+}
+
+JS_FUNCTION(list) {
+  auto list = new std::vector<uintptr_t>();
+  EACH_ARG(arg) {
+    list->push_back(arg);
+  }
+  return MASK_ARRAY(reinterpret_cast<uintptr_t>(list));
 }
 
 #undef BASIC_MATH
@@ -50,6 +77,7 @@ namespace ceos {
     REGISTER(sub);
     REGISTER(mul);
     REGISTER(div);
+    REGISTER(list);
 
 #undef REGISTER
   }
