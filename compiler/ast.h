@@ -32,7 +32,8 @@ namespace ceos {
         Call,
         Number,
         ID,
-        String
+        String,
+        FunctionArgument
       );
 
       Type type;
@@ -92,6 +93,12 @@ namespace ceos {
       std::vector<std::shared_ptr<AST>> arguments;
   };
 
+  class AST::FunctionArgument : public AST {
+    public:
+      FunctionArgument(unsigned i) : AST(Type::FunctionArgument), index(i) {}
+
+      unsigned index;
+  };
 }
 
 #endif

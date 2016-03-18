@@ -27,6 +27,9 @@ namespace ceos {
       case AST::Type::String:
         generateString(std::static_pointer_cast<AST::String>(node));
         break;
+      case AST::Type::FunctionArgument:
+        generateFunctionArgument(std::static_pointer_cast<AST::FunctionArgument>(node));
+        break;
       default:
         throw "Unhandled Type";
     }
@@ -81,9 +84,14 @@ namespace ceos {
   }
 
   void Generator::generateID(std::shared_ptr<AST::ID> id) {
-    emitOpcode(Opcode::load_string);
-    write(id->uid);
-    emitOpcode(Opcode::lookup);
+    auto v = m_currentScope->get(id->name);
+    if (v) {
+      generateNode(v);
+    } else {
+      emitOpcode(Opcode::load_string);
+      write(id->uid);
+      emitOpcode(Opcode::lookup);
+    }
   }
 
   void Generator::generateString(std::shared_ptr<AST::String> str) {
@@ -91,13 +99,20 @@ namespace ceos {
     write(str->uid);
   }
 
+  void Generator::generateFunctionArgument(std::shared_ptr<AST::FunctionArgument> arg) {
+    emitOpcode(Opcode::push_arg);
+    write(arg->index);
+  }
+
   void Generator::generateFunction(std::shared_ptr<AST::Call> fn) {
     write(AST::asID(fn->arguments[1])->name);
     write(AST::asCall(fn->arguments[2])->arguments.size());
 
+    Scope s(this);
+
+    int index = 0;
     for (auto arg : AST::asCall(fn->arguments[2])->arguments) {
-      emitOpcode(Opcode::pop);
-      write(AST::asID(arg)->name);
+      s.variables[AST::asID(arg)->name] = std::make_shared<AST::FunctionArgument>(index++);
     }
 
     generateNode(fn->arguments[3]);
@@ -262,9 +277,10 @@ section_code:
         WRITE("jz " << target);
         break;
       }
-      case Opcode::pop: {
-        READ_STR(reg);
-        WRITE("pop $" << reg);
+      case Opcode::push_arg: {
+        READ_INT(arg);
+        WRITE("push_arg $" << arg);
+        break;
       }
       default:
         break;

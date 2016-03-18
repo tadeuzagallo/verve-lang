@@ -8,11 +8,11 @@ class Opcode {
     ENUM(Type,
       ret,
       push,
-      pop,
       call,
       jz,
       jmp,
       load_string,
+      push_arg,
       lookup
     );
 };

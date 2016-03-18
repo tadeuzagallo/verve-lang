@@ -7,9 +7,8 @@ n
 n
 section FUNCTIONS:
 fn square(1):
-pop $n
-push $n
-push $n
+push_arg $0
+push_arg $0
 load_string $3
 lookup
 push $3
