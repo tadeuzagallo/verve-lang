@@ -199,6 +199,9 @@ namespace ceos {
           stack_push(arg(index));
           break;
         }
+        default:
+          std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";
+          exit(1);
       }
     }
   }
