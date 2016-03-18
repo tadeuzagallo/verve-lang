@@ -18,12 +18,15 @@ namespace ceos {
       void run();
       void stack_push(uintptr_t);
       uintptr_t stack_pop();
+      
+      std::vector<uintptr_t> stack;
+      uintptr_t ebp;
+      uintptr_t esp;
 
     private:
       std::stringstream &m_bytecode;
-      std::vector<uintptr_t> m_stack;
       std::vector<std::string> m_stringTable;
-      std::unordered_map<std::string, void (*)(VM &, int)> m_functionTable;
+      std::unordered_map<std::string, uintptr_t (*)(VM &, unsigned)> m_functionTable;
   };
 }
 

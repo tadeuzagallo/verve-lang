@@ -11,31 +11,34 @@
 #define UNMASK_STR(STR) ((STR) & ~(MASK))
 #define IS_STR(STR) ((STR) & (MASK))
 
-static void print(ceos::VM &vm, int argv) {
-  while (argv--) {
-    uintptr_t arg = vm.stack_pop();
-    if (IS_STR(arg)) {
-      std::cout << (reinterpret_cast<std::string *>(UNMASK_STR(arg)))->c_str() << "\n";
-    } else {
-      std::cout << static_cast<int>(arg) << "\n";
-    }
-  }
-}
+#define JS_FUNCTION(FN_NAME) static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
+
+#define ARG(index) vm.stack[vm.ebp - index - 2]
 
 #define BASIC_MATH(NAME, OP) \
-  static void NAME(ceos::VM &vm, int argv) { \
+  JS_FUNCTION(NAME) { \
     assert(argv == 2); \
  \
-    int a = vm.stack_pop(); \
-    int b = vm.stack_pop(); \
- \
-    vm.stack_push(a OP b); \
+    return ARG(0) OP ARG(1); \
   }
 
 BASIC_MATH(add, +)
 BASIC_MATH(sub, -)
 BASIC_MATH(mul, *)
 BASIC_MATH(div, /)
+
+JS_FUNCTION(print) {
+  for (unsigned i = 0; i < argv; i++) {
+    uintptr_t arg = ARG(i);
+    if (IS_STR(arg)) {
+      std::cout << (reinterpret_cast<std::string *>(UNMASK_STR(arg)))->c_str() << "\n";
+    } else {
+      std::cout << static_cast<int>(arg) << "\n";
+    }
+  }
+  
+  return 0;
+}
 
 #undef BASIC_MATH
 
@@ -54,12 +57,14 @@ namespace ceos {
   }
 
   void VM::stack_push(uintptr_t value) {
-    m_stack.push_back(value);
+    esp++;
+    stack.push_back(value);
   }
 
   uintptr_t VM::stack_pop() {
-    uintptr_t value = m_stack.back();
-    m_stack.pop_back();
+    uintptr_t value = stack.back();
+    stack.pop_back();
+    esp--;
     return value;
   }
 
@@ -74,15 +79,16 @@ namespace ceos {
     m_bytecode.ignore(1);
 
   void VM::execute() {
+    READ_INT(ceos);
+
+    // section marker
+    assert(ceos == Section::Header);
+
     while (true) {
-      READ_INT(ceos);
+      READ_INT(section);
 
       if (m_bytecode.eof()) break;
 
-      // section marker
-      assert(ceos == Section::Header);
-
-      READ_INT(section);
       switch (section) {
         case Section::Strings:
           loadStrings();
@@ -99,12 +105,12 @@ namespace ceos {
   void VM::loadStrings() {
     while (true) {
       READ_INT(header);
-      m_bytecode.seekg(-4, m_bytecode.cur);
 
       if (header == Section::Header) {
         break;
       }
 
+      m_bytecode.seekg(-4, m_bytecode.cur);
       READ_STR(str);
       m_stringTable.push_back(str);
     }
@@ -124,11 +130,23 @@ namespace ceos {
         }
         case Opcode::call: {
           int nargs = stack_pop();
-          void (*fn)(VM &, int) = reinterpret_cast<__typeof__(fn)>(stack_pop());
 
+          uintptr_t (*fn)(VM &, unsigned) = reinterpret_cast<__typeof__(fn)>(stack_pop());
           assert(fn != nullptr);
+          --nargs; //pop'd the callee
 
-          fn(*this, nargs - 1);
+          stack_push(ebp);
+          ebp = esp;
+
+          auto ret = fn(*this, nargs);
+
+          esp = ebp;
+          ebp = stack_pop();
+          stack.resize(stack.size() - nargs);
+          esp -= nargs;
+
+          stack_push(ret);
+
           break;
         }
         case Opcode::load_string: {
