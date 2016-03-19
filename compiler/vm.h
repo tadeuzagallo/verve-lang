@@ -32,17 +32,12 @@ namespace ceos {
 
     private:
 
-      struct Function : std::binary_function<VM &, unsigned, uintptr_t> {
-        Function(std::string n, unsigned args) : name(n), nargs(args) {}
+      struct Function {
+        Function(std::string n, unsigned args, unsigned o) : offset(o), name(n), nargs(args) {}
 
-        uintptr_t operator()(VM &vm, __unused unsigned argv) {
-          vm.run(bytecode);
-          return vm.stack_pop();
-        }
-
+        unsigned offset;
         std::string name;
         unsigned nargs;
-        std::stringstream bytecode;
       };
 
       std::stringstream &m_bytecode;

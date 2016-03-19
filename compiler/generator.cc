@@ -129,6 +129,7 @@ namespace ceos {
     }
 
     generateNode(fn->arguments[3]);
+    write(Opcode::ret);
   }
 
   void Generator::generateIf(std::shared_ptr<AST::Call> iff) {
@@ -279,6 +280,10 @@ section_code:
       case Opcode::push_arg: {
         READ_INT(bytecode, arg);
         WRITE("push_arg $" << arg);
+        break;
+      }
+      case Opcode::ret: {
+        WRITE("ret");
         break;
       }
       default:

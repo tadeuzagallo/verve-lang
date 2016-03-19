@@ -106,8 +106,7 @@ namespace ceos {
   }
 
   uintptr_t VM::arg(unsigned index) {
-    // 2 because the pointers are always 1 ahead and ebp is on top of the stack
-    return stack[ebp - index - 2];
+    return stack[ebp - index - 4];
   }
 
   void VM::execute() {
@@ -155,7 +154,7 @@ namespace ceos {
       READ_STR(m_bytecode, name);
       READ_INT(m_bytecode, nargs);
 
-      m_userFunctions.push_back(Function(name, nargs));
+      m_userFunctions.push_back(Function(name, nargs, m_bytecode.tellg()));
       Function *fn = &m_userFunctions.back();
       m_functionTable[name] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
 
@@ -166,8 +165,6 @@ namespace ceos {
         } else if (opcode == Section::FunctionHeader) {
           break;
         }
-
-        fn->bytecode.write(reinterpret_cast<char *>(&opcode), sizeof(opcode));
       }
     }
   }
@@ -186,28 +183,38 @@ namespace ceos {
           int nargs = stack_pop();
           uintptr_t fn_address = stack_pop();
 
-          //assert(fn != nullptr);
           --nargs; //pop'd the callee
 
+          stack_push(bytecode.tellg());
+          stack_push(nargs);
           stack_push(ebp);
           ebp = esp;
 
           uintptr_t ret;
           if (IS_STR(fn_address)) {
             Function *fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
-            ret = (*fn)(*this, nargs);
+            bytecode.seekg(fn->offset);
+            break;
           } else {
             JSFunctionType fn = reinterpret_cast<__typeof__(fn)>(fn_address);
             ret = fn(*this, nargs);
+            stack_push(ret);
           }
+        }
+        case Opcode::ret: {
+          uintptr_t ret = stack_pop();
 
           esp = ebp;
+
           ebp = stack_pop();
+          unsigned nargs = stack_pop();
+          auto ret_addr = stack_pop();
+
           stack.resize(stack.size() - nargs);
           esp -= nargs;
 
           stack_push(ret);
-
+          bytecode.seekg(ret_addr);
           break;
         }
         case Opcode::load_string: {
