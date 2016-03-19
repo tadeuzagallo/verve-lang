@@ -223,14 +223,14 @@ namespace ceos {
         }
         case Opcode::jmp:  {
           READ_INT(bytecode, target);
-          bytecode.seekg(target, bytecode.cur);
+          bytecode.seekg(target * 4, bytecode.cur);
           break;
         }
         case Opcode::jz: {
           READ_INT(bytecode, target);
           int value = static_cast<int>(stack_pop());
           if (value == 0) {
-            bytecode.seekg(target, bytecode.cur);
+            bytecode.seekg(target * 4, bytecode.cur);
           }
           break;
         }

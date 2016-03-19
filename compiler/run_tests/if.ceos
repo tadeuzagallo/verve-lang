@@ -1,0 +1,7 @@
+(if (lt 1 0)
+    (print "true")
+    (print "false"))
+
+(if (gte 1 0)
+    (print (add 5 3))
+    (print "false"))

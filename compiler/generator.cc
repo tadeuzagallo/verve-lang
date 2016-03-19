@@ -122,14 +122,25 @@ namespace ceos {
     generateNode(iff->arguments[1]);
 
     emitOpcode(Opcode::jz);
-    write(9);
+    unsigned ifPos = m_output.tellp();
+    write(0);
 
     generateNode(iff->arguments[2]);
+    unsigned elsePos = m_output.tellp();
+    m_output.seekp(ifPos);
+    write((elsePos - ifPos + 4) / 4);
+    m_output.seekp(elsePos);
 
     if (size == 4) {
       emitOpcode(Opcode::jmp);
-      write(7);
+      unsigned x = m_output.tellp();
+      write(0);
       generateNode(iff->arguments[3]);
+
+      unsigned y = m_output.tellp();
+      m_output.seekp(x);
+      write((y - x + 4) / 4);
+      m_output.seekp(y);
     }
   }
 

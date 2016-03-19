@@ -20,7 +20,7 @@ class Opcode {
 #define READ_INT(FROM, TO) \
     int TO; \
     FROM.read(reinterpret_cast<char *>(&TO), sizeof(TO)); \
-    if (FROM.eof()) return
+    if (FROM.eof() || FROM.fail()) return
 
 #define READ_STR(FROM, TO) \
     std::stringstream TO##_; \
