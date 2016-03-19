@@ -282,7 +282,8 @@ section_code:
         break;
       }
       default:
-        break;
+        std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";
+        throw;
     }
   }
 #undef WRITE

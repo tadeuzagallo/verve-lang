@@ -241,7 +241,7 @@ namespace ceos {
         }
         default:
           std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";
-          exit(1);
+          throw;
       }
     }
   }
