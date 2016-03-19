@@ -33,6 +33,8 @@ namespace ceos {
       void generateProgram(std::shared_ptr<AST::Program>);
 
       void emitOpcode(Opcode::Type);
+      void emitJmp(Opcode::Type, std::shared_ptr<AST> &);
+      void emitJmp(Opcode::Type, std::shared_ptr<AST> &, int);
       void write(int);
       void write(const std::string &);
 

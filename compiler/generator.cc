@@ -62,6 +62,22 @@ namespace ceos {
     write(opcode);
   }
 
+  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node)  {
+    emitJmp(jmpType, node, 0);
+  }
+
+  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node, int skip)  {
+    emitOpcode(jmpType);
+    unsigned beforePos = m_output.tellp();
+    write(0); // placeholder
+
+    generateNode(node);
+    unsigned afterPos = m_output.tellp();
+    m_output.seekp(beforePos);
+    write((afterPos - beforePos) / 4 - 1 + skip);
+    m_output.seekp(afterPos);
+  }
+
   void Generator::generateCall(std::shared_ptr<AST::Call> call) {
     if (handleSpecialCall(call)) {
       return;
@@ -121,26 +137,10 @@ namespace ceos {
 
     generateNode(iff->arguments[1]);
 
-    emitOpcode(Opcode::jz);
-    unsigned ifPos = m_output.tellp();
-    write(0);
-
-    generateNode(iff->arguments[2]);
-    unsigned elsePos = m_output.tellp();
-    m_output.seekp(ifPos);
-    write((elsePos - ifPos + 4) / 4);
-    m_output.seekp(elsePos);
+    emitJmp(Opcode::jz, iff->arguments[2], size == 4 ? 2 : 0);
 
     if (size == 4) {
-      emitOpcode(Opcode::jmp);
-      unsigned x = m_output.tellp();
-      write(0);
-      generateNode(iff->arguments[3]);
-
-      unsigned y = m_output.tellp();
-      m_output.seekp(x);
-      write((y - x + 4) / 4);
-      m_output.seekp(y);
+      emitJmp(Opcode::jmp, iff->arguments[3]);
     }
   }
 
