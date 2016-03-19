@@ -124,6 +124,12 @@ namespace ceos {
           break;
         case Section::Functions:
           loadFunctions();
+
+          for (unsigned i = 0; i < m_userFunctions.size(); i++) {
+            Function *fn = &m_userFunctions[i];
+            m_functionTable[fn->name] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
+          }
+
           break;
         case Section::Text:
           run(m_bytecode);
@@ -155,8 +161,6 @@ namespace ceos {
       READ_INT(m_bytecode, nargs);
 
       m_userFunctions.push_back(Function(name, nargs, m_bytecode.tellg()));
-      Function *fn = &m_userFunctions.back();
-      m_functionTable[name] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
 
       while (true) {
         READ_INT(m_bytecode, opcode);
