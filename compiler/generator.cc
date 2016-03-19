@@ -183,14 +183,17 @@ namespace ceos {
     }
   }
 
+  static std::vector<std::string> strings;
+  static size_t width;
+  static std::string padding("  ");
   void Generator::disassemble(std::stringstream &bytecode) {
     size_t size = bytecode.str().length();
-    size_t width = std::ceil(std::log10(size + 1)) + 1;
+    width = std::ceil(std::log10(size + 1)) + 1;
 
 #define WRITE(...) \
     std::cout << "[" \
     <<  std::setfill(' ') << std::setw(width) << bytecode.tellg() \
-    << "] " << __VA_ARGS__ << "\n"
+    << "] " << padding << __VA_ARGS__ << "\n"
 
 read_section:
     READ_INT(bytecode, ceos);
@@ -200,15 +203,21 @@ read_section:
 
     switch (section) {
       case Section::Strings:
-        WRITE("section STRINGS:");
+        padding = "";
+        WRITE("STRINGS:");
+        padding = "  ";
         goto section_strings;
         break;
       case Section::Functions:
-        WRITE("section FUNCTIONS:");
+        padding = "";
+        WRITE("FUNCTIONS:");
+        padding = "  ";
         goto section_functions;
         break;
       case Section::Text:
-        WRITE("section TEXT:");
+        padding = "";
+        WRITE("TEXT:");
+        padding = "  ";
         goto section_code;
         break;
     }
@@ -220,8 +229,10 @@ section_strings:
       if (ceos == 0xCE05)  {
         goto read_section;
       }
+      static unsigned str_index = 0;
       READ_STR(bytecode, str);
-      WRITE(str);
+      strings.push_back(str);
+      WRITE("$" << str_index++ << ": " << str);
     }
 
 section_functions: {
@@ -230,7 +241,10 @@ section_functions: {
 
       READ_STR(bytecode, fn_name);
       READ_INT(bytecode, arg_count);
-      WRITE("fn " << fn_name << "(" << arg_count << "):");
+
+      padding = "";
+      WRITE("" << fn_name << "(" << arg_count << "):");
+      padding = "  ";
 
       while (true) {
         READ_INT(bytecode, header);
@@ -261,7 +275,7 @@ section_code:
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
-        WRITE("push $" << value);
+        WRITE("push 0x" << std::setbase(16) << value << std::setbase(10));
         break;
       }
       case Opcode::call: {
@@ -275,7 +289,7 @@ section_code:
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
-        WRITE("lookup $" << id);
+        WRITE("lookup $" << id << "(" << strings[id] << ")");
         break;
       }
       case Opcode::jmp:  {
@@ -285,7 +299,7 @@ section_code:
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE("jz " << target);
+        WRITE("jz [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::push_arg: {
