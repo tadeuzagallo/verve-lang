@@ -41,6 +41,18 @@ namespace ceos {
       if (callee == "defn") {
         m_ast->functions.push_back(call);
         return true;
+      } else if (callee == "lambda") {
+        static unsigned lambdaID = 0;
+        std::stringstream lambdaName;
+        lambdaName << "lambda$" << lambdaID++;
+        int lookup = m_ast->strings.size();
+        m_ast->strings.push_back(lambdaName.str());
+        emitOpcode(Opcode::lookup);
+        write(lookup);
+        write(0);
+        write(0);
+        m_ast->functions.push_back(call);
+        return true;
       } else if (callee == "if") {
         generateIf(call);
         return true;
@@ -124,17 +136,30 @@ namespace ceos {
   }
 
   void Generator::generateFunction(std::shared_ptr<AST::Call> fn) {
-    write(AST::asID(fn->arguments[1])->name);
-    write(AST::asCall(fn->arguments[2])->arguments.size());
+    auto callee = AST::asID(fn->arguments[0])->name;
+    int index;
+    if (callee == "defn") {
+      index = 1;
+      write(AST::asID(fn->arguments[1])->name);
+    } else if (callee == "lambda") {
+      index = 0;
+      static unsigned lambdaID = 0;
+      std::stringstream lambdaName;
+      lambdaName << "lambda$" << lambdaID++;
+      write(lambdaName.str());
+    } else {
+      throw;
+    }
+    write(AST::asCall(fn->arguments[index + 1])->arguments.size());
 
     Scope s(this);
 
-    int index = 0;
-    for (auto arg : AST::asCall(fn->arguments[2])->arguments) {
-      s.variables[AST::asID(arg)->name] = std::make_shared<AST::FunctionArgument>(index++);
+    int i = 0;
+    for (auto arg : AST::asCall(fn->arguments[index + 1])->arguments) {
+      s.variables[AST::asID(arg)->name] = std::make_shared<AST::FunctionArgument>(i++);
     }
 
-    generateNode(fn->arguments[3]);
+    generateNode(fn->arguments[index + 2]);
     write(Opcode::ret);
   }
 
@@ -159,6 +184,17 @@ namespace ceos {
     auto text = m_output.str();
     m_output = std::stringstream();
     
+    if (program->functions.size()) {
+      unsigned i = 0;
+      while (i < program->functions.size()) {
+        write(Section::FunctionHeader);
+        generateFunction(program->functions[i++]);
+      }
+    }
+
+    auto functions = m_output.str();
+    m_output = std::stringstream();
+
     if (program->strings.size()) {
       write(Section::Header);
       write(Section::Strings);
@@ -168,14 +204,11 @@ namespace ceos {
       }
     }
 
-    if (program->functions.size()) {
+
+    if (functions.length()) {
       write(Section::Header);
       write(Section::Functions);
-
-      for (auto fn : program->functions) {
-        write(Section::FunctionHeader);
-        generateFunction(fn);
-      }
+      m_output << functions;
     }
 
     if (text.length()) {
