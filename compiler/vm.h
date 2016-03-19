@@ -30,6 +30,10 @@ namespace ceos {
       void run();
 
       void stack_push(uintptr_t value) {
+        if (esp > stack.size() - 2) {
+          std::cerr << "Stack overflow\n";
+          throw;
+        }
         stack[esp++] = value;
       }
 
