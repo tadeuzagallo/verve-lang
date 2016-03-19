@@ -108,6 +108,8 @@ namespace ceos {
     } else {
       emitOpcode(Opcode::lookup);
       write(id->uid);
+      write(0);
+      write(0);
     }
   }
 
@@ -289,6 +291,8 @@ section_code:
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
+        READ_INT(bytecode, cache1);
+        READ_INT(bytecode, cache2);
         WRITE("lookup $" << id << "(" << strings[id] << ")");
         break;
       }

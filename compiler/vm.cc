@@ -219,8 +219,12 @@ namespace ceos {
         }
         case Opcode::lookup: {
           auto id = read<int>();
-          auto fnName = m_stringTable[id];
-          auto fnAddress = m_functionTable[fnName];
+          auto fnAddress = read<uintptr_t>();
+          if (!fnAddress) {
+            auto fnName = m_stringTable[id];
+            fnAddress = m_functionTable[fnName];
+            memcpy(m_bytecode + pc - sizeof(uintptr_t), &fnAddress, sizeof(uintptr_t));
+          }
           stack_push(fnAddress);
           break;
         }
