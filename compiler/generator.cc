@@ -211,11 +211,9 @@ namespace ceos {
       m_output << functions;
     }
 
-    if (text.length()) {
-      write(Section::Header);
-      write(Section::Text);
-      m_output << text;
-    }
+    write(Section::Header);
+    write(Section::Text);
+    m_output << text;
   }
 
   static std::vector<std::string> strings;
