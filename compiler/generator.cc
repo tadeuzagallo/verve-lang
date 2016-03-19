@@ -63,10 +63,10 @@ namespace ceos {
   }
 
   void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node)  {
-    emitJmp(jmpType, node, 0);
+    emitJmp(jmpType, node, false);
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node, int skip)  {
+  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node, bool skipNextJump)  {
     emitOpcode(jmpType);
     unsigned beforePos = m_output.tellp();
     write(0); // placeholder
@@ -74,7 +74,10 @@ namespace ceos {
     generateNode(node);
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
-    write((afterPos - beforePos) / 4 - 1 + skip);
+    write((afterPos - beforePos)
+        - 4 // sizeof the jump offset
+        + (skipNextJump ? 8 : 0) // special case for if with else
+    );
     m_output.seekp(afterPos);
   }
 
