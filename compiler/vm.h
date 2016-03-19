@@ -41,9 +41,10 @@ namespace ceos {
         return stack[ebp - index - 4];
       }
 
-      int readInt() {
-        int v = *(int *)(m_bytecode + pc);
-        pc += 4;
+      template<typename T>
+      T read() {
+        T v = *(T *)(m_bytecode + pc);
+        pc += sizeof(T);
         return v;
       }
 

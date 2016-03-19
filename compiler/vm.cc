@@ -94,13 +94,13 @@ namespace ceos {
   }
 
   void VM::execute() {
-    int header = readInt();
+    auto header = read<int>();
 
     // section marker
     assert(header == Section::Header);
 
     while (true) {
-      int section = readInt();
+      auto section = read<int>();
 
       if (pc > length) {
         return;
@@ -128,7 +128,7 @@ namespace ceos {
 
   void VM::loadStrings() {
     while (true) {
-      int header = readInt();
+      auto header = read<int>();
 
       if (header == Section::Header) {
         break;
@@ -141,17 +141,17 @@ namespace ceos {
   }
 
   void VM::loadFunctions() {
-    int initialHeader = readInt();
+    auto initialHeader = read<int>();
     assert(initialHeader == Section::FunctionHeader);
 
     while (true) {
       char *name = readStr();
-      int nargs = readInt();
+      auto nargs = read<int>();
 
       m_userFunctions.push_back(Function(name, nargs, pc));
 
       while (true) {
-        int opcode = readInt();
+        auto opcode = read<int>();
         if (opcode == Section::Header) {
           return;
         } else if (opcode == Section::FunctionHeader) {
@@ -163,7 +163,7 @@ namespace ceos {
 
   void VM::run() {
     while (true) {
-      int opcode = readInt();
+      auto opcode = read<int>();
 
       if (pc > length) {
         return;
@@ -171,7 +171,7 @@ namespace ceos {
 
       switch (opcode) {
         case Opcode::push: {
-          int value = readInt();
+          auto value = read<int>();
           stack_push(value);
           break;
         }
@@ -213,23 +213,24 @@ namespace ceos {
           break;
         }
         case Opcode::load_string: {
-          int stringID = readInt();
+          auto stringID = read<int>();
           stack_push(MASK_STR(reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
           break;
         }
         case Opcode::lookup: {
-          int id = readInt();
+          auto id = read<int>();
           auto fnName = m_stringTable[id];
-          stack_push(reinterpret_cast<uintptr_t>(m_functionTable[fnName]));
+          auto fnAddress = m_functionTable[fnName];
+          stack_push(fnAddress);
           break;
         }
         case Opcode::jmp:  {
-          int target = readInt();
+          auto target = read<int>();
           pc += target;
           break;
         }
         case Opcode::jz: {
-          int target = readInt();
+          auto target = read<int>();
           int value = static_cast<int>(stack_pop());
           if (value == 0) {
             pc += target;
@@ -237,7 +238,7 @@ namespace ceos {
           break;
         }
         case Opcode::push_arg: {
-          int index = readInt();
+          auto index = read<int>();
           stack_push(arg(index));
           break;
         }
