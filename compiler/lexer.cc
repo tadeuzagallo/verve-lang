@@ -8,7 +8,7 @@
 
 namespace ceos {
 
-  std::shared_ptr<Token> Lexer::nextToken(void) {
+  std::shared_ptr<Token> Lexer::nextToken() {
     char c ;
 
     do {
@@ -27,6 +27,12 @@ namespace ceos {
       case EOF:
         m_token = std::make_shared<Token>(Token::Type::END);
         break;
+
+      case '#':
+        do {
+          c = m_input.get();
+        } while (c != '\n');
+        return nextToken();
 
       case '"': {
         std::stringstream str;

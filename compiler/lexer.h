@@ -12,11 +12,11 @@ namespace ceos {
     public:
       Lexer(std::ifstream &input) : m_input(input), m_token(nullptr) {}
 
-      std::shared_ptr<Token> nextToken(void);
+      std::shared_ptr<Token> nextToken();
 
       std::shared_ptr<Token> token(Token::Type);
 
-      std::shared_ptr<Token> token(void);
+      std::shared_ptr<Token> token();
 
       void ensure(Token::Type);
 
