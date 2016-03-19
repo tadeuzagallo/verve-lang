@@ -3,6 +3,7 @@
 #include "sections.h"
 
 #include <iostream>
+#include <iomanip>
 
 namespace ceos {
   std::stringstream &Generator::generate() {
@@ -183,8 +184,13 @@ namespace ceos {
   }
 
   void Generator::disassemble(std::stringstream &bytecode) {
+    size_t size = bytecode.str().length();
+    size_t width = std::ceil(std::log10(size + 1)) + 1;
 
-#define WRITE(...) std::cout << __VA_ARGS__ << "\n"
+#define WRITE(...) \
+    std::cout << "[" \
+    <<  std::setfill(' ') << std::setw(width) << bytecode.tellg() \
+    << "] " << __VA_ARGS__ << "\n"
 
 read_section:
     READ_INT(bytecode, ceos);
@@ -249,6 +255,9 @@ section_code:
   }
 
   void Generator::printOpcode(std::stringstream &bytecode, Opcode::Type opcode) {
+    size_t size = bytecode.str().length();
+    size_t width = std::ceil(std::log10(size + 1)) + 1;
+
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
