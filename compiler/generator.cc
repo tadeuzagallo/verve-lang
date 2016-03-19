@@ -194,18 +194,20 @@ read_section:
 
     switch (section) {
       case Section::Strings:
+        WRITE("section STRINGS:");
         goto section_strings;
         break;
       case Section::Functions:
+        WRITE("section FUNCTIONS:");
         goto section_functions;
         break;
       case Section::Text:
+        WRITE("section TEXT:");
         goto section_code;
         break;
     }
 
 section_strings:
-    WRITE("section STRINGS:");
     while (true) {
       READ_INT(bytecode, ceos);
       bytecode.seekg(-4, bytecode.cur);
@@ -217,8 +219,6 @@ section_strings:
     }
 
 section_functions: {
-    WRITE("section FUNCTIONS:");
-
       READ_INT(bytecode, fn_header);
       assert(fn_header == Section::FunctionHeader);
 
@@ -241,7 +241,6 @@ section_functions: {
     }
 
 section_code:
-    WRITE("section TEXT:");
     while (true) {
       READ_INT(bytecode, opcode);
       printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
