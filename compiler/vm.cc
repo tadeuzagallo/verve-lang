@@ -42,6 +42,8 @@ BASIC_MATH(gt, >)
 BASIC_MATH(lte, <=)
 BASIC_MATH(gte, >=)
 BASIC_MATH(equals, ==)
+BASIC_MATH(_and, &&)
+BASIC_MATH(_or, ||)
 
 JS_FUNCTION(print) {
   for (unsigned i = 0; i < argv; i++) {
@@ -75,20 +77,22 @@ JS_FUNCTION(list) {
 namespace ceos {
 
   void VM::registerBuiltins() {
-#define REGISTER(NAME) JSFunctionType NAME##_ = NAME; m_functionTable[#NAME] = (uintptr_t)NAME##_
+#define REGISTER(NAME, FN) JSFunctionType NAME##_ = FN; m_functionTable[#NAME] = (uintptr_t)NAME##_
 
-    REGISTER(print);
-    REGISTER(list);
+    REGISTER(print, print);
+    REGISTER(list, list);
 
-    REGISTER(add);
-    REGISTER(sub);
-    REGISTER(mul);
-    REGISTER(div);
-    REGISTER(lt);
-    REGISTER(gt);
-    REGISTER(lte);
-    REGISTER(gte);
-    REGISTER(equals);
+    REGISTER(add, add);
+    REGISTER(sub, sub);
+    REGISTER(mul, mul);
+    REGISTER(div, div);
+    REGISTER(lt, lt);
+    REGISTER(gt, gt);
+    REGISTER(lte, lte);
+    REGISTER(gte, gte);
+    REGISTER(equals, equals);
+    REGISTER(and, _and);
+    REGISTER(or, _or);
 
 #undef REGISTER
   }
