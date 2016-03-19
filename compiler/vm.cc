@@ -93,30 +93,18 @@ namespace ceos {
 #undef REGISTER
   }
 
-  void VM::stack_push(uintptr_t value) {
-    esp++;
-    stack.push_back(value);
-  }
-
-  uintptr_t VM::stack_pop() {
-    uintptr_t value = stack.back();
-    stack.pop_back();
-    esp--;
-    return value;
-  }
-
-  uintptr_t VM::arg(unsigned index) {
-    return stack[ebp - index - 4];
-  }
-
   void VM::execute() {
-    READ_INT(m_bytecode, ceos);
+    int header = readInt();
 
     // section marker
-    assert(ceos == Section::Header);
+    assert(header == Section::Header);
 
     while (true) {
-      READ_INT(m_bytecode, section);
+      int section = readInt();
+
+      if (pc > length) {
+        return;
+      }
 
       switch (section) {
         case Section::Strings:
@@ -132,7 +120,7 @@ namespace ceos {
 
           break;
         case Section::Text:
-          run(m_bytecode);
+          run();
           break;
       }
     }
@@ -140,30 +128,30 @@ namespace ceos {
 
   void VM::loadStrings() {
     while (true) {
-      READ_INT(m_bytecode, header);
+      int header = readInt();
 
       if (header == Section::Header) {
         break;
       }
 
-      m_bytecode.seekg(-4, m_bytecode.cur);
-      READ_STR(m_bytecode, str);
+      pc -= 4;
+      char *str = readStr();
       m_stringTable.push_back(str);
     }
   }
 
   void VM::loadFunctions() {
-    READ_INT(m_bytecode, initialHeader);
+    int initialHeader = readInt();
     assert(initialHeader == Section::FunctionHeader);
 
     while (true) {
-      READ_STR(m_bytecode, name);
-      READ_INT(m_bytecode, nargs);
+      char *name = readStr();
+      int nargs = readInt();
 
-      m_userFunctions.push_back(Function(name, nargs, m_bytecode.tellg()));
+      m_userFunctions.push_back(Function(name, nargs, pc));
 
       while (true) {
-        READ_INT(m_bytecode, opcode);
+        int opcode = readInt();
         if (opcode == Section::Header) {
           return;
         } else if (opcode == Section::FunctionHeader) {
@@ -173,13 +161,17 @@ namespace ceos {
     }
   }
 
-  void VM::run(std::stringstream &bytecode) {
+  void VM::run() {
     while (true) {
-      READ_INT(bytecode, opcode);
+      int opcode = readInt();
+
+      if (pc > length) {
+        return;
+      }
 
       switch (opcode) {
         case Opcode::push: {
-          READ_INT(bytecode, value);
+          int value = readInt();
           stack_push(value);
           break;
         }
@@ -189,7 +181,7 @@ namespace ceos {
 
           --nargs; //pop'd the callee
 
-          stack_push(bytecode.tellg());
+          stack_push(pc);
           stack_push(nargs);
           stack_push(ebp);
           ebp = esp;
@@ -197,7 +189,7 @@ namespace ceos {
           uintptr_t ret;
           if (IS_STR(fn_address)) {
             Function *fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
-            bytecode.seekg(fn->offset);
+            pc = fn->offset;
             break;
           } else {
             JSFunctionType fn = reinterpret_cast<__typeof__(fn)>(fn_address);
@@ -214,39 +206,38 @@ namespace ceos {
           unsigned nargs = stack_pop();
           auto ret_addr = stack_pop();
 
-          stack.resize(stack.size() - nargs);
           esp -= nargs;
 
           stack_push(ret);
-          bytecode.seekg(ret_addr);
+          pc = ret_addr;
           break;
         }
         case Opcode::load_string: {
-          READ_INT(bytecode, stringID);
+          int stringID = readInt();
           stack_push(MASK_STR(reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
           break;
         }
         case Opcode::lookup: {
-          READ_INT(bytecode, id);
+          int id = readInt();
           auto fnName = m_stringTable[id];
           stack_push(reinterpret_cast<uintptr_t>(m_functionTable[fnName]));
           break;
         }
         case Opcode::jmp:  {
-          READ_INT(bytecode, target);
-          bytecode.seekg(target, bytecode.cur);
+          int target = readInt();
+          pc += target;
           break;
         }
         case Opcode::jz: {
-          READ_INT(bytecode, target);
+          int target = readInt();
           int value = static_cast<int>(stack_pop());
           if (value == 0) {
-            bytecode.seekg(target, bytecode.cur);
+            pc += target;
           }
           break;
         }
         case Opcode::push_arg: {
-          READ_INT(bytecode, index);
+          int index = readInt();
           stack_push(arg(index));
           break;
         }

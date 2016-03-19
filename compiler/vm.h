@@ -13,7 +13,13 @@ namespace ceos {
 
   class VM {
     public:
-      VM(std::stringstream &bytecode): m_bytecode(bytecode) {
+      VM(std::stringstream &bs):
+        stack(2048),
+        pc(0) {
+        std::string bc = bs.str();
+        length = bc.length();
+        m_bytecode = (uint8_t *)malloc(length);
+        memcpy(m_bytecode, bc.data(), length);
         registerBuiltins();
       }
 
@@ -21,14 +27,37 @@ namespace ceos {
       void execute();
       void loadStrings();
       void loadFunctions();
-      void run(std::stringstream &);
-      void stack_push(uintptr_t);
-      uintptr_t stack_pop();
-      uintptr_t arg(unsigned);
+      void run();
+
+      void stack_push(uintptr_t value) {
+        stack[esp++] = value;
+      }
+
+      uintptr_t stack_pop() {
+        return stack[--esp];
+      }
+
+      uintptr_t arg(unsigned index) {
+        return stack[ebp - index - 4];
+      }
+
+      int readInt() {
+        int v = *(int *)(m_bytecode + pc);
+        pc += 4;
+        return v;
+      }
+
+      char *readStr() {
+        char *v = (char *)(m_bytecode + pc);
+        pc += strlen(v) + 1;
+        return v;
+      }
       
       std::vector<uintptr_t> stack;
       uintptr_t ebp;
       uintptr_t esp;
+      uintptr_t pc;
+      size_t length;
 
     private:
 
@@ -40,7 +69,7 @@ namespace ceos {
         unsigned nargs;
       };
 
-      std::stringstream &m_bytecode;
+      uint8_t *m_bytecode;
       std::vector<std::string> m_stringTable;
       std::unordered_map<std::string, uintptr_t> m_functionTable;
       std::vector<Function> m_userFunctions;
