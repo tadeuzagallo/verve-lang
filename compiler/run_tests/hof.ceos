@@ -1,0 +1,10 @@
+(defn math (fn a b) (fn a b))
+
+(print (math sub 2 1))
+(print (math add 2 1))
+(print (math mul 2 1))
+(print (math div 6 3))
+
+(defn square (a) (mul a a))
+
+(print (math square 6 3))
