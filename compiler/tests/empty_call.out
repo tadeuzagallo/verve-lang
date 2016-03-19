@@ -1,6 +1,0 @@
-section STRINGS:
-foo
-section TEXT:
-lookup $0
-push $1
-call

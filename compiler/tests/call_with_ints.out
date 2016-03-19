@@ -1,8 +1,0 @@
-section STRINGS:
-bar
-section TEXT:
-push $5
-push $4
-lookup $0
-push $3
-call

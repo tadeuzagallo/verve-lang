@@ -19,25 +19,13 @@ $(TARGET): $(OBJECTS)
 
 # TESTS
 
-TESTS = $(patsubst %.in,%.test,$(wildcard tests/*.in))
+TESTS = $(patsubst %.ceos,%.test,$(wildcard tests/*.ceos))
 
 .PHONY: test tests/%.test
 
 test: $(TESTS)
 
-tests/%.test: tests/%.in tests/%.out $(TARGET)
-	-@./$(TARGET) -d $< > $@_; \
-	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
-
-# RUN TESTS
-
-RUN_TESTS = $(patsubst %.ceos,%.test,$(wildcard run_tests/*.ceos))
-
-.PHONY: run_test run_tests/%.test
-
-run_test: $(RUN_TESTS)
-
-run_tests/%.test: run_tests/%.ceos run_tests/%.out $(TARGET)
+tests/%.test: tests/%.ceos tests/%.out $(TARGET)
 	-@./$(TARGET) $< > $@_; \
 	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
 

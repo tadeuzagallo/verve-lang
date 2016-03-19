@@ -243,7 +243,7 @@ section_functions: {
       READ_INT(bytecode, arg_count);
 
       padding = "";
-      WRITE("" << fn_name << "(" << arg_count << "):");
+      WRITE(fn_name << "(" << arg_count << "):");
       padding = "  ";
 
       while (true) {

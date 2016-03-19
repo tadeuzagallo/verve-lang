@@ -1,1 +1,0 @@
-(defn square (n) (mul n n))
