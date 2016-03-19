@@ -10,3 +10,4 @@ push_arg $0
 lookup $3
 push $3
 call
+ret

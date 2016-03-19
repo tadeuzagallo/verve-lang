@@ -8,12 +8,12 @@ push $1
 lookup $1
 push $3
 call
-jz 9
+jz 36
 push $1
 lookup $2
 push $2
 call
-jmp 7
+jmp 28
 push $2
 lookup $2
 push $2
