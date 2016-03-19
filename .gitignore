@@ -2,3 +2,4 @@
 compiler/ceos-build
 compiler/ceos-build.dSYM
 **/*.test_
+**/failed_patches
