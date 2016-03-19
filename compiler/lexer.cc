@@ -40,12 +40,14 @@ namespace ceos {
           str.put(c);
         }
         m_token = std::make_shared<Token::String>(str.str());
+        break;
       }
 
       case '\'': {
         int number = m_input.get();
         assert(m_input.get() == '\'');
         m_token = std::make_shared<Token::Number>(number);
+        break;
       }
 
       default:
