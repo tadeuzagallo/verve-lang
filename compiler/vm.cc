@@ -180,10 +180,8 @@ namespace ceos {
           break;
         }
         case Opcode::call: {
-          int nargs = stack_pop();
+          auto nargs = read<int>();
           uintptr_t fn_address = stack_pop();
-
-          --nargs; //pop'd the callee
 
           stack_push(pc);
           stack_push(nargs);

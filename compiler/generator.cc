@@ -103,9 +103,8 @@ namespace ceos {
       generateNode(call->arguments[--i]);
     }
 
-    emitOpcode(Opcode::push);
-    write(call->arguments.size());
     emitOpcode(Opcode::call);
+    write(call->arguments.size() - 1); // don't include the callee
   }
 
   void Generator::generateNumber(std::shared_ptr<AST::Number> number) {
