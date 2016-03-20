@@ -5,6 +5,6 @@
 (print (math mul 2 1))
 (print (math div 6 3))
 
-(defn square (a) (mul a a))
+(defn foo (a b) (add (mul a a) (mul b b)))
 
-(print (math square 6 3))
+(print (math foo 6 3))
