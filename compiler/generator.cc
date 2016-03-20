@@ -137,18 +137,21 @@ namespace ceos {
   void Generator::generateFunction(std::shared_ptr<AST::Call> fn) {
     auto callee = AST::asID(fn->arguments[0])->name;
     int index;
+    std::string name;
     if (callee == "defn") {
       index = 1;
-      write(AST::asID(fn->arguments[1])->name);
+      name = AST::asID(fn->arguments[1])->name;
     } else if (callee == "lambda") {
       index = 0;
       static unsigned lambdaID = 0;
       std::stringstream lambdaName;
       lambdaName << "lambda$" << lambdaID++;
-      write(lambdaName.str());
+      name = lambdaName.str();
     } else {
       throw;
     }
+    auto pos = std::find(m_ast->strings.begin(), m_ast->strings.end(), name);
+    write(pos - m_ast->strings.begin());
     write(AST::asCall(fn->arguments[index + 1])->arguments.size());
 
     Scope s(this);
@@ -271,11 +274,11 @@ section_functions: {
       READ_INT(bytecode, fn_header);
       assert(fn_header == Section::FunctionHeader);
 
-      READ_STR(bytecode, fn_name);
+      READ_INT(bytecode, fn_id);
       READ_INT(bytecode, arg_count);
 
       padding = "";
-      WRITE(9 + fn_name.length(), fn_name << "(" << arg_count << "):");
+      WRITE(8, strings[fn_id] << "(" << arg_count << "):");
       padding = "  ";
 
       while (true) {

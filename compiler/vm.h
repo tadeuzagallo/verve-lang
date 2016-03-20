@@ -67,10 +67,14 @@ namespace ceos {
     private:
 
       struct Function {
-        Function(std::string n, unsigned args, unsigned o) : offset(o), name(n), nargs(args) {}
+        Function(unsigned i, unsigned args, unsigned o) : offset(o), id(i), nargs(args) {}
+
+        std::string &name(VM *vm) {
+          return vm->m_stringTable[id];
+        }
 
         unsigned offset;
-        std::string name;
+        unsigned id;
         unsigned nargs;
       };
 

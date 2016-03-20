@@ -119,7 +119,7 @@ namespace ceos {
 
           for (unsigned i = 0; i < m_userFunctions.size(); i++) {
             Function *fn = &m_userFunctions[i];
-            m_functionTable[fn->name] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
+            m_functionTable[fn->name(this)] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
           }
 
           break;
@@ -149,10 +149,10 @@ namespace ceos {
     assert(initialHeader == Section::FunctionHeader);
 
     while (true) {
-      char *name = readStr();
+      auto fnid = read<int>();
       auto nargs = read<int>();
 
-      m_userFunctions.push_back(Function(name, nargs, pc));
+      m_userFunctions.push_back(Function(fnid, nargs, pc));
 
       while (true) {
         auto opcode = read<int>();
