@@ -222,9 +222,9 @@ namespace ceos {
     size_t size = bytecode.str().length();
     width = std::ceil(std::log10(size + 1)) + 1;
 
-#define WRITE(...) \
+#define WRITE(OFFSET, ...) \
     std::cout << "[" \
-    <<  std::setfill(' ') << std::setw(width) << bytecode.tellg() \
+    <<  std::setfill(' ') << std::setw(width) << ((int)bytecode.tellg() - (OFFSET)) \
     << "] " << padding << __VA_ARGS__ << "\n"
 
 read_section:
@@ -236,19 +236,19 @@ read_section:
     switch (section) {
       case Section::Strings:
         padding = "";
-        WRITE("STRINGS:");
+        WRITE(8, "STRINGS:");
         padding = "  ";
         goto section_strings;
         break;
       case Section::Functions:
         padding = "";
-        WRITE("FUNCTIONS:");
+        WRITE(8, "FUNCTIONS:");
         padding = "  ";
         goto section_functions;
         break;
       case Section::Text:
         padding = "";
-        WRITE("TEXT:");
+        WRITE(8, "TEXT:");
         padding = "  ";
         goto section_code;
         break;
@@ -264,7 +264,7 @@ section_strings:
       static unsigned str_index = 0;
       READ_STR(bytecode, str);
       strings.push_back(str);
-      WRITE("$" << str_index++ << ": " << str);
+      WRITE(str.length() + 1, "$" << str_index++ << ": " << str);
     }
 
 section_functions: {
@@ -275,7 +275,7 @@ section_functions: {
       READ_INT(bytecode, arg_count);
 
       padding = "";
-      WRITE(fn_name << "(" << arg_count << "):");
+      WRITE(9 + fn_name.length(), fn_name << "(" << arg_count << "):");
       padding = "  ";
 
       while (true) {
@@ -307,42 +307,43 @@ section_code:
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
-        WRITE("push 0x" << std::setbase(16) << value << std::setbase(10));
+        WRITE(8, "push 0x" << std::setbase(16) << value << std::setbase(10));
         break;
       }
       case Opcode::call: {
-        WRITE("call");
+        READ_INT(bytecode, nargs);
+        WRITE(8, "call (" << nargs << ")");
         break;
       }
       case Opcode::load_string: {
         READ_INT(bytecode, stringID);
-        WRITE("load_string $" << stringID);
+        WRITE(8, "load_string $" << stringID);
         break;
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
         READ_INT(bytecode, cache1);
         READ_INT(bytecode, cache2);
-        WRITE("lookup $" << id << "(" << strings[id] << ")");
+        WRITE(16, "lookup $" << id << "(" << strings[id] << ")");
         break;
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE("jmp " << target);
+        WRITE(8, "jmp [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE("jz [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(8, "jz [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::push_arg: {
         READ_INT(bytecode, arg);
-        WRITE("push_arg $" << arg);
+        WRITE(8, "push_arg $" << arg);
         break;
       }
       case Opcode::ret: {
-        WRITE("ret");
+        WRITE(4, "ret");
         break;
       }
       default:
