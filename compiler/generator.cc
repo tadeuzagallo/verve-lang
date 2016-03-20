@@ -158,7 +158,9 @@ namespace ceos {
 
     int i = 0;
     for (auto arg : AST::asCall(fn->arguments[index + 1])->arguments) {
-      s.variables[AST::asID(arg)->name] = std::make_shared<AST::FunctionArgument>(i++);
+      std::string &name = AST::asID(arg)->name;
+      s.variables[name] = std::make_shared<AST::FunctionArgument>(i++);
+      write(std::find(m_ast->strings.begin(), m_ast->strings.end(), name) - m_ast->strings.begin());
     }
 
     generateNode(fn->arguments[index + 2]);
@@ -277,8 +279,15 @@ section_functions: {
       READ_INT(bytecode, fn_id);
       READ_INT(bytecode, arg_count);
 
+      std::stringstream args;
+      for (int i = 0; i < arg_count; i++) {
+        READ_INT(bytecode, argID);
+        args << "$" << i << ": " << strings[argID];
+        if (i < arg_count - 1) args << ", ";
+      }
+
       padding = "";
-      WRITE(8, strings[fn_id] << "(" << arg_count << "):");
+      WRITE(8, strings[fn_id] << "(" << args.str() << "):");
       padding = "  ";
 
       while (true) {

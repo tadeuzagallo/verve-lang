@@ -20,6 +20,7 @@ namespace ceos {
         length = bc.length();
         m_bytecode = (uint8_t *)malloc(length);
         memcpy(m_bytecode, bc.data(), length);
+        m_scope = std::make_shared<Scope>(nullptr);
         registerBuiltins();
       }
 
@@ -67,21 +68,41 @@ namespace ceos {
     private:
 
       struct Function {
-        Function(unsigned i, unsigned args, unsigned o) : offset(o), id(i), nargs(args) {}
+        Function(unsigned i, unsigned args, unsigned o, std::vector<std::string *> &&a) : offset(o), id(i), nargs(args), args(a) {}
 
         std::string &name(VM *vm) {
           return vm->m_stringTable[id];
         }
 
+        std::string &arg(unsigned i) {
+          return *args[i];
+        }
+
         unsigned offset;
         unsigned id;
         unsigned nargs;
+        std::vector<std::string *> args;
+      };
+
+      struct Scope {
+        Scope(std::shared_ptr<Scope> p) : parent(p) { }
+
+        uintptr_t get(std::string &var) {
+          uintptr_t v;
+          if ((v = table[var])) return v;
+          else if (parent) return parent->get(var);
+          else return 0;
+        }
+
+        std::shared_ptr<Scope> parent;
+        std::unordered_map<std::string, uintptr_t> table;
       };
 
       uint8_t *m_bytecode;
       std::vector<std::string> m_stringTable;
       std::unordered_map<std::string, uintptr_t> m_functionTable;
       std::vector<Function> m_userFunctions;
+      std::shared_ptr<Scope> m_scope;
   };
 }
 

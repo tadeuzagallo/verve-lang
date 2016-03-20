@@ -77,7 +77,7 @@ JS_FUNCTION(list) {
 namespace ceos {
 
   void VM::registerBuiltins() {
-#define REGISTER(NAME, FN) JSFunctionType NAME##_ = FN; m_functionTable[#NAME] = (uintptr_t)NAME##_
+#define REGISTER(NAME, FN) JSFunctionType NAME##_ = FN; m_scope->table[#NAME] = (uintptr_t)NAME##_
 
     REGISTER(print, print);
     REGISTER(list, list);
@@ -119,7 +119,7 @@ namespace ceos {
 
           for (unsigned i = 0; i < m_userFunctions.size(); i++) {
             Function *fn = &m_userFunctions[i];
-            m_functionTable[fn->name(this)] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
+            m_scope->table[fn->name(this)] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
           }
 
           break;
@@ -149,10 +149,15 @@ namespace ceos {
     assert(initialHeader == Section::FunctionHeader);
 
     while (true) {
-      auto fnid = read<int>();
-      auto nargs = read<int>();
+      auto fnid = read<unsigned>();
+      auto nargs = read<unsigned>();
 
-      m_userFunctions.push_back(Function(fnid, nargs, pc));
+      std::vector<std::string *> args;
+      for (unsigned i = 0; i < nargs; i++) {
+        auto argID = read<unsigned>();
+        args.push_back(&m_stringTable[argID]);
+      }
+      m_userFunctions.push_back(Function(fnid, nargs, pc, std::move(args)));
 
       while (true) {
         auto opcode = read<int>();
@@ -180,8 +185,10 @@ namespace ceos {
           break;
         }
         case Opcode::call: {
-          auto nargs = read<int>();
+          auto nargs = read<unsigned>();
           uintptr_t fn_address = stack_pop();
+
+          m_scope = std::make_shared<Scope>(m_scope);
 
           stack_push(pc);
           stack_push(nargs);
@@ -191,6 +198,10 @@ namespace ceos {
           uintptr_t ret;
           if (IS_STR(fn_address)) {
             Function *fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
+            for (unsigned i = 0; i < nargs; i++) {
+              m_scope->table[fn->arg(i)] = arg(i);
+            }
+
             pc = fn->offset;
             break;
           } else {
@@ -212,6 +223,8 @@ namespace ceos {
 
           stack_push(ret);
           pc = ret_addr;
+
+          m_scope = m_scope->parent;
           break;
         }
         case Opcode::load_string: {
@@ -224,7 +237,7 @@ namespace ceos {
           auto fnAddress = read<uintptr_t>();
           if (!fnAddress) {
             auto fnName = m_stringTable[id];
-            fnAddress = m_functionTable[fnName];
+            fnAddress = m_scope->get(fnName);
             memcpy(m_bytecode + pc - sizeof(uintptr_t), &fnAddress, sizeof(uintptr_t));
           }
           stack_push(fnAddress);
