@@ -91,10 +91,13 @@ namespace ceos {
         Scope(std::shared_ptr<Scope> p, std::shared_ptr<Scope> o) : parent(p) , other(o) { }
 
         uintptr_t get(std::string &var) {
-          uintptr_t v;
-          if ((v = table[var])) return v;
-          else if (parent) return parent->get(var);
-          else return 0;
+          std::unordered_map<std::string, uintptr_t>::iterator v;
+          if ((v = table.find(var)) != table.end()) return v->second;
+          else if (parent.get() != this) return parent->get(var);
+          else {
+            std::cerr << "Symbol not found: " << var << "\n";
+            throw;
+          }
         }
 
         std::shared_ptr<Scope> parent;
