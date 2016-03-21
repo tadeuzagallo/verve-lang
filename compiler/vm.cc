@@ -86,9 +86,8 @@ JS_FUNCTION(substr) {
     } else {
       substring = str->substr(vm.arg(1), vm.arg(2));
     }
-    auto s = (std::string *)malloc(sizeof(substring));
-    memmove(s, &substring, sizeof(substring));
-    return MASK(STR, reinterpret_cast<uintptr_t>(&s));
+    auto s = new std::string(substring);
+    return MASK(STR, reinterpret_cast<uintptr_t>(s));
   } else {
     throw;
   }
