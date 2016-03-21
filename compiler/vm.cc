@@ -41,17 +41,21 @@ JS_FUNCTION(print) {
   for (unsigned i = 0; i < argv; i++) {
     uintptr_t arg = vm.arg(i);
     if (IS_MASK(STR, arg)) {
-      std::cout << (reinterpret_cast<std::string *>(UNMASK(STR, arg)))->c_str() << "\n";
+      std::cout << (reinterpret_cast<std::string *>(UNMASK(STR, arg)))->c_str();
     } else if (IS_MASK(ARRAY, arg)) {
       std::vector<uintptr_t> *array = reinterpret_cast<__typeof__(array)>(UNMASK(ARRAY, arg));
       for (auto a : *array) {
         std::cout << a << " ";
       }
-      std::cout << "\n";
     } else {
-      std::cout << static_cast<int>(arg) << "\n";
+      std::cout << static_cast<int>(arg);
+    }
+
+    if (i < argv - 1) {
+      std::cout << " ";
     }
   }
+  std::cout << "\n";
 
   return 0;
 }
