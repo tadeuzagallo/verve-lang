@@ -180,31 +180,24 @@ namespace ceos {
           auto nargs = read<unsigned>();
           uintptr_t fn_address = stack_pop();
 
-          m_scope = std::make_shared<Scope>(m_scope);
-
           stack_push(pc);
           stack_push(nargs);
           stack_push(ebp);
           ebp = esp;
 
           uintptr_t ret;
-          if (IS_MASK(STR, fn_address) || IS_MASK(ARRAY, fn_address)) {
-            Function *fn;
-            if (IS_MASK(STR, fn_address)) {
-              fn = reinterpret_cast<__typeof__(fn)>(UNMASK(STR, fn_address));
-            } else {
-              auto lambda = reinterpret_cast<Lambda *>(UNMASK(ARRAY, fn_address));
-              fn = lambda->fn;
-              m_scope = std::make_shared<Scope>(lambda->scope, m_scope->parent);
-            }
-
+          if (IS_MASK(ARRAY, fn_address)) {
+            auto lambda = reinterpret_cast<Lambda *>(UNMASK(ARRAY, fn_address));
+            m_scope = std::make_shared<Scope>(lambda->scope, m_scope->parent);
             for (unsigned i = 0; i < nargs; i++) {
-              m_scope->table[fn->arg(i)] = arg(i);
+              m_scope->table[lambda->fn->arg(i)] = arg(i);
             }
 
-            pc = fn->offset;
+            pc = lambda->fn->offset;
             break;
           } else {
+            m_scope = std::make_shared<Scope>(m_scope);
+
             JSFunctionType fn = reinterpret_cast<__typeof__(fn)>(fn_address);
             ret = fn(*this, nargs);
             stack_push(ret);
@@ -272,6 +265,12 @@ namespace ceos {
           lambda->fn = reinterpret_cast<Function *>(UNMASK(STR, fnAddress));
           lambda->scope = m_scope;
           stack_push(MASK(ARRAY, reinterpret_cast<uintptr_t>(lambda)));
+          break;
+        }
+        case Opcode::bind: {
+          auto address = stack_pop();
+          auto lambda = reinterpret_cast<Lambda *>(UNMASK(ARRAY, address));
+          m_scope->table[lambda->fn->name(this)] = address;
           break;
         }
         default:

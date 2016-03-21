@@ -7,6 +7,7 @@ class Opcode {
   public:
     ENUM(Type,
       ret,
+      bind,
       push,
       call,
       jz,

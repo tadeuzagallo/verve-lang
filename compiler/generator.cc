@@ -38,20 +38,29 @@ namespace ceos {
     if (call->arguments[0]->type == AST::Type::ID) {
       std::string callee = AST::asID(call->arguments[0])->name;
 
-      if (callee == "defn") {
-        m_ast->functions.push_back(call);
-        return true;
-      } else if (callee == "lambda") {
-        static unsigned lambdaID = 0;
-        std::stringstream lambdaName;
-        lambdaName << "lambda$" << lambdaID++;
-        int lookup = m_ast->strings.size();
-        m_ast->strings.push_back(lambdaName.str());
+      if (callee == "defn" || callee == "lambda") {
+        int lookup;
+        if (callee == "lambda") {
+          static unsigned lambdaID = 0;
+          std::stringstream lambdaName;
+          lambdaName << "lambda$" << lambdaID++;
+          lookup = m_ast->strings.size();
+          m_ast->strings.push_back(lambdaName.str());
+        } else {
+          auto name = AST::asID(call->arguments[1])->name;
+          lookup = INDEX_OF(m_ast->strings, name);
+        }
+
         emitOpcode(Opcode::lookup);
         write(lookup);
         write(0);
         write(0);
         emitOpcode(Opcode::create_lambda);
+
+        if (callee == "defn") {
+          emitOpcode(Opcode::bind);
+        }
+
         m_ast->functions.push_back(call);
         return true;
       } else if (callee == "if") {
@@ -188,7 +197,7 @@ namespace ceos {
 
     auto text = m_output.str();
     m_output = std::stringstream();
-    
+
     if (program->functions.size()) {
       unsigned i = 0;
       while (i < program->functions.size()) {
@@ -363,6 +372,9 @@ section_code:
         WRITE(4, "ret");
         break;
       }
+      case Opcode::bind:
+        WRITE(4, "bind");
+        break;
       default:
         std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";
         throw;

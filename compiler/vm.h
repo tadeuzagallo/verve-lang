@@ -21,6 +21,7 @@ namespace ceos {
         m_bytecode = (uint8_t *)malloc(length);
         memcpy(m_bytecode, bc.data(), length);
         m_scope = std::make_shared<Scope>(nullptr);
+        m_scope->parent = m_scope; // global scope
         registerBuiltins();
       }
 
