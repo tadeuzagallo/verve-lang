@@ -173,7 +173,10 @@ namespace ceos {
       write(INDEX_OF(m_ast->strings, name));
     }
 
-    generateNode(fn->arguments[index + 2]);
+    for (unsigned ii = index + 2; ii < fn->arguments.size(); ii++) {
+      generateNode(fn->arguments[ii]);
+    }
+
     write(Opcode::ret);
   }
 
