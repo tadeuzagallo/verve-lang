@@ -196,8 +196,16 @@ namespace ceos {
           ebp = esp;
 
           uintptr_t ret;
-          if (IS_STR(fn_address)) {
-            Function *fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
+          if (IS_STR(fn_address) || IS_ARRAY(fn_address)) {
+            Function *fn;
+            if (IS_STR(fn_address)) {
+              fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
+            } else {
+              auto lambda = reinterpret_cast<Lambda *>(UNMASK_ARRAY(fn_address));
+              fn = lambda->fn;
+              m_scope = std::make_shared<Scope>(lambda->scope, m_scope->parent);
+            }
+
             for (unsigned i = 0; i < nargs; i++) {
               m_scope->table[fn->arg(i)] = arg(i);
             }
@@ -224,7 +232,11 @@ namespace ceos {
           stack_push(ret);
           pc = ret_addr;
 
-          m_scope = m_scope->parent;
+          if (m_scope->other) {
+            m_scope = m_scope->other;
+          } else {
+            m_scope = m_scope->parent;
+          }
           break;
         }
         case Opcode::load_string: {
@@ -259,6 +271,15 @@ namespace ceos {
         case Opcode::push_arg: {
           auto index = read<int>();
           stack_push(arg(index));
+          break;
+        }
+        case Opcode::create_lambda: {
+          auto lambda = new Lambda();
+          auto fnAddress = stack_pop();
+          assert(IS_STR(fnAddress));
+          lambda->fn = reinterpret_cast<Function *>(UNMASK_STR(fnAddress));
+          lambda->scope = m_scope;
+          stack_push(MASK_ARRAY(reinterpret_cast<uintptr_t>(lambda)));
           break;
         }
         default:

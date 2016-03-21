@@ -51,6 +51,7 @@ namespace ceos {
         write(lookup);
         write(0);
         write(0);
+        emitOpcode(Opcode::create_lambda);
         m_ast->functions.push_back(call);
         return true;
       } else if (callee == "if") {
@@ -337,6 +338,10 @@ section_code:
         READ_INT(bytecode, cache1);
         READ_INT(bytecode, cache2);
         WRITE(16, "lookup $" << id << "(" << strings[id] << ")");
+        break;
+      }
+      case Opcode::create_lambda: {
+        WRITE(4, "create_lambda");
         break;
       }
       case Opcode::jmp:  {

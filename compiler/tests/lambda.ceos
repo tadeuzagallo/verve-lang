@@ -1,1 +1,15 @@
 ((lambda (n) (print n)) "hello")
+
+((lambda (fact) 
+  (print (fact 5))
+)
+((lambda (x) (x x))
+  (lambda (fact)
+    (lambda (n)
+      (if (lte n 2)
+          n
+          (mul n ((fact fact) (sub n 1)))
+      )
+    )
+  )
+))

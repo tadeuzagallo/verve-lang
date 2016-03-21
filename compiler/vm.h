@@ -87,6 +87,8 @@ namespace ceos {
       struct Scope {
         Scope(std::shared_ptr<Scope> p) : parent(p) { }
 
+        Scope(std::shared_ptr<Scope> p, std::shared_ptr<Scope> o) : parent(p) , other(o) { }
+
         uintptr_t get(std::string &var) {
           uintptr_t v;
           if ((v = table[var])) return v;
@@ -95,7 +97,13 @@ namespace ceos {
         }
 
         std::shared_ptr<Scope> parent;
+        std::shared_ptr<Scope> other;
         std::unordered_map<std::string, uintptr_t> table;
+      };
+
+      struct Lambda {
+        Function *fn;
+        std::shared_ptr<Scope> scope;
       };
 
       uint8_t *m_bytecode;
