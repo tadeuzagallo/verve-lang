@@ -151,8 +151,8 @@ namespace ceos {
     } else {
       throw;
     }
-    auto pos = std::find(m_ast->strings.begin(), m_ast->strings.end(), name);
-    write(pos - m_ast->strings.begin());
+
+    write(INDEX_OF(m_ast->strings, name));
     write(AST::asCall(fn->arguments[index + 1])->arguments.size());
 
     Scope s(this);
@@ -161,7 +161,7 @@ namespace ceos {
     for (auto arg : AST::asCall(fn->arguments[index + 1])->arguments) {
       std::string &name = AST::asID(arg)->name;
       s.variables[name] = std::make_shared<AST::FunctionArgument>(i++);
-      write(std::find(m_ast->strings.begin(), m_ast->strings.end(), name) - m_ast->strings.begin());
+      write(INDEX_OF(m_ast->strings, name));
     }
 
     generateNode(fn->arguments[index + 2]);

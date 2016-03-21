@@ -50,3 +50,5 @@
 
 #define ENUM(...) ENUM_COMMON(, __VA_ARGS__)
 #define ENUM_CLASS(...) ENUM_COMMON(class, __VA_ARGS__)
+
+#define INDEX_OF(ARRAY, ITEM) (std::find(ARRAY.begin(), ARRAY.end(), ITEM) - ARRAY.begin())
