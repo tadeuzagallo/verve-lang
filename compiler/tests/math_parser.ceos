@@ -4,11 +4,11 @@
         (if (and 
             (gte c '0')
             (lte c '9'))
-          (parseFactorR (add (mul 10 sum) (sub '0' c)) (substr expr 1))
-          # (list sum expr)
+          (parseFactorR (add (mul 10 sum) (sub c '0')) (substr expr 1))
+          (list sum expr)
         )
       ) (at expr 0))
-      sum
+      (list sum expr)
   )
 )
 
@@ -17,7 +17,7 @@
 )
 
 (defn evalExpr (e) 
-  (parseFactor e)
+  (at (parseFactor e) 0)
 )
 
 (print (evalExpr "22"))
