@@ -59,7 +59,7 @@ namespace ceos {
         pc += strlen(v) + 1;
         return v;
       }
-      
+
       std::vector<uintptr_t> stack;
       uintptr_t ebp;
       uintptr_t esp;

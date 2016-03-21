@@ -52,7 +52,57 @@ JS_FUNCTION(print) {
       std::cout << static_cast<int>(arg) << "\n";
     }
   }
-  
+
+  return 0;
+}
+
+JS_FUNCTION(at) {
+  assert(argv == 2);
+
+  uintptr_t arg = vm.arg(0);
+  if (IS_MASK(STR, arg)) {
+    return (reinterpret_cast<std::string *>(UNMASK(STR, arg)))->c_str()[vm.arg(1)];
+  } else if (IS_MASK(ARRAY, arg)) {
+    auto array = reinterpret_cast<std::vector<uintptr_t> *>(UNMASK(ARRAY, arg));
+    return array->at(vm.arg(1));
+  }
+
+  return 0;
+}
+
+JS_FUNCTION(substr) {
+  assert(argv == 2 || argv == 3);
+
+  uintptr_t arg = vm.arg(0);
+  if (IS_MASK(STR, arg)) {
+    std::string *str = reinterpret_cast<std::string *>(UNMASK(STR, arg));
+    std::string substring;
+    if (argv == 2) {
+      substring = str->substr(vm.arg(1));
+    } else {
+      substring = str->substr(vm.arg(1), vm.arg(2));
+    }
+    auto s = (std::string *)malloc(sizeof(substring));
+    memmove(s, &substring, sizeof(substring));
+    return MASK(STR, reinterpret_cast<uintptr_t>(&s));
+  } else {
+    throw;
+  }
+
+  return 0;
+}
+
+JS_FUNCTION(count) {
+  assert(argv == 1);
+
+  uintptr_t arg = vm.arg(0);
+  if (IS_MASK(STR, arg)) {
+    std::string *str = reinterpret_cast<std::string *>(UNMASK(STR, arg));
+    return str->length();
+  } else {
+    throw;
+  }
+
   return 0;
 }
 
@@ -85,6 +135,9 @@ namespace ceos {
     REGISTER(equals, equals);
     REGISTER(and, _and);
     REGISTER(or, _or);
+    REGISTER(at, at);
+    REGISTER(substr, substr);
+    REGISTER(count, count);
 
 #undef REGISTER
   }
@@ -120,7 +173,7 @@ namespace ceos {
           break;
       }
     }
-  } 
+  }
 
   void VM::loadStrings() {
     while (true) {
