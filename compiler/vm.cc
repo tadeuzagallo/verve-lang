@@ -9,17 +9,9 @@
 #define STR_MASK 0x8000000000000000
 #define ARRAY_MASK 0x4000000000000000
 
-#define MASK(MASK, V) ((V) | (MASK))
-#define UNMASK(MASK, V) ((V) & ~(MASK))
-#define IS_MASK(MASK, V) ((V) & (MASK))
-
-#define MASK_STR(STR) MASK(STR_MASK, STR)
-#define UNMASK_STR(STR) UNMASK(STR_MASK, STR)
-#define IS_STR(STR) IS_MASK(STR_MASK, STR)
-
-#define MASK_ARRAY(ARRAY) MASK(ARRAY_MASK, ARRAY)
-#define UNMASK_ARRAY(ARRAY) UNMASK(ARRAY_MASK, ARRAY)
-#define IS_ARRAY(ARRAY) IS_MASK(ARRAY_MASK, ARRAY)
+#define MASK(MASK, V) ((V) | (MASK##_MASK))
+#define UNMASK(MASK, V) ((V) & ~(MASK##_MASK))
+#define IS_MASK(MASK, V) ((V) & (MASK##_MASK))
 
 #define JS_FUNCTION(FN_NAME) __used static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
 
@@ -48,10 +40,10 @@ BASIC_MATH(_or, ||)
 JS_FUNCTION(print) {
   for (unsigned i = 0; i < argv; i++) {
     uintptr_t arg = vm.arg(i);
-    if (IS_STR(arg)) {
-      std::cout << (reinterpret_cast<std::string *>(UNMASK_STR(arg)))->c_str() << "\n";
-    } else if (IS_ARRAY(arg)) {
-      std::vector<uintptr_t> *array = reinterpret_cast<__typeof__(array)>(UNMASK_ARRAY(arg));
+    if (IS_MASK(STR, arg)) {
+      std::cout << (reinterpret_cast<std::string *>(UNMASK(STR, arg)))->c_str() << "\n";
+    } else if (IS_MASK(ARRAY, arg)) {
+      std::vector<uintptr_t> *array = reinterpret_cast<__typeof__(array)>(UNMASK(ARRAY, arg));
       for (auto a : *array) {
         std::cout << a << " ";
       }
@@ -69,7 +61,7 @@ JS_FUNCTION(list) {
   EACH_ARG(arg) {
     list->push_back(arg);
   }
-  return MASK_ARRAY(reinterpret_cast<uintptr_t>(list));
+  return MASK(ARRAY, reinterpret_cast<uintptr_t>(list));
 }
 
 #undef BASIC_MATH
@@ -119,7 +111,7 @@ namespace ceos {
 
           for (unsigned i = 0; i < m_userFunctions.size(); i++) {
             Function *fn = &m_userFunctions[i];
-            m_scope->table[fn->name(this)] = MASK_STR(reinterpret_cast<uintptr_t>(fn));
+            m_scope->table[fn->name(this)] = MASK(STR, reinterpret_cast<uintptr_t>(fn));
           }
 
           break;
@@ -196,12 +188,12 @@ namespace ceos {
           ebp = esp;
 
           uintptr_t ret;
-          if (IS_STR(fn_address) || IS_ARRAY(fn_address)) {
+          if (IS_MASK(STR, fn_address) || IS_MASK(ARRAY, fn_address)) {
             Function *fn;
-            if (IS_STR(fn_address)) {
-              fn = reinterpret_cast<__typeof__(fn)>(UNMASK_STR(fn_address));
+            if (IS_MASK(STR, fn_address)) {
+              fn = reinterpret_cast<__typeof__(fn)>(UNMASK(STR, fn_address));
             } else {
-              auto lambda = reinterpret_cast<Lambda *>(UNMASK_ARRAY(fn_address));
+              auto lambda = reinterpret_cast<Lambda *>(UNMASK(ARRAY, fn_address));
               fn = lambda->fn;
               m_scope = std::make_shared<Scope>(lambda->scope, m_scope->parent);
             }
@@ -241,7 +233,7 @@ namespace ceos {
         }
         case Opcode::load_string: {
           auto stringID = read<int>();
-          stack_push(MASK_STR(reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
+          stack_push(MASK(STR, reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
           break;
         }
         case Opcode::lookup: {
@@ -276,10 +268,10 @@ namespace ceos {
         case Opcode::create_lambda: {
           auto lambda = new Lambda();
           auto fnAddress = stack_pop();
-          assert(IS_STR(fnAddress));
-          lambda->fn = reinterpret_cast<Function *>(UNMASK_STR(fnAddress));
+          assert(IS_MASK(STR, fnAddress));
+          lambda->fn = reinterpret_cast<Function *>(UNMASK(STR, fnAddress));
           lambda->scope = m_scope;
-          stack_push(MASK_ARRAY(reinterpret_cast<uintptr_t>(lambda)));
+          stack_push(MASK(ARRAY, reinterpret_cast<uintptr_t>(lambda)));
           break;
         }
         default:
