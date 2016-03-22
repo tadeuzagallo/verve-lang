@@ -113,7 +113,7 @@ JS_FUNCTION(list) {
 #undef BASIC_MATH
 
   void VM::registerBuiltins() {
-#define REGISTER(NAME, FN) JSFunctionType NAME##_ = FN; m_scope->table[#NAME] = Value(NAME##_)
+#define REGISTER(NAME, FN) Builtin NAME##_ = FN; m_scope->table[#NAME] = Value(NAME##_)
 
     REGISTER(print, print);
     REGISTER(list, list);
@@ -239,7 +239,7 @@ JS_FUNCTION(list) {
           } else {
             m_scope = std::make_shared<Scope>(m_scope);
 
-            JSFunctionType fn = fn_address.asBuiltin();
+            Builtin fn = fn_address.asBuiltin();
             Value ret = fn(*this, nargs);
             stack_push(ret);
           }

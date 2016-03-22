@@ -58,20 +58,20 @@ namespace ceos {
 
 #undef POINTER_TYPE
 
-    typedef Value (*JSFunctionType)(VM &, unsigned);
+    typedef Value (*Builtin)(VM &, unsigned);
 
-    Value(JSFunctionType ptr) {
+    Value(Builtin ptr) {
       value.ptr = reinterpret_cast<uintptr_t>(ptr);
       value.data.tag = Value::BuiltinTag;
     }
 
-    JSFunctionType asBuiltin() {
-      return reinterpret_cast<JSFunctionType>(unmask(value.ptr));
+    Builtin asBuiltin() {
+      return reinterpret_cast<Builtin>(unmask(value.ptr));
     }
   };
 
 }
 
-using JSFunctionType = ceos::Value::JSFunctionType;
+using Builtin = ceos::Value::Builtin;
 
 #endif
