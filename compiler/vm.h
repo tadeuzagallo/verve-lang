@@ -111,7 +111,7 @@ namespace ceos {
   };
 
 
-  struct Lambda {
+  struct Closure {
     Function *fn;
     std::shared_ptr<Scope> scope;
   };

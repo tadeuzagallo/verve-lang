@@ -226,15 +226,15 @@ JS_FUNCTION(list) {
           stack_push(ebp);
           ebp = esp;
 
-          if (fn_address.isLambda()) {
-            auto lambda = fn_address.asLambda();
+          if (fn_address.isClosure()) {
+            auto closure = fn_address.asClosure();
 
-            m_scope = std::make_shared<Scope>(lambda->scope, m_scope->parent);
+            m_scope = std::make_shared<Scope>(closure->scope, m_scope->parent);
             for (unsigned i = 0; i < nargs; i++) {
-              m_scope->table[lambda->fn->arg(i)] = arg(i);
+              m_scope->table[closure->fn->arg(i)] = arg(i);
             }
 
-            pc = lambda->fn->offset;
+            pc = closure->fn->offset;
             break;
           } else {
             m_scope = std::make_shared<Scope>(m_scope);
@@ -296,16 +296,16 @@ JS_FUNCTION(list) {
         }
         case Opcode::create_closure: {
           auto fnID = read<int>();
-          auto lambda = new Lambda();
-          lambda->fn = &m_userFunctions[fnID];
-          lambda->scope = m_scope;
-          stack_push(Value(lambda));
+          auto closure = new Closure();
+          closure->fn = &m_userFunctions[fnID];
+          closure->scope = m_scope;
+          stack_push(Value(closure));
           break;
         }
         case Opcode::bind: {
           auto address = stack_pop();
-          auto lambda = address.asLambda();
-          m_scope->table[lambda->fn->name(this)] = address;
+          auto closure = address.asClosure();
+          m_scope->table[closure->fn->name(this)] = address;
           break;
         }
         default:

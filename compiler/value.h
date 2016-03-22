@@ -4,7 +4,7 @@
 namespace ceos {
   class VM;
   struct Function;
-  struct Lambda;
+  struct Closure;
 
   struct Value {
     union {
@@ -25,7 +25,7 @@ namespace ceos {
     TAG(String, 1);
     TAG(Array, 2);
     TAG(Builtin, 3);
-    TAG(Lambda, 4);
+    TAG(Closure, 4);
 
 #undef TAG
 
@@ -54,7 +54,7 @@ namespace ceos {
 
     POINTER_TYPE(std::string, String)
     POINTER_TYPE(std::vector<Value>, Array)
-    POINTER_TYPE(Lambda, Lambda)
+    POINTER_TYPE(Closure, Closure)
 
 #undef POINTER_TYPE
 
