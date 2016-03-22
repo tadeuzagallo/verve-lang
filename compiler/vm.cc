@@ -6,23 +6,18 @@
 #include <cassert>
 #include <iostream>
 
-#define STR_MASK 0x8000000000000000
-#define ARRAY_MASK 0x4000000000000000
+namespace ceos {
 
-#define MASK(MASK, V) ((V) | (MASK##_MASK))
-#define UNMASK(MASK, V) ((V) & ~(MASK##_MASK))
-#define IS_MASK(MASK, V) ((V) & (MASK##_MASK))
-
-#define JS_FUNCTION(FN_NAME) __used static uintptr_t FN_NAME(ceos::VM &vm, unsigned argv)
+#define JS_FUNCTION(FN_NAME) __used static Value FN_NAME(ceos::VM &vm, unsigned argv)
 
 #define EACH_ARG(IT) \
-  for (uintptr_t I = 0, IT; (IT = vm.arg(I)), I < argv; I++)
+  Value IT; for (unsigned I = 0; (I < argv ? (IT = vm.arg(I)) : 0), I < argv; I++)
 
 #define BASIC_MATH(NAME, OP) \
   JS_FUNCTION(NAME) { \
     assert(argv == 2); \
  \
-    return vm.arg(0) OP vm.arg(1); \
+    return Value(vm.arg(0).asInt() OP vm.arg(1).asInt()); \
   }
 
 BASIC_MATH(add, +)
@@ -39,16 +34,15 @@ BASIC_MATH(_or, ||)
 
 JS_FUNCTION(print) {
   for (unsigned i = 0; i < argv; i++) {
-    uintptr_t arg = vm.arg(i);
-    if (IS_MASK(STR, arg)) {
-      std::cout << (reinterpret_cast<std::string *>(UNMASK(STR, arg)))->c_str();
-    } else if (IS_MASK(ARRAY, arg)) {
-      std::vector<uintptr_t> *array = reinterpret_cast<__typeof__(array)>(UNMASK(ARRAY, arg));
-      for (auto a : *array) {
-        std::cout << a << " ";
+    Value arg = vm.arg(i);
+    if (arg.isString()) {
+      std::cout << arg.asString()->c_str();
+    } else if (arg.isArray()) {
+      for (auto a : *arg.asArray()) {
+        std::cout << a.asInt() << " ";
       }
     } else {
-      std::cout << static_cast<int>(arg);
+      std::cout << arg.asInt();
     }
 
     if (i < argv - 1) {
@@ -63,31 +57,31 @@ JS_FUNCTION(print) {
 JS_FUNCTION(at) {
   assert(argv == 2);
 
-  uintptr_t arg = vm.arg(0);
-  if (IS_MASK(STR, arg)) {
-    return (reinterpret_cast<std::string *>(UNMASK(STR, arg)))->c_str()[vm.arg(1)];
-  } else if (IS_MASK(ARRAY, arg)) {
-    auto array = reinterpret_cast<std::vector<uintptr_t> *>(UNMASK(ARRAY, arg));
-    return array->at(vm.arg(1));
+  Value arg = vm.arg(0);
+  if (arg.isString()) {
+    return arg.asString()->c_str()[vm.arg(1).asInt()];
+  } else if (arg.isArray()) {
+    auto array = arg.asArray();
+    return array->at(vm.arg(1).asInt());
   }
 
-  return 0;
+  return Value(0);
 }
 
 JS_FUNCTION(substr) {
   assert(argv == 2 || argv == 3);
 
-  uintptr_t arg = vm.arg(0);
-  if (IS_MASK(STR, arg)) {
-    std::string *str = reinterpret_cast<std::string *>(UNMASK(STR, arg));
+  Value arg = vm.arg(0);
+  if (arg.isString()) {
+    std::string *str = arg.asString();
     std::string substring;
     if (argv == 2) {
-      substring = str->substr(vm.arg(1));
+      substring = str->substr(vm.arg(1).asInt());
     } else {
-      substring = str->substr(vm.arg(1), vm.arg(2));
+      substring = str->substr(vm.arg(1).asInt(), vm.arg(2).asInt());
     }
     auto s = new std::string(substring);
-    return MASK(STR, reinterpret_cast<uintptr_t>(s));
+    return Value(s);
   } else {
     throw;
   }
@@ -98,10 +92,9 @@ JS_FUNCTION(substr) {
 JS_FUNCTION(count) {
   assert(argv == 1);
 
-  uintptr_t arg = vm.arg(0);
-  if (IS_MASK(STR, arg)) {
-    std::string *str = reinterpret_cast<std::string *>(UNMASK(STR, arg));
-    return str->length();
+  Value arg = vm.arg(0);
+  if (arg.isString()) {
+    return arg.asString()->length();
   } else {
     throw;
   }
@@ -110,19 +103,17 @@ JS_FUNCTION(count) {
 }
 
 JS_FUNCTION(list) {
-  auto list = new std::vector<uintptr_t>();
+  auto list = new std::vector<Value>();
   EACH_ARG(arg) {
     list->push_back(arg);
   }
-  return MASK(ARRAY, reinterpret_cast<uintptr_t>(list));
+  return Value(list);
 }
 
 #undef BASIC_MATH
 
-namespace ceos {
-
   void VM::registerBuiltins() {
-#define REGISTER(NAME, FN) JSFunctionType NAME##_ = FN; m_scope->table[#NAME] = (uintptr_t)NAME##_
+#define REGISTER(NAME, FN) JSFunctionType NAME##_ = FN; m_scope->table[#NAME] = Value(NAME##_)
 
     REGISTER(print, print);
     REGISTER(list, list);
@@ -167,7 +158,7 @@ namespace ceos {
 
           for (unsigned i = 0; i < m_userFunctions.size(); i++) {
             Function *fn = &m_userFunctions[i];
-            m_scope->table[fn->name(this)] = MASK(STR, reinterpret_cast<uintptr_t>(fn));
+            m_scope->table[fn->name(this)] = Value(fn);
           }
 
           break;
@@ -234,16 +225,16 @@ namespace ceos {
         }
         case Opcode::call: {
           auto nargs = read<unsigned>();
-          uintptr_t fn_address = stack_pop();
+          Value fn_address = stack_pop();
 
           stack_push(pc);
           stack_push(nargs);
           stack_push(ebp);
           ebp = esp;
 
-          uintptr_t ret;
-          if (IS_MASK(ARRAY, fn_address)) {
-            auto lambda = reinterpret_cast<Lambda *>(UNMASK(ARRAY, fn_address));
+          if (fn_address.isLambda()) {
+            auto lambda = fn_address.asLambda();
+
             m_scope = std::make_shared<Scope>(lambda->scope, m_scope->parent);
             for (unsigned i = 0; i < nargs; i++) {
               m_scope->table[lambda->fn->arg(i)] = arg(i);
@@ -254,19 +245,19 @@ namespace ceos {
           } else {
             m_scope = std::make_shared<Scope>(m_scope);
 
-            JSFunctionType fn = reinterpret_cast<__typeof__(fn)>(fn_address);
-            ret = fn(*this, nargs);
+            JSFunctionType fn = fn_address.asBuiltin();
+            Value ret = fn(*this, nargs);
             stack_push(ret);
           }
         }
         case Opcode::ret: {
-          uintptr_t ret = stack_pop();
+          Value ret = stack_pop();
 
           esp = ebp;
 
-          ebp = stack_pop();
-          unsigned nargs = stack_pop();
-          auto ret_addr = stack_pop();
+          ebp = stack_pop().asInt();
+          unsigned nargs = stack_pop().asInt();
+          auto ret_addr = stack_pop().asInt();
 
           esp -= nargs;
 
@@ -282,16 +273,16 @@ namespace ceos {
         }
         case Opcode::load_string: {
           auto stringID = read<int>();
-          stack_push(MASK(STR, reinterpret_cast<uintptr_t>(&m_stringTable[stringID])));
+          stack_push(Value(&m_stringTable[stringID]));
           break;
         }
         case Opcode::lookup: {
           auto id = read<int>();
-          auto fnAddress = read<uintptr_t>();
-          if (!fnAddress) {
+          auto fnAddress = read<Value>();
+          if (!fnAddress.isFunction()) {
             auto fnName = m_stringTable[id];
             fnAddress = m_scope->get(fnName);
-            //memcpy(m_bytecode + pc - sizeof(uintptr_t), &fnAddress, sizeof(uintptr_t));
+            //memcpy(m_bytecode + pc - sizeof(Value), &fnAddress, sizeof(Value));
           }
           stack_push(fnAddress);
           break;
@@ -303,7 +294,7 @@ namespace ceos {
         }
         case Opcode::jz: {
           auto target = read<int>();
-          int value = static_cast<int>(stack_pop());
+          int value = stack_pop().asInt();
           if (value == 0) {
             pc += target;
           }
@@ -317,15 +308,15 @@ namespace ceos {
         case Opcode::create_lambda: {
           auto lambda = new Lambda();
           auto fnAddress = stack_pop();
-          assert(IS_MASK(STR, fnAddress));
-          lambda->fn = reinterpret_cast<Function *>(UNMASK(STR, fnAddress));
+          assert(fnAddress.isFunction());
+          lambda->fn = fnAddress.asFunction();
           lambda->scope = m_scope;
-          stack_push(MASK(ARRAY, reinterpret_cast<uintptr_t>(lambda)));
+          stack_push(Value(lambda));
           break;
         }
         case Opcode::bind: {
           auto address = stack_pop();
-          auto lambda = reinterpret_cast<Lambda *>(UNMASK(ARRAY, address));
+          auto lambda = address.asLambda();
           m_scope->table[lambda->fn->name(this)] = address;
           break;
         }

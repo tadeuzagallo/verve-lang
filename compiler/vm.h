@@ -3,13 +3,31 @@
 #include <vector>
 #include <unordered_map>
 
+#include "value.h"
+
 #ifndef CEOS_VM_H
 #define CEOS_VM_H
 
 namespace ceos {
-  class VM;
+  struct Scope {
+    Scope(std::shared_ptr<Scope> p) : parent(p) { }
 
-  typedef uintptr_t (*JSFunctionType)(VM &, unsigned);
+    Scope(std::shared_ptr<Scope> p, std::shared_ptr<Scope> o) : parent(p) , other(o) { }
+
+    Value get(std::string &var) {
+      std::unordered_map<std::string, Value>::iterator v;
+      if ((v = table.find(var)) != table.end()) return v->second;
+      else if (parent.get() != this) return parent->get(var);
+      else {
+        std::cerr << "Symbol not found: " << var << "\n";
+        throw;
+      }
+    }
+
+    std::shared_ptr<Scope> parent;
+    std::shared_ptr<Scope> other;
+    std::unordered_map<std::string, Value> table;
+  };
 
   class VM {
     public:
@@ -31,7 +49,7 @@ namespace ceos {
       void loadFunctions();
       void run();
 
-      void stack_push(uintptr_t value) {
+      void stack_push(Value value) {
         if (esp > stack.size() - 2) {
           std::cerr << "Stack overflow\n";
           throw;
@@ -39,11 +57,11 @@ namespace ceos {
         stack[esp++] = value;
       }
 
-      uintptr_t stack_pop() {
+      Value stack_pop() {
         return stack[--esp];
       }
 
-      uintptr_t arg(unsigned index) {
+      Value arg(unsigned index) {
         return stack[ebp - index - 4];
       }
 
@@ -60,61 +78,43 @@ namespace ceos {
         return v;
       }
 
-      std::vector<uintptr_t> stack;
-      uintptr_t ebp;
-      uintptr_t esp;
-      uintptr_t pc;
+      std::vector<Value> stack;
+      unsigned ebp;
+      unsigned esp;
+      unsigned pc;
       size_t length;
 
+      std::vector<std::string> m_stringTable;
     private:
 
-      struct Function {
-        Function(unsigned i, unsigned args, unsigned o, std::vector<std::string *> &&a) : offset(o), id(i), nargs(args), args(a) {}
-
-        std::string &name(VM *vm) {
-          return vm->m_stringTable[id];
-        }
-
-        std::string &arg(unsigned i) {
-          return *args[i];
-        }
-
-        unsigned offset;
-        unsigned id;
-        unsigned nargs;
-        std::vector<std::string *> args;
-      };
-
-      struct Scope {
-        Scope(std::shared_ptr<Scope> p) : parent(p) { }
-
-        Scope(std::shared_ptr<Scope> p, std::shared_ptr<Scope> o) : parent(p) , other(o) { }
-
-        uintptr_t get(std::string &var) {
-          std::unordered_map<std::string, uintptr_t>::iterator v;
-          if ((v = table.find(var)) != table.end()) return v->second;
-          else if (parent.get() != this) return parent->get(var);
-          else {
-            std::cerr << "Symbol not found: " << var << "\n";
-            throw;
-          }
-        }
-
-        std::shared_ptr<Scope> parent;
-        std::shared_ptr<Scope> other;
-        std::unordered_map<std::string, uintptr_t> table;
-      };
-
-      struct Lambda {
-        Function *fn;
-        std::shared_ptr<Scope> scope;
-      };
 
       uint8_t *m_bytecode;
-      std::vector<std::string> m_stringTable;
-      std::unordered_map<std::string, uintptr_t> m_functionTable;
+      std::unordered_map<std::string, Value> m_functionTable;
       std::vector<Function> m_userFunctions;
       std::shared_ptr<Scope> m_scope;
+  };
+
+  struct Function {
+    Function(unsigned i, unsigned args, unsigned o, std::vector<std::string *> &&a) : offset(o), id(i), nargs(args), args(a) {}
+
+    std::string &name(VM *vm) {
+      return vm->m_stringTable[id];
+    }
+
+    std::string &arg(unsigned i) {
+      return *args[i];
+    }
+
+    unsigned offset;
+    unsigned id;
+    unsigned nargs;
+    std::vector<std::string *> args;
+  };
+
+
+  struct Lambda {
+    Function *fn;
+    std::shared_ptr<Scope> scope;
   };
 }
 
