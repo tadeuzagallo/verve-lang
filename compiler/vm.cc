@@ -278,13 +278,8 @@ JS_FUNCTION(list) {
         }
         case Opcode::lookup: {
           auto id = read<int>();
-          auto fnAddress = read<Value>();
-          if (!fnAddress.isFunction()) {
-            auto fnName = m_stringTable[id];
-            fnAddress = m_scope->get(fnName);
-            //memcpy(m_bytecode + pc - sizeof(Value), &fnAddress, sizeof(Value));
-          }
-          stack_push(fnAddress);
+          auto fnName = m_stringTable[id];
+          stack_push(m_scope->get(fnName));
           break;
         }
         case Opcode::jmp:  {
@@ -305,11 +300,10 @@ JS_FUNCTION(list) {
           stack_push(arg(index));
           break;
         }
-        case Opcode::create_lambda: {
+        case Opcode::create_closure: {
+          auto fnID = read<int>();
           auto lambda = new Lambda();
-          auto fnAddress = stack_pop();
-          assert(fnAddress.isFunction());
-          lambda->fn = fnAddress.asFunction();
+          lambda->fn = &m_userFunctions[fnID];
           lambda->scope = m_scope;
           stack_push(Value(lambda));
           break;

@@ -39,23 +39,17 @@ namespace ceos {
       std::string callee = AST::asID(call->arguments[0])->name;
 
       if (callee == "defn" || callee == "lambda") {
-        int lookup;
         if (callee == "lambda") {
           static unsigned lambdaID = 0;
           std::stringstream lambdaName;
           lambdaName << "lambda$" << lambdaID++;
-          lookup = m_ast->strings.size();
           m_ast->strings.push_back(lambdaName.str());
         } else {
           auto name = AST::asID(call->arguments[1])->name;
-          lookup = INDEX_OF(m_ast->strings, name);
         }
 
-        emitOpcode(Opcode::lookup);
-        write(lookup);
-        write(0);
-        write(0);
-        emitOpcode(Opcode::create_lambda);
+        emitOpcode(Opcode::create_closure);
+        write(m_ast->functions.size());
 
         if (callee == "defn") {
           emitOpcode(Opcode::bind);
@@ -129,8 +123,6 @@ namespace ceos {
     } else {
       emitOpcode(Opcode::lookup);
       write(id->uid);
-      write(0);
-      write(0);
     }
   }
 
@@ -347,13 +339,12 @@ section_code:
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
-        READ_INT(bytecode, cache1);
-        READ_INT(bytecode, cache2);
-        WRITE(16, "lookup $" << id << "(" << strings[id] << ")");
+        WRITE(8, "lookup $" << id << "(" << strings[id] << ")");
         break;
       }
-      case Opcode::create_lambda: {
-        WRITE(4, "create_lambda");
+      case Opcode::create_closure: {
+        READ_INT(bytecode, id);
+        WRITE(8, "create_closure " << strings[id]);
         break;
       }
       case Opcode::jmp:  {

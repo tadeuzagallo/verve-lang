@@ -12,7 +12,7 @@ class Opcode {
       call,
       jz,
       jmp,
-      create_lambda,
+      create_closure,
       load_string,
       push_arg,
       lookup
