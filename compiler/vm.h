@@ -89,7 +89,6 @@ namespace ceos {
 
 
       uint8_t *m_bytecode;
-      std::unordered_map<std::string, Value> m_functionTable;
       std::vector<Function> m_userFunctions;
       std::shared_ptr<Scope> m_scope;
   };
