@@ -17,13 +17,32 @@ $(TARGET): $(OBJECTS)
 %.o: %.cc $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# ERROR TESTS
+
+ERROR_TESTS = $(patsubst %.ceos,%.test,$(wildcard tests/errors/*.ceos))
+
+.PHONY: test tests/errors/%.test
+
+error_test: $(ERROR_TESTS)
+
+tests/errors/%.test: tests/errors/%.ceos tests/errors/%.err $(TARGET)
+	@sh -c "trap '' 6; ./$(TARGET) $<" > /dev/null 2> $@_; \
+	if [[ $$? == 0 ]]; then \
+		echo "$@: ERROR!"; \
+	else \
+		diff \
+			-I "libc++abi.dylib: terminating" \
+			-I "Abort trap: 6" \
+			$@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; \
+	fi
+
 # TESTS
 
 TESTS = $(patsubst %.ceos,%.test,$(wildcard tests/*.ceos))
 
 .PHONY: test tests/%.test
 
-test: $(TESTS)
+test: $(TESTS) error_test
 
 tests/%.test: tests/%.ceos tests/%.out $(TARGET)
 	-@./$(TARGET) $< > $@_; \

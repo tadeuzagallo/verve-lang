@@ -271,6 +271,10 @@ JS_FUNCTION(list) {
           auto id = read<int>();
           auto name = m_stringTable[id];
           auto value = m_scope->get(name);
+          if (value.isUndefined()) {
+            std::cerr << "Symbol not found: " << name << "\n";
+            throw;
+          }
           stack_push(value);
           break;
         }
