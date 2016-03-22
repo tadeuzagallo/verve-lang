@@ -4,7 +4,6 @@
 #include "sections.h"
 
 #include <cassert>
-#include <iostream>
 
 namespace ceos {
 
