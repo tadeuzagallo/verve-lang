@@ -1,5 +1,4 @@
-#include "value.h"
-
+#include <iostream>
 #include <memory>
 #include <unordered_map>
 
@@ -8,24 +7,45 @@
 
 namespace ceos {
 
-  struct Scope {
-    Scope(std::shared_ptr<Scope> p) : parent(p) { }
+  template<typename T>
+  class Scope : public std::enable_shared_from_this<Scope<T>> {
+    typedef std::shared_ptr<Scope<T>> ScopePtr;
 
-    Scope(std::shared_ptr<Scope> p, std::shared_ptr<Scope> o) : parent(p) , other(o) { }
+    public:
+      Scope() {}
 
-    Value get(std::string &var) {
-      std::unordered_map<std::string, Value>::iterator v;
-      if ((v = table.find(var)) != table.end()) return v->second;
-      else if (parent.get() != this) return parent->get(var);
-      else {
-        std::cerr << "Symbol not found: " << var << "\n";
-        throw;
+      inline ScopePtr create() {
+        auto s = std::make_shared<Scope<T>>();
+        s->parent = this->shared_from_this();
+        return s;
       }
-    }
 
-    std::shared_ptr<Scope> parent;
-    std::shared_ptr<Scope> other;
-    std::unordered_map<std::string, Value> table;
+      inline ScopePtr create(ScopePtr parent) {
+        auto s = std::make_shared<Scope<T>>();
+        s->parent = parent;
+        s->previous = this->parent;
+        return s;
+      }
+
+      inline ScopePtr restore() {
+        return previous ?: parent ?: this->shared_from_this();
+      }
+
+      inline T get(std::string &var) {
+        auto it = table.find(var);
+        if (it != table.end()) return it->second;
+        else if (parent) return parent->get(var);
+        else return T();
+      }
+
+      inline void set(std::string key, T value) {
+        table[key] = value;
+      }
+
+    private:
+      ScopePtr parent;
+      ScopePtr previous;
+      std::unordered_map<std::string, T> table;
   };
 
 }

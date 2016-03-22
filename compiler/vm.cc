@@ -112,7 +112,7 @@ JS_FUNCTION(list) {
 #undef BASIC_MATH
 
   void VM::registerBuiltins() {
-#define REGISTER(NAME, FN) Builtin NAME##_ = FN; m_scope->table[#NAME] = Value(NAME##_)
+#define REGISTER(NAME, FN) Builtin NAME##_ = FN; m_scope->set(#NAME, Value(NAME##_))
 
     REGISTER(print, print);
     REGISTER(list, list);
@@ -228,15 +228,16 @@ JS_FUNCTION(list) {
           if (fn_address.isClosure()) {
             auto closure = fn_address.asClosure();
 
-            m_scope = std::make_shared<Scope>(closure->scope, m_scope->parent);
+            m_scope = m_scope->create(closure->scope);
+
             for (unsigned i = 0; i < nargs; i++) {
-              m_scope->table[closure->fn->arg(i)] = arg(i);
+              m_scope->set(closure->fn->arg(i), arg(i));
             }
 
             pc = closure->fn->offset;
             break;
           } else {
-            m_scope = std::make_shared<Scope>(m_scope);
+            m_scope = m_scope->create();
 
             Builtin fn = fn_address.asBuiltin();
             Value ret = fn(*this, nargs);
@@ -257,11 +258,8 @@ JS_FUNCTION(list) {
           stack_push(ret);
           pc = ret_addr;
 
-          if (m_scope->other) {
-            m_scope = m_scope->other;
-          } else {
-            m_scope = m_scope->parent;
-          }
+          m_scope = m_scope->restore();
+
           break;
         }
         case Opcode::load_string: {
@@ -271,8 +269,9 @@ JS_FUNCTION(list) {
         }
         case Opcode::lookup: {
           auto id = read<int>();
-          auto fnName = m_stringTable[id];
-          stack_push(m_scope->get(fnName));
+          auto name = m_stringTable[id];
+          auto value = m_scope->get(name);
+          stack_push(value);
           break;
         }
         case Opcode::jmp:  {
@@ -304,7 +303,7 @@ JS_FUNCTION(list) {
         case Opcode::bind: {
           auto address = stack_pop();
           auto closure = address.asClosure();
-          m_scope->table[closure->fn->name(this)] = address;
+          m_scope->set(closure->fn->name(this), address);
           break;
         }
         default:

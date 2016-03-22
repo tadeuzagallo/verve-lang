@@ -21,11 +21,12 @@ namespace ceos {
     static const uint8_t NAME##Tag = 1 << OFFSET; \
     bool is##NAME() { return value.data.tag == Value::NAME##Tag; }
 
-    TAG(Int, 0);
-    TAG(String, 1);
-    TAG(Array, 2);
-    TAG(Builtin, 3);
-    TAG(Closure, 4);
+    TAG(Undefined, 0);
+    TAG(Int, 1);
+    TAG(String, 2);
+    TAG(Array, 3);
+    TAG(Builtin, 4);
+    TAG(Closure, 5);
 
 #undef TAG
 

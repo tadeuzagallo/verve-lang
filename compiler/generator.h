@@ -4,6 +4,7 @@
 
 #include "ast.h"
 #include "opcodes.h"
+#include "scope.h"
 
 #ifndef CEOS_GENERATOR_H
 #define CEOS_GENERATOR_H
@@ -13,7 +14,7 @@ namespace ceos {
   class Generator {
     public:
       Generator(std::shared_ptr<AST::Program> ast) : m_ast(ast) {
-        m_currentScope = new Scope(this);
+        m_scope = std::make_shared<Scope<std::shared_ptr<AST>>>();
       }
 
       std::stringstream &generate(void);
@@ -41,35 +42,8 @@ namespace ceos {
       static void printOpcode(std::stringstream &, Opcode::Type);
 
       std::shared_ptr<AST::Program> m_ast;
+      std::shared_ptr<Scope<std::shared_ptr<AST>>> m_scope;
       std::stringstream m_output;
-
-      struct Scope {
-        std::unordered_map<std::string, std::shared_ptr<AST>> variables;
-        Scope *parent;
-
-        Scope(Generator *g): m_generator(*g) {
-          parent = m_generator.m_currentScope;
-          m_generator.m_currentScope = this;
-        }
-
-        ~Scope() {
-          m_generator.m_currentScope = parent;
-        }
-
-        std::shared_ptr<AST> get(std::string name) {
-          std::shared_ptr<AST> v = nullptr;
-          auto s = this;
-          do {
-            v = s->variables[name];
-          } while (!v && (s = s->parent));
-          return v;
-        }
-
-        private:
-          Generator &m_generator;
-      };
-
-      Scope *m_currentScope;
   };
 
 }

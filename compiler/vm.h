@@ -21,8 +21,7 @@ namespace ceos {
         length = bc.length();
         m_bytecode = (uint8_t *)malloc(length);
         memcpy(m_bytecode, bc.data(), length);
-        m_scope = std::make_shared<Scope>(nullptr);
-        m_scope->parent = m_scope; // global scope
+        m_scope = std::make_shared<Scope<Value>>();
         registerBuiltins();
       }
 
@@ -72,7 +71,7 @@ namespace ceos {
     private:
       uint8_t *m_bytecode;
       std::vector<Function> m_userFunctions;
-      std::shared_ptr<Scope> m_scope;
+      std::shared_ptr<Scope<Value>> m_scope;
   };
 
 }

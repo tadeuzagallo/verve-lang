@@ -117,8 +117,8 @@ namespace ceos {
   }
 
   void Generator::generateID(std::shared_ptr<AST::ID> id) {
-    auto v = m_currentScope->get(id->name);
-    if (v) {
+    auto v = m_scope->get(id->name);
+    if (v.get()) {
       generateNode(v);
     } else {
       emitOpcode(Opcode::lookup);
@@ -156,18 +156,20 @@ namespace ceos {
     write(INDEX_OF(m_ast->strings, name));
     write(AST::asCall(fn->arguments[index + 1])->arguments.size());
 
-    Scope s(this);
+    m_scope = m_scope->create();
 
     int i = 0;
     for (auto arg : AST::asCall(fn->arguments[index + 1])->arguments) {
       std::string &name = AST::asID(arg)->name;
-      s.variables[name] = std::make_shared<AST::FunctionArgument>(i++);
+      m_scope->set(name, std::make_shared<AST::FunctionArgument>(i++));
       write(INDEX_OF(m_ast->strings, name));
     }
 
     for (unsigned ii = index + 2; ii < fn->arguments.size(); ii++) {
       generateNode(fn->arguments[ii]);
     }
+
+    m_scope = m_scope->restore();
 
     write(Opcode::ret);
   }
