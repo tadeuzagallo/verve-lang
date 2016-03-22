@@ -155,12 +155,6 @@ JS_FUNCTION(list) {
           break;
         case Section::Functions:
           loadFunctions();
-
-          for (unsigned i = 0; i < m_userFunctions.size(); i++) {
-            Function *fn = &m_userFunctions[i];
-            m_scope->table[fn->name(this)] = Value(fn);
-          }
-
           break;
         case Section::Text:
           run();
