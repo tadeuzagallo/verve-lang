@@ -1,7 +1,7 @@
 (defn parseFactorR (sum expr)
   (if (gt (count expr) 0)
       ((lambda (c)
-        (if (and 
+        (if (and
             (gte c '0')
             (lte c '9'))
           (parseFactorR (add (mul 10 sum) (sub c '0')) (substr expr 1))
@@ -12,12 +12,20 @@
   )
 )
 
-(defn parseFactor (e) 
+(defn parseFactor (e)
   (parseFactorR 0 e)
 )
 
-(defn evalExpr (e) 
-  (at (parseFactor e) 0)
+(defn evalExpr (e)
+  ((lambda (list)
+    ((lambda (left expr)
+      ((lambda (op expr)
+        (if (equals op '+')
+          (add left (at (parseFactor expr) 0))
+        )
+      ) (at expr 0) (substr expr 1))
+    ) (at list 0) (at list 1))
+  ) (parseFactor e))
 )
 
-(print (evalExpr "22"))
+(print (evalExpr "22+22"))
