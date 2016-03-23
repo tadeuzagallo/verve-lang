@@ -228,6 +228,7 @@ namespace ceos {
   }
 
   static std::vector<std::string> strings;
+  static std::vector<std::string> functions;
   static size_t width;
   static std::string padding("  ");
   void Generator::disassemble(std::stringstream &bytecode) {
@@ -252,12 +253,25 @@ read_section:
         padding = "  ";
         goto section_strings;
         break;
-      case Section::Functions:
+      case Section::Functions: {
         padding = "";
         WRITE(8, "FUNCTIONS:");
         padding = "  ";
+        auto offset = bytecode.tellg();
+        while (true) {
+          READ_INT(bytecode, header);
+          if (header == Section::FunctionHeader) {
+            READ_INT(bytecode, fnID);
+            functions.push_back(strings[fnID]);
+            continue;
+          } else if (header == Section::Header) {
+            break;
+          }
+        }
+        bytecode.seekg(offset);
         goto section_functions;
         break;
+      }
       case Section::Text:
         padding = "";
         WRITE(8, "TEXT:");
@@ -345,8 +359,8 @@ section_code:
         break;
       }
       case Opcode::create_closure: {
-        READ_INT(bytecode, id);
-        WRITE(8, "create_closure " << strings[id]);
+        READ_INT(bytecode, fnID);
+        WRITE(8, "create_closure " << functions[fnID]);
         break;
       }
       case Opcode::jmp:  {
