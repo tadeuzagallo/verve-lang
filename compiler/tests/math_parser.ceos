@@ -23,6 +23,9 @@
         ((lambda (op expr)
           (if (equals op '+')
             (add left (at (parseFactor expr) 0))
+            (if (equals op '-')
+              (sub left (at (parseFactor expr) 0))
+            )
           )
         ) (at expr 0) (substr expr 1))
         left
@@ -33,3 +36,4 @@
 
 (print (evalExpr "22"))
 (print (evalExpr "22+22"))
+(print (evalExpr "22-11"))
