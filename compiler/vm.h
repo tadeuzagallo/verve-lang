@@ -1,4 +1,5 @@
 #include "closure.h"
+#include "gc.h"
 #include "function.h"
 #include "scope.h"
 #include "value.h"
@@ -16,12 +17,16 @@ namespace ceos {
     public:
       VM(std::stringstream &bs):
         stack(2048),
-        pc(0) {
+        pc(0),
+        heapLimit(10240) {
+
         std::string bc = bs.str();
         length = bc.length();
         m_bytecode = (uint8_t *)malloc(length);
         memcpy(m_bytecode, bc.data(), length);
+
         m_scope = std::make_shared<Scope<Value>>();
+
         registerBuiltins();
       }
 
@@ -30,6 +35,8 @@ namespace ceos {
       void loadStrings();
       void loadFunctions();
       void run();
+      void trackAllocation(void *, size_t);
+      void collect();
 
       void stack_push(Value value) {
         if (esp > stack.size() - 2) {
@@ -65,6 +72,9 @@ namespace ceos {
       unsigned esp;
       unsigned pc;
       size_t length;
+      size_t heapSize;
+      size_t heapLimit;
+      std::vector<std::pair<size_t, void *>> blocks;
 
       std::vector<std::string> m_stringTable;
 
@@ -73,7 +83,6 @@ namespace ceos {
       std::vector<Function> m_userFunctions;
       std::shared_ptr<Scope<Value>> m_scope;
   };
-
 }
 
 #endif

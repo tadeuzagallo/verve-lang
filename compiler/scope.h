@@ -1,3 +1,4 @@
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <unordered_map>
@@ -16,36 +17,47 @@ namespace ceos {
 
       inline ScopePtr create() {
         auto s = std::make_shared<Scope<T>>();
-        s->parent = this->shared_from_this();
+        s->m_parent = this->shared_from_this();
         return s;
       }
 
-      inline ScopePtr create(ScopePtr parent) {
+      inline ScopePtr create(ScopePtr m_parent) {
         auto s = std::make_shared<Scope<T>>();
-        s->parent = parent;
-        s->previous = this->shared_from_this();
+        s->m_parent = m_parent;
+        s->m_previous = this->shared_from_this();
         return s;
       }
 
       inline ScopePtr restore() {
-        return previous ?: parent ?: this->shared_from_this();
+        return m_previous ?: m_parent ?: this->shared_from_this();
       }
 
       inline T get(std::string &var) {
-        auto it = table.find(var);
-        if (it != table.end()) return it->second;
-        else if (parent) return parent->get(var);
+        auto it = m_table.find(var);
+        if (it != m_table.end()) return it->second;
+        else if (m_parent) return m_parent->get(var);
         else return T();
       }
 
       inline void set(std::string key, T value) {
-        table[key] = value;
+        m_table[key] = value;
+      }
+
+      inline void visit(std::function<void(T)> visitor) {
+        ScopePtr ptr = this->shared_from_this();
+        for (auto it : m_table) {
+          visitor(it.second);
+        }
+      }
+
+      inline ScopePtr &parent() {
+        return m_parent;
       }
 
     private:
-      ScopePtr parent;
-      ScopePtr previous;
-      std::unordered_map<std::string, T> table;
+      ScopePtr m_parent;
+      ScopePtr m_previous;
+      std::unordered_map<std::string, T> m_table;
   };
 
 }

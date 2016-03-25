@@ -80,6 +80,7 @@ JS_FUNCTION(substr) {
       substring = str->substr(vm.arg(1).asInt(), vm.arg(2).asInt());
     }
     auto s = new std::string(substring);
+    vm.trackAllocation(s, sizeof(std::string) + s->capacity());
     return Value(s);
   } else {
     throw;
@@ -106,7 +107,14 @@ JS_FUNCTION(list) {
   EACH_ARG(arg) {
     list->push_back(arg);
   }
+  vm.trackAllocation(list, sizeof(std::vector<Value>) + list->capacity() * sizeof(Value));
   return Value(list);
+}
+
+JS_FUNCTION(heapSize) {
+  assert(argv == 0);
+
+  return Value((int)vm.heapSize);
 }
 
 #undef BASIC_MATH
@@ -131,6 +139,7 @@ JS_FUNCTION(list) {
     REGISTER(at, at);
     REGISTER(substr, substr);
     REGISTER(count, count);
+    REGISTER(heapSize, ceos::heapSize);
 
 #undef REGISTER
   }
@@ -299,6 +308,7 @@ JS_FUNCTION(list) {
         case Opcode::create_closure: {
           auto fnID = read<int>();
           auto closure = new Closure();
+          trackAllocation(closure, sizeof(Closure));
           closure->fn = &m_userFunctions[fnID];
           closure->scope = m_scope;
           stack_push(Value(closure));
@@ -315,6 +325,29 @@ JS_FUNCTION(list) {
           throw;
       }
     }
+  }
+
+  void VM::trackAllocation(void *ptr, size_t size) {
+    heapSize += size;
+
+    if (heapSize > heapLimit) {
+      collect();
+      heapLimit = std::max(heapLimit, 2 * heapSize);
+    }
+
+    blocks.push_back(std::make_pair(size, ptr));
+  }
+
+  void VM::collect() {
+    GC::start();
+
+    for (auto value : stack) {
+      GC::markValue(value, blocks);
+    }
+
+    GC::markScope(m_scope, blocks);
+
+    GC::sweep(blocks, &heapSize);
   }
 
 }

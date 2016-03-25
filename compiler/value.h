@@ -1,13 +1,17 @@
+#include <cstdint>
+#include <string>
+#include <vector>
+
 #ifndef CEOS_VALUE_H
 #define CEOS_VALUE_H
 
 namespace ceos {
   class VM;
-  struct Function;
   struct Closure;
 
   struct Value {
     union {
+      uint64_t raw;
       uintptr_t ptr;
       struct {
         int32_t i;
@@ -71,6 +75,24 @@ namespace ceos {
 
     Builtin asBuiltin() {
       return reinterpret_cast<Builtin>(unmask(value.ptr));
+    }
+
+    void *asPtr() {
+      return reinterpret_cast<void *>(unmask(value.ptr));
+    }
+
+    bool isHeapAllocated() {
+      return value.data.tag & (Value::ClosureTag | Value::ArrayTag | Value::StringTag);
+    }
+
+    uint64_t encode() {
+      return value.raw;
+    }
+
+    static Value decode(uint64_t data) {
+      Value v;
+      v.value.raw = data;
+      return v;
     }
   };
 
