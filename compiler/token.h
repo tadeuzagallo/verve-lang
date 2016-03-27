@@ -16,7 +16,10 @@ namespace ceos {
       Token(Type t) : type(t) {}
 
       Type type;
-
+      struct {
+        int start;
+        int end;
+      } loc;
   };
 
   class Token::ID : public Token {

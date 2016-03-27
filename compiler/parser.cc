@@ -28,7 +28,7 @@ namespace ceos {
       case Token::Type::STRING:
         return parseString();
       default:
-        Lexer::invalidType(m_lexer.token()->type);
+        m_lexer.invalidType();
         throw "Unexpected token";
     }
   }

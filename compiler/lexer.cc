@@ -3,6 +3,7 @@
 #include "token.h"
 
 #include <cassert>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -15,6 +16,7 @@ namespace ceos {
       c = m_input.get();
     } while(isspace(c));
 
+    int start = m_input.tellg();
     switch (c) {
       case '(':
         m_token = std::make_shared<Token>(Token::Type::L_PAREN);
@@ -25,6 +27,7 @@ namespace ceos {
         break;
 
       case EOF:
+        start = m_token->loc.end - 1;
         m_token = std::make_shared<Token>(Token::Type::END);
         break;
 
@@ -73,6 +76,8 @@ namespace ceos {
         }
     }
 
+    m_token->loc.start = start;
+    m_token->loc.end = m_input.tellg();
     return m_token;
   }
 
@@ -87,19 +92,37 @@ namespace ceos {
   }
 
   void Lexer::ensure(Token::Type type) {
-    assertType(m_token->type, type);
+    if (m_token->type != type) {
+      std::cerr << "Invalid type found: expected `" << Token::typeName(m_token->type) << "` to be `" << Token::typeName(type) << "`" << "\n";
+      printSource();
+      throw "Parser error";
+    }
     nextToken();
   }
 
-  void Lexer::assertType(Token::Type a, Token::Type b) {
-    if (a != b) {
-      std::cerr << "Invalid type found: expected `" << Token::typeName(a) << "` to be `" << Token::typeName(b) << "`" << "\n";
-      throw "Parser error";
+  void Lexer::invalidType() {
+    if (m_token->type == Token::Type::END) {
+      std::cerr << "Unexpected end of input\n";
+    } else {
+      std::cerr << "Invalid type found: `" << Token::typeName(m_token->type) << "`\n";
     }
+    printSource();
+    throw "Type error";
   }
 
-  void Lexer::invalidType(Token::Type type) {
-    std::cerr << "Invalid type found: `" << Token::typeName(type) << "`\n";
-    throw "Type error";
+  void Lexer::printSource() {
+    int start = m_token->loc.start;
+    int actualStart = start;
+    int curPos = m_input.tellg();
+    do {
+      m_input.clear();
+      m_input.seekg(start);
+    } while (start > 0 && start-- && m_input.get() != '\n');
+    char line[256];
+    m_input.getline(line, 256);
+    line[m_input.gcount()] = 0;
+    std::cerr << line << "\n";
+    std::cerr << std::setw(actualStart - start + 3) << "^\n";
+    m_input.seekg(curPos);
   }
 }
