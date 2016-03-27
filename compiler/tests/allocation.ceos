@@ -220,4 +220,4 @@
 # this will allocate 4243744b
 # the GC should get it down to 25152b
 # here we just test it's less than ~30k
-(print (lt (heapSize) 30000))
+(print (lt (__heap-size__) 30000))

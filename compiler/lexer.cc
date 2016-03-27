@@ -61,11 +61,11 @@ namespace ceos {
           m_input.unget();
 
           m_token = std::make_shared<Token::Number>(number);
-        } else if (isalpha(c)) {
+        } else if (isalpha(c) || c == '_') {
           std::stringstream id;
           do {
             id << c;
-          } while (isalpha(c = m_input.get()));
+          } while (isalpha(c = m_input.get()) || isnumber(c) || c == '_' || c == '-');
 
           m_input.unget();
 

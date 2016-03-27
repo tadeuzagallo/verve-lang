@@ -7,7 +7,7 @@ namespace ceos {
 
   void registerBuiltins(VM &vm) {
 
-#define REGISTER(NAME, FN) Builtin NAME##_ = FN; vm.m_scope->set(#NAME, Value(NAME##_))
+#define REGISTER(NAME, FN) Builtin FN##_ = FN; vm.m_scope->set(#NAME, Value(FN##_))
 
     REGISTER(print, print);
     REGISTER(list, list);
@@ -26,7 +26,7 @@ namespace ceos {
     REGISTER(at, at);
     REGISTER(substr, substr);
     REGISTER(count, count);
-    REGISTER(heapSize, ceos::heapSize);
+    REGISTER(__heap-size__, heapSize);
   }
 
 
