@@ -1,3 +1,4 @@
+#include "builtins.h"
 #include "closure.h"
 #include "gc.h"
 #include "function.h"
@@ -27,10 +28,9 @@ namespace ceos {
 
         m_scope = std::make_shared<Scope<Value>>();
 
-        registerBuiltins();
+        registerBuiltins(*this);
       }
 
-      void registerBuiltins();
       void execute();
       void loadStrings();
       void loadFunctions();
@@ -77,11 +77,11 @@ namespace ceos {
       std::vector<std::pair<size_t, void *>> blocks;
 
       std::vector<std::string> m_stringTable;
+      std::shared_ptr<Scope<Value>> m_scope;
 
     private:
       uint8_t *m_bytecode;
       std::vector<Function> m_userFunctions;
-      std::shared_ptr<Scope<Value>> m_scope;
   };
 }
 
