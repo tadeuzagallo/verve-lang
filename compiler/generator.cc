@@ -29,41 +29,19 @@ namespace ceos {
       case AST::Type::FunctionArgument:
         generateFunctionArgument(std::static_pointer_cast<AST::FunctionArgument>(node));
         break;
+      case AST::Type::Function:
+        generateFunctionDefinition(AST::asFunction(node));
+        break;
+      case AST::Type::If:
+        generateIf(AST::asIf(node));
+        break;
+      case AST::Type::TypeInfo:
+        // TODO: use type info
+        break;
       default:
-        throw "Unhandled Type";
+        std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
+        throw;
     }
-  }
-
-  bool Generator::handleSpecialCall(std::shared_ptr<AST::Call> call) {
-    if (call->arguments[0]->type == AST::Type::ID) {
-      std::string callee = AST::asID(call->arguments[0])->name;
-
-      if (callee == "defn" || callee == "lambda") {
-        if (callee == "lambda") {
-          static unsigned lambdaID = 0;
-          std::stringstream lambdaName;
-          lambdaName << "lambda$" << lambdaID++;
-          m_ast->strings.push_back(lambdaName.str());
-        } else {
-          auto name = AST::asID(call->arguments[1])->name;
-        }
-
-        emitOpcode(Opcode::create_closure);
-        write(m_ast->functions.size());
-
-        if (callee == "defn") {
-          emitOpcode(Opcode::bind);
-        }
-
-        m_ast->functions.push_back(call);
-        return true;
-      } else if (callee == "if") {
-        generateIf(call);
-        return true;
-      }
-    }
-
-    return false;
   }
 
   void Generator::write(int data) {
@@ -79,16 +57,19 @@ namespace ceos {
     write(opcode);
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node)  {
-    emitJmp(jmpType, node, false);
+  void Generator::emitJmp(Opcode::Type jmpType, std::vector<std::shared_ptr<AST>> &body)  {
+    emitJmp(jmpType, body, false);
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST> &node, bool skipNextJump)  {
+  void Generator::emitJmp(Opcode::Type jmpType, std::vector<std::shared_ptr<AST>> &body, bool skipNextJump)  {
     emitOpcode(jmpType);
     unsigned beforePos = m_output.tellp();
     write(0); // placeholder
 
-    generateNode(node);
+    for (auto node : body) {
+      generateNode(node);
+    }
+
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
     write((afterPos - beforePos)
@@ -99,16 +80,14 @@ namespace ceos {
   }
 
   void Generator::generateCall(std::shared_ptr<AST::Call> call) {
-    if (handleSpecialCall(call)) {
-      return;
-    }
-
     for (unsigned i = call->arguments.size(); i > 0;) {
       generateNode(call->arguments[--i]);
     }
 
+    generateNode(call->callee);
+
     emitOpcode(Opcode::call);
-    write(call->arguments.size() - 1); // don't include the callee
+    write(call->arguments.size());
   }
 
   void Generator::generateNumber(std::shared_ptr<AST::Number> number) {
@@ -136,37 +115,36 @@ namespace ceos {
     write(arg->index);
   }
 
-  void Generator::generateFunction(std::shared_ptr<AST::Call> fn) {
-    auto callee = AST::asID(fn->arguments[0])->name;
-    int index;
-    std::string name;
-    if (callee == "defn") {
-      index = 1;
-      name = AST::asID(fn->arguments[1])->name;
-    } else if (callee == "lambda") {
-      index = 0;
-      static unsigned lambdaID = 0;
-      std::stringstream lambdaName;
-      lambdaName << "lambda$" << lambdaID++;
-      name = lambdaName.str();
-    } else {
-      throw;
+  void Generator::generateFunctionDefinition(std::shared_ptr<AST::Function> fn) {
+    emitOpcode(Opcode::create_closure);
+    write(m_ast->functions.size());
+    if (fn->name->name != "_") {
+      emitOpcode(Opcode::bind);
     }
+    m_ast->functions.push_back(fn);
+  }
 
-    write(INDEX_OF(m_ast->strings, name));
-    write(AST::asCall(fn->arguments[index + 1])->arguments.size());
+  void Generator::generateFunctionSource(std::shared_ptr<AST::Function> fn) {
+    std::string fnName = fn->name->name;
+    if (fnName == "_") {
+      static unsigned id = 0;
+      fnName = "_" + std::to_string(id++);
+      m_ast->strings.push_back(fnName);
+    }
+    write(INDEX_OF(m_ast->strings, fnName));
+    write(fn->arguments.size());
 
     m_scope = m_scope->create();
 
     int i = 0;
-    for (auto arg : AST::asCall(fn->arguments[index + 1])->arguments) {
+    for (auto arg : fn->arguments) {
       std::string &name = AST::asID(arg)->name;
       m_scope->set(name, std::make_shared<AST::FunctionArgument>(i++));
       write(INDEX_OF(m_ast->strings, name));
     }
 
-    for (unsigned ii = index + 2; ii < fn->arguments.size(); ii++) {
-      generateNode(fn->arguments[ii]);
+    for (auto node : fn->body) {
+      generateNode(node);
     }
 
     m_scope = m_scope->restore();
@@ -174,16 +152,13 @@ namespace ceos {
     write(Opcode::ret);
   }
 
-  void Generator::generateIf(std::shared_ptr<AST::Call> iff) {
-    unsigned size = iff->arguments.size();
-    assert(size == 3 || size == 4);
+  void Generator::generateIf(std::shared_ptr<AST::If> iff) {
+    generateNode(iff->condition);
 
-    generateNode(iff->arguments[1]);
+    emitJmp(Opcode::jz, iff->ifBody, iff->elseBody.size() > 0);
 
-    emitJmp(Opcode::jz, iff->arguments[2], size == 4 ? 2 : 0);
-
-    if (size == 4) {
-      emitJmp(Opcode::jmp, iff->arguments[3]);
+    if (iff->elseBody.size()) {
+      emitJmp(Opcode::jmp, iff->elseBody);
     }
   }
 
@@ -196,10 +171,9 @@ namespace ceos {
     m_output = std::stringstream();
 
     if (program->functions.size()) {
-      unsigned i = 0;
-      while (i < program->functions.size()) {
+      for (unsigned i = 0; i < program->functions.size(); i++) {
         write(Section::FunctionHeader);
-        generateFunction(program->functions[i++]);
+        generateFunctionSource(program->functions[i]);
       }
     }
 

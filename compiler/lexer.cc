@@ -7,6 +7,11 @@
 #include <iostream>
 #include <sstream>
 
+#define BASIC_TOKEN(CHAR, TYPE) \
+  case CHAR: \
+    m_token = std::make_shared<Token>(Token::Type::TYPE); \
+    break;
+
 namespace ceos {
 
   std::shared_ptr<Token> Lexer::nextToken() {
@@ -18,12 +23,15 @@ namespace ceos {
 
     int start = (int)m_input.tellg() - 1;
     switch (c) {
-      case '(':
-        m_token = std::make_shared<Token>(Token::Type::L_PAREN);
-        break;
+      BASIC_TOKEN('(', L_PAREN)
+      BASIC_TOKEN(')', R_PAREN)
+      BASIC_TOKEN('{', L_BRACE)
+      BASIC_TOKEN('}', R_BRACE)
+      BASIC_TOKEN(',', COMMA)
 
-      case ')':
-        m_token = std::make_shared<Token>(Token::Type::R_PAREN);
+      case ':':
+        assert(m_input.get() == ':');
+        m_token = std::make_shared<Token>(Token::Type::TYPE);
         break;
 
       case EOF:

@@ -17,11 +17,14 @@ namespace ceos {
       std::shared_ptr<AST::Program> parse(void);
 
     private:
-      std::shared_ptr<AST::Call> parseCall(void);
+      std::shared_ptr<AST::TypeInfo> parseTypeInfo(std::shared_ptr<AST> &&id);
+      std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee);
       std::shared_ptr<AST::Number> parseNumber(void);
-      std::shared_ptr<AST::ID> parseID(void);
+      std::shared_ptr<AST> parseID(void);
       std::shared_ptr<AST::String> parseString(void);
       std::shared_ptr<AST> parseFactor(void);
+      std::shared_ptr<AST> parseIf(void);
+      void parseBody(std::vector<std::shared_ptr<AST>> &body, Token::Type delim);
 
       Lexer &m_lexer;
       std::shared_ptr<AST::Program> m_ast;

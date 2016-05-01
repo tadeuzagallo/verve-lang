@@ -1,2 +1,2 @@
 # this should be ok
-(print "ok")
+print("ok")

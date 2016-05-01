@@ -1,15 +1,18 @@
-(if (lt 1 0)
-    (print "true")
-    (print "false"))
+if (lt(1, 0)) {
+  print("true")
+} else {
+  print("false")
+}
 
-(if (gte 1 0)
-    (print (add 5 3))
-    (print "false"))
+if (gte(1, 0))
+  print(add(5, 3))
+else
+  print("false")
 
-(if (equals 0 0)
-    (print (add 5 3)))
+if (equals(0, 0)) 
+  print(add(5, 3))
 
-(if (gt 0 1)
-    (print (add 5 3)))
+if (gt(0, 1))
+  print(add(5, 3))
 
-(print "done")
+print("done")

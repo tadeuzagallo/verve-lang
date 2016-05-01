@@ -1,15 +1,18 @@
-((lambda (n) (print n)) "hello")
+_(n){ print(n) }("hello")
 
-((lambda (fact) 
-  (print (fact 5))
-)
-((lambda (x) (x x))
-  (lambda (fact)
-    (lambda (n)
-      (if (lte n 2)
+_(fact) {
+  print(fact(5))
+}(
+  _(x) {
+    x(x)
+  }(
+    _(fact) {
+      _(n) {
+        if (lte(n, 2))
           n
-          (mul n ((fact fact) (sub n 1)))
-      )
-    )
+        else
+          mul(n, fact(fact)(sub(n, 1)))
+      }
+    }
   )
-))
+)

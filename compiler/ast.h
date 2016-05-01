@@ -35,7 +35,10 @@ namespace ceos {
         Number,
         ID,
         String,
-        FunctionArgument
+        Function,
+        FunctionArgument,
+        If,
+        TypeInfo
       );
 
       Type type;
@@ -49,17 +52,11 @@ namespace ceos {
     public:
       Program() : AST(Type::Program) {}
 
-      void addNode(std::shared_ptr<AST> node) {
-        m_nodes.push_back(node);
-      }
+      std::vector<std::shared_ptr<AST>> &nodes() { return body; }
 
-      std::vector<std::shared_ptr<AST>> nodes() const { return m_nodes; }
-
-      std::vector<std::shared_ptr<AST::Call>> functions;
+      std::vector<std::shared_ptr<AST::Function>> functions;
       std::vector<std::string> strings;
-
-    private:
-      std::vector<std::shared_ptr<AST>> m_nodes;
+      std::vector<std::shared_ptr<AST>> body;
   };
 
   class AST::Number : public AST {
@@ -89,7 +86,17 @@ namespace ceos {
     public:
       Call() : AST(Type::Call) {}
 
+      std::shared_ptr<AST> callee;
       std::vector<std::shared_ptr<AST>> arguments;
+  };
+
+  class AST::Function : public AST {
+    public:
+      Function() : AST(Type::Function) {}
+
+      std::shared_ptr<AST::ID> name;
+      std::vector<std::shared_ptr<AST>> arguments;
+      std::vector<std::shared_ptr<AST>> body;
   };
 
   class AST::FunctionArgument : public AST {
@@ -97,6 +104,23 @@ namespace ceos {
       FunctionArgument(unsigned i) : AST(Type::FunctionArgument), index(i) {}
 
       unsigned index;
+  };
+
+  class AST::If : public AST {
+    public:
+      If() : AST(Type::If) {}
+
+      std::shared_ptr<AST> condition;
+      std::vector<std::shared_ptr<AST>> ifBody;
+      std::vector<std::shared_ptr<AST>> elseBody;
+  };
+
+  class AST::TypeInfo : public AST {
+    public:
+      TypeInfo() : AST(Type::TypeInfo) {}
+
+      std::shared_ptr<AST> target;
+      std::shared_ptr<AST> type;
   };
 }
 

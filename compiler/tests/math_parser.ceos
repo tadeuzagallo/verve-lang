@@ -1,78 +1,84 @@
-(defn parse-factor- (sum expr)
-  (if (gt (count expr) 0)
-      ((lambda (c)
-        (if (and
-            (gte c '0')
-            (lte c '9'))
-          (parse-factor- (add (mul 10 sum) (sub c '0')) (substr expr 1))
-          (list sum expr)
-        )
-      ) (at expr 0))
-      (list sum expr)
-  )
-)
+parse-factor-(sum, expr) {
+  if (gt(count(expr), 0)) {
+      _(c) {
+        if (and(gte(c, '0'), lte(c, '9'))) {
+          parse-factor-(add(mul(10, sum), sub(c, '0')), substr(expr, 1))
+        } else {
+          list(sum, expr)
+        }
+      }(at(expr, 0))
+  } else {
+    list(sum, expr)
+  }
+}
 
-(defn parse-factor (e)
-  (parse-factor- 0 e)
-)
+parse-factor(e) {
+  parse-factor-(0, e)
+}
 
-(defn eval-term (expr)
-  (eval-term- (parse-factor expr))
-)
+eval-term(expr) {
+  eval-term-(parse-factor(expr))
+}
 
-(defn eval-term- (pair)
-  ((lambda (lhs expr)
-    (if (lte (count expr) 0)
+eval-term-(pair) {
+  _(lhs, expr) {
+    if (lte(count(expr), 0)) {
       pair
-      ((lambda (lookahead expr)
-        (if (or (equals lookahead '*')
-                (equals lookahead '/'))
-          ((lambda (pair)
-            ((lambda (rhs expr)
-              (if (equals lookahead '*')
-                (eval-term- (list (mul lhs rhs) expr))
-                (eval-term- (list (div lhs rhs) expr))
-              )
-            ) (at pair 0) (at pair 1))
-          ) (parse-factor expr))
+    } else {
+      _(lookahead, expr) {
+        if (or(equals(lookahead, '*'), equals(lookahead, '/'))) {
+          _(pair) {
+            _(rhs, expr) {
+              if (equals(lookahead, '*')) {
+                eval-term-(list(mul(lhs, rhs), expr))
+              } else {
+                eval-term-(list(div(lhs, rhs), expr))
+              }
+            }(at(pair, 0), at(pair, 1))
+          }(parse-factor(expr))
+        } else {
           pair
-        )
-      ) (at expr 0) (substr expr 1))
-    )
-  ) (at pair 0) (at pair 1))
-)
+        }
+      }(at(expr, 0), substr(expr, 1))
+    }
+  }(at(pair, 0), at(pair, 1))
+}
 
-(defn eval-expr (e)
-  (eval-expr- (eval-term e))
-)
+eval-expr(e) {
+  eval-expr-(eval-term(e))
+}
 
-(defn eval-expr- (pair)
-  ((lambda (lhs expr)
-    (if (lte (count expr) 0)
+eval-expr-(pair) {
+  _(lhs, expr) {
+    if (lte(count(expr), 0)) {
       pair
-      ((lambda (lookahead expr)
-        (if (or (equals lookahead '+')
-                (equals lookahead '-'))
-          ((lambda (pair)
-            ((lambda (rhs expr)
-              (if (equals lookahead '+')
-                (eval-expr- (list (add lhs rhs) expr))
-                (eval-expr- (list (sub lhs rhs) expr))
-              )
-            ) (at pair 0) (at pair 1))
-          ) (eval-term expr))
+    } else {
+      _(lookahead, expr) {
+        if (or(equals(lookahead, '+'), equals(lookahead, '-'))) {
+          _(pair) {
+            _(rhs, expr) {
+              if (equals(lookahead, '+')) {
+                eval-expr-(list(add(lhs, rhs), expr))
+              } else {
+                eval-expr-(list(sub(lhs, rhs), expr))
+              }
+            }(at(pair, 0), at(pair, 1))
+          }(eval-term(expr))
+        } else {
           pair
-        )
-      ) (at expr 0) (substr expr 1))
-    )
-  ) (at pair 0) (at pair 1))
-)
+        }
+      }(at(expr, 0), substr(expr, 1))
+    }
+  }(at(pair, 0), at(pair, 1))
+}
 
-(defn eval (e) (at (eval-expr e) 0))
+eval(e) {
+  at(eval-expr(e), 0)
+}
 
-(print (eval "22"))
-(print (eval "22+22"))
-(print (eval "22-11"))
-(print (eval "10+51-17"))
-(print (eval "3*5+10"))
-(print (eval "10+3*5+10"))
+print(eval("22"))
+print(eval("22+22"))
+print(eval("22-11"))
+print(eval("10+51-17"))
+print(eval("3*5+10"))
+print(eval("10+3*5+10"))

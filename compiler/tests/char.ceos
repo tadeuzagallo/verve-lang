@@ -1,1 +1,1 @@
-(print (sub 'c' 'a'))
+print(sub('c', 'a'))

@@ -28,14 +28,14 @@ namespace ceos {
       void generateID(std::shared_ptr<AST::ID>);
       void generateString(std::shared_ptr<AST::String>);
       void generateFunctionArgument(std::shared_ptr<AST::FunctionArgument>);
-      bool handleSpecialCall(std::shared_ptr<AST::Call> call);
-      void generateFunction(std::shared_ptr<AST::Call>);
-      void generateIf(std::shared_ptr<AST::Call>);
+      void generateFunctionDefinition(std::shared_ptr<AST::Function>);
+      void generateFunctionSource(std::shared_ptr<AST::Function>);
+      void generateIf(std::shared_ptr<AST::If>);
       void generateProgram(std::shared_ptr<AST::Program>);
 
       void emitOpcode(Opcode::Type);
-      void emitJmp(Opcode::Type, std::shared_ptr<AST> &);
-      void emitJmp(Opcode::Type, std::shared_ptr<AST> &, bool);
+      void emitJmp(Opcode::Type, std::vector<std::shared_ptr<AST>> &);
+      void emitJmp(Opcode::Type, std::vector<std::shared_ptr<AST>> &, bool);
       void write(int);
       void write(const std::string &);
 

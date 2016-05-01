@@ -16,7 +16,7 @@ namespace ceos {
       class Number;
       class String;
 
-      ENUM_CLASS(Type, END, L_PAREN, R_PAREN, ID, NUMBER, STRING)
+      ENUM_CLASS(Type, END, L_PAREN, R_PAREN, ID, NUMBER, STRING, TYPE, COMMA, L_BRACE, R_BRACE)
 
       Token(Type t) : type(t) {}
 

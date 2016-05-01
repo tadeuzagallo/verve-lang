@@ -1,10 +1,14 @@
-(defn math (fn a b) (fn a b))
+math(fn, a, b) {
+  fn(a, b)
+}
 
-(print (math sub 2 1))
-(print (math add 2 1))
-(print (math mul 2 1))
-(print (math div 6 3))
+print(math(sub, 2, 1))
+print(math(add, 2, 1))
+print(math(mul, 2, 1))
+print(math(div, 6, 3))
 
-(defn foo (a b) (add (mul a a) (mul b b)))
+foo(a, b) {
+  add(mul(a, a), mul(b, b))
+}
 
-(print (math foo 6 3))
+print(math(foo, 6, 3))
