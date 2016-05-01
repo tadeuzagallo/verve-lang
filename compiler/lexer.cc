@@ -73,6 +73,10 @@ namespace ceos {
           m_input.unget();
 
           m_token = std::make_shared<Token::ID>(id.str());
+        } else {
+          // TODO: proper error here
+          std::cerr << "Invalid token `" << c << "`\n";
+          throw;
         }
     }
 
@@ -131,7 +135,8 @@ namespace ceos {
     do {
       m_input.clear();
       m_input.seekg(start);
-    } while (start > 0 && start-- && m_input.get() != '\n');
+    } while (start > 0 && m_input.get() != '\n' && start--);
+
     char line[256];
     m_input.getline(line, 256);
     line[m_input.gcount()] = 0;
