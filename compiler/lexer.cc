@@ -10,13 +10,13 @@
 namespace ceos {
 
   std::shared_ptr<Token> Lexer::nextToken() {
-    char c ;
+    char c;
 
     do {
       c = m_input.get();
     } while(isspace(c));
 
-    int start = m_input.tellg();
+    int start = (int)m_input.tellg() - 1;
     switch (c) {
       case '(':
         m_token = std::make_shared<Token>(Token::Type::L_PAREN);
@@ -93,18 +93,33 @@ namespace ceos {
 
   void Lexer::ensure(Token::Type type) {
     if (m_token->type != type) {
-      std::cerr << "Invalid type found: expected `" << Token::typeName(m_token->type) << "` to be `" << Token::typeName(type) << "`" << "\n";
+      std::cerr << "Invalid token found: expected `" << Token::typeName(m_token->type) << "` to be `" << Token::typeName(type) << "`" << "\n";
       printSource();
       throw "Parser error";
     }
     nextToken();
   }
 
-  void Lexer::invalidType() {
+   void Lexer::invalidType() {
     if (m_token->type == Token::Type::END) {
       std::cerr << "Unexpected end of input\n";
     } else {
-      std::cerr << "Invalid type found: `" << Token::typeName(m_token->type) << "`\n";
+      int line = 1;
+      int column = 0;
+      m_input.seekg(0);
+      std::stringstream _source;
+      _source << m_input.rdbuf();
+      std::string source = _source.str();
+      for (int i = 0; i < m_token->loc.start; i++) {
+        if (source[i] == '\n') {
+          line++;
+          column = 0;
+        } else {
+          column++;
+        }
+      }
+
+      std::cerr << "Unexpected token `" << Token::typeName(m_token->type) << "` at " << line << ":" << column << std::endl;
     }
     printSource();
     throw "Type error";
@@ -113,7 +128,6 @@ namespace ceos {
   void Lexer::printSource() {
     int start = m_token->loc.start;
     int actualStart = start;
-    int curPos = m_input.tellg();
     do {
       m_input.clear();
       m_input.seekg(start);
@@ -122,7 +136,6 @@ namespace ceos {
     m_input.getline(line, 256);
     line[m_input.gcount()] = 0;
     std::cerr << line << "\n";
-    std::cerr << std::setw(actualStart - start + 3) << "^\n";
-    m_input.seekg(curPos);
+    std::cerr << std::setw(actualStart - start + 2) << "^\n";
   }
 }

@@ -1,4 +1,5 @@
 #include "macros.h"
+#include "token.h"
 
 #include <cassert>
 #include <memory>
@@ -38,6 +39,7 @@ namespace ceos {
       );
 
       Type type;
+      Loc loc;
 
       AST(Type t) : type(t) {}
 

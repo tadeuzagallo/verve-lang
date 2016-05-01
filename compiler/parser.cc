@@ -9,10 +9,19 @@ namespace ceos {
     m_ast = std::make_shared<AST::Program>();
 
     m_lexer.nextToken();
+    int start = -1;
+    int end;
     while (m_lexer.token()->type != Token::Type::END) {
       std::shared_ptr<AST> node = parseFactor();
       m_ast->addNode(node);
+
+      end = node->loc.end;
+      if (start == -1) {
+        start = end;
+      }
     }
+
+    m_ast->loc = { start, end };
 
     return m_ast;
   }
@@ -29,13 +38,14 @@ namespace ceos {
         return parseString();
       default:
         m_lexer.invalidType();
-        throw "Unexpected token";
     }
   }
 
   std::shared_ptr<AST::Number> Parser::parseNumber() {
     auto number = std::static_pointer_cast<Token::Number>(m_lexer.token(Token::Type::NUMBER));
-    return std::make_shared<AST::Number>(number->value);
+    auto ast = std::make_shared<AST::Number>(number->value);
+    ast->loc = number->loc;
+    return ast;
   }
 
   std::shared_ptr<AST::ID> Parser::parseID() {
@@ -50,7 +60,9 @@ namespace ceos {
       m_ast->strings.push_back(id->name);
     }
 
-    return std::make_shared<AST::ID>(m_ast->strings[uid], uid);
+    auto ast = std::make_shared<AST::ID>(m_ast->strings[uid], uid);
+    ast->loc = id->loc;
+    return ast;
   }
 
   std::shared_ptr<AST::String> Parser::parseString() {
@@ -65,11 +77,13 @@ namespace ceos {
       m_ast->strings.push_back(string->value);
     }
 
-    return std::make_shared<AST::String>(m_ast->strings[uid], uid);
+    auto ast =  std::make_shared<AST::String>(m_ast->strings[uid], uid);
+    ast->loc = string->loc;
+    return ast;
   }
 
   std::shared_ptr<AST::Call> Parser::parseCall(void) {
-    m_lexer.ensure(Token::Type::L_PAREN);
+    auto start = m_lexer.token(Token::Type::L_PAREN)->loc.start;
 
     auto call = std::make_shared<AST::Call>();
 
@@ -77,7 +91,8 @@ namespace ceos {
       call->arguments.push_back(parseFactor());
     }
 
-    m_lexer.ensure(Token::Type::R_PAREN);
+    auto end = m_lexer.token(Token::Type::R_PAREN)->loc.end;
+    call->loc = { start, end };
 
     return call;
   }

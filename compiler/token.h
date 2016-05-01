@@ -1,9 +1,14 @@
 #include "macros.h"
+#include <string>
 
 #ifndef CEOS_TOKEN_H
 #define CEOS_TOKEN_H
 
 namespace ceos {
+  struct Loc {
+    int start;
+    int end;
+  };
 
   class Token {
     public:
@@ -16,10 +21,7 @@ namespace ceos {
       Token(Type t) : type(t) {}
 
       Type type;
-      struct {
-        int start;
-        int end;
-      } loc;
+      Loc loc;
   };
 
   class Token::ID : public Token {

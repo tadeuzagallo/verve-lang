@@ -20,7 +20,7 @@ namespace ceos {
 
       void ensure(Token::Type);
 
-      void invalidType();
+      _Noreturn void invalidType();
       void printSource();
 
     private:
