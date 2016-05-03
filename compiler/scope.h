@@ -32,7 +32,7 @@ namespace ceos {
         return m_previous ?: m_parent ?: this->shared_from_this();
       }
 
-      inline T get(std::string &var) {
+      inline T get(std::string var) {
         auto it = m_table.find(var);
         if (it != m_table.end()) return it->second;
         else if (m_parent) return m_parent->get(var);

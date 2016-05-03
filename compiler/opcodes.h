@@ -15,12 +15,13 @@ class Opcode {
       create_closure,
       load_string,
       push_arg,
-      lookup
+      lookup,
+      exit
     );
 };
 
 #define READ_INT(FROM, TO) \
-    int TO; \
+    uint64_t TO; \
     FROM.read(reinterpret_cast<char *>(&TO), sizeof(TO)); \
     if (FROM.eof() || FROM.fail()) return
 

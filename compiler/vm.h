@@ -32,6 +32,7 @@ namespace ceos {
       }
 
       void execute();
+      void inflate();
       void loadStrings();
       void loadFunctions();
       void run();
@@ -76,7 +77,7 @@ namespace ceos {
       size_t heapLimit;
       std::vector<std::pair<size_t, void *>> blocks;
 
-      std::vector<std::string> m_stringTable;
+      std::vector<char *> m_stringTable;
       std::shared_ptr<Scope<Value>> m_scope;
 
     private:

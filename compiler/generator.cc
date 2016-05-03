@@ -8,6 +8,7 @@
 namespace ceos {
   std::stringstream &Generator::generate() {
     generateProgram(m_ast);
+    emitOpcode(Opcode::exit);
     m_output.seekg(0);
     return m_output;
   }
@@ -44,7 +45,7 @@ namespace ceos {
     }
   }
 
-  void Generator::write(int data) {
+  void Generator::write(uint64_t data) {
     m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
   }
 
@@ -223,13 +224,13 @@ read_section:
     switch (section) {
       case Section::Strings:
         padding = "";
-        WRITE(8, "STRINGS:");
+        WRITE(16, "STRINGS:");
         padding = "  ";
         goto section_strings;
         break;
       case Section::Functions: {
         padding = "";
-        WRITE(8, "FUNCTIONS:");
+        WRITE(16, "FUNCTIONS:");
         padding = "  ";
         auto offset = bytecode.tellg();
         while (true) {
@@ -248,7 +249,7 @@ read_section:
       }
       case Section::Text:
         padding = "";
-        WRITE(8, "TEXT:");
+        WRITE(16, "TEXT:");
         padding = "  ";
         goto section_code;
         break;
@@ -257,8 +258,8 @@ read_section:
 section_strings:
     while (true) {
       READ_INT(bytecode, ceos);
-      bytecode.seekg(-4, bytecode.cur);
-      if (ceos == 0xCE05)  {
+      bytecode.seekg(-sizeof(ceos), bytecode.cur);
+      if (ceos == Section::Header)  {
         goto read_section;
       }
       static unsigned str_index = 0;
@@ -275,7 +276,7 @@ section_functions: {
       READ_INT(bytecode, arg_count);
 
       std::stringstream args;
-      for (int i = 0; i < arg_count; i++) {
+      for (unsigned i = 0; i < arg_count; i++) {
         READ_INT(bytecode, argID);
         args << "$" << i << ": " << strings[argID];
         if (i < arg_count - 1) args << ", ";
@@ -314,50 +315,53 @@ section_code:
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
-        WRITE(8, "push 0x" << std::setbase(16) << value << std::setbase(10));
+        WRITE(16, "push 0x" << std::setbase(16) << value << std::setbase(10));
         break;
       }
       case Opcode::call: {
         READ_INT(bytecode, nargs);
-        WRITE(8, "call (" << nargs << ")");
+        WRITE(16, "call (" << nargs << ")");
         break;
       }
       case Opcode::load_string: {
         READ_INT(bytecode, stringID);
-        WRITE(8, "load_string $" << stringID);
+        WRITE(16, "load_string $" << stringID);
         break;
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
-        WRITE(8, "lookup $" << id << "(" << strings[id] << ")");
+        WRITE(16, "lookup $" << id << "(" << strings[id] << ")");
         break;
       }
       case Opcode::create_closure: {
         READ_INT(bytecode, fnID);
-        WRITE(8, "create_closure " << functions[fnID]);
+        WRITE(16, "create_closure " << functions[fnID]);
         break;
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE(8, "jmp [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(16, "jmp [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE(8, "jz [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(16, "jz [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::push_arg: {
         READ_INT(bytecode, arg);
-        WRITE(8, "push_arg $" << arg);
+        WRITE(16, "push_arg $" << arg);
         break;
       }
       case Opcode::ret: {
-        WRITE(4, "ret");
+        WRITE(8, "ret");
         break;
       }
       case Opcode::bind:
-        WRITE(4, "bind");
+        WRITE(8, "bind");
+        break;
+      case Opcode::exit:
+        WRITE(8, "exit");
         break;
       default:
         std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";

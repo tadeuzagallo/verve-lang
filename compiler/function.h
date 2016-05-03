@@ -8,20 +8,20 @@ namespace ceos {
   class VM;
 
   struct Function {
-    Function(unsigned i, unsigned args, unsigned o, std::vector<std::string *> &&a) :
+    Function(unsigned i, unsigned args, unsigned o, std::vector<char *> &&a) :
       offset(o),
       id(i),
       nargs(args),
       args(a) {}
 
-    std::string &name(VM *);
+    std::string name(VM *);
 
-    inline std::string &arg(unsigned i) { return *args[i]; }
+    inline char *arg(unsigned i) { return args[i]; }
 
     unsigned offset;
     unsigned id;
     unsigned nargs;
-    std::vector<std::string *> args;
+    std::vector<char *> args;
   };
 
 }

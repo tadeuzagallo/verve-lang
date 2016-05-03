@@ -60,13 +60,13 @@ namespace ceos {
       return reinterpret_cast<TYPE *>(unmask(value.ptr)); \
     }
 
-    POINTER_TYPE(std::string, String)
+    POINTER_TYPE(char, String)
     POINTER_TYPE(std::vector<Value>, Array)
     POINTER_TYPE(Closure, Closure)
 
 #undef POINTER_TYPE
 
-    typedef Value (*Builtin)(VM &, unsigned);
+    typedef Value (*Builtin)(unsigned, Value *, VM *);
 
     Value(Builtin ptr) {
       value.ptr = reinterpret_cast<uintptr_t>(ptr);

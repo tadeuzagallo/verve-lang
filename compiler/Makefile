@@ -3,8 +3,8 @@ CFLAGS = -g -O0 -Wall -Wextra -std=c++11
 LIBS = 
 
 HEADERS = $(wildcard *.h)
-SOURCES = $(wildcard *.cc)
-OBJECTS = $(patsubst %.cc,%.o,$(SOURCES))
+SOURCES = $(wildcard *.cc) $(wildcard *.S)
+OBJECTS = $(patsubst %,%.o,$(SOURCES))
 TARGET = ceos-build
 
 default: $(TARGET)
@@ -14,7 +14,10 @@ default: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
 
-%.o: %.cc $(HEADERS)
+%.cc.o: %.cc $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+%.S.o: %.S $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # ERROR TESTS

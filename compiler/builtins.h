@@ -1,7 +1,11 @@
 #ifndef CEOS_BUILTINS_H
 #define CEOS_BUILTINS_H
 
-#define JS_FUNCTION(FN_NAME) Value FN_NAME(ceos::VM &vm, unsigned argv)
+#define JS_FUNCTION(FN_NAME) \
+  Value FN_NAME( \
+      __attribute__((unused)) unsigned argc, \
+      __attribute__((unused)) Value *argv, \
+      __attribute__((unused)) VM *vm)
 
 namespace ceos {
   class VM;
