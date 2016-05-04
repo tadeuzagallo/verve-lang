@@ -74,7 +74,7 @@ namespace ceos {
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
     write((afterPos - beforePos)
-        - 4 // sizeof the jump offset
+        - 8 // sizeof the jump offset
         + (skipNextJump ? 8 : 0) // special case for if with else
     );
     m_output.seekp(afterPos);
@@ -288,7 +288,7 @@ section_functions: {
 
       while (true) {
         READ_INT(bytecode, header);
-        bytecode.seekg(-4, bytecode.cur);
+        bytecode.seekg(sizeof(bytecode), bytecode.cur);
         if (header == Section::FunctionHeader) {
           goto section_functions;
         } else if (header == Section::Header) {
