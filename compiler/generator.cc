@@ -55,7 +55,7 @@ namespace ceos {
   }
 
   void Generator::emitOpcode(Opcode::Type opcode) {
-    write(opcode);
+    m_output.put(opcode);
   }
 
   void Generator::emitJmp(Opcode::Type jmpType, std::vector<std::shared_ptr<AST>> &body)  {
@@ -295,14 +295,17 @@ section_functions: {
           goto read_section;
         }
 
-        READ_INT(bytecode, opcode);
+        char opcode = bytecode.get();
         printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
       }
     }
 
 section_code:
     while (true) {
-      READ_INT(bytecode, opcode);
+      char opcode = bytecode.get();
+      if (bytecode.eof() || bytecode.fail()) {
+        return;
+      }
       printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
     }
     goto read_section;
@@ -315,53 +318,53 @@ section_code:
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
-        WRITE(8, "push 0x" << std::setbase(16) << value << std::setbase(10));
+        WRITE(5, "push 0x" << std::setbase(16) << value << std::setbase(10));
         break;
       }
       case Opcode::call: {
         READ_INT(bytecode, nargs);
-        WRITE(8, "call (" << nargs << ")");
+        WRITE(5, "call (" << nargs << ")");
         break;
       }
       case Opcode::load_string: {
         READ_INT(bytecode, stringID);
-        WRITE(8, "load_string $" << stringID);
+        WRITE(5, "load_string $" << stringID);
         break;
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
-        WRITE(8, "lookup $" << id << "(" << strings[id] << ")");
+        WRITE(5, "lookup $" << id << "(" << strings[id] << ")");
         break;
       }
       case Opcode::create_closure: {
         READ_INT(bytecode, fnID);
-        WRITE(8, "create_closure " << functions[fnID]);
+        WRITE(5, "create_closure " << functions[fnID]);
         break;
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE(8, "jmp [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(5, "jmp [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE(8, "jz [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(5, "jz [" << ((int)bytecode.tellg() + target) << "]");
         break;
       }
       case Opcode::push_arg: {
         READ_INT(bytecode, arg);
-        WRITE(8, "push_arg $" << arg);
+        WRITE(5, "push_arg $" << arg);
         break;
       }
       case Opcode::ret: {
-        WRITE(4, "ret");
+        WRITE(1, "ret");
         break;
       }
       case Opcode::bind:
-        WRITE(4, "bind");
+        WRITE(1, "bind");
         break;
       case Opcode::exit:
-        WRITE(4, "exit");
+        WRITE(1, "exit");
         break;
       default:
         std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";

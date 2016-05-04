@@ -6,12 +6,12 @@
 
 .macro read
   mov $0, %rax
-  mov (BYTECODE, %rax, 4), $1
+  mov -0x3(BYTECODE, %rax, 4), $1
 .endmacro
 
 .macro skip
   mov $0, %rax
-  lea (BYTECODE, %rax, 4), BYTECODE
+  lea 0x1(BYTECODE, %rax, 4), BYTECODE
   jmp _loop
 .endmacro
 
@@ -41,9 +41,10 @@ _execute:
   mov %rdx, VM
 
 _loop:
-  mov (BYTECODE), %eax // 0..10
+  xor %rax, %rax
+  mov (BYTECODE), %al // 0..10
   lea (%rip), %rdi
-  lea 0x7(%rdi, %rax, 8), %rdi
+  lea 0x7(%rdi, %al, 8), %rdi
   jmp *%rdi
   jmp _op_ret
   nop
@@ -98,7 +99,7 @@ _op_exit:
 _op_push:
   read $1, %edi
   push %rdi
-  skip $2
+  skip $1
 
 _op_lookup:
   mov VM, %rdi
@@ -106,7 +107,7 @@ _op_lookup:
   mov (STRINGS, %rsi, 8), %rsi
   ccall _getScope
   push %rax
-  skip $2
+  skip $1
 
 _op_call:
   // pop the callee from the stack
@@ -122,7 +123,7 @@ _op_call:
   ccall *%r8
 
   push %rax
-  skip $2
+  skip $1
 
 _op_load_string:
   read $1, %edi
@@ -131,7 +132,7 @@ _op_load_string:
   mov STRING_TAG, %dil
   ror $8, %rdi
   push %rdi
-  skip $2
+  skip $1
 
 _op_create_closure:
   hlt
