@@ -149,7 +149,7 @@ namespace ceos {
 
     m_scope = m_scope->restore();
 
-    write(Opcode::ret);
+    emitOpcode(Opcode::ret);
   }
 
   void Generator::generateIf(std::shared_ptr<AST::If> iff) {
@@ -287,7 +287,7 @@ section_functions: {
 
       while (true) {
         READ_INT(bytecode, header);
-        bytecode.seekg(sizeof(bytecode), bytecode.cur);
+        bytecode.seekg(-sizeof(header), bytecode.cur);
         if (header == Section::FunctionHeader) {
           goto section_functions;
         } else if (header == Section::Header) {
