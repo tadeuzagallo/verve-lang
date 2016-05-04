@@ -38,13 +38,13 @@ uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
 }
 
   void VM::execute() {
-    auto header = read<uint64_t>();
+    auto header = read<unsigned>();
 
     // section marker
     assert(header == Section::Header);
 
     while (true) {
-      auto section = read<uint64_t>();
+      auto section = read<unsigned>();
 
       if (pc > length) {
         return;
@@ -69,7 +69,7 @@ uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
 
   void VM::loadStrings() {
     while (true) {
-      auto header = read<uint64_t>();
+      auto header = read<unsigned>();
 
       if (header == Section::Header) {
         break;
@@ -82,7 +82,7 @@ uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
   }
 
   void VM::loadFunctions() {
-    auto initialHeader = read<uint64_t>();
+    auto initialHeader = read<unsigned>();
     assert(initialHeader == Section::FunctionHeader);
 
     while (true) {
@@ -91,13 +91,13 @@ uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
 
       std::vector<char *> args;
       for (unsigned i = 0; i < nargs; i++) {
-        auto argID = read<uint64_t>();
+        auto argID = read<unsigned>();
         args.push_back(m_stringTable[argID]);
       }
       m_userFunctions.push_back(Function(fnid, nargs, pc, std::move(args)));
 
       while (true) {
-        auto opcode = read<uint64_t>();
+        auto opcode = read<unsigned>();
         if (opcode == Section::Header) {
           return;
         } else if (opcode == Section::FunctionHeader) {

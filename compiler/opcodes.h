@@ -21,7 +21,7 @@ class Opcode {
 };
 
 #define READ_INT(FROM, TO) \
-    uint64_t TO; \
+    int TO; \
     FROM.read(reinterpret_cast<char *>(&TO), sizeof(TO)); \
     if (FROM.eof() || FROM.fail()) return
 
