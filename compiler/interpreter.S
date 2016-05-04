@@ -12,7 +12,7 @@
 .macro skip
   mov $0, %rax
   lea (BYTECODE, %rax, 8), BYTECODE
-  jmp *(BYTECODE)
+  jmp _loop
 .endmacro
 
 .macro unmask
@@ -29,7 +29,7 @@
   pop %r15
 .endmacro
 
-  .globl _execute
+.globl _execute
 _execute:
   push %rbp
   push BYTECODE
@@ -39,9 +39,54 @@ _execute:
   mov %rdi, BYTECODE
   mov %rsi, STRINGS
   mov %rdx, VM
-  jmp  *(BYTECODE)
 
-.globl _op_exit
+_loop:
+  mov (BYTECODE), %rax // 0..10
+  lea (%rip), %rdi
+  lea 0x7(%rdi, %rax, 8), %rdi
+  jmp *%rdi
+  jmp _op_ret
+  nop
+  nop
+  nop
+  jmp _op_bind
+  nop
+  nop
+  nop
+  jmp _op_push
+  nop
+  nop
+  nop
+  jmp _op_call
+  nop
+  nop
+  nop
+  jmp _op_jz
+  nop
+  nop
+  nop
+  jmp _op_jmp
+  nop
+  nop
+  nop
+  jmp _op_create_closure
+  nop
+  nop
+  nop
+  jmp _op_load_string
+  nop
+  nop
+  nop
+  jmp _op_push_arg
+  nop
+  nop
+  nop
+  jmp _op_lookup
+  nop
+  nop
+  nop
+  jmp _op_exit
+
 _op_exit:
   mov %rbp, %rsp
   pop VM
@@ -50,13 +95,11 @@ _op_exit:
   pop %rbp
   ret
 
-.globl _op_push
 _op_push:
   read $1, %rdi
   push %rdi
   skip $2
 
-.globl _op_lookup
 _op_lookup:
   mov VM, %rdi
   read $1, %rsi
@@ -65,22 +108,22 @@ _op_lookup:
   push %rax
   skip $2
 
-.globl _op_call
 _op_call:
+  // pop the callee from the stack
+  pop %r8
+
   // setup args
   read $1, %rdi //argc
-  lea (%rsp, %rdi, 8), %rsi // argv
+  mov %rsp, %rsi // argv just live in the stack
   mov VM, %rdx
 
   // setup callee
-  pop %r8
   unmask %r8
   ccall *%r8
 
   push %rax
   skip $2
 
-.globl _op_load_string
 _op_load_string:
   read $1, %rdi
   mov (STRINGS, %rdi, 8), %rdi
@@ -89,3 +132,21 @@ _op_load_string:
   ror $8, %rdi
   push %rdi
   skip $2
+
+_op_create_closure:
+  hlt
+
+_op_bind:
+  hlt
+
+_op_jz:
+  hlt
+
+_op_jmp:
+  hlt
+
+_op_ret:
+  hlt
+
+_op_push_arg:
+  hlt
