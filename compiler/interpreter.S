@@ -141,10 +141,20 @@ _op_bind:
   hlt
 
 _op_jz:
-  hlt
+  read $1, %edi
+  pop %rsi
+  test %esi, %esi
+  jz _jz
+  skip $1
+_jz:
+  add %rdi, BYTECODE
+  jmp _loop
+
 
 _op_jmp:
-  hlt
+  read $1, %edi
+  add %rdi, BYTECODE
+  jmp _loop
 
 _op_ret:
   hlt

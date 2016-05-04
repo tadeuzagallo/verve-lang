@@ -74,8 +74,7 @@ namespace ceos {
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
     write((afterPos - beforePos)
-        - 8 // sizeof the jump offset
-        + (skipNextJump ? 8 : 0) // special case for if with else
+        + (skipNextJump ? 6 : 1) // special case for if with else
     );
     m_output.seekp(afterPos);
   }
