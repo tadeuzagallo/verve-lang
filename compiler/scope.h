@@ -18,8 +18,8 @@ namespace ceos {
 
     Scope(unsigned size = DEFAULT_SIZE) {
       refCount = 1;
-      tableSize = 0;
       length = 0;
+      tableSize = 0;
       table = NULL;
       parent = NULL;
       previous = NULL;
@@ -37,11 +37,6 @@ namespace ceos {
       }
     }
 
-    ~Scope() {
-      if (parent) parent->dec();
-      if (previous) previous->dec();
-    }
-
     Scope *inc() {
       refCount++;
       return this;
@@ -49,19 +44,43 @@ namespace ceos {
 
     void dec() {
       if (!--refCount) {
-        delete this;
+        if (parent) { parent->dec(); parent = NULL; }
+        if (previous) { previous->dec(); previous = NULL; }
+        s_scopePool.push_back(this);
       }
     }
 
     Scope *create(Scope *p, unsigned size = DEFAULT_SIZE) {
-      auto s = new Scope(size);
+      Scope *s;
+      if (!s_scopePool.empty()) {
+        s = s_scopePool.back();
+        s_scopePool.pop_back();
+        s->refCount = 1;
+        s->length = 0;
+        for (unsigned i = 0; i < s->tableSize; i++) {
+          table[i++].key = NULL;
+        }
+      } else {
+        s = new Scope(size);
+      }
       s->parent = p->inc();
       s->previous = this->inc();
       return s;
     }
 
     Scope *create() {
-      auto s = new Scope();
+      Scope *s;
+      if (!s_scopePool.empty()) {
+        s = s_scopePool.back();
+        s_scopePool.pop_back();
+        unsigned prevSize = s->tableSize;
+        s->refCount = 1;
+        s->length = 0;
+        s->tableSize = 0;
+        s->resize(prevSize);
+      } else {
+        s = new Scope();
+      }
       s->parent = this->inc();
       return s;
     }
@@ -125,6 +144,8 @@ namespace ceos {
     unsigned refCount;
     unsigned length;
     unsigned tableSize;
+
+    static std::vector<Scope *> s_scopePool;
   };
 
 }
