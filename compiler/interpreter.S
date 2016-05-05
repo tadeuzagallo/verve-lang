@@ -1,18 +1,18 @@
-#define STRING_TAG $0x2
-#define CLOSURE_TAG $0x10
-#define BYTECODE %r12
-#define STRINGS %r13
-#define VM %r14
-#define BCBASE %r15
+#define STRING_TAG 0x2
+#define CLOSURE_TAG 0x10
+#define BYTECODE r12
+#define STRINGS r13
+#define VM r14
+#define BCBASE r15
 
 .macro read
   mov $0, %rax
-  mov -0x3(BYTECODE, %rax, 4), $1
+  mov -0x3(%BYTECODE, %rax, 4), $1
 .endmacro
 
 .macro skip
   mov $0, %rax
-  lea 0x1(BYTECODE, %rax, 4), BYTECODE
+  lea 0x1(%BYTECODE, %rax, 4), %BYTECODE
   jmp _loop
 .endmacro
 
@@ -33,19 +33,19 @@
 .globl _execute
 _execute:
   push %rbp
-  push BYTECODE
-  push STRINGS
-  push VM
-  push BCBASE
+  push %BYTECODE
+  push %STRINGS
+  push %VM
+  push %BCBASE
   mov %rsp, %rbp
-  mov %rdi, BYTECODE
-  mov %rsi, STRINGS
-  mov %rdx, VM
-  mov %rcx, BCBASE
+  mov %rdi, %BYTECODE
+  mov %rsi, %STRINGS
+  mov %rdx, %VM
+  mov %rcx, %BCBASE
 
 _loop:
   xor %rax, %rax
-  mov (BYTECODE), %al // 0..10
+  mov (%BYTECODE), %al // 0..10
   lea (%rip), %rdi
   lea 0x7(%rdi, %al, 8), %rdi
   jmp *%rdi
@@ -93,10 +93,10 @@ _loop:
 
 _op_exit:
   mov %rbp, %rsp
-  pop BCBASE
-  pop VM
-  pop STRINGS
-  pop BYTECODE
+  pop %BCBASE
+  pop %VM
+  pop %STRINGS
+  pop %BYTECODE
   pop %rbp
   ret
 
@@ -106,9 +106,9 @@ _op_push:
   skip $1
 
 _op_lookup:
-  mov VM, %rdi
+  mov %VM, %rdi
   read $1, %esi
-  mov (STRINGS, %rsi, 8), %rsi
+  mov (%STRINGS, %rsi, 8), %rsi
   ccall _getScope
   push %rax
   skip $1
@@ -120,11 +120,11 @@ _op_call:
   // setup args
   read $1, %edi //argc
   mov %rsp, %rsi // argv just lives in the stack
-  mov VM, %rdx
+  mov %VM, %rdx
 
   // check tag
   rol $8, %rcx
-  test CLOSURE_TAG, %cl
+  test $CLOSURE_TAG, %cl
   pushf
   shr $8, %rcx
   popf
@@ -140,12 +140,12 @@ _call_builtin:
   skip $1
 
 _call_closure:
-  push BYTECODE
+  push %BYTECODE
   push %rdi
   push %rbp
   mov %rsp, %rbp
   ccall _prepareClosure
-  lea (BCBASE, %rax, 1), BYTECODE
+  lea (%BCBASE, %rax, 1), %BYTECODE
   jmp _loop
 
 _op_ret:
@@ -153,37 +153,37 @@ _op_ret:
   mov %rbp, %rsp
   pop %rbp
   pop %rdi
-  pop BYTECODE
+  pop %BYTECODE
   lea (%rsp, %rdi, 8), %rsp
   push %rax
-  mov VM, %rdi
+  mov %VM, %rdi
   ccall _restoreScope
   skip $1
 
 _op_load_string:
   read $1, %edi
-  mov (STRINGS, %rdi, 8), %rdi
+  mov (%STRINGS, %rdi, 8), %rdi
   rol $8, %rdi 
-  mov STRING_TAG, %dil
+  mov $STRING_TAG, %dil
   ror $8, %rdi
   push %rdi
   skip $1
 
 _op_create_closure:
-  mov VM, %rdi
+  mov %VM, %rdi
   read $1, %rsi
   ccall _createClosure
   push %rax
   skip $1
 
 _op_bind:
-  mov VM, %rdi
+  mov %VM, %rdi
   pop %rdx
   mov %rdx, %rsi
   unmask %rsi
   mov (%rsi), %rsi
   mov (%rsi), %esi
-  mov (STRINGS, %rsi, 8), %rsi
+  mov (%STRINGS, %rsi, 8), %rsi
   ccall _setScope
   skip $0
 
@@ -194,13 +194,13 @@ _op_jz:
   skip $1
 _jz:
   read $1, %edi
-  add %rdi, BYTECODE
+  add %rdi, %BYTECODE
   jmp _loop
 
 
 _op_jmp:
   read $1, %edi
-  add %rdi, BYTECODE
+  add %rdi, %BYTECODE
   jmp _loop
 
 _op_push_arg:
