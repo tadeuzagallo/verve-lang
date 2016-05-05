@@ -10,7 +10,6 @@
 
 namespace ceos {
 
-  typedef std::shared_ptr<Scope<Value>> ScopePtr;
   typedef std::vector<std::pair<size_t, void *>> Heap;
 
   class GC {
@@ -52,7 +51,7 @@ namespace ceos {
         }
       }
 
-      static void markScope(ScopePtr &scope, Heap &heap) {
+      static void markScope(Scope *scope, Heap &heap) {
         if (scopes.find(scope) != scopes.end()) {
           return;
         }
@@ -63,8 +62,8 @@ namespace ceos {
             markValue(value, heap);
         });
 
-        if (scope->parent()) {
-          markScope(scope->parent(), heap);
+        if (scope->parent) {
+          markScope(scope->parent, heap);
         }
       }
 
@@ -97,7 +96,7 @@ namespace ceos {
     private:
 
       static std::set<uint64_t> roots;
-      static std::set<ScopePtr> scopes;
+      static std::set<Scope *> scopes;
   };
 }
 

@@ -3,6 +3,6 @@
 namespace ceos {
 
   std::set<uint64_t> GC::roots;
-  std::set<ScopePtr> GC::scopes;
+  std::set<Scope *> GC::scopes;
 
 }

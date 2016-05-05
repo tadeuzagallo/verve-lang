@@ -1,63 +1,120 @@
+#include "value.h"
+
 #include <functional>
-#include <iostream>
-#include <memory>
-#include <unordered_map>
 
 #ifndef CEOS_SCOPE_H
 #define CEOS_SCOPE_H
 
 namespace ceos {
+  class ScopeTest;
 
-  template<typename T>
-  class Scope : public std::enable_shared_from_this<Scope<T>> {
-    typedef std::shared_ptr<Scope<T>> ScopePtr;
-
-    public:
-      Scope() {}
-
-      inline ScopePtr create() {
-        auto s = std::make_shared<Scope<T>>();
-        s->m_parent = this->shared_from_this();
-        return s;
+  namespace {
+    static inline unsigned hash(const char *str) {
+      unsigned limit = 16;
+      unsigned long hash = 5381;
+      int c;
+      while ((c = *str++) && --limit) {
+        hash = ((hash << 5) + hash) + c;
       }
+      return hash;
+    }
+  }
 
-      inline ScopePtr create(ScopePtr parent) {
-        auto s = std::make_shared<Scope<T>>();
-        s->m_parent = parent;
-        s->m_previous = this->shared_from_this();
-        return s;
+  struct Scope {
+
+    friend class ScopeTest;
+
+    Scope() : Scope(32) {}
+
+    Scope(unsigned size) : cacheSize(size), cacheHash(size - 1) {
+      refCount = 1;
+      table = new Entry[cacheSize]();
+      parent = NULL;
+      previous = NULL;
+    }
+
+    ~Scope() {
+      if (parent) parent->dec();
+      if (previous) previous->dec();
+    }
+
+    inline Scope *inc() {
+      refCount++;
+      return this;
+    }
+    inline void dec() {
+      if (!--refCount) {
+        delete this;
       }
+    }
 
-      inline ScopePtr restore() {
-        return m_previous ?: m_parent ?: this->shared_from_this();
+    inline Scope *create(Scope *p) {
+      auto s = new Scope();
+      s->parent = p->inc();
+      s->previous = this->inc();
+      return s;
+    }
+
+    inline Scope *create() {
+      auto s = new Scope();
+      s->parent = this->inc();
+      s->previous = NULL;
+      return s;
+    }
+
+    inline Scope *restore() {
+      auto ret = previous ?: parent ?: this;
+      if (ret != this) this->dec();
+      return ret;
+    }
+
+    Value get(char *key) {
+      unsigned index = hash(key) % cacheSize;
+      auto begin = index;
+      while (table[index].key != NULL) {
+        if (table[index].key == key || strcmp(table[index].key, key) == 0) {
+          return table[index].value;
+        } 
+        if ((index = (index + 1) & cacheHash) == begin) break;
       }
+      if (parent) return parent->get(key);
+      return Value();
+    }
 
-      inline T get(std::string var) {
-        auto it = m_table.find(var);
-        if (it != m_table.end()) return it->second;
-        else if (m_parent) return m_parent->get(var);
-        else return T();
-      }
+    void set(char *key, Value value) {
+      unsigned index = hash(key) % cacheSize;
+      auto begin = index;
+      do {
+        if (table[index].key == NULL || table[index].key == key) {
+          table[index].key = key;
+          table[index].value = value;
+          return;
+        }
+      } while((index = (index + 1) & cacheHash) != begin);
+      throw;
+    }
 
-      inline void set(std::string key, T value) {
-        m_table[key] = value;
-      }
-
-      inline void visit(std::function<void(T)> visitor) {
-        ScopePtr ptr = this->shared_from_this();
-        for (auto it : m_table) {
-          visitor(it.second);
+    inline void visit(std::function<void(Value)> visitor) {
+      for (unsigned i = 0; i < cacheSize; i++) {
+        if (table[i].key != NULL) {
+          visitor(table[i].value);
         }
       }
+    }
 
-      inline ScopePtr &parent() {
-        return m_parent;
-      }
+    struct Entry {
+      char *key;
+      Value value;
+    };
 
-    private:
-      ScopePtr m_parent;
-      ScopePtr m_previous;
-      std::unordered_map<std::string, T> m_table;
+    Scope *parent;
+
+  private:
+    Entry *table;
+    Scope *previous;
+    unsigned refCount;
+    unsigned cacheSize;
+    unsigned cacheHash;
   };
 
 }

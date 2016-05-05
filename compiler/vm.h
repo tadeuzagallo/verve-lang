@@ -26,8 +26,7 @@ namespace ceos {
         m_bytecode = (uint8_t *)malloc(length);
         memcpy(m_bytecode, bc.data(), length);
 
-        m_scope = std::make_shared<Scope<Value>>();
-
+        m_scope = new Scope(1024);
         registerBuiltins(*this);
       }
 
@@ -77,7 +76,7 @@ namespace ceos {
       size_t heapLimit;
       std::vector<std::pair<size_t, void *>> blocks;
 
-      std::shared_ptr<Scope<Value>> m_scope;
+      Scope *m_scope;
       std::vector<char *> m_stringTable;
       std::vector<Function> m_userFunctions;
 

@@ -9,7 +9,10 @@ namespace ceos {
 
   struct Closure {
     Function *fn;
-    std::shared_ptr<Scope<Value>> scope;
+    Scope *scope;
+
+    Closure(Scope *s) : scope(s->inc()) {}
+    ~Closure() { scope->dec(); }
   };
 
 }

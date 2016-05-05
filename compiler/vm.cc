@@ -35,10 +35,9 @@ void restoreScope(VM *vm) {
 
 extern "C" uint64_t createClosure(VM *vm, unsigned fnID);
 uint64_t createClosure(VM *vm, unsigned fnID) {
-  auto closure = new Closure();
+  auto closure = new Closure(vm->m_scope);
   vm->trackAllocation(closure, sizeof(Closure));
   closure->fn = &vm->m_userFunctions[fnID];
-  closure->scope = vm->m_scope;
   return Value(closure).encode();
 }
 
