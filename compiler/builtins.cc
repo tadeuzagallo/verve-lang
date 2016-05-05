@@ -56,20 +56,20 @@ namespace ceos {
     for (unsigned i = 0; i < argc; i++) {
       Value arg = argv[i];
       if (arg.isString()) {
-        std::cout << arg.asString();
+        printf("%s", arg.asString().str());
       } else if (arg.isArray()) {
         for (auto a : *arg.asArray()) {
-          std::cout << a.asInt() << " ";
+          printf("%d ", a.asInt());
         }
       } else {
-        std::cout << arg.asInt();
+        printf("%d", arg.asInt());
       }
 
       if (i < argc - 1) {
-        std::cout << " ";
+        putchar(' ');
       }
     }
-    std::cout << "\n";
+    putchar('\n');
 
     return 0;
   }
