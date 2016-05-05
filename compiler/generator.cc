@@ -241,6 +241,7 @@ read_section:
           } else if (header == Section::Header) {
             break;
           }
+          bytecode.seekg(-3, bytecode.cur);
         }
         bytecode.seekg(offset);
         goto section_functions;
@@ -342,12 +343,12 @@ section_code:
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE(5, "jmp [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(5, "jmp [" << ((int)bytecode.tellg() - 5 + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE(5, "jz [" << ((int)bytecode.tellg() + target) << "]");
+        WRITE(5, "jz [" << ((int)bytecode.tellg() - 5 + target) << "]");
         break;
       }
       case Opcode::push_arg: {
