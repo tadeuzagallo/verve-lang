@@ -1,13 +1,14 @@
 #include "ceos_string.h"
 #include "value.h"
 
+#include <cassert>
 #include <cstdlib>
 #include <functional>
 
 #ifndef CEOS_SCOPE_H
 #define CEOS_SCOPE_H
 
-#define DEFAULT_SIZE 3
+#define DEFAULT_SIZE 4
 
 namespace ceos {
   class ScopeTest;
@@ -43,44 +44,42 @@ namespace ceos {
     }
 
     void dec() {
+      assert(refCount > 0);
       if (!--refCount) {
         if (parent) { parent->dec(); parent = NULL; }
         if (previous) { previous->dec(); previous = NULL; }
-        s_scopePool.push_back(this);
+
+        if (s_scopePoolIndex == s_scopePoolSize) {
+          s_scopePoolSize = s_scopePoolSize ? s_scopePoolSize << 1 : DEFAULT_SIZE;
+          s_scopePool = (Scope **)realloc(s_scopePool, s_scopePoolSize * sizeof(Scope *));
+        }
+        s_scopePool[s_scopePoolIndex++] = this;
       }
     }
 
-    Scope *create(Scope *p, unsigned size = DEFAULT_SIZE) {
-      Scope *s;
-      if (!s_scopePool.empty()) {
-        s = s_scopePool.back();
-        s_scopePool.pop_back();
-        s->refCount = 1;
-        s->length = 0;
-        for (unsigned i = 0; i < s->tableSize; i++) {
-          table[i++].key = NULL;
-        }
-      } else {
-        s = new Scope(size);
+    static inline Scope *getScope(unsigned size = DEFAULT_SIZE) {
+      if (s_scopePoolIndex <= 0) {
+        return new Scope(size);
       }
+
+      auto s = s_scopePool[--s_scopePoolIndex];
+      unsigned prevSize = s->tableSize;
+      s->refCount = 1;
+      s->length = 0;
+      s->tableSize = 0;
+      s->resize(std::max(prevSize, size));
+      return s;
+    }
+
+    Scope *create(Scope *p, unsigned size = DEFAULT_SIZE) {
+      auto s = getScope(size);
       s->parent = p->inc();
       s->previous = this->inc();
       return s;
     }
 
     Scope *create() {
-      Scope *s;
-      if (!s_scopePool.empty()) {
-        s = s_scopePool.back();
-        s_scopePool.pop_back();
-        unsigned prevSize = s->tableSize;
-        s->refCount = 1;
-        s->length = 0;
-        s->tableSize = 0;
-        s->resize(prevSize);
-      } else {
-        s = new Scope();
-      }
+      auto s = getScope();
       s->parent = this->inc();
       return s;
     }
@@ -106,7 +105,7 @@ namespace ceos {
 
     void set(String key, Value value) {
       if (length == tableSize) {
-        resize(tableSize * 2);
+        resize(tableSize << 1);
       }
 
       unsigned index = reinterpret_cast<uintptr_t>(key.str()) % tableSize;
@@ -145,7 +144,9 @@ namespace ceos {
     unsigned length;
     unsigned tableSize;
 
-    static std::vector<Scope *> s_scopePool;
+    static Scope **s_scopePool;
+    static unsigned s_scopePoolIndex;
+    static unsigned s_scopePoolSize;
   };
 
 }
