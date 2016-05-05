@@ -137,9 +137,10 @@ unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
   void VM::collect() {
     GC::start();
 
-    for (auto value : stack) {
-      GC::markValue(value, blocks);
-    }
+    // TODO: walk the actual stack
+    //for (auto value : stack) {
+      //GC::markValue(value, blocks);
+    //}
 
     GC::markScope(m_scope, blocks);
 

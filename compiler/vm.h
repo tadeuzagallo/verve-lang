@@ -17,7 +17,6 @@ namespace ceos {
   class VM {
     public:
       VM(std::stringstream &bs):
-        stack(2048),
         pc(0),
         heapLimit(10240) {
 
@@ -38,22 +37,6 @@ namespace ceos {
       void trackAllocation(void *, size_t);
       void collect();
 
-      void stack_push(Value value) {
-        if (esp > stack.size() - 2) {
-          std::cerr << "Stack overflow\n";
-          throw;
-        }
-        stack[esp++] = value;
-      }
-
-      Value stack_pop() {
-        return stack[--esp];
-      }
-
-      Value arg(unsigned index) {
-        return stack[ebp - index - 4];
-      }
-
       template<typename T>
       T read() {
         T v = *(T *)(m_bytecode + pc);
@@ -67,9 +50,6 @@ namespace ceos {
         return v;
       }
 
-      std::vector<Value> stack;
-      unsigned ebp;
-      unsigned esp;
       unsigned pc;
       size_t length;
       size_t heapSize;
