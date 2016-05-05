@@ -24,7 +24,7 @@ $(TARGET): $(OBJECTS)
 
 ERROR_TESTS = $(patsubst %.ceos,%.test,$(wildcard tests/errors/*.ceos))
 
-.PHONY: test tests/errors/%.test
+.PHONY: error_test tests/errors/%.test
 
 error_test: $(ERROR_TESTS)
 
@@ -39,13 +39,23 @@ tests/errors/%.test: tests/errors/%.ceos tests/errors/%.err $(TARGET)
 			$@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; \
 	fi
 
+CPP_TESTS = $(patsubst %.cc,%.test,$(wildcard tests/cpp/*.cc))
+
+.PHONY: cpp_test tests/cpp/%.test
+cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
+
+tests/cpp/%.test: tests/cpp/%.cc $(OBJECTS) $(HEADERS)
+	@$(CC) $(CFLAGS) $< $(filter-out main.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@_
+	@$@_; \
+	if [[ $$? != 0 ]]; then echo "$@: FAIL!"; else echo "$@: OK!"; fi
+
 # TESTS
 
 TESTS = $(patsubst %.ceos,%.test,$(wildcard tests/*.ceos))
 
 .PHONY: test tests/%.test
 
-test: $(TESTS) error_test
+test: $(TESTS) error_test cpp_test
 
 tests/%.test: tests/%.ceos tests/%.out $(TARGET)
 	-@./$(TARGET) $< > $@_; \
