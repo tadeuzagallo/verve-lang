@@ -1,6 +1,10 @@
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #ifndef CEOS_STRING_H
 #define CEOS_STRING_H
+namespace ceos {
 
 class String {
   public:
@@ -25,7 +29,7 @@ class String {
     unsigned begin = index;
 
     Entry *e;
-    while ((e = &s_strings[index]).str != NULL) {
+    while ((e = &s_strings[index])->str != NULL) {
       if (e->hash == hash && strcmp(e->str, str) == 0) {
         return e->str;
       } 
@@ -52,6 +56,7 @@ class String {
   static Entry *s_strings;
 
   const char *m_str;
-}
+};
 
+}
 #endif
