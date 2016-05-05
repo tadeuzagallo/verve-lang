@@ -85,7 +85,7 @@ namespace ceos {
       while (table[index].key != 0) {
         if (table[index].key == hash) {
           return table[index].value;
-        } 
+        }
         if ((index = (index + 1) % tableSize) == begin) break;
       }
       if (parent) return parent->get(key);
@@ -94,7 +94,7 @@ namespace ceos {
 
     void set(char *key, Value value) {
       if (length == tableSize) {
-        resize(tableSize * 2); 
+        resize(tableSize * 2);
       }
 
       unsigned hash = ::ceos::hash(key);
