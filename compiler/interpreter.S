@@ -189,7 +189,7 @@ _op_bind:
 
 _op_jz:
   pop %rdi
-  test %esi, %esi
+  test %edi, %edi
   jz _jz
   skip $1
 _jz:
