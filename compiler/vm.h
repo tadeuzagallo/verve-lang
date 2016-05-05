@@ -26,7 +26,7 @@ namespace ceos {
         m_bytecode = (uint8_t *)malloc(length);
         memcpy(m_bytecode, bc.data(), length);
 
-        m_scope = new Scope(1024);
+        m_scope = new Scope(32);
         registerBuiltins(*this);
       }
 

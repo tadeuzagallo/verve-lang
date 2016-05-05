@@ -1,19 +1,21 @@
 #include "value.h"
 
+#include <cstdlib>
 #include <functional>
 
 #ifndef CEOS_SCOPE_H
 #define CEOS_SCOPE_H
+
+#define DEFAULT_SIZE 3
 
 namespace ceos {
   class ScopeTest;
 
   namespace {
     static inline unsigned hash(const char *str) {
-      unsigned limit = 16;
       unsigned long hash = 5381;
       int c;
-      while ((c = *str++) && --limit) {
+      while ((c = *str++)) {
         hash = ((hash << 5) + hash) + c;
       }
       return hash;
@@ -24,13 +26,21 @@ namespace ceos {
 
     friend class ScopeTest;
 
-    Scope() : Scope(32) {}
-
-    Scope(unsigned size) : cacheSize(size), cacheHash(size - 1) {
+    Scope(unsigned size = DEFAULT_SIZE) {
       refCount = 1;
-      table = new Entry[cacheSize]();
+      length = 0;
+      table = NULL;
       parent = NULL;
       previous = NULL;
+
+      resize(size);
+    }
+
+    void resize(unsigned size) {
+      //assert(size > 0);
+      tableSize = size;
+      if (table) free(table);
+      table = (Entry *)calloc(sizeof(Entry), size);
     }
 
     ~Scope() {
@@ -38,72 +48,80 @@ namespace ceos {
       if (previous) previous->dec();
     }
 
-    inline Scope *inc() {
+    Scope *inc() {
       refCount++;
       return this;
     }
-    inline void dec() {
+
+    void dec() {
       if (!--refCount) {
         delete this;
       }
     }
 
-    inline Scope *create(Scope *p) {
-      auto s = new Scope();
+    Scope *create(Scope *p, unsigned size = DEFAULT_SIZE) {
+      auto s = new Scope(size);
       s->parent = p->inc();
       s->previous = this->inc();
       return s;
     }
 
-    inline Scope *create() {
+    Scope *create() {
       auto s = new Scope();
       s->parent = this->inc();
-      s->previous = NULL;
       return s;
     }
 
-    inline Scope *restore() {
+    Scope *restore() {
       auto ret = previous ?: parent ?: this;
       if (ret != this) this->dec();
       return ret;
     }
 
     Value get(char *key) {
-      unsigned index = hash(key) % cacheSize;
+      unsigned hash = ::ceos::hash(key);
+      unsigned index = hash % tableSize;
       auto begin = index;
-      while (table[index].key != NULL) {
-        if (table[index].key == key || strcmp(table[index].key, key) == 0) {
+      while (table[index].key != 0) {
+        if (table[index].key == hash) {
           return table[index].value;
         } 
-        if ((index = (index + 1) & cacheHash) == begin) break;
+        if ((index = (index + 1) % tableSize) == begin) break;
       }
       if (parent) return parent->get(key);
       return Value();
     }
 
     void set(char *key, Value value) {
-      unsigned index = hash(key) % cacheSize;
+      if (length == tableSize) {
+        resize(tableSize * 2); 
+      }
+
+      unsigned hash = ::ceos::hash(key);
+      unsigned index = hash % tableSize;
       auto begin = index;
       do {
-        if (table[index].key == NULL || table[index].key == key) {
-          table[index].key = key;
+        if (table[index].key == 0 || table[index].key == hash) {
+          if (table[index].key != hash) length++;
+
+          table[index].key = hash;
           table[index].value = value;
           return;
         }
-      } while((index = (index + 1) & cacheHash) != begin);
+      } while((index = (index + 1) % tableSize) != begin);
       throw;
     }
 
-    inline void visit(std::function<void(Value)> visitor) {
-      for (unsigned i = 0; i < cacheSize; i++) {
-        if (table[i].key != NULL) {
+    void visit(std::function<void(Value)> visitor) {
+      for (unsigned i = 0; i < tableSize; i++) {
+        if (table[i].key != 0) {
           visitor(table[i].value);
         }
       }
     }
 
     struct Entry {
-      char *key;
+      unsigned key;
       Value value;
     };
 
@@ -113,8 +131,8 @@ namespace ceos {
     Entry *table;
     Scope *previous;
     unsigned refCount;
-    unsigned cacheSize;
-    unsigned cacheHash;
+    unsigned length;
+    unsigned tableSize;
   };
 
 }
