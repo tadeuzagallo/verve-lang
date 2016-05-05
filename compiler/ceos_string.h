@@ -9,7 +9,7 @@ namespace ceos {
 
 class String {
   public:
-  String(const char *str) {
+  inline String(const char *str) {
     if (str) {
       m_str = dedupe(str);
     } else {
@@ -17,20 +17,20 @@ class String {
     }
   }
 
-  const char *str() const {
+  inline const char *str() const {
     return m_str;
   }
   
-  operator const char *() {
+  inline operator const char *() {
     return m_str;
   }
 
-  bool operator==(String &other) {
+  inline bool operator==(String &other) {
     return m_str == other.m_str;
   }
 
   private:
-    static unsigned hash(const char *str) {
+    static inline unsigned hash(const char *str) {
       unsigned long hash = 5381;
       int c;
       while ((c = *str++)) {
@@ -39,7 +39,7 @@ class String {
       return hash;
     }
 
-  static const char *dedupe(const char *str) {
+  static inline const char *dedupe(const char *str) {
     if (!s_strings) {
       s_size = s_initialSize;
       s_strings = (Entry *)calloc(s_size, 8);
