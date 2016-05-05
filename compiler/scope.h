@@ -8,7 +8,7 @@
 #ifndef CEOS_SCOPE_H
 #define CEOS_SCOPE_H
 
-#define DEFAULT_SIZE 4
+#define DEFAULT_SIZE 8
 
 namespace ceos {
   class ScopeTest;
@@ -18,6 +18,7 @@ namespace ceos {
     friend class ScopeTest;
 
     Scope(unsigned size = DEFAULT_SIZE) {
+      assert(size % 2 == 0);
       refCount = 1;
       length = 0;
       tableSize = 0;
@@ -32,6 +33,7 @@ namespace ceos {
       //assert(size > 0);
       unsigned i = tableSize;
       tableSize = size;
+      tableHash = size - 1;
       table = (Entry *)realloc(table, sizeof(Entry) * size);
       while (i < size) {
         table[i++].key = NULL;
@@ -50,16 +52,16 @@ namespace ceos {
         if (previous) { previous->dec(); previous = NULL; }
 
         if (s_scopePoolIndex == s_scopePoolSize) {
-          s_scopePoolSize = s_scopePoolSize ? s_scopePoolSize << 1 : DEFAULT_SIZE;
+          s_scopePoolSize = s_scopePoolSize ? s_scopePoolSize << 1 : DEFAULT_SIZE << 1;
           s_scopePool = (Scope **)realloc(s_scopePool, s_scopePoolSize * sizeof(Scope *));
         }
         s_scopePool[s_scopePoolIndex++] = this;
       }
     }
 
-    static inline Scope *getScope(unsigned size = DEFAULT_SIZE) {
+    static inline Scope *getScope() {
       if (s_scopePoolIndex <= 0) {
-        return new Scope(size);
+        return new Scope();
       }
 
       auto s = s_scopePool[--s_scopePoolIndex];
@@ -67,12 +69,12 @@ namespace ceos {
       s->refCount = 1;
       s->length = 0;
       s->tableSize = 0;
-      s->resize(std::max(prevSize, size));
+      s->resize(prevSize);
       return s;
     }
 
-    Scope *create(Scope *p, unsigned size = DEFAULT_SIZE) {
-      auto s = getScope(size);
+    Scope *create(Scope *p) {
+      auto s = getScope();
       s->parent = p->inc();
       s->previous = this->inc();
       return s;
@@ -91,13 +93,13 @@ namespace ceos {
     }
 
     Value get(String key) {
-      unsigned index = reinterpret_cast<uintptr_t>(key.str()) % tableSize;
+      unsigned index = reinterpret_cast<uintptr_t>(key.str()) & tableHash;
       auto begin = index;
       while (table[index].key != NULL) {
         if (table[index].key == key) {
           return table[index].value;
         }
-        if ((index = (index + 1) % tableSize) == begin) break;
+        if ((index = (index + 1) & tableHash) == begin) break;
       }
       if (parent) return parent->get(key);
       return Value();
@@ -108,7 +110,7 @@ namespace ceos {
         resize(tableSize << 1);
       }
 
-      unsigned index = reinterpret_cast<uintptr_t>(key.str()) % tableSize;
+      unsigned index = reinterpret_cast<uintptr_t>(key.str()) & tableHash;
       auto begin = index;
       do {
         if (table[index].key == NULL || table[index].key == key) {
@@ -118,7 +120,7 @@ namespace ceos {
           table[index].value = value;
           return;
         }
-      } while((index = (index + 1) % tableSize) != begin);
+      } while((index = (index + 1) & tableHash) != begin);
       throw;
     }
 
@@ -143,6 +145,7 @@ namespace ceos {
     unsigned refCount;
     unsigned length;
     unsigned tableSize;
+    unsigned tableHash;
 
     static Scope **s_scopePool;
     static unsigned s_scopePoolIndex;

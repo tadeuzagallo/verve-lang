@@ -43,7 +43,7 @@ uint64_t createClosure(VM *vm, unsigned fnID) {
 
 extern "C" unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure);
 unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
-  vm->m_scope = vm->m_scope->create(closure->scope, argc + 3);
+  vm->m_scope = vm->m_scope->create(closure->scope);
 
   for (unsigned i = 0; i < argc; i++) {
     vm->m_scope->set(closure->fn->args[i], argv[i]);
