@@ -4,19 +4,40 @@
 
 #ifndef CEOS_STRING_H
 #define CEOS_STRING_H
+
 namespace ceos {
 
 class String {
   public:
   String(const char *str) {
-    m_str = dedupe(str);
+    if (str) {
+      m_str = dedupe(str);
+    } else {
+      m_str = NULL;
+    }
   }
 
-  const char *operator(const char *)() {
+  const char *str() const {
+    return m_str;
+  }
+  
+  operator const char *() {
     return m_str;
   }
 
+  bool operator==(String &other) {
+    return m_str == other.m_str;
+  }
+
   private:
+    static unsigned hash(const char *str) {
+      unsigned long hash = 5381;
+      int c;
+      while ((c = *str++)) {
+        hash = ((hash << 5) + hash) + c;
+      }
+      return hash;
+    }
 
   static const char *dedupe(const char *str) {
     if (!s_strings) {
@@ -40,7 +61,7 @@ class String {
       e->hash = hash;
       e->str = str;
     } else {
-      fputs(stderr, "No space for strings left :(");
+      fputs("No space for strings left :(", stderr);
       throw;
     }
 

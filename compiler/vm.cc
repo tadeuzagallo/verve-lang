@@ -9,22 +9,22 @@ namespace ceos {
 
 extern "C" void execute(
     const uint8_t *bytecode,
-    char **stringTable,
+    String *stringTable,
     VM *vm,
     const uint8_t *bcbase);
 
-extern "C" uint64_t getScope(VM *vm, char *name);
-uint64_t getScope(VM *vm, char *name) {
+extern "C" uint64_t getScope(VM *vm, String name);
+uint64_t getScope(VM *vm, String name) {
   auto value = vm->m_scope->get(name);
   if (value.isUndefined()) {
-    std::cerr << "Symbol not found: " << name << "\n";
+    std::cerr << "Symbol not found: " << name.str() << "\n";
     throw;
   }
   return value.encode();
 }
 
-extern "C" void setScope(VM *vm, char *name, Value closure);
-void setScope(VM *vm, char *name, Value closure) {
+extern "C" void setScope(VM *vm, String name, Value closure);
+void setScope(VM *vm, String name, Value closure) {
   vm->m_scope->set(name, closure);
 }
 
@@ -91,7 +91,7 @@ unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
       }
 
       pc -= sizeof(header);
-      char *str = readStr();
+      String str = readStr();
       m_stringTable.push_back(str);
     }
   }
@@ -104,7 +104,7 @@ unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
       auto fnid = read<unsigned>();
       auto nargs = read<unsigned>();
 
-      std::vector<char *> args;
+      std::vector<String> args;
       for (unsigned i = 0; i < nargs; i++) {
         auto argID = read<unsigned>();
         args.push_back(m_stringTable[argID]);

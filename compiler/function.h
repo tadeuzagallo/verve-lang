@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 
+#include "ceos_string.h"
+
 #ifndef CEOS_FUNCTION_H
 #define CEOS_FUNCTION_H
 
@@ -8,18 +10,18 @@ namespace ceos {
   class VM;
 
   struct Function {
-    Function(unsigned i, unsigned args, unsigned o, std::vector<char *> &&a) :
+    Function(unsigned i, unsigned args, unsigned o, std::vector<String> &&a) :
       id(i),
       offset(o),
       nargs(args),
       args(a) {}
 
-    std::string name(VM *);
+    String name(VM *);
 
     unsigned id;
     unsigned offset;
     unsigned nargs;
-    std::vector<char *> args;
+    std::vector<String> args;
   };
 
 }

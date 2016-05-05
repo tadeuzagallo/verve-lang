@@ -93,17 +93,18 @@ namespace ceos {
 
     Value arg = argv[0];
     if (arg.isString()) {
-      char *str = arg.asString();
-      char *substring;
+      const char *str = arg.asString().str();
+      const char *substring;
       if (argc == 2) {
         substring = str + argv[1].asInt();
       } else {
         size_t start = argv[0].asInt();
         size_t length = argv[1].asInt() - start;
-        substring = (char *)malloc(length + 1);
-        memcpy(substring, str, length);
-        substring[length] = 0;
-        vm->trackAllocation(substring, length);
+        char *substr = (char *)malloc(length + 1);
+        memcpy(substr, str, length);
+        substr[length] = 0;
+        vm->trackAllocation(substr, length);
+        substring = substr;
       }
 
       return Value(substring);

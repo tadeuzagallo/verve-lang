@@ -1,4 +1,5 @@
 #include "builtins.h"
+#include "ceos_string.h"
 #include "closure.h"
 #include "gc.h"
 #include "function.h"
@@ -44,10 +45,10 @@ namespace ceos {
         return v;
       }
 
-      char *readStr() {
+      String readStr() {
         char *v = (char *)(m_bytecode + pc);
         pc += strlen(v) + 1;
-        return v;
+        return String(v);
       }
 
       unsigned pc;
@@ -57,7 +58,7 @@ namespace ceos {
       std::vector<std::pair<size_t, void *>> blocks;
 
       Scope *m_scope;
-      std::vector<char *> m_stringTable;
+      std::vector<String> m_stringTable;
       std::vector<Function> m_userFunctions;
 
     private:

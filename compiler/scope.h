@@ -1,3 +1,4 @@
+#include "ceos_string.h"
 #include "value.h"
 
 #include <cstdlib>
@@ -11,23 +12,13 @@
 namespace ceos {
   class ScopeTest;
 
-  namespace {
-    static inline unsigned hash(const char *str) {
-      unsigned long hash = 5381;
-      int c;
-      while ((c = *str++)) {
-        hash = ((hash << 5) + hash) + c;
-      }
-      return hash;
-    }
-  }
-
   struct Scope {
 
     friend class ScopeTest;
 
     Scope(unsigned size = DEFAULT_SIZE) {
       refCount = 1;
+      tableSize = 0;
       length = 0;
       table = NULL;
       parent = NULL;
@@ -38,9 +29,12 @@ namespace ceos {
 
     void resize(unsigned size) {
       //assert(size > 0);
+      unsigned i = tableSize;
       tableSize = size;
-      if (table) free(table);
-      table = (Entry *)calloc(sizeof(Entry), size);
+      table = (Entry *)realloc(table, sizeof(Entry) * size);
+      while (i < size) {
+        table[i++].key = NULL;
+      }
     }
 
     ~Scope() {
@@ -78,12 +72,11 @@ namespace ceos {
       return ret;
     }
 
-    Value get(char *key) {
-      unsigned hash = ::ceos::hash(key);
-      unsigned index = hash % tableSize;
+    Value get(String key) {
+      unsigned index = reinterpret_cast<uintptr_t>(key.str()) % tableSize;
       auto begin = index;
-      while (table[index].key != 0) {
-        if (table[index].key == hash) {
+      while (table[index].key != NULL) {
+        if (table[index].key == key) {
           return table[index].value;
         }
         if ((index = (index + 1) % tableSize) == begin) break;
@@ -92,19 +85,18 @@ namespace ceos {
       return Value();
     }
 
-    void set(char *key, Value value) {
+    void set(String key, Value value) {
       if (length == tableSize) {
         resize(tableSize * 2);
       }
 
-      unsigned hash = ::ceos::hash(key);
-      unsigned index = hash % tableSize;
+      unsigned index = reinterpret_cast<uintptr_t>(key.str()) % tableSize;
       auto begin = index;
       do {
-        if (table[index].key == 0 || table[index].key == hash) {
-          if (table[index].key != hash) length++;
+        if (table[index].key == NULL || table[index].key == key) {
+          if (table[index].key != key) length++;
 
-          table[index].key = hash;
+          table[index].key = key;
           table[index].value = value;
           return;
         }
@@ -121,7 +113,7 @@ namespace ceos {
     }
 
     struct Entry {
-      unsigned key;
+      String key;
       Value value;
     };
 

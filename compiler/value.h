@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 
+#include "ceos_string.h"
+
 #ifndef CEOS_VALUE_H
 #define CEOS_VALUE_H
 
@@ -60,9 +62,17 @@ namespace ceos {
       return reinterpret_cast<TYPE *>(unmask(value.ptr)); \
     }
 
-    POINTER_TYPE(char, String)
     POINTER_TYPE(std::vector<Value>, Array)
     POINTER_TYPE(Closure, Closure)
+
+    Value(String str) {
+      value.ptr = reinterpret_cast<uintptr_t>(str.str());
+      value.data.tag = Value::StringTag;
+    }
+
+    String asString() {
+      return String(reinterpret_cast<char *>(unmask(value.ptr)));
+    }
 
 #undef POINTER_TYPE
 
