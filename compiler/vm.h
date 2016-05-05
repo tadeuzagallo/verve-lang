@@ -77,12 +77,12 @@ namespace ceos {
       size_t heapLimit;
       std::vector<std::pair<size_t, void *>> blocks;
 
-      std::vector<char *> m_stringTable;
       std::shared_ptr<Scope<Value>> m_scope;
+      std::vector<char *> m_stringTable;
+      std::vector<Function> m_userFunctions;
 
     private:
       uint8_t *m_bytecode;
-      std::vector<Function> m_userFunctions;
   };
 }
 

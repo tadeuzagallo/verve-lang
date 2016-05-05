@@ -9,17 +9,15 @@ namespace ceos {
 
   struct Function {
     Function(unsigned i, unsigned args, unsigned o, std::vector<char *> &&a) :
-      offset(o),
       id(i),
+      offset(o),
       nargs(args),
       args(a) {}
 
     std::string name(VM *);
 
-    inline char *arg(unsigned i) { return args[i]; }
-
-    unsigned offset;
     unsigned id;
+    unsigned offset;
     unsigned nargs;
     std::vector<char *> args;
   };

@@ -21,15 +21,16 @@ namespace ceos {
       } data;
     } value;
 
-#define TAG(NAME, OFFSET) \
-    static const uint8_t NAME##Tag = 1 << OFFSET; \
+#define TAG(NAME, VALUE) \
+    static const uint8_t NAME##Tag = VALUE; \
     bool is##NAME() { return value.data.tag == Value::NAME##Tag; }
 
-    TAG(Int, 0);
-    TAG(String, 1);
-    TAG(Array, 2);
-    TAG(Builtin, 3);
-    TAG(Closure, 4);
+    TAG(Int, 0); // fast path from assembly
+    TAG(Undefined, 1 << 0);
+    TAG(String,    1 << 1);
+    TAG(Array,     1 << 2);
+    TAG(Builtin,   1 << 3);
+    TAG(Closure,   1 << 4);
 
 #undef TAG
 
@@ -39,6 +40,7 @@ namespace ceos {
 
     Value() {
       value.ptr = 0;
+      value.data.tag = Value::UndefinedTag;
     }
 
     Value(int v) {
@@ -47,8 +49,6 @@ namespace ceos {
     }
 
     int asInt() { return value.data.i; }
-
-    bool isUndefined() { return value.data.tag == 0; }
 
 #define POINTER_TYPE(TYPE, NAME) \
     Value(TYPE *ptr) { \

@@ -1,8 +1,9 @@
 #define STRING_TAG $0x2
-#define CLOSURE_TAG $0x0800000000000000
+#define CLOSURE_TAG $0x10
 #define BYTECODE %r12
 #define STRINGS %r13
 #define VM %r14
+#define BCBASE %r15
 
 .macro read
   mov $0, %rax
@@ -16,17 +17,17 @@
 .endmacro
 
 .macro unmask
-  shl $$0x16, $0
-  shr $$0x16, $0
+  shl $$8, $0
+  shr $$8, $0
 .endmacro
 
 .macro ccall
-  push %r15
-  mov %rsp, %r15
+  push %rbx
+  mov %rsp, %rbx
   and $-0x10, %rsp
   call $0
-  mov %r15, %rsp
-  pop %r15
+  mov %rbx, %rsp
+  pop %rbx
 .endmacro
 
 .globl _execute
@@ -35,10 +36,12 @@ _execute:
   push BYTECODE
   push STRINGS
   push VM
+  push BCBASE
   mov %rsp, %rbp
   mov %rdi, BYTECODE
   mov %rsi, STRINGS
   mov %rdx, VM
+  mov %rcx, BCBASE
 
 _loop:
   xor %rax, %rax
@@ -90,6 +93,7 @@ _loop:
 
 _op_exit:
   mov %rbp, %rsp
+  pop BCBASE
   pop VM
   pop STRINGS
   pop BYTECODE
@@ -111,18 +115,49 @@ _op_lookup:
 
 _op_call:
   // pop the callee from the stack
-  pop %r8
+  pop %rcx
 
   // setup args
   read $1, %edi //argc
-  mov %rsp, %rsi // argv just live in the stack
+  mov %rsp, %rsi // argv just lives in the stack
   mov VM, %rdx
 
-  // setup callee
-  unmask %r8
-  ccall *%r8
+  // check tag
+  rol $8, %rcx
+  test CLOSURE_TAG, %cl
+  pushf
+  shr $8, %rcx
+  popf
+  jnz _call_closure
+  jmp _call_builtin
 
+_call_builtin:
+  push %rdi
+  ccall *%rcx
+  pop %rdi
+  lea (%rsp, %rdi, 8), %rsp
   push %rax
+  skip $1
+
+_call_closure:
+  push BYTECODE
+  push %rdi
+  push %rbp
+  mov %rsp, %rbp
+  ccall _prepareClosure
+  lea (BCBASE, %rax, 1), BYTECODE
+  jmp _loop
+
+_op_ret:
+  pop %rax
+  mov %rbp, %rsp
+  pop %rbp
+  pop %rdi
+  pop BYTECODE
+  lea (%rsp, %rdi, 8), %rsp
+  push %rax
+  mov VM, %rdi
+  ccall _restoreScope
   skip $1
 
 _op_load_string:
@@ -135,18 +170,30 @@ _op_load_string:
   skip $1
 
 _op_create_closure:
-  hlt
+  mov VM, %rdi
+  read $1, %rsi
+  ccall _createClosure
+  push %rax
+  skip $1
 
 _op_bind:
-  hlt
+  mov VM, %rdi
+  pop %rdx
+  mov %rdx, %rsi
+  unmask %rsi
+  mov (%rsi), %rsi
+  mov (%rsi), %esi
+  mov (STRINGS, %rsi, 8), %rsi
+  ccall _setScope
+  skip $0
 
 _op_jz:
-  read $1, %edi
-  pop %rsi
+  pop %rdi
   test %esi, %esi
   jz _jz
   skip $1
 _jz:
+  read $1, %edi
   add %rdi, BYTECODE
   jmp _loop
 
@@ -156,8 +203,8 @@ _op_jmp:
   add %rdi, BYTECODE
   jmp _loop
 
-_op_ret:
-  hlt
-
 _op_push_arg:
-  hlt
+  read $1, %edi
+  mov 0x18(%rbp, %rdi, 8), %rax
+  push %rax
+  skip $1

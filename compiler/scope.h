@@ -21,9 +21,9 @@ namespace ceos {
         return s;
       }
 
-      inline ScopePtr create(ScopePtr m_parent) {
+      inline ScopePtr create(ScopePtr parent) {
         auto s = std::make_shared<Scope<T>>();
-        s->m_parent = m_parent;
+        s->m_parent = parent;
         s->m_previous = this->shared_from_this();
         return s;
       }

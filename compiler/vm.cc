@@ -10,7 +10,8 @@ namespace ceos {
 extern "C" void execute(
     const uint8_t *bytecode,
     char **stringTable,
-    VM *vm);
+    VM *vm,
+    const uint8_t *bcbase);
 
 extern "C" uint64_t getScope(VM *vm, char *name);
 uint64_t getScope(VM *vm, char *name) {
@@ -22,16 +23,31 @@ uint64_t getScope(VM *vm, char *name) {
   return value.encode();
 }
 
-extern "C" void pushScope();
-void pushScope() { }
+extern "C" void setScope(VM *vm, char *name, Value closure);
+void setScope(VM *vm, char *name, Value closure) {
+  vm->m_scope->set(name, closure);
+}
 
-extern "C" uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm);
-uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
-  auto closure = fnAddress.asClosure();
+extern "C" void restoreScope(VM *vm);
+void restoreScope(VM *vm) {
+  vm->m_scope = vm->m_scope->restore();
+}
+
+extern "C" uint64_t createClosure(VM *vm, unsigned fnID);
+uint64_t createClosure(VM *vm, unsigned fnID) {
+  auto closure = new Closure();
+  vm->trackAllocation(closure, sizeof(Closure));
+  closure->fn = &vm->m_userFunctions[fnID];
+  closure->scope = vm->m_scope;
+  return Value(closure).encode();
+}
+
+extern "C" unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure);
+unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
   vm->m_scope = vm->m_scope->create(closure->scope);
 
   for (unsigned i = 0; i < argc; i++) {
-    vm->m_scope->set(closure->fn->arg(i), args[i]);
+    vm->m_scope->set(closure->fn->args[i], argv[i]);
   }
 
   return closure->fn->offset;
@@ -58,7 +74,7 @@ uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
           loadFunctions();
           break;
         case Section::Text:
-          ::ceos::execute(m_bytecode + pc, m_stringTable.data(), this);
+          ::ceos::execute(m_bytecode + pc, m_stringTable.data(), this, m_bytecode);
           return;
         default:
           std::cerr << "Unknown section: `0x0" << std::hex << section << "`\n";
@@ -103,6 +119,7 @@ uint64_t prepareClosure(unsigned argc, Value *args, Value fnAddress, VM *vm) {
         } else if (opcode == Section::FunctionHeader) {
           break;
         }
+        pc -= 3;
       }
     }
   }
