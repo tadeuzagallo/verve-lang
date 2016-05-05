@@ -35,7 +35,7 @@ namespace ceos {
         break;
 
       case EOF:
-        start = m_token->loc.end - 1;
+        start = m_token != nullptr ? m_token->loc.end - 1 : 0;
         m_token = std::make_shared<Token>(Token::Type::END);
         break;
 
