@@ -6,13 +6,23 @@
 #define BCBASE r15
 
 .macro read
-  mov $0, %rax
+.if $0 == 1
+  mov 0x1(%BYTECODE), $1
+.else
+  mov $$$0, %rax
   mov -0x3(%BYTECODE, %rax, 4), $1
+.endif
 .endmacro
 
 .macro skip
-  mov $0, %rax
+.if $0 == 0
+  lea 0x1(%BYTECODE), %BYTECODE
+.elseif $0 == 1
+  lea 0x5(%BYTECODE), %BYTECODE
+.else
+  mov $$$0, %rax
   lea 0x1(%BYTECODE, %rax, 4), %BYTECODE
+.endif
   jmp _loop
 .endmacro
 
@@ -101,24 +111,24 @@ _op_exit:
   ret
 
 _op_push:
-  read $1, %edi
+  read 1, %edi
   push %rdi
-  skip $1
+  skip 1
 
 _op_lookup:
   mov %VM, %rdi
-  read $1, %esi
+  read 1, %esi
   mov (%STRINGS, %rsi, 8), %rsi
   ccall _getScope
   push %rax
-  skip $1
+  skip 1
 
 _op_call:
   // pop the callee from the stack
   pop %rcx
 
   // setup args
-  read $1, %edi //argc
+  read 1, %edi //argc
   mov %rsp, %rsi // argv just lives in the stack
   mov %VM, %rdx
 
@@ -135,7 +145,7 @@ _call_builtin:
   pop %rdi
   lea (%rsp, %rdi, 8), %rsp
   push %rax
-  skip $1
+  skip 1
 
 _call_closure:
   shr $8, %rcx
@@ -157,23 +167,23 @@ _op_ret:
   push %rax
   mov %VM, %rdi
   ccall _restoreScope
-  skip $1
+  skip 1
 
 _op_load_string:
-  read $1, %edi
+  read 1, %edi
   mov (%STRINGS, %rdi, 8), %rdi
   rol $8, %rdi 
   mov $STRING_TAG, %dil
   ror $8, %rdi
   push %rdi
-  skip $1
+  skip 1
 
 _op_create_closure:
   mov %VM, %rdi
-  read $1, %rsi
+  read 1, %rsi
   ccall _createClosure
   push %rax
-  skip $1
+  skip 1
 
 _op_bind:
   mov %VM, %rdi
@@ -184,26 +194,26 @@ _op_bind:
   mov (%rsi), %esi
   mov (%STRINGS, %rsi, 8), %rsi
   ccall _setScope
-  skip $0
+  skip 0
 
 _op_jz:
   pop %rdi
   test %edi, %edi
   jz _jz
-  skip $1
+  skip 1
 _jz:
-  read $1, %edi
+  read 1, %edi
   add %rdi, %BYTECODE
   jmp _loop
 
 
 _op_jmp:
-  read $1, %edi
+  read 1, %edi
   add %rdi, %BYTECODE
   jmp _loop
 
 _op_push_arg:
-  read $1, %edi
+  read 1, %edi
   mov 0x18(%rbp, %rdi, 8), %rax
   push %rax
-  skip $1
+  skip 1
