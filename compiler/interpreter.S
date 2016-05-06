@@ -125,13 +125,11 @@ _op_call:
   // check tag
   rol $8, %rcx
   test $CLOSURE_TAG, %cl
-  pushf
-  shr $8, %rcx
-  popf
   jnz _call_closure
   jmp _call_builtin
 
 _call_builtin:
+  shr $8, %rcx
   push %rdi
   ccall *%rcx
   pop %rdi
@@ -140,6 +138,7 @@ _call_builtin:
   skip $1
 
 _call_closure:
+  shr $8, %rcx
   push %BYTECODE
   push %rdi
   push %rbp
