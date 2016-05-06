@@ -116,10 +116,39 @@ _op_push:
   skip 1
 
 _op_lookup:
+  read 1, %esi
+  mov (%STRINGS, %rsi, 8), %rsi
+  mov (%VM), %rdi
+  mov (%rdi), %rax // scope table
+  mov 0x8(%rdi), %edx // table hash
+  mov %esi, %ecx // index
+  and %edx, %ecx // index &= hash
+  mov %ecx, %r8d // begin
+
+begin:
+  mov %ecx, %edi
+  shl $1, %edi
+  mov (%rax, %rdi, 0x8), %r9  // Entry::key
+  test %r9,%r9
+  jz slow_path
+  xor %r9, %rsi
+  jz found
+  inc %ecx
+  and %edx, %ecx
+  xor %ecx, %r8d
+  jnz begin
+
+slow_path:
   mov %VM, %rdi
   read 1, %esi
   mov (%STRINGS, %rsi, 8), %rsi
   ccall _getScope
+  jmp done
+
+found:
+  mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
+
+done:
   push %rax
   skip 1
 
@@ -172,7 +201,7 @@ _op_ret:
 _op_load_string:
   read 1, %edi
   mov (%STRINGS, %rdi, 8), %rdi
-  rol $8, %rdi 
+  rol $8, %rdi
   mov $STRING_TAG, %dil
   ror $8, %rdi
   push %rdi

@@ -31,13 +31,10 @@ namespace ceos {
 
     void resize(unsigned size) {
       //assert(size > 0);
-      unsigned i = tableSize;
       tableSize = size;
       tableHash = size - 1;
       table = (Entry *)realloc(table, sizeof(Entry) * size);
-      while (i < size) {
-        table[i++].key = NULL;
-      }
+      memset(table, 0, sizeof(Entry) * size);
     }
 
     Scope *inc() {
@@ -135,15 +132,15 @@ namespace ceos {
       Value value;
     };
 
-    Scope *parent;
 
-  private:
     Entry *table;
+    unsigned tableHash;
+    Scope *parent;
+  private:
     Scope *previous;
     unsigned refCount;
     unsigned length;
     unsigned tableSize;
-    unsigned tableHash;
 
     static Scope **s_scopePool;
     static unsigned s_scopePoolIndex;

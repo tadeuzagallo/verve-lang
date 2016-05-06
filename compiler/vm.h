@@ -51,13 +51,14 @@ namespace ceos {
         return String(v);
       }
 
+      Scope *m_scope; // first thing, easy to access from asm
+
       unsigned pc;
       size_t length;
       size_t heapSize;
       size_t heapLimit;
       std::vector<std::pair<size_t, void *>> blocks;
 
-      Scope *m_scope;
       std::vector<String> m_stringTable;
       std::vector<Function> m_userFunctions;
 
