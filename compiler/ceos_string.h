@@ -1,3 +1,5 @@
+#include "macros.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -9,7 +11,7 @@ namespace ceos {
 
 class String {
   public:
-  __attribute__((always_inline)) inline String(const char *str) {
+  ALWAYS_INLINE String(const char *str) {
     if (str) {
       m_str = dedupe(str);
     } else {
@@ -17,15 +19,15 @@ class String {
     }
   }
 
-  __attribute__((always_inline)) inline const char *str() const {
+  ALWAYS_INLINE const char *str() const {
     return m_str;
   }
   
-  __attribute__((always_inline)) inline operator const char *() {
+  ALWAYS_INLINE operator const char *() {
     return m_str;
   }
 
-  __attribute__((always_inline)) inline bool operator==(String &other) {
+  ALWAYS_INLINE bool operator==(String &other) {
     return m_str == other.m_str;
   }
 

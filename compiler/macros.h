@@ -52,3 +52,5 @@
 #define ENUM_CLASS(...) ENUM_COMMON(class, __VA_ARGS__)
 
 #define INDEX_OF(ARRAY, ITEM) (std::find(ARRAY.begin(), ARRAY.end(), ITEM) - ARRAY.begin())
+
+#define ALWAYS_INLINE __attribute__((always_inline)) inline
