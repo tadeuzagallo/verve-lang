@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "ceos_string.h"
+#include "macros.h"
 
 #ifndef CEOS_VALUE_H
 #define CEOS_VALUE_H
@@ -25,7 +26,7 @@ namespace ceos {
 
 #define TAG(NAME, VALUE) \
     static const uint8_t NAME##Tag = VALUE; \
-    bool is##NAME() { return value.data.tag == Value::NAME##Tag; }
+    ALWAYS_INLINE bool is##NAME() { return value.data.tag == Value::NAME##Tag; }
 
     TAG(Int, 0); // fast path from assembly
     TAG(Undefined, 1 << 0);
@@ -36,41 +37,41 @@ namespace ceos {
 
 #undef TAG
 
-    static uintptr_t unmask(uintptr_t ptr) {
+    ALWAYS_INLINE static uintptr_t unmask(uintptr_t ptr) {
       return 0xFFFFFFFFFFFFFF & ptr;
     }
 
-    Value() {
+    ALWAYS_INLINE Value() {
       value.ptr = 0;
       value.data.tag = Value::UndefinedTag;
     }
 
-    Value(int v) {
+    ALWAYS_INLINE Value(int v) {
       value.data.i = v;
       value.data.tag = Value::IntTag;
     }
 
-    int asInt() { return value.data.i; }
+    ALWAYS_INLINE int asInt() { return value.data.i; }
 
 #define POINTER_TYPE(TYPE, NAME) \
-    Value(TYPE *ptr) { \
+    ALWAYS_INLINE Value(TYPE *ptr) { \
       value.ptr = reinterpret_cast<uintptr_t>(ptr); \
       value.data.tag = Value::NAME##Tag; \
     }\
     \
-    TYPE *as##NAME() { \
+    ALWAYS_INLINE TYPE *as##NAME() { \
       return reinterpret_cast<TYPE *>(unmask(value.ptr)); \
     }
 
     POINTER_TYPE(std::vector<Value>, Array)
     POINTER_TYPE(Closure, Closure)
 
-    Value(String str) {
+    ALWAYS_INLINE Value(String str) {
       value.ptr = reinterpret_cast<uintptr_t>(str.str());
       value.data.tag = Value::StringTag;
     }
 
-    String asString() {
+    ALWAYS_INLINE String asString() {
       return String(reinterpret_cast<char *>(unmask(value.ptr)));
     }
 
@@ -78,28 +79,28 @@ namespace ceos {
 
     typedef Value (*Builtin)(unsigned, Value *, VM *);
 
-    Value(Builtin ptr) {
+    ALWAYS_INLINE Value(Builtin ptr) {
       value.ptr = reinterpret_cast<uintptr_t>(ptr);
       value.data.tag = Value::BuiltinTag;
     }
 
-    Builtin asBuiltin() {
+    ALWAYS_INLINE Builtin asBuiltin() {
       return reinterpret_cast<Builtin>(unmask(value.ptr));
     }
 
-    void *asPtr() {
+    ALWAYS_INLINE void *asPtr() {
       return reinterpret_cast<void *>(unmask(value.ptr));
     }
 
-    bool isHeapAllocated() {
+    ALWAYS_INLINE bool isHeapAllocated() {
       return value.data.tag & (Value::ClosureTag | Value::ArrayTag | Value::StringTag);
     }
 
-    uint64_t encode() {
+    ALWAYS_INLINE uint64_t encode() {
       return value.raw;
     }
 
-    static Value decode(uint64_t data) {
+    ALWAYS_INLINE static Value decode(uint64_t data) {
       Value v;
       v.value.raw = data;
       return v;
