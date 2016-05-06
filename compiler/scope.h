@@ -65,11 +65,9 @@ namespace ceos {
       }
 
       auto s = s_scopePool[--s_scopePoolIndex];
-      unsigned prevSize = s->tableSize;
       s->refCount = 1;
       s->length = 0;
-      s->tableSize = 0;
-      s->resize(prevSize);
+      memset(s->table, 0, s->tableSize * sizeof(Entry));
       return s;
     }
 
