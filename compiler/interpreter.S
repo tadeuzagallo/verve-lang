@@ -116,11 +116,13 @@ _op_push:
   skip 1
 
 _op_lookup:
-  read 1, %esi
-  mov (%STRINGS, %rsi, 8), %rsi
-  mov (%VM), %rdi
-  mov (%rdi), %rax // scope table
-  mov 0x8(%rdi), %edx // table hash
+  read 1, %esi // string ID
+  mov (%STRINGS, %rsi, 8), %rsi // actual char *
+  mov (%VM), %r9 // VM::m_scope *
+
+load:
+  mov (%r9), %rax // Scope::table *
+  mov 0x8(%r9), %edx // Scope::tableHash
   mov %esi, %ecx // index
   and %edx, %ecx // index &= hash
   mov %ecx, %r8d // begin
@@ -128,21 +130,25 @@ _op_lookup:
 begin:
   mov %ecx, %edi
   shl $1, %edi
-  mov (%rax, %rdi, 0x8), %r9  // Entry::key
-  test %r9,%r9
-  jz slow_path
-  xor %r9, %rsi
+  mov (%rax, %rdi, 0x8), %r11  // Entry::key
+  test %r11,%r11
+  jz check_parent
+  cmp %rsi, %r11
   jz found
   inc %ecx
   and %edx, %ecx
-  xor %ecx, %r8d
+  cmp %ecx, %r8d
   jnz begin
 
-slow_path:
-  mov %VM, %rdi
-  read 1, %esi
-  mov (%STRINGS, %rsi, 8), %rsi
-  ccall _getScope
+check_parent:
+  mov 0x10(%r9), %r9 // Scope::parent
+  test %r9, %r9
+  jz ret_undefined
+  jmp load
+
+ret_undefined:
+  mov $0x01, %rax
+  shl $0x38, %rax
   jmp done
 
 found:

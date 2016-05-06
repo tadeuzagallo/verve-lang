@@ -13,19 +13,6 @@ extern "C" void execute(
     VM *vm,
     const uint8_t *bcbase);
 
-extern "C" uint64_t getScope(VM *vm, String name);
-uint64_t getScope(VM *vm, String name) {
-  Value value;
-  if (vm->m_scope->parent) {
-    value = vm->m_scope->parent->get(name);
-  }
-  if (value.isUndefined()) {
-    std::cerr << "Symbol not found: " << name.str() << "\n";
-    throw;
-  }
-  return value.encode();
-}
-
 extern "C" void setScope(VM *vm, const char *name, Value closure);
 void setScope(VM *vm, const char *name, Value closure) {
   vm->m_scope->set(name, closure);
