@@ -32,11 +32,24 @@ namespace ceos {
         return m_previous ?: m_parent ?: this->shared_from_this();
       }
 
-      inline T get(std::string var) {
+      inline T get(std::string &var, bool recursive = true) {
         auto it = m_table.find(var);
         if (it != m_table.end()) return it->second;
-        else if (m_parent) return m_parent->get(var);
-        else return T();
+        else if (recursive && m_parent != nullptr) return m_parent->get(var);
+        else return nullptr;
+      }
+
+      inline bool isInCurrentScope(std::string &var) {
+        auto it = m_table.find(var);
+        return it != m_table.end();
+      }
+
+      OldScopePtr scopeFor(std::string &var) {
+        auto scope = this->shared_from_this();
+        do {
+          if (scope->isInCurrentScope(var)) { return scope; }
+        } while ((scope = scope->parent()) != nullptr);
+        return nullptr;
       }
 
       inline void set(std::string key, T value) {
@@ -54,6 +67,8 @@ namespace ceos {
         return m_parent;
       }
 
+      bool isRequired;
+      bool capturesScope;
     private:
       OldScopePtr m_parent;
       OldScopePtr m_previous;

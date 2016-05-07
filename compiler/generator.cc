@@ -139,7 +139,7 @@ namespace ceos {
 
     std::vector<unsigned> captured;
     for (unsigned i = 0; i < fn->arguments.size(); i++) {
-      write(INDEX_OF(m_ast->strings, AST::asID(fn->arguments[i])->name));
+      write(INDEX_OF(m_ast->strings, AST::asFunctionArgument(fn->arguments[i])->name));
     }
 
     generateNode(fn->body);

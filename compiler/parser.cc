@@ -10,6 +10,7 @@ namespace ceos {
     m_ast = std::make_shared<AST::Program>();
     m_ast->loc.start = m_lexer.token()->loc.start;
     m_ast->body = parseBlock(Token::Type::END);
+    m_ast->body->needsScope = false;
     return m_ast;
   }
 
@@ -19,6 +20,8 @@ namespace ceos {
       std::shared_ptr<AST> node = parseFactor();
       block->nodes.push_back(node);
     }
+    block->needsScope = m_scope->isRequired;
+    block->capturesScope = m_scope->capturesScope;
 
     return block;
   }
@@ -83,23 +86,40 @@ namespace ceos {
   std::shared_ptr<AST> Parser::parseID() {
     auto id = std::static_pointer_cast<Token::ID>(m_lexer.token(Token::Type::ID));
 
-    unsigned uid;
-    auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), id->name);
-    if (it != m_ast->strings.end()) {
-      uid = it - m_ast->strings.begin();
-    } else {
-      uid = str_uid++;
-      m_ast->strings.push_back(id->name);
-    }
-
     if (id->name == "if") {
       return parseIf();
     }
 
-    std::shared_ptr<AST> ast = std::make_shared<AST::ID>(m_ast->strings[uid], uid);
-    ast->loc = id->loc;
+    std::shared_ptr<AST> ast, ref;
+    if ((ref = m_scope->get(id->name, false)) != nullptr && ref->type == AST::Type::FunctionArgument) {
+      ast = ref;
+    } else {
+      unsigned uid;
+      auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), id->name);
+      if (it != m_ast->strings.end()) {
+        uid = it - m_ast->strings.begin();
+      } else {
+        uid = str_uid++;
+        m_ast->strings.push_back(id->name);
+      }
+
+      ast = std::make_shared<AST::ID>(m_ast->strings[uid], uid);
+      ast->loc = id->loc;
+
+      if ((ref = m_scope->get(id->name)) && !m_scope->isInCurrentScope(id->name)) {
+        if (ref->type == AST::Type::FunctionArgument) {
+          AST::asFunctionArgument(ref)->isCaptured = true;
+        }
+        m_scope->scopeFor(id->name)->isRequired = true;
+        m_scope->capturesScope = true;
+      }
+    }
 
     while (true) {
+      if (ast->type == AST::Type::Call && m_lexer.token()->type != Token::Type::L_BRACE) {
+        AST::asCall(ast)->isBuiltin = ref == nullptr;
+      }
+
       if (m_lexer.token()->type == Token::Type::TYPE) {
         ast = parseTypeInfo(std::move(ast));
       } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
@@ -121,12 +141,36 @@ namespace ceos {
 
     auto fn = std::make_shared<AST::Function>();
     fn->name = AST::asID(call->callee);
-    fn->arguments = std::move(call->arguments);
+
+    m_scope->set(fn->name->name, fn);
+    m_scope->isRequired = true;
+
+    m_scope = m_scope->create();
+
+    unsigned i = 0;
+    for (auto arg : call->arguments) {
+      std::string argName;
+      if (arg->type == AST::Type::ID) {
+        argName = AST::asID(arg)->name;
+      } else if (arg->type == AST::Type::FunctionArgument) {
+        argName = AST::asFunctionArgument(arg)->name;
+      } else {
+        perror("Can't handle argument type on function declaration");
+        throw;
+      }
+
+      auto fnArg = std::make_shared<AST::FunctionArgument>(argName, i++);
+      fn->arguments.push_back(fnArg);
+
+      m_scope->set(argName, fnArg);
+    }
 
     m_lexer.ensure(Token::Type::L_BRACE);
     fn->body = parseBlock(Token::Type::R_BRACE);
     fn->loc.start = fn->name->loc.start;
     fn->loc.end = m_lexer.token(Token::Type::R_BRACE)->loc.end;
+
+    m_scope = m_scope->restore();
 
     return fn;
   }

@@ -2,6 +2,7 @@
 #include "token.h"
 
 #include <cassert>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -54,6 +55,8 @@ namespace ceos {
     Block() : AST(Type::Block) {}
 
     std::vector<std::shared_ptr<AST>> nodes;
+    bool needsScope;
+    bool capturesScope;
   };
 
   class AST::Program : public AST {
@@ -94,6 +97,7 @@ namespace ceos {
 
       std::shared_ptr<AST> callee;
       std::vector<std::shared_ptr<AST>> arguments;
+      bool isBuiltin;
   };
 
   class AST::Function : public AST {
@@ -101,15 +105,17 @@ namespace ceos {
       Function() : AST(Type::Function) {}
 
       std::shared_ptr<AST::ID> name;
-      std::vector<std::shared_ptr<AST>> arguments;
+      std::vector<std::shared_ptr<AST::FunctionArgument>> arguments;
       std::shared_ptr<AST::Block> body;
   };
 
   class AST::FunctionArgument : public AST {
     public:
-      FunctionArgument(unsigned i) : AST(Type::FunctionArgument), index(i) {}
+      FunctionArgument(std::string name, unsigned i) : AST(Type::FunctionArgument), name(name), index(i) {}
 
+      std::string name;
       unsigned index;
+      bool isCaptured;
   };
 
   class AST::If : public AST {

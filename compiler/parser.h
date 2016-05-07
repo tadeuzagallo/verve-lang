@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "ast.h"
+#include "old_scope.h"
 
 #ifndef CEOS_PARSER_H
 #define CEOS_PARSER_H
@@ -12,7 +13,9 @@ namespace ceos {
 
   class Parser {
     public:
-      Parser(Lexer &lexer) : m_lexer(lexer) {}
+      Parser(Lexer &lexer) : m_lexer(lexer) {
+        m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
+      }
 
       std::shared_ptr<AST::Program> parse(void);
 
@@ -29,6 +32,7 @@ namespace ceos {
 
       Lexer &m_lexer;
       std::shared_ptr<AST::Program> m_ast;
+      std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;
   };
 
 }
