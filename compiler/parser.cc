@@ -107,25 +107,28 @@ namespace ceos {
       } else if (m_lexer.token()->type == Token::Type::L_BRACE) {
         assert(ast->type == AST::Type::Call);
         auto call = AST::asCall(ast);
-        assert(call->callee->type == AST::Type::ID);
-        auto callee = AST::asID(call->callee);
-        auto fn = std::make_shared<AST::Function>();
-        fn->name = std::move(callee);
-        for (auto arg : call->arguments) {
-          assert(arg->type == AST::Type::ID);
-        }
-        fn->arguments = std::move(call->arguments);
-        m_lexer.ensure(Token::Type::L_BRACE);
-        fn->body = parseBlock(Token::Type::R_BRACE);
-        fn->loc.start = fn->name->loc.start;
-        fn->loc.end = m_lexer.token(Token::Type::R_BRACE)->loc.end;
-        ast = fn;
+        ast = parseFunction(std::move(call));
       } else {
         break;
       }
     }
 
     return ast;
+  }
+
+  std::shared_ptr<AST::Function> Parser::parseFunction(std::shared_ptr<AST::Call> &&call) {
+    assert(call->callee->type == AST::Type::ID);
+
+    auto fn = std::make_shared<AST::Function>();
+    fn->name = AST::asID(call->callee);
+    fn->arguments = std::move(call->arguments);
+
+    m_lexer.ensure(Token::Type::L_BRACE);
+    fn->body = parseBlock(Token::Type::R_BRACE);
+    fn->loc.start = fn->name->loc.start;
+    fn->loc.end = m_lexer.token(Token::Type::R_BRACE)->loc.end;
+
+    return fn;
   }
 
   std::shared_ptr<AST::String> Parser::parseString() {

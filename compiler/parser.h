@@ -21,6 +21,7 @@ namespace ceos {
       std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee);
       std::shared_ptr<AST::Number> parseNumber(void);
       std::shared_ptr<AST> parseID(void);
+      std::shared_ptr<AST::Function> parseFunction(std::shared_ptr<AST::Call> &&);
       std::shared_ptr<AST::String> parseString(void);
       std::shared_ptr<AST> parseFactor(void);
       std::shared_ptr<AST> parseIf(void);
