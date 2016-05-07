@@ -1,0 +1,7 @@
+adder(a) {
+  _(b) {
+    add(a, b)
+  }
+}
+
+print(adder(1)(2))
