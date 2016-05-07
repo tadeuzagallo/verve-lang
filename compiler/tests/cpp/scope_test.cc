@@ -4,14 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define assert(COND) \
-if (!(COND)) { \
-  fprintf(stderr, "Assertion failed on line %d: %s\n", __LINE__, #COND); \
-  exit(10); \
-}
-
 namespace ceos {
-
 
 class ScopeTest {
   public:
