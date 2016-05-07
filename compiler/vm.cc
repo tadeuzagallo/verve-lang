@@ -42,6 +42,12 @@ unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
   return closure->fn->offset;
 }
 
+extern "C" void symbolNotFound(char *);
+extern "C" void symbolNotFound(char *symbolName) {
+  fprintf(stderr, "Symbol not found: %s\n", symbolName);
+  throw;
+}
+
   void VM::execute() {
     auto header = read<unsigned>();
 

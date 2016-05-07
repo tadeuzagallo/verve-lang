@@ -143,13 +143,12 @@ begin:
 check_parent:
   mov 0x10(%r9), %r9 // Scope::parent
   test %r9, %r9
-  jz ret_undefined
+  jz not_found
   jmp load
 
-ret_undefined:
-  mov $0x01, %rax
-  shl $0x38, %rax
-  jmp done
+not_found:
+  mov %rsi, %rdi
+  ccall _symbolNotFound
 
 found:
   mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
