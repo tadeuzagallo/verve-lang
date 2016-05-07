@@ -39,6 +39,9 @@ namespace ceos {
       case AST::Type::TypeInfo:
         // TODO: use type info
         break;
+      case AST::Type::Block:
+        generateBlock(AST::asBlock(node));
+        break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
         throw;
@@ -58,18 +61,16 @@ namespace ceos {
     m_output.put(opcode);
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::vector<std::shared_ptr<AST>> &body)  {
+  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST::Block> &body)  {
     emitJmp(jmpType, body, false);
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::vector<std::shared_ptr<AST>> &body, bool skipNextJump)  {
+  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST::Block> &body, bool skipNextJump)  {
     emitOpcode(jmpType);
     unsigned beforePos = m_output.tellp();
     write(0); // placeholder
 
-    for (auto node : body) {
-      generateNode(node);
-    }
+    generateNode(body);
 
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
@@ -136,18 +137,12 @@ namespace ceos {
 
     m_scope = m_scope->create();
 
-    int i = 0;
-    for (auto arg : fn->arguments) {
-      std::string &name = AST::asID(arg)->name;
-      m_scope->set(name, std::make_shared<AST::FunctionArgument>(i++));
-      write(INDEX_OF(m_ast->strings, name));
+    std::vector<unsigned> captured;
+    for (unsigned i = 0; i < fn->arguments.size(); i++) {
+      write(INDEX_OF(m_ast->strings, AST::asID(fn->arguments[i])->name));
     }
 
-    for (auto node : fn->body) {
-      generateNode(node);
-    }
-
-    m_scope = m_scope->restore();
+    generateNode(fn->body);
 
     emitOpcode(Opcode::ret);
   }
@@ -155,17 +150,16 @@ namespace ceos {
   void Generator::generateIf(std::shared_ptr<AST::If> iff) {
     generateNode(iff->condition);
 
-    emitJmp(Opcode::jz, iff->ifBody, iff->elseBody.size() > 0);
+    bool hasElse = iff->elseBody != nullptr && iff->elseBody->nodes.size() > 0;
+    emitJmp(Opcode::jz, iff->ifBody, hasElse);
 
-    if (iff->elseBody.size()) {
+    if (hasElse) {
       emitJmp(Opcode::jmp, iff->elseBody);
     }
   }
 
   void Generator::generateProgram(std::shared_ptr<AST::Program> program) {
-    for (auto node : program->nodes()) {
-      generateNode(node);
-    }
+    generateBlock(program->body);
 
     auto text = m_output.str();
     m_output = std::stringstream();
@@ -199,6 +193,12 @@ namespace ceos {
     write(Section::Header);
     write(Section::Text);
     m_output << text;
+  }
+
+  void Generator::generateBlock(std::shared_ptr<AST::Block> block) {
+    for (auto node : block->nodes) {
+      generateNode(node);
+    }
   }
 
   static std::vector<std::string> strings;

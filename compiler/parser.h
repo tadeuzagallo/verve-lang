@@ -24,7 +24,7 @@ namespace ceos {
       std::shared_ptr<AST::String> parseString(void);
       std::shared_ptr<AST> parseFactor(void);
       std::shared_ptr<AST> parseIf(void);
-      void parseBody(std::vector<std::shared_ptr<AST>> &body, Token::Type delim);
+      std::shared_ptr<AST::Block> parseBlock(Token::Type delim);
 
       Lexer &m_lexer;
       std::shared_ptr<AST::Program> m_ast;

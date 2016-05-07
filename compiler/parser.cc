@@ -9,15 +9,18 @@ namespace ceos {
     m_lexer.nextToken();
     m_ast = std::make_shared<AST::Program>();
     m_ast->loc.start = m_lexer.token()->loc.start;
-    parseBody(m_ast->body, Token::Type::END);
+    m_ast->body = parseBlock(Token::Type::END);
     return m_ast;
   }
 
-  void Parser::parseBody(std::vector<std::shared_ptr<AST>> &body, Token::Type delim) {
+  std::shared_ptr<AST::Block> Parser::parseBlock(Token::Type delim) {
+    auto block = std::make_shared<AST::Block>();
     while (m_lexer.token()->type != delim) {
       std::shared_ptr<AST> node = parseFactor();
-      body.push_back(node);
+      block->nodes.push_back(node);
     }
+
+    return block;
   }
 
   std::shared_ptr<AST> Parser::parseFactor() {
@@ -42,10 +45,12 @@ namespace ceos {
 
     if (m_lexer.token()->type == Token::Type::L_BRACE) {
       m_lexer.ensure(Token::Type::L_BRACE);
-      parseBody(_if->ifBody, Token::Type::R_BRACE);
+      _if->ifBody = parseBlock(Token::Type::R_BRACE);
       m_lexer.ensure(Token::Type::R_BRACE);
     } else {
-      _if->ifBody.push_back(parseFactor());
+      auto ifBody = std::make_shared<AST::Block>();
+      ifBody->nodes.push_back(parseFactor());
+      _if->ifBody = ifBody;
     }
 
     if (m_lexer.token()->type == Token::Type::ID) {
@@ -55,10 +60,12 @@ namespace ceos {
 
         if (m_lexer.token()->type == Token::Type::L_BRACE) {
           m_lexer.ensure(Token::Type::L_BRACE);
-          parseBody(_if->elseBody, Token::Type::R_BRACE);
+          _if->elseBody = parseBlock(Token::Type::R_BRACE);
           m_lexer.ensure(Token::Type::R_BRACE);
         } else {
-          _if->elseBody.push_back(parseFactor());
+          auto elseBody = std::make_shared<AST::Block>();
+          elseBody->nodes.push_back(parseFactor());
+          _if->elseBody = elseBody;
         }
       }
     }
@@ -109,7 +116,7 @@ namespace ceos {
         }
         fn->arguments = std::move(call->arguments);
         m_lexer.ensure(Token::Type::L_BRACE);
-        parseBody(fn->body, Token::Type::R_BRACE);
+        fn->body = parseBlock(Token::Type::R_BRACE);
         fn->loc.start = fn->name->loc.start;
         fn->loc.end = m_lexer.token(Token::Type::R_BRACE)->loc.end;
         ast = fn;

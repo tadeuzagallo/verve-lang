@@ -32,10 +32,11 @@ namespace ceos {
       void generateFunctionSource(std::shared_ptr<AST::Function>);
       void generateIf(std::shared_ptr<AST::If>);
       void generateProgram(std::shared_ptr<AST::Program>);
+      void generateBlock(std::shared_ptr<AST::Block>);
 
       void emitOpcode(Opcode::Type);
-      void emitJmp(Opcode::Type, std::vector<std::shared_ptr<AST>> &);
-      void emitJmp(Opcode::Type, std::vector<std::shared_ptr<AST>> &, bool);
+      void emitJmp(Opcode::Type, std::shared_ptr<AST::Block>&);
+      void emitJmp(Opcode::Type, std::shared_ptr<AST::Block>&, bool);
       void write(int);
       void write(const std::string &);
 

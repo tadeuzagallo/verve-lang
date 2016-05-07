@@ -31,6 +31,7 @@ namespace ceos {
     public:
       AST_TYPES(Type, 
         Program,
+        Block,
         Call,
         Number,
         ID,
@@ -48,15 +49,20 @@ namespace ceos {
 
   };
 
+  class AST::Block : public AST {
+    public:
+    Block() : AST(Type::Block) {}
+
+    std::vector<std::shared_ptr<AST>> nodes;
+  };
+
   class AST::Program : public AST {
     public:
       Program() : AST(Type::Program) {}
 
-      std::vector<std::shared_ptr<AST>> &nodes() { return body; }
-
       std::vector<std::shared_ptr<AST::Function>> functions;
       std::vector<std::string> strings;
-      std::vector<std::shared_ptr<AST>> body;
+      std::shared_ptr<AST::Block> body;
   };
 
   class AST::Number : public AST {
@@ -96,7 +102,7 @@ namespace ceos {
 
       std::shared_ptr<AST::ID> name;
       std::vector<std::shared_ptr<AST>> arguments;
-      std::vector<std::shared_ptr<AST>> body;
+      std::shared_ptr<AST::Block> body;
   };
 
   class AST::FunctionArgument : public AST {
@@ -111,8 +117,8 @@ namespace ceos {
       If() : AST(Type::If) {}
 
       std::shared_ptr<AST> condition;
-      std::vector<std::shared_ptr<AST>> ifBody;
-      std::vector<std::shared_ptr<AST>> elseBody;
+      std::shared_ptr<AST::Block> ifBody;
+      std::shared_ptr<AST::Block> elseBody;
   };
 
   class AST::TypeInfo : public AST {
