@@ -41,7 +41,7 @@
 .endmacro
 
 .macro get_arg
-  mov 0x18(%rbp, $0, 8), $1
+  mov 0x20(%rbp, $0, 8), $1
 .endmacro
 
 .globl _execute
@@ -201,6 +201,7 @@ _call_closure:
   shr $8, %rcx
   push %BYTECODE
   push %rdi
+  push %rcx
   push %rbp
   mov %rsp, %rbp
   ccall _prepareClosure
@@ -211,12 +212,15 @@ _op_ret:
   pop %rax
   mov %rbp, %rsp
   pop %rbp
+  pop %rsi
   pop %rdi
   pop %BYTECODE
   lea (%rsp, %rdi, 8), %rsp
   push %rax
-  mov %VM, %rdi
-  ccall _restoreScope
+restore_scope:
+  mov %VM, %rdi // VM::m_scope : Scope
+  // %rsi is the Closure *
+  ccall _finishClosure
   skip 1
 
 _op_load_string:
