@@ -13,9 +13,14 @@ extern "C" void execute(
     VM *vm,
     const uint8_t *bcbase);
 
-extern "C" void setScope(VM *vm, const char *name, Value closure);
-void setScope(VM *vm, const char *name, Value closure) {
-  vm->m_scope->set(name, closure);
+extern "C" void setScope(VM *vm, const char *name, Value value);
+void setScope(VM *vm, const char *name, Value value) {
+  vm->m_scope->set(name, value);
+}
+
+extern "C" void pushScope(VM *vm);
+void pushScope(VM *vm) {
+  vm->m_scope = vm->m_scope->create();
 }
 
 extern "C" void restoreScope(VM *vm);
@@ -23,9 +28,12 @@ void restoreScope(VM *vm) {
   vm->m_scope = vm->m_scope->restore();
 }
 
-extern "C" uint64_t createClosure(VM *vm, unsigned fnID);
-uint64_t createClosure(VM *vm, unsigned fnID) {
-  auto closure = new Closure(vm->m_scope);
+extern "C" uint64_t createClosure(VM *vm, unsigned fnID, bool capturesScope);
+uint64_t createClosure(VM *vm, unsigned fnID, bool capturesScope) {
+  auto closure = new Closure();
+  if (capturesScope) {
+    closure->scope = vm->m_scope->inc();
+  }
   vm->trackAllocation(closure, sizeof(Closure));
   closure->fn = &vm->m_userFunctions[fnID];
   return Value(closure).encode();
@@ -33,13 +41,17 @@ uint64_t createClosure(VM *vm, unsigned fnID) {
 
 extern "C" unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure);
 unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
-  vm->m_scope = vm->m_scope->create(closure->scope);
-
-  for (unsigned i = 0; i < argc; i++) {
-    vm->m_scope->set(closure->fn->args[i], argv[i]);
+  if (closure->scope) {
+    vm->m_scope = vm->m_scope->create(closure->scope);
   }
-
   return closure->fn->offset;
+}
+
+extern "C" void finishClosure(VM *vm, Closure *closure);
+void finishClosure(VM *vm, Closure *closure) {
+  if (closure->scope) {
+    vm->m_scope = vm->m_scope->restore();
+  }
 }
 
 extern "C" void symbolNotFound(char *);

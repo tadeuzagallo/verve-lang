@@ -40,6 +40,10 @@
   pop %rbx
 .endmacro
 
+.macro get_arg
+  mov 0x18(%rbp, $0, 8), $1
+.endmacro
+
 .globl _execute
 _execute:
   push %rbp
@@ -100,6 +104,18 @@ _loop:
   nop
   nop
   jmp _op_exit
+  nop
+  nop
+  nop
+  jmp _op_create_lex_scope
+  nop
+  nop
+  nop
+  jmp _op_release_lex_scope
+  nop
+  nop
+  nop
+  jmp _op_put_to_scope
 
 _op_exit:
   mov %rbp, %rsp
@@ -214,17 +230,18 @@ _op_load_string:
 
 _op_create_closure:
   mov %VM, %rdi
-  read 1, %rsi
+  read 1, %esi
+  read 2, %edx
   ccall _createClosure
   push %rax
-  skip 1
+  skip 2
 
 _op_bind:
   mov %VM, %rdi
   pop %rdx
   mov %rdx, %rsi
   unmask %rsi
-  mov (%rsi), %rsi
+  mov 0x8(%rsi), %rsi
   mov (%rsi), %esi
   mov (%STRINGS, %rsi, 8), %rsi
   ccall _setScope
@@ -248,6 +265,27 @@ _op_jmp:
 
 _op_push_arg:
   read 1, %edi
-  mov 0x18(%rbp, %rdi, 8), %rax
+  get_arg %rdi, %rax
   push %rax
   skip 1
+
+_op_create_lex_scope:
+  mov %VM, %rdi
+  ccall _pushScope
+  skip 0
+
+_op_release_lex_scope:
+  mov %VM, %rdi
+  ccall _restoreScope
+  skip 0
+
+_op_put_to_scope:
+  mov %VM, %rdi
+  read 1, %esi
+  read 2, %edx
+
+  mov (%STRINGS, %rsi, 8), %rsi
+  get_arg %rdx, %rdx
+
+  ccall _setScope
+  skip 2

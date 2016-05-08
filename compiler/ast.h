@@ -55,6 +55,7 @@ namespace ceos {
     Block() : AST(Type::Block) {}
 
     std::vector<std::shared_ptr<AST>> nodes;
+    std::function<void()> prologue;
     bool needsScope;
     bool capturesScope;
   };

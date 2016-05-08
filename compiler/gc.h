@@ -46,7 +46,10 @@ namespace ceos {
               markValue(i, heap);
             }
           } else if (value.isClosure()) {
-            markScope(value.asClosure()->scope, heap);
+            Scope *scope;
+            if ((scope = value.asClosure()->scope) != NULL) {
+              markScope(scope, heap);
+            }
           }
         }
       }

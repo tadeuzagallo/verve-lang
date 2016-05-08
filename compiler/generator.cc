@@ -119,6 +119,7 @@ namespace ceos {
   void Generator::generateFunctionDefinition(std::shared_ptr<AST::Function> fn) {
     emitOpcode(Opcode::create_closure);
     write(m_ast->functions.size());
+    write(fn->body->capturesScope);
     if (fn->name->name != "_") {
       emitOpcode(Opcode::bind);
     }
@@ -139,8 +140,20 @@ namespace ceos {
 
     std::vector<unsigned> captured;
     for (unsigned i = 0; i < fn->arguments.size(); i++) {
-      write(INDEX_OF(m_ast->strings, AST::asFunctionArgument(fn->arguments[i])->name));
+      write(INDEX_OF(m_ast->strings, fn->arguments[i]->name));
+
+      if (fn->arguments[i]->isCaptured) {
+        captured.push_back(i);
+      }
     }
+
+    fn->body->prologue = [captured, this, fn]() {
+      for (auto i : captured) {
+        emitOpcode(Opcode::put_to_scope);
+        write(INDEX_OF(m_ast->strings, fn->arguments[i]->name));
+        write(i);
+      }
+    };
 
     generateNode(fn->body);
 
@@ -196,8 +209,20 @@ namespace ceos {
   }
 
   void Generator::generateBlock(std::shared_ptr<AST::Block> block) {
+    if (block->needsScope) {
+      emitOpcode(Opcode::create_lex_scope);
+    }
+
+    if (block->prologue) {
+      block->prologue();
+    }
+
     for (auto node : block->nodes) {
       generateNode(node);
+    }
+
+    if (block->needsScope) {
+      emitOpcode(Opcode::release_lex_scope);
     }
   }
 
@@ -338,7 +363,8 @@ section_code:
       }
       case Opcode::create_closure: {
         READ_INT(bytecode, fnID);
-        WRITE(5, "create_closure " << functions[fnID]);
+        READ_INT(bytecode, capturesScope);
+        WRITE(9, "create_closure " << functions[fnID] << " [capturesScope=" << (capturesScope ? "true" : "false") << "]");
         break;
       }
       case Opcode::jmp:  {
@@ -356,8 +382,22 @@ section_code:
         WRITE(5, "push_arg $" << arg);
         break;
       }
+      case Opcode::put_to_scope: {
+        READ_INT(bytecode, arg);
+        READ_INT(bytecode, arg2);
+        WRITE(9, "put_to_scope $" << strings[arg] << " = $" << arg2);
+        break;
+      }
       case Opcode::ret: {
         WRITE(1, "ret");
+        break;
+      }
+      case Opcode::create_lex_scope: {
+        WRITE(1, "create_lex_scope");
+        break;
+      }
+      case Opcode::release_lex_scope: {
+        WRITE(1, "release_lex_scope");
         break;
       }
       case Opcode::bind:

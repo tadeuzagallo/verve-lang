@@ -16,7 +16,10 @@ class Opcode {
       load_string,
       push_arg,
       lookup,
-      exit
+      exit,
+      create_lex_scope,
+      release_lex_scope,
+      put_to_scope
     );
 };
 

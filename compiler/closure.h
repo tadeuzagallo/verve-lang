@@ -8,11 +8,12 @@
 namespace ceos {
 
   struct Closure {
-    Function *fn;
     Scope *scope;
+    Function *fn;
 
+    Closure() : scope(NULL) {}
     Closure(Scope *s) : scope(s->inc()) {}
-    ~Closure() { scope->dec(); }
+    ~Closure() { if (scope) scope->dec(); }
   };
 
 }
