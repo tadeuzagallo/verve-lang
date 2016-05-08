@@ -98,7 +98,6 @@ namespace ceos {
 
       std::shared_ptr<AST> callee;
       std::vector<std::shared_ptr<AST>> arguments;
-      bool isBuiltin;
   };
 
   class AST::Function : public AST {

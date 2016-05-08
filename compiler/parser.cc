@@ -116,10 +116,6 @@ namespace ceos {
     }
 
     while (true) {
-      if (ast->type == AST::Type::Call && m_lexer.token()->type != Token::Type::L_BRACE) {
-        AST::asCall(ast)->isBuiltin = ref == nullptr;
-      }
-
       if (m_lexer.token()->type == Token::Type::TYPE) {
         ast = parseTypeInfo(std::move(ast));
       } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
