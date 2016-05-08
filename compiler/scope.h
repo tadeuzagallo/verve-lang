@@ -17,7 +17,7 @@ namespace ceos {
 
     friend class ScopeTest;
 
-    Scope(unsigned size = DEFAULT_SIZE) {
+    Scope(unsigned size = 0) {
       assert(size % 2 == 0);
       refCount = 1;
       length = 0;
@@ -26,15 +26,21 @@ namespace ceos {
       parent = NULL;
       previous = NULL;
 
-      resize(size);
+      if (size) {
+        resize(size);
+      }
     }
 
     void resize(unsigned size) {
-      //assert(size > 0);
-      tableSize = size;
-      tableHash = size - 1;
-      table = (Entry *)realloc(table, sizeof(Entry) * size);
-      memset(table, 0, sizeof(Entry) * size);
+      if (size) {
+        tableSize = size;
+        free(table);
+      } else {
+        tableSize = DEFAULT_SIZE;
+      }
+
+      tableHash = tableSize - 1;
+      table = (Entry *)calloc(sizeof(Entry), tableSize);
     }
 
     Scope *inc() {
@@ -88,13 +94,15 @@ namespace ceos {
     }
 
     Value get(String key) {
-      unsigned index = reinterpret_cast<uintptr_t>(key.str()) & tableHash;
-      auto begin = index;
-      while (table[index].key != NULL) {
-        if (table[index].key == key) {
-          return table[index].value;
+      if (tableSize) {
+        unsigned index = reinterpret_cast<uintptr_t>(key.str()) & tableHash;
+        auto begin = index;
+        while (table[index].key != NULL) {
+          if (table[index].key == key) {
+            return table[index].value;
+          }
+          if ((index = (index + 1) & tableHash) == begin) break;
         }
-        if ((index = (index + 1) & tableHash) == begin) break;
       }
       if (parent) return parent->get(key);
       return Value();
@@ -134,10 +142,10 @@ namespace ceos {
 
 
     Entry *table;
-    unsigned tableHash;
     Scope *parent;
-  private:
     Scope *previous;
+    unsigned tableHash;
+  private:
     unsigned refCount;
     unsigned length;
     unsigned tableSize;

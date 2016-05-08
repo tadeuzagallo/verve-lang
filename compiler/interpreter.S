@@ -138,7 +138,9 @@ _op_lookup:
 
 load:
   mov (%r9), %rax // Scope::table *
-  mov 0x8(%r9), %edx // Scope::tableHash
+  test %rax, %rax
+  jz check_parent
+  mov 0x18(%r9), %edx // Scope::tableHash
   mov %esi, %ecx // index
   and %edx, %ecx // index &= hash
   mov %ecx, %r8d // begin
@@ -157,7 +159,7 @@ begin:
   jnz begin
 
 check_parent:
-  mov 0x10(%r9), %r9 // Scope::parent
+  mov 0x8(%r9), %r9 // Scope::parent
   test %r9, %r9
   jz not_found
   jmp load
