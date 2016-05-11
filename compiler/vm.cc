@@ -40,7 +40,7 @@ uint64_t createClosure(VM *vm, unsigned fnID, bool capturesScope) {
 }
 
 extern "C" unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure);
-unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure) {
+unsigned prepareClosure(__unused unsigned argc, __unused Value *argv, VM *vm, Closure *closure) {
   if (closure->scope) {
     vm->m_scope = vm->m_scope->create(closure->scope);
   }
