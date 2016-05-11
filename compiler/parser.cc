@@ -109,9 +109,9 @@ namespace ceos {
       if ((ref = m_scope->get(id->name)) && !m_scope->isInCurrentScope(id->name)) {
         if (ref->type == AST::Type::FunctionArgument) {
           AST::asFunctionArgument(ref)->isCaptured = true;
+          m_scope->scopeFor(id->name)->isRequired = true;
+          m_scope->capturesScope = true;
         }
-        m_scope->scopeFor(id->name)->isRequired = true;
-        m_scope->capturesScope = true;
       }
     }
 
