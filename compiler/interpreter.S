@@ -58,63 +58,38 @@ _execute:
   mov %rcx, %BCBASE
 
 _loop:
+  lea loop_opcodes(%rip), %rdi
   xor %rax, %rax
   mov (%BYTECODE), %al // 0..10
-  lea (%rip), %rdi
-  lea 0x7(%rdi, %al, 8), %rdi
+  lea (%rdi, %al, 8), %rdi
   jmp *%rdi
+loop_opcodes:
   jmp _op_ret
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_bind
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_push
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_call
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_jz
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_jmp
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_create_closure
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_load_string
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_push_arg
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_lookup
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_exit
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_create_lex_scope
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_release_lex_scope
-  nop
-  nop
-  nop
+  .fill 3
   jmp _op_put_to_scope
 
 _op_exit:
