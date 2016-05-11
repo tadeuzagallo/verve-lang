@@ -3,20 +3,28 @@
 
 #include <cassert>
 
+extern "C" void *builtin_sub();
+extern "C" void *builtin_add();
+extern "C" void *builtin_lt();
+
 namespace ceos {
 
   void registerBuiltins(VM &vm) {
 
-#define REGISTER(NAME, FN) Builtin FN##_ = FN; vm.m_scope->set(#NAME, Value(FN##_))
+#define REGISTER(NAME, FN) \
+    do { \
+      Builtin FN##_ = (Builtin)FN;  \
+      vm.m_scope->set(#NAME, Value(FN##_)); \
+    } while(0)
 
     REGISTER(print, print);
     REGISTER(list, list);
 
-    REGISTER(add, add);
-    REGISTER(sub, sub);
+    REGISTER(add, builtin_add);
+    REGISTER(sub, builtin_sub);
     REGISTER(mul, mul);
     REGISTER(div, div);
-    REGISTER(lt, lt);
+    REGISTER(lt, builtin_lt);
     REGISTER(gt, gt);
     REGISTER(lte, lte);
     REGISTER(gte, gte);
