@@ -46,6 +46,11 @@
   mov 0x20(%rbp, $0, 8), $1
 .endmacro
 
+.macro opcode_jmp
+  jmp _op_$0
+  .fill 3
+.endmacro
+
 .globl _execute
 _execute:
   push %rbp
@@ -66,33 +71,20 @@ _loop:
   lea (%rdi, %al, 8), %rdi
   jmp *%rdi
 loop_opcodes:
-  jmp _op_ret
-  .fill 3
-  jmp _op_bind
-  .fill 3
-  jmp _op_push
-  .fill 3
-  jmp _op_call
-  .fill 3
-  jmp _op_jz
-  .fill 3
-  jmp _op_jmp
-  .fill 3
-  jmp _op_create_closure
-  .fill 3
-  jmp _op_load_string
-  .fill 3
-  jmp _op_push_arg
-  .fill 3
-  jmp _op_lookup
-  .fill 3
-  jmp _op_exit
-  .fill 3
-  jmp _op_create_lex_scope
-  .fill 3
-  jmp _op_release_lex_scope
-  .fill 3
-  jmp _op_put_to_scope
+  opcode_jmp ret
+  opcode_jmp bind
+  opcode_jmp push
+  opcode_jmp call
+  opcode_jmp jz
+  opcode_jmp jmp
+  opcode_jmp create_closure
+  opcode_jmp load_string
+  opcode_jmp push_arg
+  opcode_jmp lookup
+  opcode_jmp exit
+  opcode_jmp create_lex_scope
+  opcode_jmp release_lex_scope
+  opcode_jmp put_to_scope
 
 _op_exit:
   mov %rbp, %rsp
