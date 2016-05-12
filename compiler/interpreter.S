@@ -16,9 +16,11 @@
 
 .macro skip
 .if $0 == 0
-  lea 0x1(%BYTECODE), %BYTECODE
+  inc %BYTECODE
 .elseif $0 == 1
-  lea 0x5(%BYTECODE), %BYTECODE
+  add $$0x5, %BYTECODE
+.elseif $0 == 2
+  add $$0x9, %BYTECODE
 .else
   mov $$$0, %rax
   lea 0x1(%BYTECODE, %rax, 4), %BYTECODE
