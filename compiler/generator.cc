@@ -5,6 +5,8 @@
 #include <iostream>
 #include <iomanip>
 
+#define WORD_SIZE 4
+
 namespace ceos {
   static unsigned lookupID = 1;
   static bool capturesScope = true;
@@ -78,7 +80,7 @@ namespace ceos {
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
     write((afterPos - beforePos)
-        + (skipNextJump ? 12 : 4) // special case for if with else
+        + (skipNextJump ? (3 * WORD_SIZE) : WORD_SIZE) // special case for if with else
     );
     m_output.seekp(afterPos);
   }
@@ -207,8 +209,8 @@ namespace ceos {
     }
 
 
-    unsigned index = m_output.tellp() % 4;
-    while (index++ % 4) {
+    unsigned index = m_output.tellp() % WORD_SIZE;
+    while (index++ % WORD_SIZE) {
       m_output.put('\0');
     }
 
@@ -252,7 +254,7 @@ namespace ceos {
 
 #define WRITE(OFFSET, ...) \
     std::cout << "[" \
-    <<  std::setfill(' ') << std::setw(width) << ((int)bytecode.tellg() - (OFFSET)) \
+    <<  std::setfill(' ') << std::setw(width) << ((int)bytecode.tellg() - ((OFFSET) * WORD_SIZE)) \
     << "] " << padding << __VA_ARGS__ << "\n"
 
 read_section:
@@ -264,13 +266,13 @@ read_section:
     switch (section) {
       case Section::Strings:
         padding = "";
-        WRITE(8, "STRINGS:");
+        WRITE(2, "STRINGS:");
         padding = "  ";
         goto section_strings;
         break;
       case Section::Functions: {
         padding = "";
-        WRITE(8, "FUNCTIONS:");
+        WRITE(2, "FUNCTIONS:");
         padding = "  ";
         auto offset = bytecode.tellg();
         while (true) {
@@ -282,7 +284,6 @@ read_section:
           } else if (header == Section::Header) {
             break;
           }
-          bytecode.seekg(-3, bytecode.cur);
         }
         bytecode.seekg(offset);
         goto section_functions;
@@ -290,7 +291,7 @@ read_section:
       }
       case Section::Text:
         padding = "";
-        WRITE(8, "TEXT:");
+        WRITE(2, "TEXT:");
         padding = "  ";
         goto section_code;
         break;
@@ -309,7 +310,7 @@ section_strings:
         bytecode.get();
       }
       strings.push_back(str);
-      WRITE(str.length() + 1, "$" << str_index++ << ": " << str);
+      WRITE((float)(str.length() + 1)/WORD_SIZE, "$" << str_index++ << ": " << str);
     }
 
 section_functions: {
@@ -327,7 +328,7 @@ section_functions: {
       }
 
       padding = "";
-      WRITE(8, strings[fn_id] << "(" << args.str() << "):");
+      WRITE(3 + arg_count, strings[fn_id] << "(" << args.str() << "):");
       padding = "  ";
 
       while (true) {
@@ -346,7 +347,7 @@ section_functions: {
 
 section_code:
     // skip size of lookup table
-    bytecode.seekg(4, bytecode.cur);
+    bytecode.seekg(WORD_SIZE, bytecode.cur);
     while (true) {
       READ_INT(bytecode, opcode);
       if (bytecode.eof() || bytecode.fail()) {
@@ -364,70 +365,70 @@ section_code:
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
-        WRITE(8, "push 0x" << std::setbase(16) << value << std::setbase(10));
+        WRITE(2, "push 0x" << std::setbase(16) << value << std::setbase(10));
         break;
       }
       case Opcode::call: {
         READ_INT(bytecode, nargs);
-        WRITE(8, "call (" << nargs << ")");
+        WRITE(2, "call (" << nargs << ")");
         break;
       }
       case Opcode::load_string: {
         READ_INT(bytecode, stringID);
-        WRITE(8, "load_string $" << stringID);
+        WRITE(2, "load_string $" << stringID);
         break;
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
         READ_INT(bytecode, cacheSlot);
-        WRITE(12, "lookup $" << id << "(" << strings[id] << ") [cacheSlot=" << cacheSlot << "]");
+        WRITE(3, "lookup $" << id << "(" << strings[id] << ") [cacheSlot=" << cacheSlot << "]");
         break;
       }
       case Opcode::create_closure: {
         READ_INT(bytecode, fnID);
         READ_INT(bytecode, capturesScope);
-        WRITE(12, "create_closure " << functions[fnID] << " [capturesScope=" << (capturesScope ? "true" : "false") << "]");
+        WRITE(3, "create_closure " << functions[fnID] << " [capturesScope=" << (capturesScope ? "true" : "false") << "]");
         break;
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE(8, "jmp [" << ((int)bytecode.tellg() - 5 + target) << "]");
+        WRITE(2, "jmp [" << ((int)bytecode.tellg() - 5 + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE(8, "jz [" << ((int)bytecode.tellg() - 5 + target) << "]");
+        WRITE(2, "jz [" << ((int)bytecode.tellg() - 5 + target) << "]");
         break;
       }
       case Opcode::push_arg: {
         READ_INT(bytecode, arg);
-        WRITE(8, "push_arg $" << arg);
+        WRITE(2, "push_arg $" << arg);
         break;
       }
       case Opcode::put_to_scope: {
         READ_INT(bytecode, arg);
         READ_INT(bytecode, arg2);
-        WRITE(12, "put_to_scope $" << strings[arg] << " = $" << arg2);
+        WRITE(3, "put_to_scope $" << strings[arg] << " = $" << arg2);
         break;
       }
       case Opcode::bind:
         READ_INT(bytecode, fnID);
-        WRITE(8, "bind $" << functions[fnID]);
+        WRITE(2, "bind $" << functions[fnID]);
         break;
       case Opcode::ret: {
-        WRITE(4, "ret");
+        WRITE(1, "ret");
         break;
       }
       case Opcode::create_lex_scope: {
-        WRITE(4, "create_lex_scope");
+        WRITE(1, "create_lex_scope");
         break;
       }
       case Opcode::release_lex_scope: {
-        WRITE(4, "release_lex_scope");
+        WRITE(1, "release_lex_scope");
         break;
       }
       case Opcode::exit:
-        WRITE(4, "exit");
+        WRITE(1, "exit");
         break;
       default:
         std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";

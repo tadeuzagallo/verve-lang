@@ -133,7 +133,6 @@ void symbolNotFound(char *symbolName) {
         } else if (opcode == Section::FunctionHeader) {
           break;
         }
-        pc -= 3;
       }
     }
   }

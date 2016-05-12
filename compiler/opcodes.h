@@ -34,10 +34,4 @@ class Opcode {
     std::string TO = TO##_.str(); \
     FROM.ignore(1);
 
-#define READ_STR(FROM, TO) \
-    std::stringstream TO##_; \
-    FROM.get(*TO##_.rdbuf(), '\0'); \
-    std::string TO = TO##_.str(); \
-    FROM.ignore(1);
-
 #endif
