@@ -1,0 +1,61 @@
+#!/usr/bin/env node
+
+if (process.argv.length < 3) {
+  console.log(`Usage: profile <ceos-script> [repetitions=25]`);
+  return;
+}
+
+const childProcess = require('child_process');
+const exec = childProcess.execSync;
+
+const performanceNow = () => {
+  const hrTime = process.hrtime();
+  return hrTime[0] * 1000000 + hrTime[1] / 1000;
+}
+
+const overhead = (() => {
+  const start = performanceNow();
+  exec('');
+  return performanceNow() - start;
+})();
+
+const repetitions = process.argv[3] || 25;
+const times = new Array(repetitions);
+const program = `./ceos-build ${process.argv[2]}`
+for (let i = 0; i < repetitions; i++) {
+  const start = performanceNow();
+  exec(program);
+  const end = performanceNow();
+  times[i] = end - start - overhead;
+}
+
+const formatTime = time => {
+  return (time / 1000).toFixed(3) + 'µs';
+}
+
+const avg = times.reduce((a, b) => a + b) / repetitions;
+const min = times.reduce((a, b) => Math.min(a, b));
+const max = times.reduce((a, b) => Math.max(a, b));
+
+console.log(`
+avg: ${formatTime(avg)}    -    ${formatTime(min)} ~ ${formatTime(max)}
+
+${distributionTable(times, min, max)}
+`);
+
+function distributionTable(times, min, max) {
+  const tableHeight = 10;
+  const table = new Array(tableHeight);
+  for (let i = 0; i < tableHeight; i++) {
+    table[i] = [''];
+  }
+  const distance = (max - min + 1) / tableHeight;
+  for (let time of times) {
+    const slot = Math.floor((time - min) / distance);
+    table[slot].push('');
+  }
+  return table.map((row, i) => 
+    `[${row.join('@')}${new Array(times.length - row.length).join(' ')}] ` +
+    `${formatTime(min + (i * distance))} ~ ${formatTime(min + ((i+1) * distance))}`
+    ).join('\n');
+}
