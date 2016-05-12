@@ -44,7 +44,7 @@ class String {
   static const char *dedupe(const char *str) {
     if (!s_strings) {
       s_size = s_initialSize;
-      s_strings = (Entry *)calloc(s_size, 8);
+      s_strings = (Entry *)calloc(s_size, sizeof(Entry));
     }
 
     unsigned hash = String::hash(str);
