@@ -9,25 +9,23 @@
 
 .macro read
 .if $0 == 1
-  mov 0x4(%BYTECODE), $1
-.elseif $0 == 2
   mov 0x8(%BYTECODE), $1
+.elseif $0 == 2
+  mov 0x10(%BYTECODE), $1
 .else
-  mov $$$0, %rax
-  mov -0x4(%BYTECODE, %rax, 4), $1
+  hlt
 .endif
 .endmacro
 
 .macro skip
 .if $0 == 0
-  add $$0x4, %BYTECODE
-.elseif $0 == 1
   add $$0x8, %BYTECODE
+.elseif $0 == 1
+  add $$0x10, %BYTECODE
 .elseif $0 == 2
-  add $$0xc, %BYTECODE
+  add $$0x18, %BYTECODE
 .else
-  mov $$$0, %rax
-  lea 0x4(%BYTECODE, %rax, 4), %BYTECODE
+  hlt
 .endif
   jmp _loop
 .endmacro
@@ -104,7 +102,7 @@ _loop_op_addresses:
 
 _op_lookup:
 _op_lookup_fast_path:
-  read 2, %edi
+  read 2, %rdi
   mov (%LOOKUP, %rdi, 8), %rsi // Cached address
   test %rsi, %rsi
   jz _op_lookup_slow_path
@@ -112,28 +110,28 @@ _op_lookup_fast_path:
   skip 2
 
 _op_push:
-  read 1, %edi
+  read 1, %rdi
   push %rdi
   skip 1
 
 _op_push_arg:
-  read 1, %edi
+  read 1, %rdi
   get_arg %rdi, %rax
   push %rax
   skip 1
 
 _op_jz:
   pop %rdi
-  test %edi, %edi
+  test %rdi, %rdi
   jz _jz
   skip 1
 _jz:
-  read 1, %edi
+  read 1, %rdi
   add %rdi, %BYTECODE
   jmp _loop
 
 _op_jmp:
-  read 1, %edi
+  read 1, %rdi
   add %rdi, %BYTECODE
   jmp _loop
 
@@ -142,7 +140,7 @@ _op_call:
   pop %rcx
 
   // setup args
-  read 1, %edi //argc
+  read 1, %rdi //argc
   mov %rsp, %rsi // argv just lives in the stack
   mov %VM, %rdx
 
@@ -183,7 +181,7 @@ _op_call_fast_closure:
 
 
 _op_load_string:
-  read 1, %edi
+  read 1, %rdi
   mov (%STRINGS, %rdi, 8), %rdi
   rol $8, %rdi
   mov $STRING_TAG, %dil
@@ -193,15 +191,15 @@ _op_load_string:
 
 _op_create_closure:
   mov %VM, %rdi
-  read 1, %esi
-  read 2, %edx
+  read 1, %rsi
+  read 2, %rdx
   ccall _createClosure
   push %rax
   skip 2
 
 _op_bind:
   mov %VM, %rdi
-  read 1, %esi
+  read 1, %rsi
   pop %rdx
   mov (%STRINGS, %rsi, 8), %rsi
   ccall _setScope
@@ -219,8 +217,8 @@ _op_release_lex_scope:
 
 _op_put_to_scope:
   mov %VM, %rdi
-  read 1, %esi
-  read 2, %edx
+  read 1, %rsi
+  read 2, %rdx
 
   mov (%STRINGS, %rsi, 8), %rsi
   get_arg %rdx, %rdx
@@ -248,7 +246,7 @@ skip:
   skip 1
 
 _op_lookup_slow_path:
-  read 1, %esi // string ID
+  read 1, %rsi // string ID
   mov (%VM), %r9 // VM::m_scope *
   mov (%STRINGS, %rsi, 8), %rsi // actual char *
 
@@ -285,8 +283,8 @@ _op_lookup_not_found:
 
 _op_lookup_found:
   mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
-  read 2, %edx
-  test %edx, %edx
+  read 2, %rdx
+  test %rdx, %rdx
   jz _op_lookup_done
   mov %rax, (%LOOKUP, %rdx, 8) // cache value
 

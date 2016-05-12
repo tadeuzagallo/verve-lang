@@ -53,13 +53,13 @@ namespace ceos {
     }
   }
 
-  void Generator::write(int data) {
+  void Generator::write(int64_t data) {
     m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
   }
 
   void Generator::write(const std::string &data) {
     m_output << data;
-    m_output.put('\0');
+    m_output.put(0);
   }
 
   void Generator::emitOpcode(Opcode::Type opcode) {

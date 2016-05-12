@@ -64,13 +64,13 @@ void symbolNotFound(char *symbolName) {
 }
 
   void VM::execute() {
-    auto header = read<unsigned>();
+    auto header = read<uint64_t>();
 
     // section marker
     assert(header == Section::Header);
 
     while (true) {
-      auto section = read<unsigned>();
+      auto section = read<uint64_t>();
 
       if (pc > length) {
         return;
@@ -84,7 +84,7 @@ void symbolNotFound(char *symbolName) {
           loadFunctions();
           break;
         case Section::Text: {
-          auto lookupTableSize = read<unsigned>();
+          auto lookupTableSize = read<uint64_t>();
           void *lookupTable = calloc(lookupTableSize * 8, 1);
           ::ceos::execute(m_bytecode + pc, m_stringTable.data(), this, m_bytecode, lookupTable);
           return;
@@ -98,7 +98,7 @@ void symbolNotFound(char *symbolName) {
 
   inline void VM::loadStrings() {
     while (true) {
-      auto header = read<unsigned>();
+      auto header = read<uint64_t>();
 
       if (header == Section::Header) {
         break;
@@ -112,22 +112,22 @@ void symbolNotFound(char *symbolName) {
   }
 
   inline void VM::loadFunctions() {
-    auto initialHeader = read<unsigned>();
+    auto initialHeader = read<uint64_t>();
     assert(initialHeader == Section::FunctionHeader);
 
     while (true) {
-      auto fnid = read<unsigned>();
-      auto nargs = read<unsigned>();
+      auto fnid = read<uint64_t>();
+      auto nargs = read<uint64_t>();
 
       std::vector<String> args;
       for (unsigned i = 0; i < nargs; i++) {
-        auto argID = read<unsigned>();
+        auto argID = read<uint64_t>();
         args.push_back(m_stringTable[argID]);
       }
       m_userFunctions.push_back(Function(fnid, nargs, pc, std::move(args)));
 
       while (true) {
-        auto opcode = read<unsigned>();
+        auto opcode = read<uint64_t>();
         if (opcode == Section::Header) {
           return;
         } else if (opcode == Section::FunctionHeader) {

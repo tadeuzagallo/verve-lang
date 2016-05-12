@@ -37,7 +37,7 @@ namespace ceos {
       void emitOpcode(Opcode::Type);
       void emitJmp(Opcode::Type, std::shared_ptr<AST::Block>&);
       void emitJmp(Opcode::Type, std::shared_ptr<AST::Block>&, bool);
-      void write(int);
+      void write(int64_t);
       void write(const std::string &);
 
       static void printOpcode(std::stringstream &, Opcode::Type);
