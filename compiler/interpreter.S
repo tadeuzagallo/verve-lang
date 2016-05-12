@@ -46,9 +46,8 @@
   mov 0x20(%rbp, $0, 8), $1
 .endmacro
 
-.macro opcode_jmp
-  jmp _op_$0
-  .fill 3
+.macro op_address
+  .long _op_$0 - _loop_op_addresses
 .endmacro
 
 .globl _execute
@@ -65,26 +64,27 @@ _execute:
   mov %rcx, %BCBASE
 
 _loop:
-  lea loop_opcodes(%rip), %rdi
   xor %rax, %rax
   mov (%BYTECODE), %al // 0..10
-  lea (%rdi, %al, 8), %rdi
+  lea _loop_op_addresses(%rip), %rdi
+  movsl (%rdi, %al, 4), %rax
+  add %rax, %rdi
   jmp *%rdi
-loop_opcodes:
-  opcode_jmp ret
-  opcode_jmp bind
-  opcode_jmp push
-  opcode_jmp call
-  opcode_jmp jz
-  opcode_jmp jmp
-  opcode_jmp create_closure
-  opcode_jmp load_string
-  opcode_jmp push_arg
-  opcode_jmp lookup
-  opcode_jmp exit
-  opcode_jmp create_lex_scope
-  opcode_jmp release_lex_scope
-  opcode_jmp put_to_scope
+_loop_op_addresses:
+  op_address ret
+  op_address bind
+  op_address push
+  op_address call
+  op_address jz
+  op_address jmp
+  op_address create_closure
+  op_address load_string
+  op_address push_arg
+  op_address lookup
+  op_address exit
+  op_address create_lex_scope
+  op_address release_lex_scope
+  op_address put_to_scope
 
 _op_exit:
   mov %rbp, %rsp
