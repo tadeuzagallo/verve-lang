@@ -79,7 +79,7 @@ _op_exit:
   ret
 
 _loop:
-  mov (%BYTECODE), %eax
+  mov (%BYTECODE), %rax
   lea _loop_op_addresses(%rip), %rdi
   movsl (%rdi, %rax, 4), %rax
   add %rax, %rdi

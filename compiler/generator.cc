@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 
-#define WORD_SIZE 4
+#define WORD_SIZE 8
 
 namespace ceos {
   static unsigned lookupID = 1;
@@ -208,10 +208,9 @@ namespace ceos {
       }
     }
 
-
-    unsigned index = m_output.tellp() % WORD_SIZE;
+    unsigned index = m_output.tellp();
     while (index++ % WORD_SIZE) {
-      m_output.put('\0');
+      m_output.put(0);
     }
 
     if (functions.length()) {
@@ -392,12 +391,12 @@ section_code:
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE(2, "jmp [" << ((int)bytecode.tellg() - 5 + target) << "]");
+        WRITE(2, "jmp [" << ((int)bytecode.tellg() - (2 * WORD_SIZE) + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE(2, "jz [" << ((int)bytecode.tellg() - 5 + target) << "]");
+        WRITE(2, "jz [" << ((int)bytecode.tellg() - (2 * WORD_SIZE) + target) << "]");
         break;
       }
       case Opcode::push_arg: {
