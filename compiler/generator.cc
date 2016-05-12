@@ -61,7 +61,7 @@ namespace ceos {
   }
 
   void Generator::emitOpcode(Opcode::Type opcode) {
-    m_output.put(opcode);
+    write(opcode);
   }
 
   void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST::Block> &body)  {
@@ -78,7 +78,7 @@ namespace ceos {
     unsigned afterPos = m_output.tellp();
     m_output.seekp(beforePos);
     write((afterPos - beforePos)
-        + (skipNextJump ? 6 : 1) // special case for if with else
+        + (skipNextJump ? 12 : 4) // special case for if with else
     );
     m_output.seekp(afterPos);
   }
@@ -207,6 +207,11 @@ namespace ceos {
     }
 
 
+    unsigned index = m_output.tellp() % 4;
+    while (index++ % 4) {
+      m_output.put('\0');
+    }
+
     if (functions.length()) {
       write(Section::Header);
       write(Section::Functions);
@@ -300,6 +305,9 @@ section_strings:
       }
       static unsigned str_index = 0;
       READ_STR(bytecode, str);
+      while (bytecode.peek() == '\0') {
+        bytecode.get();
+      }
       strings.push_back(str);
       WRITE(str.length() + 1, "$" << str_index++ << ": " << str);
     }
@@ -331,15 +339,16 @@ section_functions: {
           goto read_section;
         }
 
-        char opcode = bytecode.get();
+        READ_INT(bytecode, opcode);
         printOpcode(bytecode, static_cast<Opcode::Type>(opcode));
       }
     }
 
 section_code:
+    // skip size of lookup table
     bytecode.seekg(4, bytecode.cur);
     while (true) {
-      char opcode = bytecode.get();
+      READ_INT(bytecode, opcode);
       if (bytecode.eof() || bytecode.fail()) {
         return;
       }
@@ -355,70 +364,70 @@ section_code:
     switch (opcode) {
       case Opcode::push: {
         READ_INT(bytecode, value);
-        WRITE(5, "push 0x" << std::setbase(16) << value << std::setbase(10));
+        WRITE(8, "push 0x" << std::setbase(16) << value << std::setbase(10));
         break;
       }
       case Opcode::call: {
         READ_INT(bytecode, nargs);
-        WRITE(5, "call (" << nargs << ")");
+        WRITE(8, "call (" << nargs << ")");
         break;
       }
       case Opcode::load_string: {
         READ_INT(bytecode, stringID);
-        WRITE(5, "load_string $" << stringID);
+        WRITE(8, "load_string $" << stringID);
         break;
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
         READ_INT(bytecode, cacheSlot);
-        WRITE(9, "lookup $" << id << "(" << strings[id] << ") [cacheSlot=" << cacheSlot << "]");
+        WRITE(12, "lookup $" << id << "(" << strings[id] << ") [cacheSlot=" << cacheSlot << "]");
         break;
       }
       case Opcode::create_closure: {
         READ_INT(bytecode, fnID);
         READ_INT(bytecode, capturesScope);
-        WRITE(9, "create_closure " << functions[fnID] << " [capturesScope=" << (capturesScope ? "true" : "false") << "]");
+        WRITE(12, "create_closure " << functions[fnID] << " [capturesScope=" << (capturesScope ? "true" : "false") << "]");
         break;
       }
       case Opcode::jmp:  {
         READ_INT(bytecode, target);
-        WRITE(5, "jmp [" << ((int)bytecode.tellg() - 5 + target) << "]");
+        WRITE(8, "jmp [" << ((int)bytecode.tellg() - 5 + target) << "]");
         break;
       }
       case Opcode::jz: {
         READ_INT(bytecode, target);
-        WRITE(5, "jz [" << ((int)bytecode.tellg() - 5 + target) << "]");
+        WRITE(8, "jz [" << ((int)bytecode.tellg() - 5 + target) << "]");
         break;
       }
       case Opcode::push_arg: {
         READ_INT(bytecode, arg);
-        WRITE(5, "push_arg $" << arg);
+        WRITE(8, "push_arg $" << arg);
         break;
       }
       case Opcode::put_to_scope: {
         READ_INT(bytecode, arg);
         READ_INT(bytecode, arg2);
-        WRITE(9, "put_to_scope $" << strings[arg] << " = $" << arg2);
+        WRITE(12, "put_to_scope $" << strings[arg] << " = $" << arg2);
         break;
       }
       case Opcode::bind:
         READ_INT(bytecode, fnID);
-        WRITE(5, "bind $" << functions[fnID]);
+        WRITE(8, "bind $" << functions[fnID]);
         break;
       case Opcode::ret: {
-        WRITE(1, "ret");
+        WRITE(4, "ret");
         break;
       }
       case Opcode::create_lex_scope: {
-        WRITE(1, "create_lex_scope");
+        WRITE(4, "create_lex_scope");
         break;
       }
       case Opcode::release_lex_scope: {
-        WRITE(1, "release_lex_scope");
+        WRITE(4, "release_lex_scope");
         break;
       }
       case Opcode::exit:
-        WRITE(1, "exit");
+        WRITE(4, "exit");
         break;
       default:
         std::cerr << "Unhandled opcode: " << Opcode::typeName(static_cast<Opcode::Type>(opcode)) << "\n";

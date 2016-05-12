@@ -9,25 +9,25 @@
 
 .macro read
 .if $0 == 1
-  mov 0x1(%BYTECODE), $1
+  mov 0x4(%BYTECODE), $1
 .elseif $0 == 2
-  mov 0x5(%BYTECODE), $1
+  mov 0x8(%BYTECODE), $1
 .else
   mov $$$0, %rax
-  mov -0x3(%BYTECODE, %rax, 4), $1
+  mov -0x4(%BYTECODE, %rax, 4), $1
 .endif
 .endmacro
 
 .macro skip
 .if $0 == 0
-  inc %BYTECODE
+  add $$0x4, %BYTECODE
 .elseif $0 == 1
-  add $$0x5, %BYTECODE
+  add $$0x8, %BYTECODE
 .elseif $0 == 2
-  add $$0x9, %BYTECODE
+  add $$0xc, %BYTECODE
 .else
   mov $$$0, %rax
-  lea 0x1(%BYTECODE, %rax, 4), %BYTECODE
+  lea 0x4(%BYTECODE, %rax, 4), %BYTECODE
 .endif
   jmp _loop
 .endmacro
@@ -81,10 +81,9 @@ _op_exit:
   ret
 
 _loop:
-  xor %rax, %rax
-  mov (%BYTECODE), %al // 0..10
+  mov (%BYTECODE), %eax
   lea _loop_op_addresses(%rip), %rdi
-  movsl (%rdi, %al, 4), %rax
+  movsl (%rdi, %rax, 4), %rax
   add %rax, %rdi
   jmp *%rdi
 _loop_op_addresses:
