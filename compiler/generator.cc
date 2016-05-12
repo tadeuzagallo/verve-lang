@@ -6,6 +6,9 @@
 #include <iomanip>
 
 namespace ceos {
+  static unsigned lookupID = 1;
+  static bool capturesScope = true;
+
   std::stringstream &Generator::generate() {
     generateProgram(m_ast);
     emitOpcode(Opcode::exit);
@@ -103,6 +106,11 @@ namespace ceos {
     } else {
       emitOpcode(Opcode::lookup);
       write(id->uid);
+      if (capturesScope) {
+        write(0);
+      } else {
+        write(lookupID++);
+      }
     }
   }
 
@@ -155,6 +163,7 @@ namespace ceos {
       }
     };
 
+    capturesScope = fn->body->capturesScope;
     generateNode(fn->body);
 
     emitOpcode(Opcode::ret);
@@ -205,6 +214,7 @@ namespace ceos {
 
     write(Section::Header);
     write(Section::Text);
+    write(lookupID);
     m_output << text;
   }
 
@@ -326,6 +336,7 @@ section_functions: {
     }
 
 section_code:
+    bytecode.seekg(4, bytecode.cur);
     while (true) {
       char opcode = bytecode.get();
       if (bytecode.eof() || bytecode.fail()) {
@@ -358,7 +369,8 @@ section_code:
       }
       case Opcode::lookup: {
         READ_INT(bytecode, id);
-        WRITE(5, "lookup $" << id << "(" << strings[id] << ")");
+        READ_INT(bytecode, cacheSlot);
+        WRITE(9, "lookup $" << id << "(" << strings[id] << ") [cacheSlot=" << cacheSlot << "]");
         break;
       }
       case Opcode::create_closure: {

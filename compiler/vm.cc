@@ -11,7 +11,8 @@ extern "C" void execute(
     const uint8_t *bytecode,
     String *stringTable,
     VM *vm,
-    const uint8_t *bcbase);
+    const uint8_t *bcbase,
+    void *lookupTable);
 
 extern "C" void setScope(VM *vm, const char *name, Value value);
 void setScope(VM *vm, const char *name, Value value) {
@@ -41,7 +42,7 @@ uint64_t createClosure(VM *vm, unsigned fnID, bool capturesScope) {
 
 extern "C" unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure);
 unsigned prepareClosure(__unused unsigned argc, __unused Value *argv, VM *vm, Closure *closure) {
-  if (closure->scope) {
+  if (closure->scope != NULL) {
     vm->m_scope = vm->m_scope->create(closure->scope);
   }
   return closure->fn->offset;
@@ -55,7 +56,7 @@ void finishClosure(VM *vm, Closure *closure) {
 }
 
 extern "C" void symbolNotFound(char *);
-extern "C" void symbolNotFound(char *symbolName) {
+void symbolNotFound(char *symbolName) {
   fprintf(stderr, "Symbol not found: %s\n", symbolName);
   throw;
 }
@@ -80,9 +81,12 @@ extern "C" void symbolNotFound(char *symbolName) {
         case Section::Functions:
           loadFunctions();
           break;
-        case Section::Text:
-          ::ceos::execute(m_bytecode + pc, m_stringTable.data(), this, m_bytecode);
+        case Section::Text: {
+          auto lookupTableSize = read<unsigned>();
+          void *lookupTable = calloc(lookupTableSize * 8, 1);
+          ::ceos::execute(m_bytecode + pc, m_stringTable.data(), this, m_bytecode, lookupTable);
           return;
+        }
         default:
           std::cerr << "Unknown section: `0x0" << std::hex << section << "`\n";
           throw;
@@ -90,7 +94,7 @@ extern "C" void symbolNotFound(char *symbolName) {
     }
   }
 
-  void VM::loadStrings() {
+  inline void VM::loadStrings() {
     while (true) {
       auto header = read<unsigned>();
 
@@ -104,7 +108,7 @@ extern "C" void symbolNotFound(char *symbolName) {
     }
   }
 
-  void VM::loadFunctions() {
+  inline void VM::loadFunctions() {
     auto initialHeader = read<unsigned>();
     assert(initialHeader == Section::FunctionHeader);
 

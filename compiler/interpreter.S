@@ -4,10 +4,13 @@
 #define STRINGS r13
 #define VM r14
 #define BCBASE r15
+#define LOOKUP rbx
 
 .macro read
 .if $0 == 1
   mov 0x1(%BYTECODE), $1
+.elseif $0 == 2
+  mov 0x5(%BYTECODE), $1
 .else
   mov $$$0, %rax
   mov -0x3(%BYTECODE, %rax, 4), $1
@@ -57,11 +60,13 @@ _execute:
   push %STRINGS
   push %VM
   push %BCBASE
+  push %LOOKUP
   mov %rsp, %rbp
   mov %rdi, %BYTECODE
   mov %rsi, %STRINGS
   mov %rdx, %VM
   mov %rcx, %BCBASE
+  mov %r8,  %LOOKUP
 
 _loop:
   xor %rax, %rax
@@ -88,6 +93,7 @@ _loop_op_addresses:
 
 _op_exit:
   mov %rbp, %rsp
+  pop %LOOKUP
   pop %BCBASE
   pop %VM
   pop %STRINGS
@@ -101,20 +107,29 @@ _op_push:
   skip 1
 
 _op_lookup:
-  read 1, %esi // string ID
-  mov (%STRINGS, %rsi, 8), %rsi // actual char *
-  mov (%VM), %r9 // VM::m_scope *
+_op_lookup_fast_path:
+  read 2, %edi
+  mov (%LOOKUP, %rdi, 8), %rsi // Cached address
+  test %rsi, %rsi
+  jz _op_lookup_slow_path
+  push %rsi
+  skip 2
 
-load:
+_op_lookup_slow_path:
+  read 1, %esi // string ID
+  mov (%VM), %r9 // VM::m_scope *
+  mov (%STRINGS, %rsi, 8), %rsi // actual char *
+
+_op_lookup_load:
   mov (%r9), %rax // Scope::table *
   test %rax, %rax
-  jz check_parent
+  jz _op_lookup_check_parent
   mov 0x18(%r9), %edx // Scope::tableHash
   mov %esi, %ecx // index
   and %edx, %ecx // index &= hash
   mov %ecx, %r8d // begin
 
-begin:
+_op_lookup_begin:
   mov %ecx, %edi
   shl $1, %edi
   mov (%rax, %rdi, 0x8), %r11  // Entry::key
@@ -125,21 +140,34 @@ begin:
   skip 1
 
 slow_path:
+  cmp %rsi, %r11
+  jz _op_lookup_found
   test %r11,%r11
-  jz check_parent
+  jz _op_lookup_check_parent
   inc %ecx
   and %edx, %ecx
   cmp %ecx, %r8d
-  jnz begin
+  jnz _op_lookup_begin
 
-check_parent:
+_op_lookup_check_parent:
   mov 0x8(%r9), %r9 // Scope::parent
   test %r9, %r9
-  jnz load
+  jnz _op_lookup_load
 
-not_found:
+_op_lookup_not_found:
   mov %rsi, %rdi
   ccall _symbolNotFound
+
+_op_lookup_found:
+  mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
+  read 2, %edx
+  test %edx, %edx
+  jz _op_lookup_done
+  mov %rax, (%LOOKUP, %rdx, 8) // cache value
+
+_op_lookup_done:
+  push %rax
+  skip 2
 
 _op_call:
   // pop the callee from the stack
