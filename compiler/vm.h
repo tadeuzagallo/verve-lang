@@ -32,14 +32,13 @@ namespace ceos {
 
       void execute();
       void inflate();
-      void loadStrings();
-      void loadFunctions();
-      void run();
+      inline void loadStrings();
+      inline void loadFunctions();
       void trackAllocation(void *, size_t);
       void collect();
 
       template<typename T>
-      T read() {
+      inline T read() {
         T v = *(T *)(m_bytecode + pc);
         pc += sizeof(T);
         return v;
