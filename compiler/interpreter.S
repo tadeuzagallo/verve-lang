@@ -118,10 +118,15 @@ begin:
   mov %ecx, %edi
   shl $1, %edi
   mov (%rax, %rdi, 0x8), %r11  // Entry::key
+  cmp %rsi, %r11
+  jne slow_path
+  mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
+  push %rax
+  skip 1
+
+slow_path:
   test %r11,%r11
   jz check_parent
-  cmp %rsi, %r11
-  jz found
   inc %ecx
   and %edx, %ecx
   cmp %ecx, %r8d
@@ -130,19 +135,11 @@ begin:
 check_parent:
   mov 0x8(%r9), %r9 // Scope::parent
   test %r9, %r9
-  jz not_found
-  jmp load
+  jnz load
 
 not_found:
   mov %rsi, %rdi
   ccall _symbolNotFound
-
-found:
-  mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
-
-done:
-  push %rax
-  skip 1
 
 _op_call:
   // pop the callee from the stack
