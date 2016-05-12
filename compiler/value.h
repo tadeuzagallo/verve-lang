@@ -47,8 +47,7 @@ namespace ceos {
     }
 
     ALWAYS_INLINE Value(int v) {
-      value.data.i = v;
-      value.data.tag = Value::IntTag;
+      value.raw = v;
     }
 
     ALWAYS_INLINE int asInt() { return value.data.i; }
