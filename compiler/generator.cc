@@ -63,7 +63,7 @@ namespace ceos {
   }
 
   void Generator::emitOpcode(Opcode::Type opcode) {
-    write(opcode);
+    write(Opcode::opcodeAddress(opcode));
   }
 
   void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST::Block> &body)  {

@@ -27,7 +27,7 @@
 .else
   hlt
 .endif
-  jmp _loop
+  jmp *(%BYTECODE)
 .endmacro
 
 .macro unmask
@@ -48,10 +48,6 @@
   mov 0x20(%rbp, $0, 8), $1
 .endmacro
 
-.macro op_address
-  .long _op_$0 - _loop_op_addresses
-.endmacro
-
 .globl _execute
 _execute:
   push %rbp
@@ -66,8 +62,9 @@ _execute:
   mov %rdx, %VM
   mov %rcx, %BCBASE
   mov %r8,  %LOOKUP
-  jmp _loop
+  jmp *(%BYTECODE)
 
+.globl _op_exit
 _op_exit:
   mov %rbp, %rsp
   pop %LOOKUP
@@ -78,28 +75,7 @@ _op_exit:
   pop %rbp
   ret
 
-_loop:
-  mov (%BYTECODE), %rax
-  lea _loop_op_addresses(%rip), %rdi
-  movsl (%rdi, %rax, 4), %rax
-  add %rax, %rdi
-  jmp *%rdi
-_loop_op_addresses:
-  op_address ret
-  op_address bind
-  op_address push
-  op_address call
-  op_address jz
-  op_address jmp
-  op_address create_closure
-  op_address load_string
-  op_address push_arg
-  op_address lookup
-  op_address exit
-  op_address create_lex_scope
-  op_address release_lex_scope
-  op_address put_to_scope
-
+.globl _op_lookup
 _op_lookup:
 _op_lookup_fast_path:
   read 2, %rdi
@@ -109,17 +85,20 @@ _op_lookup_fast_path:
   push %rsi
   skip 2
 
+.globl _op_push
 _op_push:
   read 1, %rdi
   push %rdi
   skip 1
 
+.globl _op_push_arg
 _op_push_arg:
   read 1, %rdi
   get_arg %rdi, %rax
   push %rax
   skip 1
 
+.globl _op_jz
 _op_jz:
   pop %rdi
   test %rdi, %rdi
@@ -128,13 +107,15 @@ _op_jz:
 _jz:
   read 1, %rdi
   add %rdi, %BYTECODE
-  jmp _loop
+  jmp *(%BYTECODE)
 
+.globl _op_jmp
 _op_jmp:
   read 1, %rdi
   add %rdi, %BYTECODE
-  jmp _loop
+  jmp *(%BYTECODE)
 
+.globl _op_call
 _op_call:
   // pop the callee from the stack
   pop %rcx
@@ -172,14 +153,15 @@ _op_call_closure:
 _op_call_slow_closure:
   ccall _prepareClosure
   lea (%BCBASE, %rax, 1), %BYTECODE
-  jmp _loop
+  jmp *(%BYTECODE)
 
 _op_call_fast_closure:
   shr $1, %ecx
   lea (%BCBASE, %rcx, 1), %BYTECODE
-  jmp _loop
+  jmp *(%BYTECODE)
 
 
+.globl _op_load_string
 _op_load_string:
   read 1, %rdi
   mov (%STRINGS, %rdi, 8), %rdi
@@ -189,6 +171,7 @@ _op_load_string:
   push %rdi
   skip 1
 
+.globl _op_create_closure
 _op_create_closure:
   mov %VM, %rdi
   read 1, %rsi
@@ -197,6 +180,7 @@ _op_create_closure:
   push %rax
   skip 2
 
+.globl _op_bind
 _op_bind:
   mov %VM, %rdi
   read 1, %rsi
@@ -205,16 +189,19 @@ _op_bind:
   ccall _setScope
   skip 1
 
+.globl _op_create_lex_scope
 _op_create_lex_scope:
   mov %VM, %rdi
   ccall _pushScope
   skip 0
 
+.globl _op_release_lex_scope
 _op_release_lex_scope:
   mov %VM, %rdi
   ccall _restoreScope
   skip 0
 
+.globl _op_put_to_scope
 _op_put_to_scope:
   mov %VM, %rdi
   read 1, %rsi
@@ -226,6 +213,7 @@ _op_put_to_scope:
   ccall _setScope
   skip 2
 
+.globl _op_ret
 _op_ret:
   pop %rax
   mov %rbp, %rsp

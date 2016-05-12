@@ -16,7 +16,8 @@
 
 #define DEFER(__macro) __macro EMPTY()
 
-#define MAP(__macro, __first, ...) __macro(__first) DEFER(CONCAT(MAP_, IS_EMPTY(__VA_ARGS__)))()(__macro, __VA_ARGS__)
+#define MAP(...) MAP_(__VA_ARGS__)
+#define MAP_(__macro, __first, ...) __macro(__first) DEFER(CONCAT(MAP_, IS_EMPTY(__VA_ARGS__)))()(__macro, __VA_ARGS__)
 
 #define IS_EMPTY(...) IS_EMPTY_(FIRST(__VA_ARGS__))
 #define IS_EMPTY_(...) IS_EMPTY__(__VA_ARGS__)
