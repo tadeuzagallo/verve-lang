@@ -238,7 +238,7 @@ _op_ret:
   lea (%rsp, %rdi, 8), %rsp
   push %rax
 restore_scope:
-  and $1, %rsi
+  test $1, %rsi
   jnz skip
 
   mov %VM, %rdi // VM::m_scope : Scope
