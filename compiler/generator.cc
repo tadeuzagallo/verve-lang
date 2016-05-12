@@ -130,6 +130,7 @@ namespace ceos {
     write(fn->body->capturesScope);
     if (fn->name->name != "_") {
       emitOpcode(Opcode::bind);
+      write(m_ast->functions.size());
     }
     m_ast->functions.push_back(fn);
   }
@@ -400,6 +401,10 @@ section_code:
         WRITE(9, "put_to_scope $" << strings[arg] << " = $" << arg2);
         break;
       }
+      case Opcode::bind:
+        READ_INT(bytecode, fnID);
+        WRITE(5, "bind $" << functions[fnID]);
+        break;
       case Opcode::ret: {
         WRITE(1, "ret");
         break;
@@ -412,9 +417,6 @@ section_code:
         WRITE(1, "release_lex_scope");
         break;
       }
-      case Opcode::bind:
-        WRITE(1, "bind");
-        break;
       case Opcode::exit:
         WRITE(1, "exit");
         break;

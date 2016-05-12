@@ -105,6 +105,13 @@ namespace ceos {
       v.value.raw = data;
       return v;
     }
+
+    ALWAYS_INLINE static Value fastClosure(unsigned offset) {
+      Value v;
+      v.value.data.i = (offset << 1) | 1;
+      v.value.data.tag = ClosureTag;
+      return v;
+    }
   };
 
 }

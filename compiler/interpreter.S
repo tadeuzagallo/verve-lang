@@ -1,5 +1,6 @@
-#define STRING_TAG 0x2
-#define CLOSURE_TAG 0x10
+#define STRING_TAG    1 << 1
+#define CLOSURE_TAG   1 << 4
+
 #define BYTECODE r12
 #define STRINGS r13
 #define VM r14
@@ -167,9 +168,20 @@ _op_call_closure:
   push %rcx
   push %rbp
   mov %rsp, %rbp
+
+  test $1, %rcx
+  jnz _op_call_fast_closure
+
+_op_call_slow_closure:
   ccall _prepareClosure
   lea (%BCBASE, %rax, 1), %BYTECODE
   jmp _loop
+
+_op_call_fast_closure:
+  shr $1, %ecx
+  lea (%BCBASE, %rcx, 1), %BYTECODE
+  jmp _loop
+
 
 _op_load_string:
   read 1, %edi
@@ -190,14 +202,11 @@ _op_create_closure:
 
 _op_bind:
   mov %VM, %rdi
+  read 1, %esi
   pop %rdx
-  mov %rdx, %rsi
-  unmask %rsi
-  mov 0x8(%rsi), %rsi
-  mov (%rsi), %esi
   mov (%STRINGS, %rsi, 8), %rsi
   ccall _setScope
-  skip 0
+  skip 1
 
 _op_create_lex_scope:
   mov %VM, %rdi
@@ -230,9 +239,13 @@ _op_ret:
   lea (%rsp, %rdi, 8), %rsp
   push %rax
 restore_scope:
+  and $1, %rsi
+  jnz skip
+
   mov %VM, %rdi // VM::m_scope : Scope
   // %rsi is the Closure *
   ccall _finishClosure
+skip:
   skip 1
 
 _op_lookup_slow_path:

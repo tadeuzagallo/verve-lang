@@ -31,13 +31,15 @@ void restoreScope(VM *vm) {
 
 extern "C" uint64_t createClosure(VM *vm, unsigned fnID, bool capturesScope);
 uint64_t createClosure(VM *vm, unsigned fnID, bool capturesScope) {
-  auto closure = new Closure();
   if (capturesScope) {
+    auto closure = new Closure();
     closure->scope = vm->m_scope->inc();
+    vm->trackAllocation(closure, sizeof(Closure));
+    closure->fn = &vm->m_userFunctions[fnID];
+    return Value(closure).encode();
+  } else {
+    return Value::fastClosure(vm->m_userFunctions[fnID].offset).encode();
   }
-  vm->trackAllocation(closure, sizeof(Closure));
-  closure->fn = &vm->m_userFunctions[fnID];
-  return Value(closure).encode();
 }
 
 extern "C" unsigned prepareClosure(unsigned argc, Value *argv, VM *vm, Closure *closure);
