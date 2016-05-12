@@ -30,7 +30,7 @@ for (let i = 0; i < repetitions; i++) {
 }
 
 const formatTime = time => {
-  return (time / 1000).toFixed(3) + 'µs';
+  return (time / 1000).toFixed(3) + 'ms';
 }
 
 const avg = times.reduce((a, b) => a + b) / repetitions;
