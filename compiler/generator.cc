@@ -132,7 +132,7 @@ namespace ceos {
     write(fn->body->capturesScope);
     if (fn->name->name != "_") {
       emitOpcode(Opcode::bind);
-      write(m_ast->functions.size());
+      write(INDEX_OF(m_ast->strings, fn->name->name));
     }
     m_ast->functions.push_back(fn);
   }
