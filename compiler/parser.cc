@@ -11,7 +11,6 @@ namespace ceos {
     m_types["Float"] = new BasicType("Float");
     m_types["List"] = new DataType("List", 1);
 
-    m_lexer.nextToken();
     m_ast = std::make_shared<AST::Program>();
     m_ast->loc.start = m_lexer.token()->loc.start;
     m_ast->body = parseBlock(Token::Type::END);
@@ -64,7 +63,7 @@ namespace ceos {
     }
 
     if (m_lexer.token()->type == Token::Type::ID) {
-      auto maybeElse = std::static_pointer_cast<Token::ID>(m_lexer.token());
+      auto maybeElse = static_cast<Token::ID *>(m_lexer.token());
       if (maybeElse->name == "else") {
         m_lexer.ensure(Token::Type::ID);
 
@@ -84,39 +83,39 @@ namespace ceos {
   }
 
   std::shared_ptr<AST::Number> Parser::parseNumber() {
-    auto number = std::static_pointer_cast<Token::Number>(m_lexer.token(Token::Type::NUMBER));
+    auto number = static_cast<Token::Number *>(m_lexer.token(Token::Type::NUMBER));
     auto ast = std::make_shared<AST::Number>(number->value);
     ast->loc = number->loc;
     return ast;
   }
 
   std::shared_ptr<AST> Parser::parseID() {
-    auto id = std::static_pointer_cast<Token::ID>(m_lexer.token(Token::Type::ID));
+    auto id = *static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
 
-    if (id->name == "if") {
+    if (id.name == "if") {
       return parseIf();
     }
 
     std::shared_ptr<AST> ast, ref;
-    if ((ref = m_scope->get(id->name, false)) != nullptr && ref->type == AST::Type::FunctionArgument) {
+    if ((ref = m_scope->get(id.name, false)) != nullptr && ref->type == AST::Type::FunctionArgument) {
       ast = ref;
     } else {
       unsigned uid;
-      auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), id->name);
+      auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), id.name);
       if (it != m_ast->strings.end()) {
         uid = it - m_ast->strings.begin();
       } else {
         uid = str_uid++;
-        m_ast->strings.push_back(id->name);
+        m_ast->strings.push_back(id.name);
       }
 
       ast = std::make_shared<AST::ID>(m_ast->strings[uid], uid);
-      ast->loc = id->loc;
+      ast->loc = id.loc;
 
-      if ((ref = m_scope->get(id->name)) && !m_scope->isInCurrentScope(id->name)) {
+      if ((ref = m_scope->get(id.name)) && !m_scope->isInCurrentScope(id.name)) {
         if (ref->type == AST::Type::FunctionArgument) {
           AST::asFunctionArgument(ref)->isCaptured = true;
-          m_scope->scopeFor(id->name)->isRequired = true;
+          m_scope->scopeFor(id.name)->isRequired = true;
           m_scope->capturesScope = true;
         }
       }
@@ -184,7 +183,7 @@ namespace ceos {
   }
 
   std::shared_ptr<AST::String> Parser::parseString() {
-    auto string = std::static_pointer_cast<Token::String>(m_lexer.token(Token::Type::STRING));
+    auto string = static_cast<Token::String *>(m_lexer.token(Token::Type::STRING));
 
     int uid;
     auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), string->value);
@@ -232,7 +231,7 @@ namespace ceos {
         throw std::runtime_error("Undefined type");
       }
       typeInfo->types.push_back(type);
-    } while (m_lexer.token()->type == Token::Type::ARROW && m_lexer.nextToken());
+    } while (m_lexer.skip(Token::Type::ARROW));
     m_typeInfo[AST::asID(target)->name] = typeInfo;
   }
 

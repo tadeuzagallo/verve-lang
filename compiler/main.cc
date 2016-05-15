@@ -20,12 +20,28 @@ int main(int argc, char **argv) {
     assert(argc == 2);
   }
 
-  std::ifstream input(isDebug || isCompile ? argv[2] : argv[1]);
+  FILE *prelude = fopen("builtins.ceos", "r");
+  FILE *source = fopen(isDebug || isCompile ? argv[2] : argv[1], "r");
+  fseek(prelude, 0, SEEK_END);
+  fseek(source, 0, SEEK_END);
+  size_t preludeSize = ftell(prelude);
+  size_t sourceSize = ftell(source);
+  fseek(prelude, 0, SEEK_SET);
+  fseek(source, 0, SEEK_SET);
 
-  ceos::Lexer lexer(input);
+  char *input = (char *)malloc(preludeSize + sourceSize);
+  fread(input, 1, preludeSize, prelude);
+  fread(input + preludeSize, 1, sourceSize, source);
+
+  fclose(prelude);
+  fclose(source);
+
+  ceos::Lexer lexer(input, preludeSize);
   ceos::Parser parser(lexer);
 
   std::shared_ptr<ceos::AST::Program> ast = parser.parse();
+
+  free(input);
 
   ceos::Generator generator(ast);
 

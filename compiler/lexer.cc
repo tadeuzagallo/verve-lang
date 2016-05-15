@@ -9,19 +9,32 @@
 
 #define BASIC_TOKEN(CHAR, TYPE) \
   case CHAR: \
-    m_token = std::make_shared<Token>(Token::Type::TYPE); \
+    m_token = new Token(Token::Type::TYPE); \
     break;
 
 namespace ceos {
 
-  std::shared_ptr<Token> Lexer::nextToken() {
+  char Lexer::nextChar() {
+    char c = m_input[m_pos];
+    if (c != '\0') {
+      m_pos++;
+    }
+    return c;
+  }
+
+  void Lexer::nextToken() {
     char c;
 
     do {
-      c = m_input.get();
+      c = nextChar();
     } while(isspace(c));
 
-    int start = (int)m_input.tellg() - 1;
+    if (m_prevToken && m_prevToken != m_token) {
+      delete m_prevToken;
+    }
+
+    m_prevToken = m_token;
+    int start = m_pos - 1;
     switch (c) {
       BASIC_TOKEN('(', L_PAREN)
       BASIC_TOKEN(')', R_PAREN)
@@ -30,39 +43,39 @@ namespace ceos {
       BASIC_TOKEN(',', COMMA)
 
       case ':':
-        assert(m_input.get() == ':');
-        m_token = std::make_shared<Token>(Token::Type::TYPE);
+        assert(nextChar() == ':');
+        m_token = new Token(Token::Type::TYPE);
         break;
 
       case '-':
-        assert(m_input.get() == '>');
-        m_token = std::make_shared<Token>(Token::Type::ARROW);
+        assert(nextChar() == '>');
+        m_token = new Token(Token::Type::ARROW);
         break;
 
-      case EOF:
-        start = m_token != nullptr ? m_token->loc.end - 1 : 0;
-        m_token = std::make_shared<Token>(Token::Type::END);
+      case '\0':
+        start = std::max(m_token->loc.end - 1, 0);
+        m_token = new Token(Token::Type::END);
         break;
 
       case '#':
         do {
-          c = m_input.get();
+          c = nextChar();
         } while (c != '\n');
         return nextToken();
 
       case '"': {
         std::stringstream str;
-        while ((c = m_input.get()) != '"') {
+        while ((c = nextChar()) != '"') {
           str.put(c);
         }
-        m_token = std::make_shared<Token::String>(str.str());
+        m_token = new Token::String(str.str());
         break;
       }
 
       case '\'': {
-        int number = m_input.get();
-        assert(m_input.get() == '\'');
-        m_token = std::make_shared<Token::Number>(number);
+        int number = nextChar();
+        assert(nextChar() == '\'');
+        m_token = new Token::Number(number);
         break;
       }
 
@@ -72,20 +85,20 @@ namespace ceos {
           do {
             number *= 10;
             number += c - '0';
-          } while (isnumber(c = m_input.get()));
+          } while (isnumber(c = nextChar()));
 
-          m_input.unget();
+          m_pos--;
 
-          m_token = std::make_shared<Token::Number>(number);
+          m_token = new Token::Number(number);
         } else if (isalpha(c) || c == '_') {
           std::stringstream id;
           do {
             id << c;
-          } while (isalpha(c = m_input.get()) || isnumber(c) || c == '_' || c == '-');
+          } while (isalpha(c = nextChar()) || isnumber(c) || c == '_' || c == '-');
 
-          m_input.unget();
+          m_pos--;
 
-          m_token = std::make_shared<Token::ID>(id.str());
+          m_token = new Token::ID(id.str());
         } else {
           // TODO: proper error here
           std::cerr << "Invalid token `" << c << "`\n";
@@ -94,17 +107,23 @@ namespace ceos {
     }
 
     m_token->loc.start = start;
-    m_token->loc.end = m_input.tellg();
-    return m_token;
+    m_token->loc.end = m_pos;
   }
 
-  std::shared_ptr<Token> Lexer::token(Token::Type type) {
-    auto token = m_token;
+  Token *Lexer::token(Token::Type type) {
     ensure(type);
-    return token;
+    return m_prevToken;
   }
 
-  std::shared_ptr<Token> Lexer::token(void) {
+  bool Lexer::skip(Token::Type type) {
+    if (m_token->type == type) {
+      nextToken();
+      return true;
+    }
+    return false;
+  }
+
+  Token *Lexer::token(void) {
     return m_token;
   }
 
@@ -123,12 +142,10 @@ namespace ceos {
     } else {
       int line = 1;
       int column = 0;
-      m_input.seekg(0);
-      std::stringstream _source;
-      _source << m_input.rdbuf();
-      std::string source = _source.str();
-      for (int i = 0; i < m_token->loc.start; i++) {
-        if (source[i] == '\n') {
+      m_pos = 0;
+      size_t pos = m_token->loc.start > m_offset ? m_token->loc.start - m_offset : m_token->loc.start;
+      for (int i = 0; i < pos; i++) {
+        if (m_input[i] == '\n') {
           line++;
           column = 0;
         } else {
@@ -146,14 +163,14 @@ namespace ceos {
     int start = m_token->loc.start;
     int actualStart = start;
     do {
-      m_input.clear();
-      m_input.seekg(start);
-    } while (start > 0 && m_input.get() != '\n' && start--);
+      m_pos = start;
+    } while (start > 0 && nextChar() != '\n' && start--);
 
     char line[256];
-    m_input.getline(line, 256);
-    line[m_input.gcount()] = 0;
-    std::cerr << line << "\n";
-    std::cerr << std::setw(actualStart - start + 2) << "^\n";
+    unsigned i = 0;
+    while ((line[i++] = nextChar()) != '\n');
+    line[i] = 0;
+    std::cerr << line;
+    std::cerr << std::setw(actualStart - start + 1) << "^\n";
   }
 }

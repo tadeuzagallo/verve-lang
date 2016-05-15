@@ -10,22 +10,35 @@ namespace ceos {
 
   class Lexer {
     public:
-      Lexer(std::ifstream &input) : m_input(input), m_token(nullptr) {}
+      Lexer(const char *input, size_t offset) :
+        m_input(input),
+        m_pos(0),
+        m_offset(offset),
+        m_token(nullptr),
+        m_prevToken(nullptr)
+      {
+        nextToken();
+      }
 
-      std::shared_ptr<Token> nextToken();
+      Token *token(Token::Type);
+      Token *token();
 
-      std::shared_ptr<Token> token(Token::Type);
-
-      std::shared_ptr<Token> token();
+      bool skip(Token::Type);
 
       void ensure(Token::Type);
 
-      _Noreturn void invalidType();
+      void _Noreturn invalidType();
       void printSource();
 
     private:
-      std::ifstream &m_input;
-      std::shared_ptr<Token> m_token;
+      void nextToken();
+      char nextChar();
+
+      const char *m_input;
+      size_t m_pos;
+      size_t m_offset;
+      Token *m_token;
+      Token *m_prevToken;
   };
 
 }
