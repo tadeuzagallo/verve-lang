@@ -34,6 +34,11 @@ namespace ceos {
         m_token = std::make_shared<Token>(Token::Type::TYPE);
         break;
 
+      case '-':
+        assert(m_input.get() == '>');
+        m_token = std::make_shared<Token>(Token::Type::ARROW);
+        break;
+
       case EOF:
         start = m_token != nullptr ? m_token->loc.end - 1 : 0;
         m_token = std::make_shared<Token>(Token::Type::END);

@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "old_scope.h"
+#include "type.h"
 
 #ifndef CEOS_PARSER_H
 #define CEOS_PARSER_H
@@ -20,7 +21,6 @@ namespace ceos {
       std::shared_ptr<AST::Program> parse(void);
 
     private:
-      std::shared_ptr<AST::TypeInfo> parseTypeInfo(std::shared_ptr<AST> &&id);
       std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee);
       std::shared_ptr<AST::Number> parseNumber(void);
       std::shared_ptr<AST> parseID(void);
@@ -30,11 +30,15 @@ namespace ceos {
       std::shared_ptr<AST> parseIf(void);
       std::shared_ptr<AST::Block> parseBlock(Token::Type delim);
 
+      void parseTypeInfo(std::shared_ptr<AST> &&id);
+      void typeCheck(std::shared_ptr<AST::Call> &&);
+
       Lexer &m_lexer;
       std::shared_ptr<AST::Program> m_ast;
       std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;
+      std::unordered_map<std::string, Type *> m_types;
+      std::unordered_map<std::string, TypeChain *> m_typeInfo;
   };
-
 }
 
 #endif

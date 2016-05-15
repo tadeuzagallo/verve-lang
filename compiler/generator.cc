@@ -41,9 +41,6 @@ namespace ceos {
       case AST::Type::If:
         generateIf(AST::asIf(node));
         break;
-      case AST::Type::TypeInfo:
-        // TODO: use type info
-        break;
       case AST::Type::Block:
         generateBlock(AST::asBlock(node));
         break;

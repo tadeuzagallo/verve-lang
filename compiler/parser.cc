@@ -6,6 +6,11 @@
 namespace ceos {
 
   std::shared_ptr<AST::Program> Parser::parse(void) {
+    m_types["Int"] = new BasicType("Int");
+    m_types["Char"] = new BasicType("Char");
+    m_types["Float"] = new BasicType("Float");
+    m_types["List"] = new DataType("List", 1);
+
     m_lexer.nextToken();
     m_ast = std::make_shared<AST::Program>();
     m_ast->loc.start = m_lexer.token()->loc.start;
@@ -18,7 +23,9 @@ namespace ceos {
     auto block = std::make_shared<AST::Block>();
     while (m_lexer.token()->type != delim) {
       std::shared_ptr<AST> node = parseFactor();
-      block->nodes.push_back(node);
+      if (node) {
+        block->nodes.push_back(node);
+      }
     }
     block->needsScope = m_scope->isRequired;
     block->capturesScope = m_scope->capturesScope;
@@ -117,7 +124,8 @@ namespace ceos {
 
     while (true) {
       if (m_lexer.token()->type == Token::Type::TYPE) {
-        ast = parseTypeInfo(std::move(ast));
+        parseTypeInfo(std::move(ast));
+        return nullptr;
       } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
         ast = parseCall(std::move(ast));
       } else if (m_lexer.token()->type == Token::Type::L_BRACE) {
@@ -127,6 +135,10 @@ namespace ceos {
       } else {
         break;
       }
+    }
+
+    if (ast->type == AST::Type::Call) {
+      typeCheck(AST::asCall(ast));
     }
 
     return ast;
@@ -209,13 +221,69 @@ namespace ceos {
     return call;
   }
 
-  std::shared_ptr<AST::TypeInfo> Parser::parseTypeInfo(std::shared_ptr<AST> &&target) {
+  void Parser::parseTypeInfo(std::shared_ptr<AST> &&target) {
     m_lexer.ensure(Token::Type::TYPE);
 
-    auto typeInfo = std::make_shared<AST::TypeInfo>();
-    typeInfo->target = std::move(target);
-    typeInfo->type = parseID();
-    return typeInfo;
+    TypeChain *typeInfo = new TypeChain();
+    do {
+      auto typeString = AST::asID(parseID())->name;
+      auto type = m_types[typeString];
+      if (!type) {
+        throw std::runtime_error("Undefined type");
+      }
+      typeInfo->types.push_back(type);
+    } while (m_lexer.token()->type == Token::Type::ARROW && m_lexer.nextToken());
+    m_typeInfo[AST::asID(target)->name] = typeInfo;
   }
 
+  void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {
+    TypeChain *typeInfo;
+    if (call->callee->type == AST::Type::ID) {
+      auto calleeName = AST::asID(call->callee)->name;
+      auto it = m_typeInfo.find(calleeName);
+      if (it == m_typeInfo.end()) {
+        fprintf(stderr, "Missing type information for `%s`\n", calleeName.c_str());
+        throw;
+      }
+      typeInfo = it->second;
+
+      if (call->arguments.size() != typeInfo->types.size() - 1) {
+        fprintf(stderr, "Invalid type");
+        throw;
+      }
+
+      TypeChain callTypeInfo = call->generateTypeInfo(m_types);
+
+      for (unsigned i = 0; i < typeInfo->types.size() - 1; i++) {
+        Type* expected = typeInfo->types[i];
+        Type* actual = callTypeInfo.types[i];
+
+        if (actual != expected) {
+          fprintf(stderr, "Expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
+          throw;
+        }
+      }
+    }
+  }
+
+  TypeChain AST::Call::generateTypeInfo(std::unordered_map<std::string, ::ceos::Type *> &types) {
+    TypeChain typeInfo;
+
+    for (auto argument : arguments) {
+      switch (argument->type) {
+        case AST::Type::String: {
+          auto type = new DataTypeInstance((DataType *)types["List"], (::ceos::Type *[]){ types["Char"] });
+          typeInfo.types.push_back(type);
+          break;
+        }
+        case AST::Type::Number:
+          typeInfo.types.push_back(types["Int"]);
+          break;
+        default:
+          throw std::runtime_error("Can't know type for node");
+      }
+    }
+
+    return typeInfo;
+  }
 }

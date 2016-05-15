@@ -1,0 +1,4 @@
+printInt :: Int -> Int
+printInt(a) { a }
+
+printInt("ASD")

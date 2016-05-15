@@ -1,5 +1,6 @@
 #include "macros.h"
 #include "token.h"
+#include "type.h"
 
 #include <cassert>
 #include <functional>
@@ -27,10 +28,10 @@ static unsigned str_uid = 0;
   }
 
 namespace ceos {
-  
+
   class AST {
     public:
-      AST_TYPES(Type, 
+      AST_TYPES(Type,
         Program,
         Block,
         Call,
@@ -39,8 +40,7 @@ namespace ceos {
         String,
         Function,
         FunctionArgument,
-        If,
-        TypeInfo
+        If
       );
 
       Type type;
@@ -96,6 +96,8 @@ namespace ceos {
     public:
       Call() : AST(Type::Call) {}
 
+      TypeChain generateTypeInfo(std::unordered_map<std::string, ::ceos::Type *> &);
+
       std::shared_ptr<AST> callee;
       std::vector<std::shared_ptr<AST>> arguments;
   };
@@ -127,13 +129,6 @@ namespace ceos {
       std::shared_ptr<AST::Block> elseBody;
   };
 
-  class AST::TypeInfo : public AST {
-    public:
-      TypeInfo() : AST(Type::TypeInfo) {}
-
-      std::shared_ptr<AST> target;
-      std::shared_ptr<AST> type;
-  };
 }
 
 #endif
