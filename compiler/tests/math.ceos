@@ -1,3 +1,5 @@
+print :: Int -> Void
+
 print(add(2, 2))
 print(sub(8, 3))
 print(mul(3, 3))

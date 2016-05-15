@@ -43,11 +43,17 @@ namespace ceos {
         If
       );
 
-      Type type;
-      Loc loc;
-
       AST(Type t) : type(t) {}
 
+      ~AST() {
+        if (typeInfo) {
+          delete typeInfo;
+        }
+      }
+
+      Type type;
+      Loc loc;
+      ::ceos::Type *typeInfo;
   };
 
   class AST::Block : public AST {
@@ -96,7 +102,9 @@ namespace ceos {
     public:
       Call() : AST(Type::Call) {}
 
-      TypeChain generateTypeInfo(std::unordered_map<std::string, ::ceos::Type *> &);
+      TypeChain *getTypeInfo() {
+        return (TypeChain *)typeInfo;
+      }
 
       std::shared_ptr<AST> callee;
       std::vector<std::shared_ptr<AST>> arguments;
@@ -105,6 +113,10 @@ namespace ceos {
   class AST::Function : public AST {
     public:
       Function() : AST(Type::Function) {}
+
+      TypeChain *getTypeInfo() {
+        return (TypeChain *)typeInfo;
+      }
 
       std::shared_ptr<AST::ID> name;
       std::vector<std::shared_ptr<AST::FunctionArgument>> arguments;

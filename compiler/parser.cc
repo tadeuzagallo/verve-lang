@@ -9,7 +9,9 @@ namespace ceos {
     m_types["Int"] = new BasicType("Int");
     m_types["Char"] = new BasicType("Char");
     m_types["Float"] = new BasicType("Float");
+    m_types["Void"] = new BasicType("Void");
     m_types["List"] = new DataType("List", 1);
+    m_types["String"] = new DataTypeInstance((DataType *)m_types["List"], (::ceos::Type *[]){ m_types["Char"] });
 
     m_ast = std::make_shared<AST::Program>();
     m_ast->loc.start = m_lexer.token()->loc.start;
@@ -86,6 +88,7 @@ namespace ceos {
     auto number = static_cast<Token::Number *>(m_lexer.token(Token::Type::NUMBER));
     auto ast = std::make_shared<AST::Number>(number->value);
     ast->loc = number->loc;
+    ast->typeInfo = m_types["Int"];
     return ast;
   }
 
@@ -148,6 +151,10 @@ namespace ceos {
 
     auto fn = std::make_shared<AST::Function>();
     fn->name = AST::asID(call->callee);
+    if (!(fn->typeInfo = m_typeInfo[fn->name->name])) {
+      fprintf(stderr, "Defining function `%s` that does not have type information\n", fn->name->name.c_str());
+      throw std::runtime_error("Missing type infomation");
+    }
 
     m_scope->set(fn->name->name, fn);
     m_scope->isRequired = true;
@@ -166,9 +173,9 @@ namespace ceos {
         throw;
       }
 
-      auto fnArg = std::make_shared<AST::FunctionArgument>(argName, i++);
+      auto fnArg = std::make_shared<AST::FunctionArgument>(argName, i);
+      fnArg->typeInfo = fn->getTypeInfo()->types[i++];
       fn->arguments.push_back(fnArg);
-
       m_scope->set(argName, fnArg);
     }
 
@@ -196,6 +203,7 @@ namespace ceos {
 
     auto ast =  std::make_shared<AST::String>(m_ast->strings[uid], uid);
     ast->loc = string->loc;
+    ast->typeInfo = m_types["String"];
     return ast;
   }
 
@@ -206,9 +214,12 @@ namespace ceos {
 
     auto call = std::make_shared<AST::Call>();
     call->callee = callee;
+    call->typeInfo = new TypeChain();
 
     while (m_lexer.token()->type != Token::Type::R_PAREN) {
-      call->arguments.push_back(parseFactor());
+      auto argument = parseFactor();
+      call->getTypeInfo()->types.push_back(argument->typeInfo);
+      call->arguments.push_back(argument);
       if (m_lexer.token()->type != Token::Type::R_PAREN) {
         m_lexer.ensure(Token::Type::COMMA);
       }
@@ -251,11 +262,9 @@ namespace ceos {
         throw;
       }
 
-      TypeChain callTypeInfo = call->generateTypeInfo(m_types);
-
       for (unsigned i = 0; i < typeInfo->types.size() - 1; i++) {
         Type* expected = typeInfo->types[i];
-        Type* actual = callTypeInfo.types[i];
+        Type* actual = call->getTypeInfo()->types[i];
 
         if (actual != expected) {
           fprintf(stderr, "Expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
@@ -263,26 +272,5 @@ namespace ceos {
         }
       }
     }
-  }
-
-  TypeChain AST::Call::generateTypeInfo(std::unordered_map<std::string, ::ceos::Type *> &types) {
-    TypeChain typeInfo;
-
-    for (auto argument : arguments) {
-      switch (argument->type) {
-        case AST::Type::String: {
-          auto type = new DataTypeInstance((DataType *)types["List"], (::ceos::Type *[]){ types["Char"] });
-          typeInfo.types.push_back(type);
-          break;
-        }
-        case AST::Type::Number:
-          typeInfo.types.push_back(types["Int"]);
-          break;
-        default:
-          throw std::runtime_error("Can't know type for node");
-      }
-    }
-
-    return typeInfo;
   }
 }
