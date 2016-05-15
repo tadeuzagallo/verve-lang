@@ -1,3 +1,4 @@
+fib :: Int -> Int
 fib(n) {
   if (lt(n, 2)) {
     n

@@ -6,8 +6,8 @@
 
 namespace ceos {
   struct Loc {
-    int start;
-    int end;
+    unsigned start;
+    unsigned end;
   };
 
   class Token {
@@ -28,7 +28,8 @@ namespace ceos {
           COMMA,
           L_BRACE,
           R_BRACE,
-
+          L_ANGLE,
+          R_ANGLE,
         )
 
       Token(Type t) : type(t) {}

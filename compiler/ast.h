@@ -47,7 +47,7 @@ namespace ceos {
 
       ~AST() {
         if (typeInfo) {
-          delete typeInfo;
+          //delete typeInfo;
         }
       }
 
@@ -101,10 +101,6 @@ namespace ceos {
   class AST::Call : public AST {
     public:
       Call() : AST(Type::Call) {}
-
-      TypeChain *getTypeInfo() {
-        return (TypeChain *)typeInfo;
-      }
 
       std::shared_ptr<AST> callee;
       std::vector<std::shared_ptr<AST>> arguments;

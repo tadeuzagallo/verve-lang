@@ -1,0 +1,30 @@
+interface Stringify<T> {
+  stringify :: T -> String
+}
+
+implementation Stringify<Int> { }
+implementation Stringify<String> { }
+
+print :: Stringify -> Void
+
+add :: Int -> Int -> Int
+sub :: Int -> Int -> Int
+mul :: Int -> Int -> Int
+div :: Int -> Int -> Int
+
+# should be bool
+and :: Int -> Int -> Int
+or :: Int -> Int -> Int
+
+lt :: Int -> Int -> Int
+gt :: Int -> Int -> Int
+lte :: Int -> Int -> Int
+gte :: Int -> Int -> Int
+
+equals :: Int -> Int -> Int
+
+# at :: List(a) -> a
+# substr :: String -> Range -> String
+# list :: a... -> List(a)
+
+__heap-size__ :: Int

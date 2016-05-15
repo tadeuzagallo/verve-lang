@@ -1,6 +1,7 @@
 #include "macros.h"
 
 #include <sstream>
+#include <unordered_map>
 #include <vector>
 
 #ifndef CEOS_TYPE_H
@@ -17,6 +18,7 @@ namespace ceos {
 
   struct Type { 
     virtual std::string toString() = 0;
+    virtual ~Type() {}
   };
 
   struct BasicType : Type {
@@ -27,6 +29,10 @@ namespace ceos {
     }
 
     std::string typeName;
+  };
+
+  struct GenericType : BasicType {
+    GenericType(std::string n) : BasicType(std::move(n)) {}
   };
 
   struct DataType : BasicType {
@@ -83,6 +89,36 @@ namespace ceos {
 
     Type *returnType() { return types.back(); }
     std::vector<Type *> types;
+  };
+
+  struct TypeImplementation;
+  struct TypeInterface : Type {
+    virtual std::string toString() override {
+      std::stringstream str;
+      str << "interface "
+          << name
+          << "<"
+          << genericName
+          << ">";
+
+      str << "{\n";
+      for (auto it : functions) {
+        str << it.first << " :: " << it.second->toString() << "\n";
+      }
+      str << "}";
+
+      return str.str();
+    }
+
+    std::string name;
+    std::string genericName;
+    std::unordered_map<Type *, TypeImplementation *> implementations;
+    std::unordered_map<std::string, TypeChain *> functions;
+  };
+
+  struct TypeImplementation {
+    TypeInterface *interface;
+    Type *type;
   };
 }
 

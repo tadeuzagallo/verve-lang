@@ -1,3 +1,4 @@
+allocate :: Void
 allocate() {
   list(
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
@@ -203,16 +204,27 @@ allocate() {
   )
 }
 
+a :: Void
 a(){ allocate() allocate() }
+b :: Void
 b(){ a() a() }
+c :: Void
 c(){ b() b() }
+d :: Void
 d(){ c() c() }
+e :: Void
 e(){ d() d() }
+f :: Void
 f(){ e() e() }
+g :: Void
 g(){ f() f() }
+h :: Void
 h(){ g() g() }
+i :: Void
 i(){ h() h() }
+j :: Void
 j(){ i() i() }
+k :: Void
 k(){ j() j() }
 
 k()

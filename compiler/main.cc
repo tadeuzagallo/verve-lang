@@ -29,9 +29,11 @@ int main(int argc, char **argv) {
   fseek(prelude, 0, SEEK_SET);
   fseek(source, 0, SEEK_SET);
 
-  char *input = (char *)malloc(preludeSize + sourceSize);
+  char *input = (char *)malloc(preludeSize + sourceSize + 2);
   fread(input, 1, preludeSize, prelude);
-  fread(input + preludeSize, 1, sourceSize, source);
+  input[preludeSize] = '\n';
+  fread(input + preludeSize + 1, 1, sourceSize, source);
+  input[preludeSize + sourceSize + 1] = '\0';
 
   fclose(prelude);
   fclose(source);

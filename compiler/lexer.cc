@@ -40,6 +40,8 @@ namespace ceos {
       BASIC_TOKEN(')', R_PAREN)
       BASIC_TOKEN('{', L_BRACE)
       BASIC_TOKEN('}', R_BRACE)
+      BASIC_TOKEN('<', L_ANGLE)
+      BASIC_TOKEN('>', R_ANGLE)
       BASIC_TOKEN(',', COMMA)
 
       case ':':
@@ -53,7 +55,7 @@ namespace ceos {
         break;
 
       case '\0':
-        start = std::max(m_token->loc.end - 1, 0);
+        start = m_token->loc.end > 0 ? m_token->loc.end - 1 : 0;
         m_token = new Token(Token::Type::END);
         break;
 
@@ -144,7 +146,7 @@ namespace ceos {
       int column = 0;
       m_pos = 0;
       size_t pos = m_token->loc.start > m_offset ? m_token->loc.start - m_offset : m_token->loc.start;
-      for (int i = 0; i < pos; i++) {
+      for (size_t i = 0; i < pos; i++) {
         if (m_input[i] == '\n') {
           line++;
           column = 0;

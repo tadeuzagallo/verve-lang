@@ -1,3 +1,4 @@
+adder :: Int -> (Int -> Int)
 adder(a) {
   _(b) {
     add(a, b)

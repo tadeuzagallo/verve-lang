@@ -1,3 +1,4 @@
+square :: Int -> Int
 square(n) {
   mul(n, n)
 }
