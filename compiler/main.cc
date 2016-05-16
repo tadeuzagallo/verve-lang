@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
 
   free(input);
 
-  ceos::Generator generator(ast);
+  ceos::Generator generator(ast, isDebug);
 
   std::stringstream &bytecode = generator.generate();
 

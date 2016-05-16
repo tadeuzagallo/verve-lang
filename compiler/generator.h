@@ -13,7 +13,7 @@ namespace ceos {
 
   class Generator {
     public:
-      Generator(std::shared_ptr<AST::Program> ast) : m_ast(ast) {
+      Generator(std::shared_ptr<AST::Program> ast, bool isDebug) : m_ast(ast), m_isDebug(isDebug) {
         m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
       }
 
@@ -45,6 +45,7 @@ namespace ceos {
       std::shared_ptr<AST::Program> m_ast;
       std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;
       std::stringstream m_output;
+      bool m_isDebug;
   };
 
 }
