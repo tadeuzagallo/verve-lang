@@ -7,13 +7,6 @@
 #ifndef CEOS_TYPE_H
 #define CEOS_TYPE_H
 
-// data Maybe a = Just a | Nothing
-// type :: [(Maybe Char -> Maybe Int)] -> [Maybe Char] -> [[Maybe Int]]
-// List(Maybe(Char) -> Maybe(Int)) -> List(Maybe(Char)) -> List(List(Maybe(Int)))
-
-// Nothing :: Maybe *
-// Just :: a -> Maybe a // Just(1) => Maybe Int // Just(1.0) => Maybe Float
-
 namespace ceos {
 
   struct Type { 
@@ -83,7 +76,7 @@ namespace ceos {
     virtual std::string toString() override {
       std::stringstream str;
       str << dataType->toString();
-      str << "(";
+      str << "<";
       bool first = true;
       for (auto type : types) {
         if (!first) {
@@ -92,7 +85,7 @@ namespace ceos {
         first = false;
         str << type->toString();
       }
-      str << ")";
+      str << ">";
       return str.str();
     }
 
