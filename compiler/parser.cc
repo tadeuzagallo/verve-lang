@@ -257,17 +257,25 @@ namespace ceos {
     return call;
   }
 
-  TypeChain *Parser::parseTypeInfo(std::string *genericName) {
-    m_lexer.ensure(Token::Type::TYPE);
+  TypeChain *Parser::parseTypeInfo(std::string *genericName, bool skipTypeToken) {
+    if (skipTypeToken) {
+      m_lexer.ensure(Token::Type::TYPE);
+    }
 
     TypeChain *typeInfo = new TypeChain();
     do {
-      auto typeString = AST::asID(parseID())->name;
       Type *type = nullptr;
-      if (genericName != nullptr && typeString == *genericName) {
-        type = new GenericType(typeString);
+
+      if (m_lexer.skip(Token::Type::L_PAREN)) {
+        type = parseTypeInfo(genericName, false);
+        m_lexer.ensure(Token::Type::R_PAREN);
       } else {
-        type = m_types[typeString];
+        auto typeString = AST::asID(parseID())->name;
+        if (genericName != nullptr && typeString == *genericName) {
+          type = new GenericType(typeString);
+        } else {
+          type = m_types[typeString];
+        }
       }
 
       if (!type) {
@@ -356,7 +364,7 @@ namespace ceos {
           }
         }
 
-        if (actual != expected) {
+        if (!actual->equals(expected)) {
           fprintf(stderr, "Expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
           throw;
         }

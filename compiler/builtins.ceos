@@ -24,7 +24,7 @@ gte :: Int -> Int -> Int
 equals :: Int -> Int -> Int
 
 # at :: List(a) -> a
-# substr :: String -> Range -> String
+# substr :: (String, ():String): String
 # list :: a... -> List(a)
 
 __heap-size__ :: Int

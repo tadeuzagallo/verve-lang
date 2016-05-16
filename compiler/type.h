@@ -17,12 +17,21 @@
 namespace ceos {
 
   struct Type { 
+    virtual bool equals(Type *) = 0;
     virtual std::string toString() = 0;
     virtual ~Type() {}
   };
 
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
+
+    virtual bool equals(Type *other) override {
+      BasicType *t;
+      if (!(t = dynamic_cast<BasicType *>(other))) {
+        return false;
+      }
+      return typeName == t->typeName;
+    }
 
     virtual std::string toString() override {
       return typeName;
@@ -52,6 +61,25 @@ namespace ceos {
       }
     }
 
+    virtual bool equals(Type *other) override {
+      DataTypeInstance *t;
+      if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
+        return false;
+      }
+      if (!dataType->equals(t->dataType)) {
+        return false;
+      }
+      if (types.size() != t->types.size()) {
+        return false;
+      }
+      for (unsigned i = 0; i < types.size(); i++) {
+        if (!types[i]->equals(t->types[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     virtual std::string toString() override {
       std::stringstream str;
       str << dataType->toString();
@@ -75,8 +103,22 @@ namespace ceos {
   struct TypeChain : Type {
     TypeChain() {}
 
+    virtual bool equals(Type *other) override {
+      TypeChain *t;
+      if (!(t = dynamic_cast<TypeChain *>(other))) {
+        return false;
+      }
+      for (unsigned i = 0; i < types.size(); i++) {
+        if (!types[i]->equals(t->types[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     virtual std::string toString() override {
       std::stringstream str;
+      str << "(";
       for (unsigned i = 0; i < types.size(); i++) {
         if (i > 0) {
           str << " -> ";
@@ -84,6 +126,7 @@ namespace ceos {
 
         str << types[i]->toString();
       }
+      str << ")";
       return str.str();
     }
 
@@ -93,6 +136,14 @@ namespace ceos {
 
   struct TypeImplementation;
   struct TypeInterface : Type {
+    virtual bool equals(Type *other) override {
+      TypeInterface *t;
+      if (!(t = dynamic_cast<TypeInterface *>(other))) {
+        return false;
+      }
+      return name == t->name;
+    }
+
     virtual std::string toString() override {
       std::stringstream str;
       str << "interface "
