@@ -35,6 +35,9 @@ namespace ceos {
       std::shared_ptr<AST> parseImplementation();
       void typeCheck(std::shared_ptr<AST::Call> &&);
 
+      // Helpers
+      unsigned uniqueString(std::string &);
+
       Lexer &m_lexer;
       std::shared_ptr<AST::Program> m_ast;
       std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;

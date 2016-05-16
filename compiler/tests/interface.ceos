@@ -1,0 +1,18 @@
+interface Show<T> {
+  show :: T -> String
+}
+
+implementation Show<String> {
+  show(s) {
+    print("SHOW STRING")
+  }
+}
+
+implementation Show<Int> {
+  show(n) {
+    print("SHOW INT")
+  }
+}
+
+show("")
+show(0)

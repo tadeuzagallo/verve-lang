@@ -7,6 +7,7 @@ namespace ceos {
 
   static std::unordered_map<std::string, TypeChain *> *InterfaceTypeInfo;
   static std::unordered_map<std::string, Type *> *ImplementationTypes;
+  static std::string ImplementationTypeName = "";
 
   std::shared_ptr<AST::Program> Parser::parse(void) {
     m_types["Int"] = new BasicType("Int");
@@ -104,22 +105,14 @@ namespace ceos {
       parseInterface();
       return nullptr;
     } else if (id.name == "implementation") {
-      parseImplementation();
-      return nullptr;
+      return parseImplementation();
     }
 
     std::shared_ptr<AST> ast, ref;
     if ((ref = m_scope->get(id.name, false)) != nullptr && ref->type == AST::Type::FunctionArgument) {
       ast = ref;
     } else {
-      unsigned uid;
-      auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), id.name);
-      if (it != m_ast->strings.end()) {
-        uid = it - m_ast->strings.begin();
-      } else {
-        uid = str_uid++;
-        m_ast->strings.push_back(id.name);
-      }
+      auto uid = uniqueString(id.name);
 
       ast = std::make_shared<AST::ID>(m_ast->strings[uid], uid);
       ast->loc = id.loc;
@@ -173,6 +166,8 @@ namespace ceos {
       throw std::runtime_error("Missing type infomation");
     }
 
+    fn->name->name += ImplementationTypeName;
+    fn->name->uid = uniqueString(fn->name->name);
     m_scope->set(fn->name->name, fn);
     m_scope->isRequired = true;
 
@@ -215,15 +210,7 @@ namespace ceos {
   std::shared_ptr<AST::String> Parser::parseString() {
     auto string = static_cast<Token::String *>(m_lexer.token(Token::Type::STRING));
 
-    int uid;
-    auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), string->value);
-    if (it != m_ast->strings.end()) {
-      uid = it - m_ast->strings.begin();
-    } else {
-      uid = str_uid++;
-      m_ast->strings.push_back(string->value);
-    }
-
+    auto uid = uniqueString(string->value);
     auto ast =  std::make_shared<AST::String>(m_ast->strings[uid], uid);
     ast->loc = string->loc;
     ast->typeInfo = m_types["String"];
@@ -299,7 +286,9 @@ namespace ceos {
     while (!m_lexer.skip(Token::Type::R_BRACE)) {
       auto fnName = ((Token::ID *)m_lexer.token(Token::Type::ID))->name;
       auto typeInfo = parseTypeInfo(&interface->genericName);
+      m_types[fnName] = interface;
       interface->functions[fnName] = typeInfo;
+      m_typeInfo[fnName] = typeInfo;
     }
 
     m_types[interface->name] = interface;
@@ -323,6 +312,7 @@ namespace ceos {
 
     InterfaceTypeInfo = &interface->functions;
     ImplementationTypes = &t;
+    ImplementationTypeName = implementation->type->toString();
 
     m_lexer.ensure(Token::Type::L_BRACE);
     auto block = parseBlock(Token::Type::R_BRACE);
@@ -330,23 +320,24 @@ namespace ceos {
 
     InterfaceTypeInfo = nullptr;
     ImplementationTypes = nullptr;
+    ImplementationTypeName = "";
 
     implementation->interface = interface;
     interface->implementations[implementation->type] = implementation;
 
+    block->needsScope = false;
     return block;
   }
 
   void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {
-    TypeChain *typeInfo;
     if (call->callee->type == AST::Type::ID) {
-      auto calleeName = AST::asID(call->callee)->name;
-      auto it = m_typeInfo.find(calleeName);
-      if (it == m_typeInfo.end() || !it->second) {
+      auto callee = AST::asID(call->callee);
+      auto &calleeName = callee->name;
+      auto typeInfo = m_typeInfo[calleeName];
+      if (!typeInfo) {
         fprintf(stderr, "Missing type information for `%s`\n", calleeName.c_str());
         throw;
       }
-      typeInfo = it->second;
 
       if (call->arguments.size() != typeInfo->types.size() - 1) {
         fprintf(stderr, "Invalid type");
@@ -356,6 +347,18 @@ namespace ceos {
       for (unsigned i = 0; i < typeInfo->types.size() - 1; i++) {
         Type* expected = typeInfo->types[i];
         Type* actual = call->arguments[i]->typeInfo;
+
+        if (dynamic_cast<GenericType *>(expected)) {
+          auto impl = dynamic_cast<TypeInterface *>(m_types[calleeName])->implementations[actual];
+          if (!impl) {
+            fprintf(stderr, "Couldn't find implementation for `%s` with signature `%s`", calleeName.c_str(), call->typeInfo->toString().c_str());
+            throw;
+          }
+
+          callee->name += impl->type->toString();
+          callee->uid = uniqueString(callee->name);
+          expected = impl->type;
+        }
 
         TypeInterface *interface;
         if ((interface = dynamic_cast<TypeInterface *>(expected))) {
@@ -371,4 +374,19 @@ namespace ceos {
       }
     }
   }
+
+  // Helpers
+  //
+  unsigned Parser::uniqueString(std::string &str) {
+    unsigned uid;
+    auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), str);
+    if (it != m_ast->strings.end()) {
+      uid = it - m_ast->strings.begin();
+    } else {
+      uid = str_uid++;
+      m_ast->strings.push_back(str);
+    }
+    return uid;
+  }
+
 }
