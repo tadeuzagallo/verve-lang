@@ -412,8 +412,8 @@ section_code:
         break;
       }
       case Opcode::bind:
-        READ_INT(bytecode, fnID);
-        WRITE(2, "bind $" << functions[fnID]);
+        READ_INT(bytecode, stringID);
+        WRITE(2, "bind $" << strings[stringID]);
         break;
       case Opcode::ret: {
         WRITE(1, "ret");
