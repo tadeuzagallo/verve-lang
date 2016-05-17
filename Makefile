@@ -11,7 +11,8 @@ SOURCES = $(call source_glob, '*.cc') $(call source_glob, '*.S')
 OBJECTS = $(patsubst %,%.o,$(SOURCES))
 TARGET = ceos
 
-default: $(TARGET)
+default:
+	make -j $(shell sysctl -n hw.ncpu) $(TARGET)
 
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
