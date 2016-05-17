@@ -10,8 +10,7 @@
 #include <sstream>
 #include <vector>
 
-#ifndef CEOS_VM_H
-#define CEOS_VM_H
+#pragma once
 
 namespace ceos {
 
@@ -65,5 +64,3 @@ namespace ceos {
       uint8_t *m_bytecode;
   };
 }
-
-#endif

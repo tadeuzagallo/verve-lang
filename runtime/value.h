@@ -5,8 +5,7 @@
 #include "ceos_string.h"
 #include "utils/macros.h"
 
-#ifndef CEOS_VALUE_H
-#define CEOS_VALUE_H
+#pragma once
 
 namespace ceos {
   class VM;
@@ -116,5 +115,3 @@ namespace ceos {
 }
 
 using Builtin = ceos::Value::Builtin;
-
-#endif

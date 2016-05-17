@@ -5,8 +5,7 @@
 #include <cstdlib>
 #include <functional>
 
-#ifndef CEOS_SCOPE_H
-#define CEOS_SCOPE_H
+#pragma once
 
 #define DEFAULT_SIZE 8
 
@@ -156,5 +155,3 @@ namespace ceos {
   };
 
 }
-
-#endif

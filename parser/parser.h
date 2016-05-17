@@ -4,8 +4,7 @@
 #include "utils/old_scope.h"
 #include "type.h"
 
-#ifndef CEOS_PARSER_H
-#define CEOS_PARSER_H
+#pragma once
 
 namespace ceos {
 
@@ -46,5 +45,3 @@ namespace ceos {
       std::unordered_map<std::string, TypeChain *> m_typeInfo;
   };
 }
-
-#endif

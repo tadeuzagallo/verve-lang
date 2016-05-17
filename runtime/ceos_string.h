@@ -4,8 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#ifndef CEOS_STRING_H
-#define CEOS_STRING_H
+#pragma once
 
 namespace ceos {
 
@@ -80,6 +79,4 @@ class String {
 
   const char *m_str;
 };
-
 }
-#endif

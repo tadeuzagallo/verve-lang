@@ -1,7 +1,6 @@
 #include "utils/macros.h"
 
-#ifndef CEOS_OPCODES_H
-#define CEOS_OPCODES_H
+#pragma once
 
 #define OPCODE_ADDRESS(__op) (uintptr_t)op_##__op,
 
@@ -52,5 +51,3 @@ class Opcode {
     FROM.get(*TO##_.rdbuf(), '\0'); \
     std::string TO = TO##_.str(); \
     FROM.ignore(1);
-
-#endif

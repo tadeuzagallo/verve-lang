@@ -3,8 +3,7 @@
 
 #include "./token.h"
 
-#ifndef CEOS_LEXER_H
-#define CEOS_LEXER_H
+#pragma once
 
 namespace ceos {
 
@@ -42,5 +41,3 @@ namespace ceos {
   };
 
 }
-
-#endif

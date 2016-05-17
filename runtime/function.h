@@ -3,8 +3,7 @@
 
 #include "ceos_string.h"
 
-#ifndef CEOS_FUNCTION_H
-#define CEOS_FUNCTION_H
+#pragma once
 
 namespace ceos {
   class VM;
@@ -25,5 +24,3 @@ namespace ceos {
   };
 
 }
-
-#endif

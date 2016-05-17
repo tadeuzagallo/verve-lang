@@ -2,8 +2,7 @@
 
 #include <string>
 
-#ifndef CEOS_TOKEN_H
-#define CEOS_TOKEN_H
+#pragma once
 
 namespace ceos {
   struct Loc {
@@ -61,5 +60,3 @@ namespace ceos {
       std::string value;
   };
 }
-
-#endif

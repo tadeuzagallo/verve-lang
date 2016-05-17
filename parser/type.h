@@ -4,8 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#ifndef CEOS_TYPE_H
-#define CEOS_TYPE_H
+#pragma once
 
 namespace ceos {
 
@@ -165,5 +164,3 @@ namespace ceos {
     Type *type;
   };
 }
-
-#endif

@@ -1,7 +1,6 @@
 #include "utils/macros.h"
 
-#ifndef CEOS_SECTIONS_H
-#define CEOS_SECTIONS_H
+#pragma once
 
 struct Section {
   static int const Header = 0xCE05;
@@ -13,5 +12,3 @@ struct Section {
     Text,
   );
 };
-
-#endif

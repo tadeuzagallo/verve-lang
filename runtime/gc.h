@@ -5,8 +5,7 @@
 #include <set>
 #include <vector>
 
-#ifndef CEOS_GC_H
-#define CEOS_GC_H
+#pragma once
 
 namespace ceos {
 
@@ -102,5 +101,3 @@ namespace ceos {
       static std::set<Scope *> scopes;
   };
 }
-
-#endif

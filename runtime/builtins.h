@@ -1,5 +1,4 @@
-#ifndef CEOS_BUILTINS_H
-#define CEOS_BUILTINS_H
+#pragma once
 
 #define JS_FUNCTION(FN_NAME) \
   Value FN_NAME( \
@@ -32,5 +31,3 @@ namespace ceos {
   void registerBuiltins(VM &);
 
 }
-
-#endif

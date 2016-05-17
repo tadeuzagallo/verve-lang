@@ -2,8 +2,7 @@
 #include "scope.h"
 #include "value.h"
 
-#ifndef CEOS_CLOSURE_H
-#define CEOS_CLOSURE_H
+#pragma once
 
 namespace ceos {
 
@@ -17,5 +16,3 @@ namespace ceos {
   };
 
 }
-
-#endif

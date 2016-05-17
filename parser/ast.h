@@ -9,8 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-#ifndef CEOS_AST_H
-#define CEOS_AST_H
+#pragma once
 
 static unsigned str_uid = 0;
 
@@ -138,5 +137,3 @@ namespace ceos {
   };
 
 }
-
-#endif

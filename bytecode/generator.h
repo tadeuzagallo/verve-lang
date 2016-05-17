@@ -6,8 +6,7 @@
 #include "opcodes.h"
 #include "utils/old_scope.h"
 
-#ifndef CEOS_GENERATOR_H
-#define CEOS_GENERATOR_H
+#pragma once
 
 namespace ceos {
 
@@ -49,5 +48,3 @@ namespace ceos {
   };
 
 }
-
-#endif

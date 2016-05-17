@@ -3,8 +3,7 @@
 #include <memory>
 #include <unordered_map>
 
-#ifndef CEOS_OLD_SCOPE_H
-#define CEOS_OLD_SCOPE_H
+#pragma once
 
 namespace ceos {
 
@@ -76,5 +75,3 @@ namespace ceos {
   };
 
 }
-
-#endif
