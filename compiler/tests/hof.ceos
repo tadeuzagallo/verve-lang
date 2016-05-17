@@ -1,5 +1,4 @@
-math :: (Int -> Int -> Int) -> Int -> Int -> Int
-math(fn, a, b) {
+math(fn: (Int, Int): Int, a: Int, b: Int): Int {
   fn(a, b)
 }
 
@@ -8,8 +7,7 @@ print(math(add, 2, 1))
 print(math(mul, 2, 1))
 print(math(div, 6, 3))
 
-foo :: Int -> Int -> Int
-foo(a, b) {
+foo(a: Int, b: Int): Int {
   add(mul(a, a), mul(b, b))
 }
 

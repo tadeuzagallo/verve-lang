@@ -1,6 +1,5 @@
-adder :: Int -> (Int -> Int)
-adder(a) {
-  _(b) {
+adder(a: Int): (Int): Int {
+  _(b: Int): Int {
     add(a, b)
   }
 }

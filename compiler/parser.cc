@@ -186,7 +186,7 @@ namespace ceos {
         throw;
       }
 
-      auto fnArg = std::make_shared<AST::FunctionArgument>(argName, i);
+      auto fnArg = std::make_shared<AST::FunctionArgument>(argName, i++);
 
       if (!InterfaceTypeInfo) {
         if (!arg->typeInfo) {
@@ -195,7 +195,7 @@ namespace ceos {
         }
         fn->getTypeInfo()->types.push_back((fnArg->typeInfo = arg->typeInfo));
       } else {
-        fnArg->typeInfo = fn->getTypeInfo()->types[i++];
+        fnArg->typeInfo = fn->getTypeInfo()->types[i - 1];
       }
 
 
@@ -262,8 +262,21 @@ namespace ceos {
   }
 
   Type *Parser::parseType() {
-    auto typeString = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
-    return m_types[typeString];
+    if (m_lexer.skip(Token::Type::L_PAREN)) {
+      TypeChain *typeInfo = new TypeChain();
+      while (!m_lexer.skip(Token::Type::R_PAREN)) {
+        typeInfo->types.push_back(parseType());
+        if (m_lexer.token()->type != Token::Type::R_PAREN) {
+          m_lexer.ensure(Token::Type::COMMA);
+        }
+      }
+      m_lexer.ensure(Token::Type::COLON);
+      typeInfo->types.push_back(parseType());
+      return typeInfo;
+    } else {
+      auto typeString = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+      return m_types[typeString];
+    }
   }
 
   TypeChain *Parser::parseTypeInfo(std::string *genericName, bool skipTypeToken) {
