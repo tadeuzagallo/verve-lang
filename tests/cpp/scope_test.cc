@@ -1,5 +1,5 @@
-#include "scope.h"
-#include "closure.h"
+#include "runtime/scope.h"
+#include "runtime/closure.h"
 
 #include <stdio.h>
 #include <stdlib.h>

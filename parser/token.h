@@ -1,4 +1,5 @@
-#include "macros.h"
+#include "utils/macros.h"
+
 #include <string>
 
 #ifndef CEOS_TOKEN_H

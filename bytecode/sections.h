@@ -1,4 +1,4 @@
-#include "macros.h"
+#include "utils/macros.h"
 
 #ifndef CEOS_SECTIONS_H
 #define CEOS_SECTIONS_H

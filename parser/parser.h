@@ -1,7 +1,7 @@
 #include <memory>
 
 #include "ast.h"
-#include "old_scope.h"
+#include "utils/old_scope.h"
 #include "type.h"
 
 #ifndef CEOS_PARSER_H

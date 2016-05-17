@@ -1,7 +1,7 @@
 #include "vm.h"
 
-#include "opcodes.h"
-#include "sections.h"
+#include "bytecode/opcodes.h"
+#include "bytecode/sections.h"
 
 #include <cassert>
 

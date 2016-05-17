@@ -1,17 +1,22 @@
 CC = clang++
-CFLAGS = -g -O0 -Wall -Wextra -std=c++11
+CFLAGS = -g -O0 -Wall -Wextra -std=c++11 -I .
 LIBS = 
 
-HEADERS = $(wildcard *.h)
-SOURCES = $(wildcard *.cc) $(wildcard *.S)
+define source_glob
+$(shell find . -name $(1) -not -path './tests/*')
+endef
+
+HEADERS = $(call source_glob, '*.h')
+SOURCES = $(call source_glob, '*.cc') $(call source_glob, '*.S')
 OBJECTS = $(patsubst %,%.o,$(SOURCES))
-TARGET = ceos-build
+TARGET = ceos
 
 default: $(TARGET)
 
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
+	echo $(SOURCES)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
 
 %.cc.o: %.cc $(HEADERS)
@@ -45,7 +50,7 @@ CPP_TESTS = $(patsubst %.cc,%.test,$(wildcard tests/cpp/*.cc))
 cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
 
 tests/cpp/%.test: tests/cpp/%.cc $(OBJECTS) $(HEADERS)
-	@$(CC) $(CFLAGS) $< $(filter-out main.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@_
+	@$(CC) $(CFLAGS) $< $(filter-out ./ceos.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@_
 	@$@_; \
 	if [[ $$? != 0 ]]; then echo "$@: FAIL!"; else echo "$@: OK!"; fi
 

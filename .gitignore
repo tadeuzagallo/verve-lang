@@ -1,5 +1,4 @@
 *.o
 *.dSYM
-compiler/ceos-build
+ceos-build
 **/*.test_
-**/failed_patches

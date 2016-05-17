@@ -2,10 +2,10 @@
 #include <cstdio>
 #include <fstream>
 
-#include "./lexer.h"
-#include "./parser.h"
-#include "./generator.h"
-#include "./vm.h"
+#include "./parser/lexer.h"
+#include "./parser/parser.h"
+#include "./bytecode/generator.h"
+#include "./runtime/vm.h"
 
 int main(int argc, char **argv) {
   char *first = argv[1];
@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     assert(argc == 2);
   }
 
-  FILE *prelude = fopen("builtins.ceos", "r");
+  FILE *prelude = fopen("runtime/builtins.ceos", "r");
   FILE *source = fopen(isDebug || isCompile ? argv[2] : argv[1], "r");
   fseek(prelude, 0, SEEK_END);
   fseek(source, 0, SEEK_END);

@@ -2,9 +2,9 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "ast.h"
+#include "parser/ast.h"
 #include "opcodes.h"
-#include "old_scope.h"
+#include "utils/old_scope.h"
 
 #ifndef CEOS_GENERATOR_H
 #define CEOS_GENERATOR_H
