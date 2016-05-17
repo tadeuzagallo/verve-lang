@@ -130,14 +130,15 @@ namespace ceos {
     }
 
     while (true) {
-      if (m_lexer.token()->type == Token::Type::TYPE) {
+      if (m_lexer.skip(Token::Type::COLON)) {
+        ast->typeInfo = parseType();
+      } else if (m_lexer.token()->type == Token::Type::TYPE) {
         TypeChain *typeInfo = parseTypeInfo();
         m_typeInfo[AST::asID(ast)->name] = typeInfo;
         return nullptr;
       } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
         ast = parseCall(std::move(ast));
-      } else if (m_lexer.token()->type == Token::Type::L_BRACE) {
-        assert(ast->type == AST::Type::Call);
+      } else if (ast->type == AST::Type::Call &&  m_lexer.token()->type == Token::Type::L_BRACE) {
         auto call = AST::asCall(ast);
         ast = parseFunction(std::move(call));
       } else {
@@ -157,13 +158,13 @@ namespace ceos {
 
     auto fn = std::make_shared<AST::Function>();
     fn->name = AST::asID(call->callee);
-    fn->typeInfo = nullptr;
     if (InterfaceTypeInfo != nullptr) {
-      fn->typeInfo = InterfaceTypeInfo->operator[](fn->name->name);
-    }
-    if (!(fn->typeInfo = fn->typeInfo ?: m_typeInfo[fn->name->name])) {
-      fprintf(stderr, "Defining function `%s` that does not have type information\n", fn->name->name.c_str());
-      throw std::runtime_error("Missing type infomation");
+      if (!(fn->typeInfo = InterfaceTypeInfo->operator[](fn->name->name))) {
+        fprintf(stderr, "Defining function `%s` that does not have type information\n", fn->name->name.c_str());
+        throw std::runtime_error("Missing type infomation");
+      }
+    } else {
+      fn->typeInfo = new TypeChain();
     }
 
     fn->name->name += ImplementationTypeName;
@@ -186,7 +187,18 @@ namespace ceos {
       }
 
       auto fnArg = std::make_shared<AST::FunctionArgument>(argName, i);
-      fnArg->typeInfo = fn->getTypeInfo()->types[i++];
+
+      if (!InterfaceTypeInfo) {
+        if (!arg->typeInfo) {
+          fprintf(stderr, "Defining function `%s` that does not have type information\n", fn->name->name.c_str());
+          throw std::runtime_error("Missing type infomation");
+        }
+        fn->getTypeInfo()->types.push_back((fnArg->typeInfo = arg->typeInfo));
+      } else {
+        fnArg->typeInfo = fn->getTypeInfo()->types[i++];
+      }
+
+
       GenericType *gt;
       if ((gt = dynamic_cast<GenericType *>(fnArg->typeInfo))) {
         if (!(fnArg->typeInfo = ImplementationTypes->operator[](gt->typeName))) {
@@ -195,6 +207,11 @@ namespace ceos {
       }
       fn->arguments.push_back(fnArg);
       m_scope->set(argName, fnArg);
+    }
+
+    if (!InterfaceTypeInfo) {
+      fn->getTypeInfo()->types.push_back(call->typeInfo);
+      m_typeInfo[fn->name->name] = fn->getTypeInfo();
     }
 
     m_lexer.ensure(Token::Type::L_BRACE);
@@ -242,6 +259,11 @@ namespace ceos {
     }
 
     return call;
+  }
+
+  Type *Parser::parseType() {
+    auto typeString = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+    return m_types[typeString];
   }
 
   TypeChain *Parser::parseTypeInfo(std::string *genericName, bool skipTypeToken) {

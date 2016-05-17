@@ -45,8 +45,12 @@ namespace ceos {
       BASIC_TOKEN(',', COMMA)
 
       case ':':
-        assert(nextChar() == ':');
-        m_token = new Token(Token::Type::TYPE);
+        if (nextChar() == ':') {
+          m_token = new Token(Token::Type::TYPE);
+        } else {
+          m_pos--;
+          m_token = new Token(Token::Type::COLON);
+        }
         break;
 
       case '-':

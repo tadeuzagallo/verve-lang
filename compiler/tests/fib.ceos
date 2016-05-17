@@ -1,5 +1,4 @@
-fib :: Int -> Int
-fib(n) {
+fib(n: Int): Int {
   if (lt(n, 2)) {
     n
   } else {

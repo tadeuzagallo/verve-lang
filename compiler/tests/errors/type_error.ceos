@@ -1,4 +1,3 @@
-printInt :: Int -> Int
-printInt(a) { a }
+printInt(a: Int): Int { a }
 
 printInt("ASD")

@@ -30,6 +30,7 @@ namespace ceos {
           R_BRACE,
           L_ANGLE,
           R_ANGLE,
+          COLON,
         )
 
       Token(Type t) : type(t) {}

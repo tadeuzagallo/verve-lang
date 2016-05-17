@@ -1,5 +1,4 @@
-square :: Int -> Int
-square(n) {
+square(n: Int): Int {
   mul(n, n)
 }
 
