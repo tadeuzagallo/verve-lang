@@ -1,0 +1,14 @@
+# test all the ambiguities
+
+foo(): Void {}
+bar(a: Int): Int { a }
+
+_(a: Int): Int {
+  bar(a)
+}(42)
+
+_(): Void {
+  foo()
+}()
+
+print("OK")
