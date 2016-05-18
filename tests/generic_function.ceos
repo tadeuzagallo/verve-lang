@@ -1,0 +1,6 @@
+id<T>(a: T): T {
+  a
+}
+
+print(id("foo"))
+print(id(42))

@@ -20,16 +20,16 @@ namespace ceos {
       std::shared_ptr<AST::Program> parse(void);
 
     private:
-      std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee);
+      std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee, TypeMap *types = nullptr);
       std::shared_ptr<AST::Number> parseNumber(void);
-      std::shared_ptr<AST> parseID(void);
-      std::shared_ptr<AST::Function> parseFunction(std::shared_ptr<AST::Call> &&);
+      std::shared_ptr<AST> parseID(TypeMap *types = nullptr);
+      std::shared_ptr<AST::Function> parseFunction(std::shared_ptr<AST::Call> &&, TypeMap *);
       std::shared_ptr<AST::String> parseString(void);
-      std::shared_ptr<AST> parseFactor(void);
+      std::shared_ptr<AST> parseFactor(TypeMap *types = nullptr);
       std::shared_ptr<AST> parseIf(void);
       std::shared_ptr<AST::Block> parseBlock(Token::Type delim);
 
-      Type *parseType();
+      Type *parseType(TypeMap *types = nullptr);
       TypeChain *parseTypeInfo(std::string *genericName = nullptr, bool skipTypeToken = true);
       void parseInterface();
       std::shared_ptr<AST> parseImplementation();

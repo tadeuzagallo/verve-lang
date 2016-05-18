@@ -4,6 +4,7 @@
 #include "token.h"
 
 namespace ceos {
+  static Type *GenericInitialValue = (Type *)&GenericInitialValue;
 
   static std::unordered_map<std::string, TypeChain *> *InterfaceTypeInfo;
   static std::unordered_map<std::string, Type *> *ImplementationTypes;
@@ -38,12 +39,12 @@ namespace ceos {
     return block;
   }
 
-  std::shared_ptr<AST> Parser::parseFactor() {
+  std::shared_ptr<AST> Parser::parseFactor(TypeMap *types) {
     switch (m_lexer.token()->type) {
       case Token::Type::NUMBER:
         return parseNumber();
       case Token::Type::ID:
-        return parseID();
+        return parseID(types);
       case Token::Type::STRING:
         return parseString();
       default:
@@ -96,7 +97,7 @@ namespace ceos {
     return ast;
   }
 
-  std::shared_ptr<AST> Parser::parseID() {
+  std::shared_ptr<AST> Parser::parseID(TypeMap *types) {
     auto id = *static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
 
     if (id.name == "if") {
@@ -129,18 +130,30 @@ namespace ceos {
       }
     }
 
+    std::unordered_map<std::string, Type *> newTypes;
+    if (m_lexer.skip(Token::Type::L_ANGLE)) {
+      do {
+        auto t = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
+        newTypes[t->name] = new GenericType(t->name);
+        if (m_lexer.skip(Token::Type::R_ANGLE)) {
+          break;
+        }
+      } while(m_lexer.skip(Token::Type::COMMA));
+      types = &newTypes;
+    }
+
     while (true) {
       if (m_lexer.skip(Token::Type::COLON)) {
-        ast->typeInfo = parseType();
+        ast->typeInfo = parseType(types);
       } else if (m_lexer.token()->type == Token::Type::TYPE) {
         TypeChain *typeInfo = parseTypeInfo();
         m_typeInfo[AST::asID(ast)->name] = typeInfo;
         return nullptr;
       } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
-        ast = parseCall(std::move(ast));
+        ast = parseCall(std::move(ast), types);
       } else if (ast->type == AST::Type::Call &&  m_lexer.token()->type == Token::Type::L_BRACE) {
         auto call = AST::asCall(ast);
-        ast = parseFunction(std::move(call));
+        ast = parseFunction(std::move(call), types);
       } else {
         break;
       }
@@ -153,7 +166,7 @@ namespace ceos {
     return ast;
   }
 
-  std::shared_ptr<AST::Function> Parser::parseFunction(std::shared_ptr<AST::Call> &&call) {
+  std::shared_ptr<AST::Function> Parser::parseFunction(std::shared_ptr<AST::Call> &&call, TypeMap *types) {
     assert(call->callee->type == AST::Type::ID);
 
     auto fn = std::make_shared<AST::Function>();
@@ -201,8 +214,11 @@ namespace ceos {
 
       GenericType *gt;
       if ((gt = dynamic_cast<GenericType *>(fnArg->typeInfo))) {
-        if (!(fnArg->typeInfo = ImplementationTypes->operator[](gt->typeName))) {
+        if (!types->operator[](gt->typeName) && !(fnArg->typeInfo = ImplementationTypes->operator[](gt->typeName))) {
           throw std::runtime_error("Unknown type");
+        }
+        if (!InterfaceTypeInfo) {
+          fn->getTypeInfo()->generics[gt->typeName] = GenericInitialValue;
         }
       }
       fn->arguments.push_back(fnArg);
@@ -234,7 +250,7 @@ namespace ceos {
     return ast;
   }
 
-  std::shared_ptr<AST::Call> Parser::parseCall(std::shared_ptr<AST> &&callee) {
+  std::shared_ptr<AST::Call> Parser::parseCall(std::shared_ptr<AST> &&callee, TypeMap *types) {
     auto start = callee->loc.start;
 
     m_lexer.ensure(Token::Type::L_PAREN);
@@ -243,7 +259,7 @@ namespace ceos {
     call->callee = callee;
 
     while (m_lexer.token()->type != Token::Type::R_PAREN) {
-      auto argument = parseFactor();
+      auto argument = parseFactor(types);
       call->arguments.push_back(argument);
       if (m_lexer.token()->type != Token::Type::R_PAREN) {
         m_lexer.ensure(Token::Type::COMMA);
@@ -261,21 +277,22 @@ namespace ceos {
     return call;
   }
 
-  Type *Parser::parseType() {
+  Type *Parser::parseType(TypeMap *types) {
     if (m_lexer.skip(Token::Type::L_PAREN)) {
       TypeChain *typeInfo = new TypeChain();
       while (!m_lexer.skip(Token::Type::R_PAREN)) {
-        typeInfo->types.push_back(parseType());
+        typeInfo->types.push_back(parseType(types));
         if (m_lexer.token()->type != Token::Type::R_PAREN) {
           m_lexer.ensure(Token::Type::COMMA);
         }
       }
       m_lexer.ensure(Token::Type::COLON);
-      typeInfo->types.push_back(parseType());
+      typeInfo->types.push_back(parseType(types));
       return typeInfo;
     } else {
       auto typeString = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
-      return m_types[typeString];
+      auto type = types ? types->operator[](typeString) : nullptr;
+      return type ?: m_types[typeString];
     }
   }
 
@@ -379,20 +396,32 @@ namespace ceos {
         throw;
       }
 
+      TypeMap generics = typeInfo->generics;
       for (unsigned i = 0; i < typeInfo->types.size() - 1; i++) {
         Type* expected = typeInfo->types[i];
         Type* actual = call->arguments[i]->typeInfo;
 
-        if (dynamic_cast<GenericType *>(expected)) {
-          auto impl = dynamic_cast<TypeInterface *>(m_types[calleeName])->implementations[actual];
-          if (!impl) {
-            fprintf(stderr, "Couldn't find implementation for `%s` with signature `%s`", calleeName.c_str(), call->typeInfo->toString().c_str());
-            throw;
-          }
+        GenericType *gt;
+        if ((gt = dynamic_cast<GenericType *>(expected))) {
+          Type *t;
+          if ((t = generics[gt->typeName])) {
+            if (t == GenericInitialValue) {
+              generics[gt->typeName] = actual;
+              continue;
+            } else {
+              expected = t;
+            }
+          } else {
+            auto impl = dynamic_cast<TypeInterface *>(m_types[calleeName])->implementations[actual];
+            if (!impl) {
+              fprintf(stderr, "Couldn't find implementation for `%s` with signature `%s`", calleeName.c_str(), call->typeInfo->toString().c_str());
+              throw;
+            }
 
-          callee->name += impl->type->toString();
-          callee->uid = uniqueString(callee->name);
-          expected = impl->type;
+            callee->name += impl->type->toString();
+            callee->uid = uniqueString(callee->name);
+            expected = impl->type;
+          }
         }
 
         TypeInterface *interface;
@@ -407,6 +436,19 @@ namespace ceos {
           throw;
         }
       }
+
+      GenericType *gt;
+      if ((gt = dynamic_cast<GenericType *>(call->typeInfo))) {
+        Type *t;
+        if ((t = generics[gt->typeName])) {
+          if (t == GenericInitialValue) {
+            throw std::runtime_error("Cannot resolve generic return type for function");
+          } else {
+            call->typeInfo = t;
+          }
+        }
+      }
+
     }
   }
 

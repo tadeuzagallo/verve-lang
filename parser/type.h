@@ -8,11 +8,14 @@
 
 namespace ceos {
 
-  struct Type { 
+
+  struct Type {
     virtual bool equals(Type *) = 0;
     virtual std::string toString() = 0;
     virtual ~Type() {}
   };
+
+  typedef std::unordered_map<std::string, Type *> TypeMap;
 
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
@@ -124,6 +127,7 @@ namespace ceos {
 
     Type *returnType() { return types.back(); }
     std::vector<Type *> types;
+    TypeMap generics;
   };
 
   struct TypeImplementation;
