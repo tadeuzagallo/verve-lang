@@ -12,7 +12,7 @@ sub :: Int -> Int -> Int
 mul :: Int -> Int -> Int
 div :: Int -> Int -> Int
 
-# should be bool
+// should be bool
 and :: Int -> Int -> Int
 or :: Int -> Int -> Int
 
@@ -23,8 +23,8 @@ gte :: Int -> Int -> Int
 
 equals :: Int -> Int -> Int
 
-# at :: List(a) -> a
-# substr :: (String, ():String): String
-# list :: a... -> List(a)
+// at :: List(a) -> a
+// substr :: (String, ():String): String
+// list :: a... -> List(a)
 
 __heap-size__ :: Int

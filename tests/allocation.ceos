@@ -229,7 +229,7 @@ k(){ j() j() }
 
 k()
 
-# this will allocate 4243744b (~4mb)
-# the GC should get it down to ~20k
-# here we just test it's less than ~30k
+// this will allocate 4243744b (~4mb)
+// the GC should get it down to ~20k
+// here we just test it's less than ~30k
 print(lt(__heap-size__(), 30000))

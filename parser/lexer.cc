@@ -63,11 +63,24 @@ namespace ceos {
         m_token = new Token(Token::Type::END);
         break;
 
-      case '#':
-        do {
-          c = nextChar();
-        } while (c != '\n');
+      case '/': {
+        char c = nextChar();
+
+        if (c == '/') {
+          do {
+            c = nextChar();
+          } while (c != '\n');
+        } else if(c == '*') {
+          char prev;
+          do {
+            prev = c;
+            c = nextChar();
+          } while (prev != '*' || c != '/');
+        } else {
+          throw std::runtime_error("Invalid token after /");
+        }
         return nextToken();
+      }
 
       case '"': {
         std::stringstream str;
