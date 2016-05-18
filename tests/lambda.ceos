@@ -1,13 +1,13 @@
-_(n){ print(n) }("hello")
+_(n: String): Void { print(n) }("hello")
 
-_(fact) {
+_(fact: (Int): Int): Void {
   print(fact(5))
 }(
-  _(x) {
+  _(x: ((Int): Int): (Int): Int): (Int): Int {
     x(x)
   }(
-    _(fact) {
-      _(n) {
+    _(fact: ((Int): Int): (Int): Int): Int {
+      _(n: Int): Int {
         if (lte(n, 2))
           n
         else
