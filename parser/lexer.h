@@ -26,6 +26,8 @@ namespace ceos {
 
       void ensure(Token::Type);
 
+      void rewind();
+
       void _Noreturn invalidType();
       void printSource();
 

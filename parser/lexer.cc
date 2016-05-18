@@ -121,6 +121,12 @@ namespace ceos {
     return m_prevToken;
   }
 
+  void Lexer::rewind() {
+    m_token = m_prevToken;
+    m_prevToken = nullptr;
+    m_pos = m_token->loc.end;
+  }
+
   bool Lexer::skip(Token::Type type) {
     if (m_token->type == type) {
       nextToken();
