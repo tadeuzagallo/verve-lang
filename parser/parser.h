@@ -29,10 +29,13 @@ namespace ceos {
       std::shared_ptr<AST> parseIf(void);
       std::shared_ptr<AST::Block> parseBlock(Token::Type delim);
 
-      Type *parseType(TypeMap *types = nullptr);
-      TypeChain *parseTypeInfo(std::string *genericName = nullptr, bool skipTypeToken = true);
-      void parseInterface();
+      std::shared_ptr<AST::Block> parseInterface();
       std::shared_ptr<AST> parseImplementation();
+
+      bool parseGenerics(TypeMap &);
+      Type *parseType(TypeMap *types = nullptr);
+      TypeChain *parsePrototype();
+
       void typeCheck(std::shared_ptr<AST::Call> &&);
 
       // Helpers

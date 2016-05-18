@@ -107,6 +107,14 @@ namespace ceos {
       return nullptr;
     } else if (id.name == "implementation") {
       return parseImplementation();
+    } else if (id.name == "extern") {
+      auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+      auto typeInfo = parsePrototype();
+      typeInfo->external = true;
+      m_typeInfo[name] = typeInfo;
+      return nullptr;
+    } else if (id.name == "virtual") {
+      throw std::runtime_error("Virtual functions can only be placed inside interfaces");
     }
 
     std::shared_ptr<AST> ast, ref;
@@ -130,25 +138,14 @@ namespace ceos {
       }
     }
 
-    std::unordered_map<std::string, Type *> newTypes;
-    if (m_lexer.skip(Token::Type::L_ANGLE)) {
-      do {
-        auto t = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
-        newTypes[t->name] = new GenericType(t->name);
-        if (m_lexer.skip(Token::Type::R_ANGLE)) {
-          break;
-        }
-      } while(m_lexer.skip(Token::Type::COMMA));
+    TypeMap newTypes;
+    if (parseGenerics(newTypes)) {
       types = &newTypes;
     }
 
     while (true) {
       if (m_lexer.skip(Token::Type::COLON)) {
         ast->typeInfo = parseType(types);
-      } else if (m_lexer.token()->type == Token::Type::TYPE) {
-        TypeChain *typeInfo = parseTypeInfo();
-        m_typeInfo[AST::asID(ast)->name] = typeInfo;
-        return nullptr;
       } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
         ast = parseCall(std::move(ast), types);
       } else if (ast->type == AST::Type::Call &&  m_lexer.token()->type == Token::Type::L_BRACE) {
@@ -296,37 +293,7 @@ namespace ceos {
     }
   }
 
-  TypeChain *Parser::parseTypeInfo(std::string *genericName, bool skipTypeToken) {
-    if (skipTypeToken) {
-      m_lexer.ensure(Token::Type::TYPE);
-    }
-
-    TypeChain *typeInfo = new TypeChain();
-    do {
-      Type *type = nullptr;
-
-      if (m_lexer.skip(Token::Type::L_PAREN)) {
-        type = parseTypeInfo(genericName, false);
-        m_lexer.ensure(Token::Type::R_PAREN);
-      } else {
-        auto typeString = AST::asID(parseID())->name;
-        if (genericName != nullptr && typeString == *genericName) {
-          type = new GenericType(typeString);
-        } else {
-          type = m_types[typeString];
-        }
-      }
-
-      if (!type) {
-        throw std::runtime_error("Undefined type");
-      }
-      typeInfo->types.push_back(type);
-    } while (m_lexer.skip(Token::Type::ARROW));
-
-    return typeInfo;
-  }
-  
-  void Parser::parseInterface() {
+  std::shared_ptr<AST::Block> Parser::parseInterface() {
     auto interface = new TypeInterface();
     interface->name = ((Token::ID *)m_lexer.token(Token::Type::ID))->name;
 
@@ -335,15 +302,30 @@ namespace ceos {
     m_lexer.ensure(Token::Type::R_ANGLE);
 
     m_lexer.ensure(Token::Type::L_BRACE);
+
+    auto block = std::make_shared<AST::Block>();
     while (!m_lexer.skip(Token::Type::R_BRACE)) {
-      auto fnName = ((Token::ID *)m_lexer.token(Token::Type::ID))->name;
-      auto typeInfo = parseTypeInfo(&interface->genericName);
-      m_types[fnName] = interface;
-      interface->functions[fnName] = typeInfo;
-      m_typeInfo[fnName] = typeInfo;
+      auto next = ((Token::ID *)m_lexer.token())->name;
+      if (next != "virtual") {
+        auto node = parseID();
+        if (node) {
+          block->nodes.push_back(node);
+        }
+      } else {
+        m_lexer.ensure(Token::Type::ID);
+
+        auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+        auto typeInfo = parsePrototype();
+
+        m_types[name] = interface;
+        interface->functions[name] = typeInfo;
+        m_typeInfo[name] = typeInfo;
+      }
     }
 
     m_types[interface->name] = interface;
+
+    return block;
   }
 
   std::shared_ptr<AST> Parser::parseImplementation() {
@@ -379,6 +361,42 @@ namespace ceos {
 
     block->needsScope = false;
     return block;
+  }
+  
+  TypeChain *Parser::parsePrototype() {
+    auto typeInfo = new TypeChain();
+
+    parseGenerics(typeInfo->generics);
+
+    m_lexer.ensure(Token::Type::L_PAREN);
+    while (m_lexer.token()->type != Token::Type::R_PAREN) {
+      typeInfo->types.push_back(parseType(&typeInfo->generics));
+      if (!m_lexer.skip(Token::Type::COMMA)) {
+        break;
+      }
+    }
+    m_lexer.ensure(Token::Type::R_PAREN);
+
+    m_lexer.ensure(Token::Type::COLON);
+    typeInfo->types.push_back(parseType(&typeInfo->generics));
+
+    return typeInfo;
+  }
+
+  bool Parser::parseGenerics(TypeMap &generics) {
+    if (m_lexer.skip(Token::Type::L_ANGLE)) {
+      do {
+        auto t = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
+        generics[t->name] = new GenericType(t->name);
+        if (m_lexer.skip(Token::Type::R_ANGLE)) {
+          break;
+        }
+      } while(m_lexer.skip(Token::Type::COMMA));
+
+      return false;
+    }
+
+    return true;
   }
 
   void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {

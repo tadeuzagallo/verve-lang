@@ -128,6 +128,7 @@ namespace ceos {
     Type *returnType() { return types.back(); }
     std::vector<Type *> types;
     TypeMap generics;
+    bool external;
   };
 
   struct TypeImplementation;

@@ -1,30 +1,32 @@
+extern test((Int): String): Void
+
 interface Stringify<T> {
-  stringify :: T -> String
+  virtual stringify(T): String
 }
 
 implementation Stringify<Int> { }
 implementation Stringify<String> { }
 
-print :: Stringify -> Void
+extern print(Stringify): Void
 
-add :: Int -> Int -> Int
-sub :: Int -> Int -> Int
-mul :: Int -> Int -> Int
-div :: Int -> Int -> Int
+extern add(Int, Int): Int
+extern sub(Int, Int): Int
+extern mul(Int, Int): Int
+extern div(Int, Int): Int
 
 // should be bool
-and :: Int -> Int -> Int
-or :: Int -> Int -> Int
+extern and(Int, Int): Int
+extern or(Int, Int): Int
 
-lt :: Int -> Int -> Int
-gt :: Int -> Int -> Int
-lte :: Int -> Int -> Int
-gte :: Int -> Int -> Int
+extern lt(Int, Int): Int
+extern gt(Int, Int): Int
+extern lte(Int, Int): Int
+extern gte(Int, Int): Int
 
-equals :: Int -> Int -> Int
+extern equals(Int, Int): Int
 
-// at :: List(a) -> a
-// substr :: (String, ():String): String
-// list :: a... -> List(a)
+// at(List(a), a
+// substr((String, ():String): String
+// list(a..., List(a)
 
-__heap-size__ :: Int
+extern __heap-size__(): Int
