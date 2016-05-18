@@ -1,1 +1,1 @@
-au BufNewFile,BufRead *.ceos setf ceos
+au BufEnter,BufNewFile,BufRead *.ceos setf ceos
