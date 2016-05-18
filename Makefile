@@ -12,12 +12,11 @@ OBJECTS = $(patsubst %,.build/%.o,$(SOURCES))
 TARGET = ceos
 
 default:
-	make -j $(shell sysctl -n hw.ncpu) $(TARGET)
+	@make -j $(shell sysctl -n hw.ncpu) $(TARGET)
 
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
-	echo $(SOURCES)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
 
 .build/%.cc.o: %.cc $(HEADERS)
