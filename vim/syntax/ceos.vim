@@ -2,7 +2,7 @@
 " Language:	Ceos
 " Current Maintainer:	tadeuzagallo (https://github.com/tadeuzagallo)
 
-syn keyword ceosLanguageKeywords if else interface implementation extern
+syn keyword ceosLanguageKeywords if else interface implementation extern virtual
 
 syn keyword ceosTodo contained TODO NOTE
 syn region	ceosComment	start="//" skip="\\$" end="$" keepend contains=ceosTodo
