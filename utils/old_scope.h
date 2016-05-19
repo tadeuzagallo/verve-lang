@@ -1,3 +1,5 @@
+#include "parser/type.h"
+
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -31,10 +33,36 @@ namespace ceos {
         return m_previous ?: m_parent ?: this->shared_from_this();
       }
 
+      inline void set(std::string key, T value) {
+        m_table[key] = value;
+      }
+
       inline T get(std::string &var, bool recursive = true) {
         auto it = m_table.find(var);
         if (it != m_table.end()) return it->second;
         else if (recursive && m_parent != nullptr) return m_parent->get(var);
+        else return nullptr;
+      }
+
+      inline void setType(std::string key, Type *value) {
+        m_types[key] = value;
+      }
+
+      inline Type *getType(std::string &var, bool recursive = true) {
+        auto it = m_types.find(var);
+        if (it != m_types.end()) return it->second;
+        else if (recursive && m_parent != nullptr) return m_parent->getType(var);
+        else return nullptr;
+      }
+
+      inline void setTypeInfo(std::string key, TypeInfo *value) {
+        m_typeInfo[key] = value;
+      }
+
+      inline TypeInfo *getTypeInfo(std::string &var, bool recursive = true) {
+        auto it = m_typeInfo.find(var);
+        if (it != m_typeInfo.end()) return it->second;
+        else if (recursive && m_parent != nullptr) return m_parent->getTypeInfo(var);
         else return nullptr;
       }
 
@@ -49,10 +77,6 @@ namespace ceos {
           if (scope->isInCurrentScope(var)) { return scope; }
         } while ((scope = scope->parent()) != nullptr);
         return nullptr;
-      }
-
-      inline void set(std::string key, T value) {
-        m_table[key] = value;
       }
 
       inline void visit(std::function<void(T)> visitor) {
@@ -72,6 +96,9 @@ namespace ceos {
       OldScopePtr m_parent;
       OldScopePtr m_previous;
       std::unordered_map<std::string, T> m_table;
+    public:
+      std::unordered_map<std::string, Type *> m_types;
+      std::unordered_map<std::string, TypeInfo *> m_typeInfo;
   };
 
 }

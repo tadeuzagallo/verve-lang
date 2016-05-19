@@ -1,1 +1,1 @@
-Expected `Int` but got `List<Char>`
+Expected `Int` but got `List<Char>` on arg #1 for function `printInt`

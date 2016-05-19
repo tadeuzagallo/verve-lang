@@ -4,3 +4,16 @@ id<T>(a: T): T {
 
 print(id("foo"))
 print(id(42))
+
+interface Foo<T> {
+  virtual bar<U>(T, U): U
+}
+
+implementation Foo<String> {
+  bar(str, int) {
+    print(str)
+    int
+  }
+}
+
+print(bar("foo", 42))

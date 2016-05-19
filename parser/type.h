@@ -8,14 +8,17 @@
 
 namespace ceos {
 
+  struct Type;
+  struct TypeInfo;
+
+  typedef std::unordered_map<std::string, Type *> TypeMap;
+  typedef std::unordered_map<std::string, TypeInfo *> TypeInfoMap;
 
   struct Type {
     virtual bool equals(Type *) = 0;
     virtual std::string toString() = 0;
     virtual ~Type() {}
   };
-
-  typedef std::unordered_map<std::string, Type *> TypeMap;
 
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
@@ -95,12 +98,12 @@ namespace ceos {
     std::vector<Type *> types;
   };
 
-  struct TypeChain : Type {
-    TypeChain() {}
+  struct TypeInfo : Type {
+    TypeInfo() {}
 
     virtual bool equals(Type *other) override {
-      TypeChain *t;
-      if (!(t = dynamic_cast<TypeChain *>(other))) {
+      TypeInfo *t;
+      if (!(t = dynamic_cast<TypeInfo *>(other))) {
         return false;
       }
       for (unsigned i = 0; i < types.size(); i++) {
@@ -161,7 +164,7 @@ namespace ceos {
     std::string name;
     std::string genericName;
     std::unordered_map<Type *, TypeImplementation *> implementations;
-    std::unordered_map<std::string, TypeChain *> functions;
+    std::unordered_map<std::string, TypeInfo *> functions;
   };
 
   struct TypeImplementation {

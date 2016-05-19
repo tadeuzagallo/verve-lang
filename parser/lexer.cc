@@ -77,6 +77,7 @@ namespace ceos {
             c = nextChar();
           } while (prev != '*' || c != '/');
         } else {
+          printSource();
           throw std::runtime_error("Invalid token after /");
         }
         return nextToken();
@@ -185,7 +186,11 @@ namespace ceos {
   }
 
   void Lexer::printSource() {
-    int start = m_token->loc.start;
+    printSource(m_token->loc);
+  }
+
+  void Lexer::printSource(Loc loc) {
+    int start = loc.start;
     int actualStart = start;
     do {
       m_pos = start;

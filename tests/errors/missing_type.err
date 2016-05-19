@@ -1,1 +1,1 @@
-Defining function `foo` that does not have type information
+Defining function `foo` that is missing type information for arg #1

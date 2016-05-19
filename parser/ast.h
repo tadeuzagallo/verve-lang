@@ -42,7 +42,7 @@ namespace ceos {
         If
       );
 
-      AST(Type t) : type(t) {}
+      AST(Type t) : type(t), typeInfo(nullptr) {}
 
       ~AST() {
         if (typeInfo) {
@@ -109,8 +109,8 @@ namespace ceos {
     public:
       Function() : AST(Type::Function) {}
 
-      TypeChain *getTypeInfo() {
-        return (TypeChain *)typeInfo;
+      TypeInfo *getTypeInfo() {
+        return (TypeInfo *)typeInfo;
       }
 
       std::shared_ptr<AST::ID> name;

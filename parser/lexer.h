@@ -30,6 +30,7 @@ namespace ceos {
 
       void _Noreturn invalidType();
       void printSource();
+      void printSource(Loc loc);
 
     private:
       void nextToken();
