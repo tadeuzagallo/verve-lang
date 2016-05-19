@@ -1,5 +1,5 @@
 interface Show<T> {
-  show :: T -> String
+  virtual show(T): String
 }
 
 implementation Show<String> {
