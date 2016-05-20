@@ -42,7 +42,10 @@ namespace ceos {
         If
       );
 
-      AST(Type t) : type(t), typeInfo(nullptr) {}
+      AST(Type t) :
+        type(t),
+        typeInfo(nullptr),
+        hasTypeAnnotation(false) {}
 
       ~AST() {
         if (typeInfo) {
@@ -53,6 +56,7 @@ namespace ceos {
       Type type;
       Loc loc;
       ::ceos::Type *typeInfo;
+      bool hasTypeAnnotation;
   };
 
   class AST::Block : public AST {

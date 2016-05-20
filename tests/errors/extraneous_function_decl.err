@@ -1,0 +1,3 @@
+Cannot declare function with two bodies
+1: foo<T>(n: T) {  }(){  }
+   ^

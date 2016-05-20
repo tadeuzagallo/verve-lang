@@ -1,0 +1,3 @@
+Extraneous generic type in function call
+1: foo<T>(1)
+   ^

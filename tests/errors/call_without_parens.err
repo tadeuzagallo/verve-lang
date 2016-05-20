@@ -1,0 +1,3 @@
+Cannot declare method without arguments/parenthesis
+1: print {  }
+   ^

@@ -6,6 +6,10 @@
 #pragma once
 
 namespace ceos {
+  struct Pos {
+    int line;
+    int column;
+  };
 
   class Lexer {
     public:
@@ -31,10 +35,13 @@ namespace ceos {
       void _Noreturn invalidType();
       void printSource();
       void printSource(Loc loc);
+      void _Noreturn error(Loc loc, const char *, ...);
 
     private:
       void nextToken();
       char nextChar();
+
+      Pos getSourcePosition(Loc loc);
 
       const char *m_input;
       size_t m_pos;

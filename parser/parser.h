@@ -22,10 +22,10 @@ namespace ceos {
     private:
       std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee);
       std::shared_ptr<AST::Number> parseNumber(void);
-      std::shared_ptr<AST> parseID();
+      std::shared_ptr<AST> parseID(bool isCall = false);
       std::shared_ptr<AST::Function> parseFunction(std::shared_ptr<AST::Call> &&, TypeMap &);
       std::shared_ptr<AST::String> parseString(void);
-      std::shared_ptr<AST> parseFactor();
+      std::shared_ptr<AST> parseFactor(bool isCall = false);
       std::shared_ptr<AST> parseIf(void);
       std::shared_ptr<AST::Block> parseBlock(Token::Type delim);
 

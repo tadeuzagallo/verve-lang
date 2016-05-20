@@ -37,12 +37,12 @@ namespace ceos {
     return block;
   }
 
-  std::shared_ptr<AST> Parser::parseFactor() {
+  std::shared_ptr<AST> Parser::parseFactor(bool isCall) {
     switch (m_lexer.token()->type) {
       case Token::Type::NUMBER:
         return parseNumber();
       case Token::Type::ID:
-        return parseID();
+        return parseID(isCall);
       case Token::Type::STRING:
         return parseString();
       default:
@@ -95,7 +95,7 @@ namespace ceos {
     return ast;
   }
 
-  std::shared_ptr<AST> Parser::parseID() {
+  std::shared_ptr<AST> Parser::parseID(bool isCall) {
     auto id = *static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
 
     if (id.name == "if") {
@@ -138,26 +138,80 @@ namespace ceos {
 
     pushTypeScope();
 
+    int state = 0;
+    static const int s_generics = 1;
+    static const int s_call = 2;
+    static const int s_scope = 4;
+    static const int s_type = 8;
+
     TypeMap generics;
-    parseGenerics(generics);
+    if (parseGenerics(generics)) {
+      state |= s_generics;
+    }
 
     while (true) {
       if (m_lexer.skip(Token::Type::COLON)) {
+        state |= s_type;
+
+        ast->hasTypeAnnotation = true;
         ast->typeInfo = parseType();
-      } else if (m_lexer.token()->type == Token::Type::L_PAREN) {
+        continue;
+      } 
+
+      if (m_lexer.token()->type == Token::Type::L_PAREN) {
+        state |= s_call;
+
         ast = parseCall(std::move(ast));
-      } else if (ast->type == AST::Type::Call &&  m_lexer.token()->type == Token::Type::L_BRACE) {
+        continue;
+      } 
+
+      if (m_lexer.token()->type == Token::Type::L_BRACE) {
+        if (!(state & s_call)) {
+          m_lexer.error(ast->loc, "Cannot declare method without arguments/parenthesis");
+        }
+        if (state & s_scope) {
+          m_lexer.error(ast->loc, "Cannot declare function with two bodies");
+        }
+        state = s_scope;
+
         auto call = AST::asCall(ast);
         ast = parseFunction(std::move(call), generics);
-      } else {
-        break;
+
+        popTypeScope();
+
+        continue;
+      } else if (state & s_call) {
+        if (state & (s_type | s_generics)) {
+          m_lexer.error(ast->loc, "Extraneous %s in function call", (state & s_type) ? "return type" : "generic type");
+        }
+
+        state &= ~(s_type | s_generics | s_call);
+
+        unsigned i = 0;
+        for (auto arg : AST::asCall(ast)->arguments) {
+          i++;
+          if(arg->hasTypeAnnotation) {
+            m_lexer.error(ast->loc, "Extraneous type annotation for arg #%d", i);
+          }
+        }
+
+        typeCheck(AST::asCall(ast));
+        continue;
       }
+
+      break;
     }
 
-    popTypeScope();
+    if (state & s_generics) {
+      m_lexer.error(ast->loc, "Trailing generics");
+    }
 
-    if (ast->type == AST::Type::Call) {
-      typeCheck(AST::asCall(ast));
+    if (!isCall && (state & s_type)) {
+      m_lexer.error(ast->loc, "Trailing type annotation");
+    }
+
+    if (!(state & s_scope)) {
+      popTypeScope();
     }
 
     return ast;
@@ -264,7 +318,7 @@ std::shared_ptr<AST::Call> Parser::parseCall(std::shared_ptr<AST> &&callee) {
   call->callee = callee;
 
   while (m_lexer.token()->type != Token::Type::R_PAREN) {
-    auto argument = parseFactor();
+    auto argument = parseFactor(true);
     call->arguments.push_back(argument);
     if (m_lexer.token()->type != Token::Type::R_PAREN) {
       m_lexer.ensure(Token::Type::COMMA);
@@ -411,10 +465,10 @@ bool Parser::parseGenerics(TypeMap &generics) {
       }
     } while(m_lexer.skip(Token::Type::COMMA));
 
-    return false;
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {

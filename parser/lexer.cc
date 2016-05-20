@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <math.h>
 
 #define BASIC_TOKEN(CHAR, TYPE) \
   case CHAR: \
@@ -166,23 +167,26 @@ namespace ceos {
     if (m_token->type == Token::Type::END) {
       std::cerr << "Unexpected end of input\n";
     } else {
-      int line = 1;
-      int column = 0;
-      m_pos = 0;
-      size_t pos = m_token->loc.start > m_offset ? m_token->loc.start - m_offset : m_token->loc.start;
-      for (size_t i = 0; i < pos; i++) {
-        if (m_input[i] == '\n') {
-          line++;
-          column = 0;
-        } else {
-          column++;
-        }
-      }
-
-      std::cerr << "Unexpected token `" << Token::typeName(m_token->type) << "` at " << line << ":" << column << std::endl;
+      Pos pos = getSourcePosition(m_token->loc);
+      std::cerr << "Unexpected token `" << Token::typeName(m_token->type) << "` at " << pos.line << ":" << pos.column << std::endl;
     }
     printSource();
     throw "Type error";
+  }
+
+  Pos Lexer::getSourcePosition(Loc loc) {
+    Pos pos = {1, 1};
+    m_pos = 0;
+    size_t i = loc.start >= m_offset ? m_offset : 0;
+    for (; i < loc.start; i++) {
+      if (m_input[i] == '\n') {
+        pos.line++;
+        pos.column = 1;
+      } else {
+        pos.column++;
+      }
+    }
+    return pos;
   }
 
   void Lexer::printSource() {
@@ -190,17 +194,35 @@ namespace ceos {
   }
 
   void Lexer::printSource(Loc loc) {
+    Pos pos = getSourcePosition(loc);
+
     int start = loc.start;
     int actualStart = start;
-    do {
-      m_pos = start;
-    } while (start > 0 && nextChar() != '\n' && start--);
+
+    while(start > 0 && m_input[start - 1] != '\n') {
+      start--;
+    }
+    m_pos = start;
 
     char line[256];
     unsigned i = 0;
     while ((line[i++] = nextChar()) != '\n');
     line[i] = 0;
-    std::cerr << line;
-    std::cerr << std::setw(actualStart - start + 1) << "^\n";
+
+    const char *separator = ": ";
+    int lineNoWidth = ceil(log10(pos.line + 1));
+
+    std::cerr << pos.line << separator << line;
+    std::cerr << std::setw((actualStart - start) + 2 + strlen(separator) + lineNoWidth) << "^\n";
+  }
+
+  void Lexer::error(Loc loc, const char *message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    fputc('\n', stderr);
+    printSource(loc);
+    throw std::runtime_error("Parser error");
   }
 }

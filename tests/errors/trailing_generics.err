@@ -1,0 +1,3 @@
+Trailing generics
+1: foo<T>
+   ^
