@@ -17,14 +17,14 @@ namespace ceos {
         m_input(input),
         m_pos(0),
         m_offset(offset),
-        m_token(nullptr),
-        m_prevToken(nullptr)
+        m_token(Token(Token::Type::END)),
+        m_prevToken(Token(Token::Type::END))
       {
         nextToken();
       }
 
-      Token *token(Token::Type);
-      Token *token();
+      Token &token(Token::Type);
+      Token &token();
 
       bool skip(Token::Type);
 
@@ -46,8 +46,8 @@ namespace ceos {
       const char *m_input;
       size_t m_pos;
       size_t m_offset;
-      Token *m_token;
-      Token *m_prevToken;
+      Token m_token;
+      Token m_prevToken;
   };
 
 }

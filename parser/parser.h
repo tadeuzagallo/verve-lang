@@ -37,7 +37,7 @@ namespace ceos {
       void typeCheck(std::shared_ptr<AST::Call> &&);
 
       // Helpers
-      unsigned uniqueString(std::string &);
+      unsigned uniqueString(std::string);
 
       // Type helpers
       template <typename T = Type *>

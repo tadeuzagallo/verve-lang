@@ -10,7 +10,7 @@
 
 #define BASIC_TOKEN(CHAR, TYPE) \
   case CHAR: \
-    m_token = new Token(Token::Type::TYPE); \
+    m_token = Token(Token::Type::TYPE); \
     break;
 
 namespace ceos {
@@ -25,16 +25,13 @@ namespace ceos {
 
   void Lexer::nextToken() {
     char c;
+    m_prevToken = std::move(m_token);
 
+start:
     do {
       c = nextChar();
     } while(isspace(c));
 
-    if (m_prevToken && m_prevToken != m_token) {
-      delete m_prevToken;
-    }
-
-    m_prevToken = m_token;
     int start = m_pos - 1;
     switch (c) {
       BASIC_TOKEN('(', L_PAREN)
@@ -47,21 +44,21 @@ namespace ceos {
 
       case ':':
         if (nextChar() == ':') {
-          m_token = new Token(Token::Type::TYPE);
+          m_token = Token(Token::Type::TYPE);
         } else {
           m_pos--;
-          m_token = new Token(Token::Type::COLON);
+          m_token = Token(Token::Type::COLON);
         }
         break;
 
       case '-':
         assert(nextChar() == '>');
-        m_token = new Token(Token::Type::ARROW);
+        m_token = Token(Token::Type::ARROW);
         break;
 
       case '\0':
-        start = m_token->loc.end > 0 ? m_token->loc.end - 1 : 0;
-        m_token = new Token(Token::Type::END);
+        start = m_token.loc.end > 0 ? m_token.loc.end - 1 : 0;
+        m_token = Token(Token::Type::END);
         break;
 
       case '/': {
@@ -81,22 +78,25 @@ namespace ceos {
           printSource();
           throw std::runtime_error("Invalid token after /");
         }
-        return nextToken();
+        goto start;
       }
 
       case '"': {
-        std::stringstream str;
+        auto start = m_pos;
+        unsigned length = 0;
         while ((c = nextChar()) != '"') {
-          str.put(c);
+          length++;
         }
-        m_token = new Token::String(str.str());
+        const char *str = (const char *)calloc(length + 1, 1);
+        memcpy((void *)str, m_input+start, length);
+        m_token = Token(Token::Type::STRING, str);
         break;
       }
 
       case '\'': {
         int number = nextChar();
         assert(nextChar() == '\'');
-        m_token = new Token::Number(number);
+        m_token = Token(Token::Type::NUMBER, number);
         break;
       }
 
@@ -110,16 +110,19 @@ namespace ceos {
 
           m_pos--;
 
-          m_token = new Token::Number(number);
+          m_token = Token(Token::Type::NUMBER, number);
         } else if (isalpha(c) || c == '_') {
-          std::stringstream id;
+          auto start = m_pos - 1;
+          unsigned length = 0;
           do {
-            id << c;
+            length++;
           } while (isalpha(c = nextChar()) || isnumber(c) || c == '_' || c == '-');
 
           m_pos--;
 
-          m_token = new Token::ID(id.str());
+          const char *str = (const char *)calloc(length + 1, 1);
+          memcpy((void *)str, m_input + start, length);
+          m_token = Token(Token::Type::ID, str);
         } else {
           // TODO: proper error here
           std::cerr << "Invalid token `" << c << "`\n";
@@ -127,51 +130,51 @@ namespace ceos {
         }
     }
 
-    m_token->loc.start = start;
-    m_token->loc.end = m_pos;
+    m_token.loc.start = start;
+    m_token.loc.end = m_pos;
   }
 
-  Token *Lexer::token(Token::Type type) {
+  Token &Lexer::token(Token::Type type) {
     ensure(type);
     return m_prevToken;
   }
 
   void Lexer::rewind() {
-    m_token = m_prevToken;
-    m_prevToken = nullptr;
-    m_pos = m_token->loc.end;
+    m_token = std::move(m_prevToken);
+    m_prevToken = Token(Token::Type::END);
+    m_pos = m_token.loc.end;
   }
 
   bool Lexer::skip(Token::Type type) {
-    if (m_token->type == type) {
+    if (m_token.type == type) {
       nextToken();
       return true;
     }
     return false;
   }
 
-  Token *Lexer::token(void) {
+  Token &Lexer::token(void) {
     return m_token;
   }
 
   void Lexer::ensure(Token::Type type) {
-    if (m_token->type != type) {
-      std::cerr << "Invalid token found: expected `" << Token::typeName(m_token->type) << "` to be `" << Token::typeName(type) << "`" << "\n";
+    if (m_token.type != type) {
+      std::cerr << "Invalid token found: expected `" << Token::typeName(m_token.type) << "` to be `" << Token::typeName(type) << "`" << "\n";
       printSource();
-      throw "Parser error";
+      throw std::runtime_error("Parser error");
     }
     nextToken();
   }
 
    void Lexer::invalidType() {
-    if (m_token->type == Token::Type::END) {
+    if (m_token.type == Token::Type::END) {
       std::cerr << "Unexpected end of input\n";
     } else {
-      Pos pos = getSourcePosition(m_token->loc);
-      std::cerr << "Unexpected token `" << Token::typeName(m_token->type) << "` at " << pos.line << ":" << pos.column << std::endl;
+      Pos pos = getSourcePosition(m_token.loc);
+      std::cerr << "Unexpected token `" << Token::typeName(m_token.type) << "` at " << pos.line << ":" << pos.column << std::endl;
     }
     printSource();
-    throw "Type error";
+    throw std::runtime_error("Type error");
   }
 
   Pos Lexer::getSourcePosition(Loc loc) {
@@ -190,7 +193,7 @@ namespace ceos {
   }
 
   void Lexer::printSource() {
-    printSource(m_token->loc);
+    printSource(m_token.loc);
   }
 
   void Lexer::printSource(Loc loc) {

@@ -1,6 +1,7 @@
 #include "utils/macros.h"
 
 #include <string>
+#include <cstdlib>
 
 #pragma once
 
@@ -33,30 +34,59 @@ namespace ceos {
           COLON,
         )
 
-      Token(Type t) : type(t) {}
+      Token(Type t) :
+        type(t) {}
+
+      Token(Type t, int num) :
+        type(t)
+      {
+        value.number = num;
+      }
+
+      Token(Type t, const char *str) :
+        type(t)
+      {
+        value.string = str;
+      }
+
+      Token(Token &&other) :
+        type(other.type),
+        loc(other.loc),
+        value(other.value)
+      {
+        other.value.string = NULL;
+      }
+
+      Token &operator=(Token &) = delete;
+      Token &operator=(Token &&other)
+      {
+        type = other.type;
+        loc = other.loc;
+        value = other.value;
+        other.value.string = NULL;
+        return *this;
+      };
+
+      ~Token() {
+        if (value.string) {
+          free((void *)value.string);
+          value.string = NULL;
+        }
+      }
+
+      inline std::string string() {
+        return std::string(value.string);
+      }
+
+      inline int number() {
+        return value.number;
+      }
 
       Type type;
       Loc loc;
-  };
-
-  class Token::ID : public Token {
-    public:
-      ID(std::string n) : Token(Type::ID), name(n) {}
-
-      std::string name;
-  };
-
-  class Token::Number : public Token {
-    public:
-      Number(int v) : Token(Type::NUMBER), value(v) {}
-
-      int value;
-  };
-
-  class Token::String : public Token {
-    public:
-      String(std::string str) : Token(Type::STRING), value(str) {}
-
-      std::string value;
+      union {
+        const char *string;
+        int number;
+      } value = {0};
   };
 }

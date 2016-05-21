@@ -25,7 +25,7 @@ namespace ceos {
 
   std::shared_ptr<AST::Program> Parser::parse(void) {
     m_ast = std::make_shared<AST::Program>();
-    m_ast->loc.start = m_lexer.token()->loc.start;
+    m_ast->loc.start = m_lexer.token().loc.start;
     m_ast->body = parseBlock(Token::Type::END);
     m_ast->body->needsScope = false;
     return m_ast;
@@ -33,7 +33,7 @@ namespace ceos {
 
   std::shared_ptr<AST::Block> Parser::parseBlock(Token::Type delim) {
     auto block = std::make_shared<AST::Block>();
-    while (m_lexer.token()->type != delim) {
+    while (m_lexer.token().type != delim) {
       std::shared_ptr<AST> node = parseFactor();
       if (node) {
         block->nodes.push_back(node);
@@ -46,7 +46,7 @@ namespace ceos {
   }
 
   std::shared_ptr<AST> Parser::parseFactor(bool isCall) {
-    switch (m_lexer.token()->type) {
+    switch (m_lexer.token().type) {
       case Token::Type::NUMBER:
         return parseNumber();
       case Token::Type::ID:
@@ -65,7 +65,7 @@ namespace ceos {
     _if->condition = parseFactor();
     m_lexer.ensure(Token::Type::R_PAREN);
 
-    if (m_lexer.token()->type == Token::Type::L_BRACE) {
+    if (m_lexer.token().type == Token::Type::L_BRACE) {
       m_lexer.ensure(Token::Type::L_BRACE);
       _if->ifBody = parseBlock(Token::Type::R_BRACE);
       m_lexer.ensure(Token::Type::R_BRACE);
@@ -75,12 +75,12 @@ namespace ceos {
       _if->ifBody = ifBody;
     }
 
-    if (m_lexer.token()->type == Token::Type::ID) {
-      auto maybeElse = static_cast<Token::ID *>(m_lexer.token());
-      if (maybeElse->name == "else") {
+    if (m_lexer.token().type == Token::Type::ID) {
+      auto maybeElse = m_lexer.token().string();
+      if (maybeElse == "else") {
         m_lexer.ensure(Token::Type::ID);
 
-        if (m_lexer.token()->type == Token::Type::L_BRACE) {
+        if (m_lexer.token().type == Token::Type::L_BRACE) {
           m_lexer.ensure(Token::Type::L_BRACE);
           _if->elseBody = parseBlock(Token::Type::R_BRACE);
           m_lexer.ensure(Token::Type::R_BRACE);
@@ -96,51 +96,52 @@ namespace ceos {
   }
 
   std::shared_ptr<AST::Number> Parser::parseNumber() {
-    auto number = static_cast<Token::Number *>(m_lexer.token(Token::Type::NUMBER));
-    auto ast = std::make_shared<AST::Number>(number->value);
-    ast->loc = number->loc;
+    auto &number = m_lexer.token(Token::Type::NUMBER);
+    auto ast = std::make_shared<AST::Number>(number.number());
+    ast->loc = number.loc;
     ast->typeInfo = getType("Int");
     return ast;
   }
 
   std::shared_ptr<AST> Parser::parseID(bool isCall) {
-    auto id = *static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
+    auto loc = m_lexer.token().loc;
+    auto ident = m_lexer.token(Token::Type::ID).string();
 
-    if (id.name == "if") {
+    if (ident == "if") {
       return parseIf();
-    } else if (id.name == "interface") {
+    } else if (ident == "interface") {
       parseInterface();
       return nullptr;
-    } else if (id.name == "implementation") {
+    } else if (ident == "implementation") {
       return parseImplementation();
-    } else if (id.name == "extern") {
-      auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+    } else if (ident == "extern") {
+      auto name = m_lexer.token(Token::Type::ID).string();
       auto typeInfo = parsePrototype();
       typeInfo->external = true;
       setType(name, typeInfo);
       return nullptr;
-    } else if (id.name == "virtual") {
+    } else if (ident == "virtual") {
       throw std::runtime_error("Virtual functions can only be placed inside interfaces");
     }
 
     std::shared_ptr<AST> ast, ref;
-    if ((ref = m_scope->get(id.name, false)) != nullptr && ref->type == AST::Type::FunctionArgument) {
+    if ((ref = m_scope->get(ident, false)) != nullptr && ref->type == AST::Type::FunctionArgument) {
       ast = ref;
     } else {
-      auto uid = uniqueString(id.name);
+      auto uid = uniqueString(ident);
 
       ast = std::make_shared<AST::ID>(m_ast->strings[uid], uid);
-      ast->loc = id.loc;
+      ast->loc = loc;
 
-      if ((ref = m_scope->get(id.name)) && !m_scope->isInCurrentScope(id.name)) {
+      if ((ref = m_scope->get(ident)) && !m_scope->isInCurrentScope(ident)) {
         ast->typeInfo = ref->typeInfo;
         if (ref->type == AST::Type::FunctionArgument) {
           AST::asFunctionArgument(ref)->isCaptured = true;
-          m_scope->scopeFor(id.name)->isRequired = true;
+          m_scope->scopeFor(ident)->isRequired = true;
           m_scope->capturesScope = true;
         }
       } else {
-        ast->typeInfo = getType<TypeInfo *>(id.name);
+        ast->typeInfo = getType<TypeInfo *>(ident);
       }
     }
 
@@ -166,14 +167,14 @@ namespace ceos {
         continue;
       } 
 
-      if (m_lexer.token()->type == Token::Type::L_PAREN) {
+      if (m_lexer.token().type == Token::Type::L_PAREN) {
         state |= s_call;
 
         ast = parseCall(std::move(ast));
         continue;
       } 
 
-      if (m_lexer.token()->type == Token::Type::L_BRACE) {
+      if (m_lexer.token().type == Token::Type::L_BRACE) {
         if (!(state & s_call)) {
           m_lexer.error(ast->loc, "Cannot declare method without arguments/parenthesis");
         }
@@ -298,7 +299,7 @@ namespace ceos {
     m_lexer.ensure(Token::Type::L_BRACE);
     fn->body = parseBlock(Token::Type::R_BRACE);
     fn->loc.start = fn->name->loc.start;
-    fn->loc.end = m_lexer.token(Token::Type::R_BRACE)->loc.end;
+    fn->loc.end = m_lexer.token(Token::Type::R_BRACE).loc.end;
 
     popScope();
     setType(fn->name->name, typeInfo, true);
@@ -308,11 +309,11 @@ namespace ceos {
   }
 
 std::shared_ptr<AST::String> Parser::parseString() {
-  auto string = static_cast<Token::String *>(m_lexer.token(Token::Type::STRING));
+  auto string = std::move(m_lexer.token(Token::Type::STRING));
 
-  auto uid = uniqueString(string->value);
+  auto uid = uniqueString(string.string());
   auto ast =  std::make_shared<AST::String>(m_ast->strings[uid], uid);
-  ast->loc = string->loc;
+  ast->loc = string.loc;
   ast->typeInfo = getType("String");
   return ast;
 }
@@ -325,15 +326,15 @@ std::shared_ptr<AST::Call> Parser::parseCall(std::shared_ptr<AST> &&callee) {
   auto call = std::make_shared<AST::Call>();
   call->callee = callee;
 
-  while (m_lexer.token()->type != Token::Type::R_PAREN) {
+  while (m_lexer.token().type != Token::Type::R_PAREN) {
     auto argument = parseFactor(true);
     call->arguments.push_back(argument);
-    if (m_lexer.token()->type != Token::Type::R_PAREN) {
+    if (m_lexer.token().type != Token::Type::R_PAREN) {
       m_lexer.ensure(Token::Type::COMMA);
     }
   }
 
-  auto end = m_lexer.token(Token::Type::R_PAREN)->loc.end;
+  auto end = m_lexer.token(Token::Type::R_PAREN).loc.end;
   call->loc = { start, end };
 
   TypeInfo *typeInfo;
@@ -349,7 +350,7 @@ Type *Parser::parseType() {
     TypeInfo *typeInfo = new TypeInfo();
     while (!m_lexer.skip(Token::Type::R_PAREN)) {
       typeInfo->types.push_back(parseType());
-      if (m_lexer.token()->type != Token::Type::R_PAREN) {
+      if (m_lexer.token().type != Token::Type::R_PAREN) {
         m_lexer.ensure(Token::Type::COMMA);
       }
     }
@@ -357,17 +358,17 @@ Type *Parser::parseType() {
     typeInfo->types.push_back(parseType());
     return typeInfo;
   } else {
-    auto typeString = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+    auto typeString = m_lexer.token(Token::Type::ID).string();
     return getType(typeString);
   }
 }
 
 std::shared_ptr<AST::Block> Parser::parseInterface() {
   auto interface = new TypeInterface();
-  interface->name = ((Token::ID *)m_lexer.token(Token::Type::ID))->name;
+  interface->name = m_lexer.token(Token::Type::ID).string();
 
   m_lexer.ensure(Token::Type::L_ANGLE);
-  interface->genericName = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+  interface->genericName = m_lexer.token(Token::Type::ID).string();
   m_lexer.ensure(Token::Type::R_ANGLE);
 
   setType(interface->name, interface);
@@ -380,7 +381,7 @@ std::shared_ptr<AST::Block> Parser::parseInterface() {
 
   auto block = std::make_shared<AST::Block>();
   while (!m_lexer.skip(Token::Type::R_BRACE)) {
-    auto next = ((Token::ID *)m_lexer.token())->name;
+    auto next = m_lexer.token().string();
     if (next != "virtual") {
       auto node = parseID();
       if (node) {
@@ -389,7 +390,7 @@ std::shared_ptr<AST::Block> Parser::parseInterface() {
     } else {
       m_lexer.ensure(Token::Type::ID);
 
-      auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+      auto name = m_lexer.token(Token::Type::ID).string();
       auto typeInfo = parsePrototype();
 
       typeInfo->interface = interface;
@@ -404,17 +405,17 @@ std::shared_ptr<AST::Block> Parser::parseInterface() {
 
 std::shared_ptr<AST> Parser::parseImplementation() {
   auto implementation = new TypeImplementation();
-  auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
+  auto name = m_lexer.token(Token::Type::ID).string();
   auto interface = dynamic_cast<TypeInterface *>(getType(name));
   if (!interface) {
     throw std::runtime_error("Cannot find interface for implementation");
   }
 
   m_lexer.ensure(Token::Type::L_ANGLE);
-  auto type = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
-  implementation->type = getType(type->name);
+  auto typeName = m_lexer.token(Token::Type::ID).string();
+  implementation->type = getType(typeName);
   if (!implementation->type) {
-    throw std::runtime_error("Cannot implement interface `" + interface->name + "` for undefined type `" + type->name + "`");
+    throw std::runtime_error("Cannot implement interface `" + interface->name + "` for undefined type `" + typeName + "`");
   }
   m_lexer.ensure(Token::Type::R_ANGLE);
 
@@ -446,7 +447,7 @@ TypeInfo *Parser::parsePrototype() {
   parseGenerics(typeInfo->generics);
 
   m_lexer.ensure(Token::Type::L_PAREN);
-  while (m_lexer.token()->type != Token::Type::R_PAREN) {
+  while (m_lexer.token().type != Token::Type::R_PAREN) {
     typeInfo->types.push_back(parseType());
     if (!m_lexer.skip(Token::Type::COMMA)) {
       break;
@@ -465,9 +466,9 @@ TypeInfo *Parser::parsePrototype() {
 bool Parser::parseGenerics(TypeMap &generics) {
   if (m_lexer.skip(Token::Type::L_ANGLE)) {
     do {
-      auto t = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID));
-      generics[t->name] = new GenericType(t->name);
-      setType(t->name, generics[t->name]);
+      auto typeName = m_lexer.token(Token::Type::ID).string();
+      generics[typeName] = new GenericType(typeName);
+      setType(typeName, generics[typeName]);
       if (m_lexer.skip(Token::Type::R_ANGLE)) {
         break;
       }
@@ -551,7 +552,7 @@ void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {
 }
 
 // Helpers
-unsigned Parser::uniqueString(std::string &str) {
+unsigned Parser::uniqueString(std::string str) {
   unsigned uid;
   auto it = std::find(m_ast->strings.begin(), m_ast->strings.end(), str);
   if (it != m_ast->strings.end()) {
