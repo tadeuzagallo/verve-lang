@@ -13,10 +13,7 @@ namespace ceos {
 
   class Parser {
     public:
-      Parser(Lexer &lexer) : m_lexer(lexer) {
-        m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
-        m_environment = new Environment();
-      }
+      Parser(Lexer &lexer);
 
       std::shared_ptr<AST::Program> parse(void);
 

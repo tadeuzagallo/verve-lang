@@ -8,6 +8,13 @@ namespace ceos {
 
   static std::string ImplementationTypeName = "";
 
+  Parser(Lexer &lexer)
+    : m_lexer(lexer)
+  {
+    m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
+    m_environment = new Environment();
+  }
+
   std::shared_ptr<AST::Program> Parser::parse(void) {
     setType("Int", new BasicType("Int"));
     setType("Char", new BasicType("Char"));
