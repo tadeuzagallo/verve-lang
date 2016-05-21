@@ -24,8 +24,6 @@ namespace ceos {
           ID,
           NUMBER,
           STRING,
-          TYPE,
-          ARROW,
           COMMA,
           L_BRACE,
           R_BRACE,

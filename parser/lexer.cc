@@ -41,20 +41,7 @@ start:
       BASIC_TOKEN('<', L_ANGLE)
       BASIC_TOKEN('>', R_ANGLE)
       BASIC_TOKEN(',', COMMA)
-
-      case ':':
-        if (nextChar() == ':') {
-          m_token = Token(Token::Type::TYPE);
-        } else {
-          m_pos--;
-          m_token = Token(Token::Type::COLON);
-        }
-        break;
-
-      case '-':
-        assert(nextChar() == '>');
-        m_token = Token(Token::Type::ARROW);
-        break;
+      BASIC_TOKEN(':', COLON)
 
       case '\0':
         start = m_token.loc.end > 0 ? m_token.loc.end - 1 : 0;
