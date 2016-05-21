@@ -124,7 +124,7 @@ namespace ceos {
 
   void Generator::generateFunctionArgument(std::shared_ptr<AST::FunctionArgument> arg) {
     emitOpcode(Opcode::push_arg);
-    write(arg->index);
+    write(arg->uid);
   }
 
   void Generator::generateFunctionDefinition(std::shared_ptr<AST::Function> fn) {

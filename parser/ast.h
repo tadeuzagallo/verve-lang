@@ -122,12 +122,14 @@ namespace ceos {
       std::shared_ptr<AST::Block> body;
   };
 
-  class AST::FunctionArgument : public AST {
+  class AST::FunctionArgument : public AST::ID {
     public:
-      FunctionArgument(std::string name, unsigned i) : AST(Type::FunctionArgument), name(name), index(i) {}
+      FunctionArgument(std::string name, unsigned i) :
+        AST::ID(name, i)
+      {
+        this->type = AST::Type::FunctionArgument;
+      }
 
-      std::string name;
-      unsigned index;
       bool isCaptured;
   };
 

@@ -8,14 +8,12 @@ namespace ceos {
 
   static std::string ImplementationTypeName = "";
 
-  Parser(Lexer &lexer)
+  Parser::Parser(Lexer &lexer)
     : m_lexer(lexer)
   {
     m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
     m_environment = new Environment();
-  }
 
-  std::shared_ptr<AST::Program> Parser::parse(void) {
     setType("Int", new BasicType("Int"));
     setType("Char", new BasicType("Char"));
     setType("Float", new BasicType("Float"));
@@ -23,6 +21,9 @@ namespace ceos {
     setType("List", new DataType("List", 1));
     setType("String", new DataTypeInstance((DataType *)getType("List"), (::ceos::Type *[]){ getType("Char") }));
 
+  }
+
+  std::shared_ptr<AST::Program> Parser::parse(void) {
     m_ast = std::make_shared<AST::Program>();
     m_ast->loc.start = m_lexer.token()->loc.start;
     m_ast->body = parseBlock(Token::Type::END);
