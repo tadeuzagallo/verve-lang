@@ -109,7 +109,7 @@ namespace ceos {
       auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
       auto typeInfo = parsePrototype();
       typeInfo->external = true;
-      setTypeInfo(name, typeInfo);
+      setType(name, typeInfo);
       return nullptr;
     } else if (id.name == "virtual") {
       throw std::runtime_error("Virtual functions can only be placed inside interfaces");
@@ -132,7 +132,7 @@ namespace ceos {
           m_scope->capturesScope = true;
         }
       } else {
-        ast->typeInfo = getTypeInfo(id.name);
+        ast->typeInfo = getType<TypeInfo *>(id.name);
       }
     }
 
@@ -225,7 +225,7 @@ namespace ceos {
 
     bool isImplementation = false;
     TypeInfo *ti;
-    if ((ti = getTypeInfo(fn->name->name))) {
+    if ((ti = getType<TypeInfo *>(fn->name->name))) {
       isImplementation = true;
     }
 
@@ -285,7 +285,7 @@ namespace ceos {
     }
 
     // FIXME: hack for recursive functions
-    setTypeInfo(fn->name->name, typeInfo, true);
+    setType(fn->name->name, typeInfo, true);
 
     m_lexer.ensure(Token::Type::L_BRACE);
     fn->body = parseBlock(Token::Type::R_BRACE);
@@ -293,7 +293,7 @@ namespace ceos {
     fn->loc.end = m_lexer.token(Token::Type::R_BRACE)->loc.end;
 
     popScope();
-    setTypeInfo(fn->name->name, typeInfo, true);
+    setType(fn->name->name, typeInfo, true);
 
 
     return fn;
@@ -384,9 +384,9 @@ std::shared_ptr<AST::Block> Parser::parseInterface() {
       auto name = static_cast<Token::ID *>(m_lexer.token(Token::Type::ID))->name;
       auto typeInfo = parsePrototype();
 
+      typeInfo->interface = interface;
       interface->functions[name] = typeInfo;
-      setType(name, interface, true);
-      setTypeInfo(name, typeInfo, true);
+      setType(name, typeInfo, true);
     }
   }
   popTypeScope();
@@ -475,7 +475,7 @@ void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {
   if (call->callee->type == AST::Type::ID) {
     auto callee = AST::asID(call->callee);
     auto &calleeName = callee->name;
-    auto typeInfo = getTypeInfo(calleeName);
+    auto typeInfo = getType<TypeInfo *>(calleeName);
     if (!typeInfo) {
       fprintf(stderr, "Missing type information for `%s`\n", calleeName.c_str());
       throw;
@@ -502,7 +502,7 @@ void Parser::typeCheck(std::shared_ptr<AST::Call> &&call) {
             expected = t;
           }
         } else {
-          auto impl = dynamic_cast<TypeInterface *>(getType(calleeName))->implementations[actual];
+          auto impl = getType<TypeInterface *>(calleeName)->implementations[actual];
           if (!impl) {
             fprintf(stderr, "Couldn't find implementation for `%s` with signature `%s`", calleeName.c_str(), call->typeInfo->toString().c_str());
             throw;
@@ -556,20 +556,21 @@ unsigned Parser::uniqueString(std::string &str) {
 }
 
 // Type helpers
-Type *Parser::getType(std::string typeName) {
-  return m_typeScope->getType(typeName);
-}
-
-TypeInfo *Parser::getTypeInfo(std::string name) {
-  return m_scope->getTypeInfo(name);
+template <typename T>
+T Parser::getType(std::string typeName) {
+  auto env = m_environment;
+  while (env) {
+    auto it = env->types.find(typeName);
+    if (it != env->types.end()) {
+      return dynamic_cast<T>(it->second);
+    }
+    env = env->parent;
+  }
+  return nullptr;
 }
 
 void Parser::setType(std::string typeName, Type *type, bool parentScope) {
-  (parentScope ? m_scope : m_typeScope)->setType(typeName, type);
-}
-
-void Parser::setTypeInfo(std::string name, TypeInfo *typeInfo, bool parentScope) {
-  (parentScope ? m_scope : m_typeScope)->setTypeInfo(name, typeInfo);
+  (parentScope ? m_environment->parent : m_environment)->types[typeName] = type;
 }
 
 void Parser::pushScope() {
@@ -582,9 +583,14 @@ void Parser::popScope() {
 }
 
 void Parser::pushTypeScope() {
-  m_typeScope = m_typeScope->create();
+  auto env = new Environment();
+  env->parent = m_environment;
+  m_environment = env;
 }
+
 void Parser::popTypeScope() {
-  m_typeScope = m_typeScope->restore();
+  auto env = m_environment;
+  m_environment = m_environment->parent;
+  delete env;
 }
 }

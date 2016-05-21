@@ -98,6 +98,7 @@ namespace ceos {
     std::vector<Type *> types;
   };
 
+  struct TypeInterface;
   struct TypeInfo : Type {
     TypeInfo() {}
 
@@ -132,6 +133,7 @@ namespace ceos {
     std::vector<Type *> types;
     TypeMap generics;
     bool external;
+    TypeInterface *interface;
   };
 
   struct TypeImplementation;
@@ -170,5 +172,10 @@ namespace ceos {
   struct TypeImplementation {
     TypeInterface *interface;
     Type *type;
+  };
+
+  struct Environment {
+    TypeMap types;
+    Environment *parent;
   };
 }

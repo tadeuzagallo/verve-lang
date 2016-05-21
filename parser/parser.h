@@ -14,7 +14,8 @@ namespace ceos {
   class Parser {
     public:
       Parser(Lexer &lexer) : m_lexer(lexer) {
-        m_typeScope = m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
+        m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
+        m_environment = new Environment();
       }
 
       std::shared_ptr<AST::Program> parse(void);
@@ -42,11 +43,10 @@ namespace ceos {
       unsigned uniqueString(std::string &);
 
       // Type helpers
-      Type *getType(std::string);
-      TypeInfo *getTypeInfo(std::string);
+      template <typename T = Type *>
+      T getType(std::string);
 
       void setType(std::string, Type *, bool parentScope = false);
-      void setTypeInfo(std::string, TypeInfo *, bool parentScopee = false);
 
       void pushScope();
       void popScope();
@@ -56,6 +56,6 @@ namespace ceos {
       Lexer &m_lexer;
       std::shared_ptr<AST::Program> m_ast;
       std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;
-      std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_typeScope;
+      Environment *m_environment;
   };
 }
