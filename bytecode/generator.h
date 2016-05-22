@@ -12,8 +12,11 @@ namespace ceos {
 
   class Generator {
     public:
-      Generator(std::shared_ptr<AST::Program> ast, bool isDebug) : m_ast(ast), m_isDebug(isDebug) {
-        m_scope = std::make_shared<OldScope<std::shared_ptr<AST>>>();
+      Generator(AST::ProgramPtr ast, bool isDebug) :
+        m_ast(ast),
+        m_isDebug(isDebug)
+      {
+        m_scope = std::make_shared<OldScope<AST::NodePtr>>();
       }
 
       std::stringstream &generate(void);
@@ -21,29 +24,33 @@ namespace ceos {
       static void disassemble(std::stringstream &);
 
     private:
-      void generateNode(std::shared_ptr<AST>);
-      void generateCall(std::shared_ptr<AST::Call>);
-      void generateNumber(std::shared_ptr<AST::Number>);
-      void generateID(std::shared_ptr<AST::ID>);
-      void generateString(std::shared_ptr<AST::String>);
-      void generateFunctionArgument(std::shared_ptr<AST::FunctionArgument>);
-      void generateFunctionDefinition(std::shared_ptr<AST::Function>);
-      void generateFunctionSource(std::shared_ptr<AST::Function>);
-      void generateIf(std::shared_ptr<AST::If>);
-      void generateProgram(std::shared_ptr<AST::Program>);
-      void generateBlock(std::shared_ptr<AST::Block>);
+      void generateNode(AST::NodePtr);
+      void generateCall(AST::CallPtr);
+      void generateNumber(AST::NumberPtr);
+      void generateIdentifier(AST::IdentifierPtr);
+      void generateString(AST::StringPtr);
+      void generateFunctionParameter(AST::FunctionParameterPtr);
+      void generateFunctionDefinition(AST::FunctionPtr);
+      void generateFunctionSource(AST::FunctionPtr);
+      void generateIf(AST::IfPtr);
+      void generateProgram(AST::ProgramPtr);
+      void generateBlock(AST::BlockPtr);
 
       void emitOpcode(Opcode::Type);
-      void emitJmp(Opcode::Type, std::shared_ptr<AST::Block>&);
-      void emitJmp(Opcode::Type, std::shared_ptr<AST::Block>&, bool);
+      void emitJmp(Opcode::Type, AST::BlockPtr &);
+      void emitJmp(Opcode::Type, AST::BlockPtr &, bool);
       void write(int64_t);
       void write(const std::string &);
 
+      unsigned uniqueString(std::string &);
+
       static void printOpcode(std::stringstream &, Opcode::Type);
 
-      std::shared_ptr<AST::Program> m_ast;
-      std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;
+      AST::ProgramPtr  m_ast;
+      std::shared_ptr<OldScope<AST::NodePtr>> m_scope;
       std::stringstream m_output;
+      std::vector<std::string> m_strings;
+      std::vector<AST::FunctionPtr> m_functions;
       bool m_isDebug;
   };
 

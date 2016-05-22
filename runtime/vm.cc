@@ -86,7 +86,7 @@ void symbolNotFound(char *symbolName) {
         case Section::Text: {
           auto lookupTableSize = read<uint64_t>();
           void *lookupTable = calloc(lookupTableSize * 8, 1);
-          ::ceos::execute(m_bytecode + pc, m_stringTable.data(), this, m_bytecode, lookupTable);
+          ::ceos::execute(m_bytecode + pc, &m_stringTable[0], this, m_bytecode, lookupTable);
           return;
         }
         default:

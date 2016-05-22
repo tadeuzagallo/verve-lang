@@ -17,20 +17,21 @@ namespace ceos {
         m_input(input),
         m_pos(0),
         m_offset(offset),
-        m_token(Token(Token::Type::END)),
-        m_prevToken(Token(Token::Type::END))
+        m_token(Token(Token::END)),
+        m_prevToken(Token(Token::END))
       {
         nextToken();
       }
 
-      Token &token(Token::Type);
       Token &token();
-
-      bool skip(Token::Type);
-
-      void ensure(Token::Type);
+      Token &token(Token::Type);
 
       void rewind();
+      void rewind(Loc &loc);
+
+      bool next(char c);
+      bool skip(char c);
+      void match(char c);
 
       void _Noreturn invalidType();
       void printSource();

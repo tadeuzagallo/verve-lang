@@ -12,24 +12,19 @@ namespace ceos {
   };
 
   class Token {
+    friend class Lexer;
+
     public:
       class ID;
       class Number;
       class String;
 
-      ENUM_CLASS(Type,
+      ENUM(Type,
           END,
-          L_PAREN,
-          R_PAREN,
           ID,
           NUMBER,
           STRING,
-          COMMA,
-          L_BRACE,
-          R_BRACE,
-          L_ANGLE,
-          R_ANGLE,
-          COLON,
+          BASIC
         )
 
       Token(Type t) :
@@ -55,6 +50,7 @@ namespace ceos {
         other.value.string = NULL;
       }
 
+
       Token &operator=(Token &) = delete;
       Token &operator=(Token &&other)
       {
@@ -66,7 +62,7 @@ namespace ceos {
       };
 
       ~Token() {
-        if (value.string) {
+        if ((type == Token::STRING || type == Token::ID) && value.string != NULL) {
           free((void *)value.string);
           value.string = NULL;
         }
@@ -82,6 +78,7 @@ namespace ceos {
 
       Type type;
       Loc loc;
+    private:
       union {
         const char *string;
         int number;

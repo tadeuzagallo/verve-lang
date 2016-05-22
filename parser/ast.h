@@ -1,6 +1,5 @@
 #include "utils/macros.h"
 #include "token.h"
-#include "type.h"
 
 #include <cassert>
 #include <functional>
@@ -13,133 +12,90 @@
 
 static unsigned str_uid = 0;
 
-#define AST_TYPES(__name, __options...) \
-  ENUM_CLASS(__name, __options) \
-  EVAL(MAP(DECLARE_CLASS, __options)) \
-  EVAL(MAP(DECLARE_CONVERTER, __options))
-
-#define DECLARE_CLASS(__class) class __class;
+#define DECLARE_TYPE(__class) \
+  struct __class; \
+  typedef std::shared_ptr<__class> __class##Ptr;
 
 #define DECLARE_CONVERTER(__class) \
-  static std::shared_ptr<AST::__class> as##__class(std::shared_ptr<AST> __n) { \
+  __unused static __class##Ptr as##__class(NodePtr __n) { \
     assert(__n->type == Type::__class); \
-    return std::static_pointer_cast<AST::__class>(__n); \
+    return std::static_pointer_cast<__class>(__n); \
   }
 
+#define DECLARE_CTOR(__class, ...)  \
+    static inline __class##Ptr create##__class() { \
+       auto node = std::make_shared<__class>(__VA_ARGS__); \
+      node->type = Type::__class; \
+      return node; \
+    } \
+
+#define AST_TYPES \
+      Node, \
+      Program, \
+      Block, \
+      Call, \
+      Number, \
+      Identifier, \
+      String, \
+      Function, \
+      FunctionParameter, \
+      If
+
 namespace ceos {
+namespace AST {
 
-  class AST {
-    public:
-      AST_TYPES(Type,
-        Program,
-        Block,
-        Call,
-        Number,
-        ID,
-        String,
-        Function,
-        FunctionArgument,
-        If
-      );
+  ENUM_CLASS(Type, AST_TYPES)
+  EVAL(MAP(DECLARE_TYPE, AST_TYPES))
 
-      AST(Type t) :
-        type(t),
-        typeInfo(nullptr),
-        hasTypeAnnotation(false) {}
-
-      ~AST() {
-        if (typeInfo) {
-          //delete typeInfo;
-        }
-      }
-
-      Type type;
-      Loc loc;
-      ::ceos::Type *typeInfo;
-      bool hasTypeAnnotation;
+  struct Node {
+    Type type;
+    Loc loc;
   };
 
-  class AST::Block : public AST {
-    public:
-    Block() : AST(Type::Block) {}
+  struct Program : public Node {
+    BlockPtr body;
+  };
 
-    std::vector<std::shared_ptr<AST>> nodes;
+  struct Block : public Node {
+    std::vector<NodePtr> nodes;
     std::function<void()> prologue;
     bool needsScope;
     bool capturesScope;
   };
 
-  class AST::Program : public AST {
-    public:
-      Program() : AST(Type::Program) {}
-
-      std::vector<std::shared_ptr<AST::Function>> functions;
-      std::vector<std::string> strings;
-      std::shared_ptr<AST::Block> body;
+  struct Number : public Node {
+    int value;
   };
 
-  class AST::Number : public AST {
-    public:
-      Number(int v) : AST(Type::Number), value(v) {}
-
-      int value;
+  struct Identifier : public Node {
+    std::string name;
+    unsigned uid;
   };
 
-  class AST::ID : public AST {
-    public:
-      ID(std::string n, unsigned id) : AST(Type::ID), name(n), uid(id) { }
+  struct String : public Identifier {};
 
-      std::string name;
-      unsigned uid;
+  struct FunctionParameter : public Identifier {
+    bool isCaptured;
   };
 
-  class AST::String : public AST {
-    public:
-      String(std::string n, unsigned id) : AST(Type::String), name(n), uid(id) { }
-
-      std::string name;
-      unsigned uid;
+  struct Call : public Node {
+    NodePtr callee;
+    std::vector<NodePtr> arguments;
   };
 
-  class AST::Call : public AST {
-    public:
-      Call() : AST(Type::Call) {}
-
-      std::shared_ptr<AST> callee;
-      std::vector<std::shared_ptr<AST>> arguments;
+  struct Function : public Node {
+    IdentifierPtr name;
+    std::vector<FunctionParameterPtr> parameters;
+    BlockPtr body;
   };
 
-  class AST::Function : public AST {
-    public:
-      Function() : AST(Type::Function) {}
-
-      TypeInfo *getTypeInfo() {
-        return (TypeInfo *)typeInfo;
-      }
-
-      std::shared_ptr<AST::ID> name;
-      std::vector<std::shared_ptr<AST::FunctionArgument>> arguments;
-      std::shared_ptr<AST::Block> body;
+  struct If : public Node {
+    NodePtr condition;
+    BlockPtr ifBody;
+    BlockPtr elseBody;
   };
 
-  class AST::FunctionArgument : public AST::ID {
-    public:
-      FunctionArgument(std::string name, unsigned i) :
-        AST::ID(name, i)
-      {
-        this->type = AST::Type::FunctionArgument;
-      }
-
-      bool isCaptured;
-  };
-
-  class AST::If : public AST {
-    public:
-      If() : AST(Type::If) {}
-
-      std::shared_ptr<AST> condition;
-      std::shared_ptr<AST::Block> ifBody;
-      std::shared_ptr<AST::Block> elseBody;
-  };
-
+  EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))
+  EVAL(MAP(DECLARE_CTOR, AST_TYPES))
+}
 }

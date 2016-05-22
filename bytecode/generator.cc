@@ -18,22 +18,22 @@ namespace ceos {
     return m_output;
   }
 
-  void Generator::generateNode(std::shared_ptr<AST> node) {
+  void Generator::generateNode(AST::NodePtr node) {
     switch (node->type) {
       case AST::Type::Call:
-        generateCall(std::static_pointer_cast<AST::Call>(node));
+        generateCall(AST::asCall(node));
         break;
       case AST::Type::Number:
-        generateNumber(std::static_pointer_cast<AST::Number>(node));
+        generateNumber(AST::asNumber(node));
         break;
-      case AST::Type::ID:
-        generateID(std::static_pointer_cast<AST::ID>(node));
+      case AST::Type::Identifier:
+        generateIdentifier(AST::asIdentifier(node));
         break;
       case AST::Type::String:
-        generateString(std::static_pointer_cast<AST::String>(node));
+        generateString(AST::asString(node));
         break;
-      case AST::Type::FunctionArgument:
-        generateFunctionArgument(std::static_pointer_cast<AST::FunctionArgument>(node));
+      case AST::Type::FunctionParameter:
+        generateFunctionParameter(AST::asFunctionParameter(node));
         break;
       case AST::Type::Function:
         generateFunctionDefinition(AST::asFunction(node));
@@ -67,11 +67,11 @@ namespace ceos {
     }
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST::Block> &body)  {
+  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body)  {
     emitJmp(jmpType, body, false);
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, std::shared_ptr<AST::Block> &body, bool skipNextJump)  {
+  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body, bool skipNextJump)  {
     emitOpcode(jmpType);
     unsigned beforePos = m_output.tellp();
     write(0); // placeholder
@@ -86,7 +86,7 @@ namespace ceos {
     m_output.seekp(afterPos);
   }
 
-  void Generator::generateCall(std::shared_ptr<AST::Call> call) {
+  void Generator::generateCall(AST::CallPtr call) {
     for (unsigned i = call->arguments.size(); i > 0;) {
       generateNode(call->arguments[--i]);
     }
@@ -97,18 +97,18 @@ namespace ceos {
     write(call->arguments.size());
   }
 
-  void Generator::generateNumber(std::shared_ptr<AST::Number> number) {
+  void Generator::generateNumber(AST::NumberPtr number) {
     emitOpcode(Opcode::push);
     write(number->value);
   }
 
-  void Generator::generateID(std::shared_ptr<AST::ID> id) {
-    auto v = m_scope->get(id->name);
+  void Generator::generateIdentifier(AST::IdentifierPtr ident) {
+    auto v = m_scope->get(ident->name);
     if (v.get()) {
       generateNode(v);
     } else {
       emitOpcode(Opcode::lookup);
-      write(id->uid);
+      write(uniqueString(ident->name));
       if (capturesScope) {
         write(0);
       } else {
@@ -117,44 +117,43 @@ namespace ceos {
     }
   }
 
-  void Generator::generateString(std::shared_ptr<AST::String> str) {
+  void Generator::generateString(AST::StringPtr str) {
     emitOpcode(Opcode::load_string);
-    write(str->uid);
+    write(uniqueString(str->name));
   }
 
-  void Generator::generateFunctionArgument(std::shared_ptr<AST::FunctionArgument> arg) {
+  void Generator::generateFunctionParameter(AST::FunctionParameterPtr arg) {
     emitOpcode(Opcode::push_arg);
-    write(arg->uid);
+    write(uniqueString(arg->name));
   }
 
-  void Generator::generateFunctionDefinition(std::shared_ptr<AST::Function> fn) {
+  void Generator::generateFunctionDefinition(AST::FunctionPtr fn) {
     emitOpcode(Opcode::create_closure);
-    write(m_ast->functions.size());
+    write(m_functions.size());
     write(fn->body->capturesScope);
     if (fn->name->name != "_") {
       emitOpcode(Opcode::bind);
-      write(INDEX_OF(m_ast->strings, fn->name->name));
+      write(uniqueString(fn->name->name));
     }
-    m_ast->functions.push_back(fn);
+    m_functions.push_back(fn);
   }
 
-  void Generator::generateFunctionSource(std::shared_ptr<AST::Function> fn) {
+  void Generator::generateFunctionSource(AST::FunctionPtr fn) {
     std::string fnName = fn->name->name;
     if (fnName == "_") {
       static unsigned id = 0;
       fnName = "_" + std::to_string(id++);
-      m_ast->strings.push_back(fnName);
     }
-    write(INDEX_OF(m_ast->strings, fnName));
-    write(fn->arguments.size());
+    write(uniqueString(fnName));
+    write(fn->parameters.size());
 
     m_scope = m_scope->create();
 
     std::vector<unsigned> captured;
-    for (unsigned i = 0; i < fn->arguments.size(); i++) {
-      write(INDEX_OF(m_ast->strings, fn->arguments[i]->name));
+    for (unsigned i = 0; i < fn->parameters.size(); i++) {
+      write(uniqueString(fn->parameters[i]->name));
 
-      if (fn->arguments[i]->isCaptured) {
+      if (fn->parameters[i]->isCaptured) {
         captured.push_back(i);
       }
     }
@@ -162,7 +161,7 @@ namespace ceos {
     fn->body->prologue = [captured, this, fn]() {
       for (auto i : captured) {
         emitOpcode(Opcode::put_to_scope);
-        write(INDEX_OF(m_ast->strings, fn->arguments[i]->name));
+        write(uniqueString(fn->parameters[i]->name));
         write(i);
       }
     };
@@ -173,7 +172,7 @@ namespace ceos {
     emitOpcode(Opcode::ret);
   }
 
-  void Generator::generateIf(std::shared_ptr<AST::If> iff) {
+  void Generator::generateIf(AST::IfPtr iff) {
     generateNode(iff->condition);
 
     bool hasElse = iff->elseBody != nullptr && iff->elseBody->nodes.size() > 0;
@@ -184,27 +183,27 @@ namespace ceos {
     }
   }
 
-  void Generator::generateProgram(std::shared_ptr<AST::Program> program) {
+  void Generator::generateProgram(AST::ProgramPtr program) {
     generateBlock(program->body);
 
     auto text = m_output.str();
     m_output = std::stringstream();
 
-    if (program->functions.size()) {
-      for (unsigned i = 0; i < program->functions.size(); i++) {
+    if (m_functions.size()) {
+      for (unsigned i = 0; i < m_functions.size(); i++) {
         write(Section::FunctionHeader);
-        generateFunctionSource(program->functions[i]);
+        generateFunctionSource(m_functions[i]);
       }
     }
 
     auto functions = m_output.str();
     m_output = std::stringstream();
 
-    if (program->strings.size()) {
+    if (m_strings.size()) {
       write(Section::Header);
       write(Section::Strings);
 
-      for (auto string : program->strings) {
+      for (auto string : m_strings) {
         write(string);
       }
     }
@@ -226,7 +225,7 @@ namespace ceos {
     m_output << text;
   }
 
-  void Generator::generateBlock(std::shared_ptr<AST::Block> block) {
+  void Generator::generateBlock(AST::BlockPtr block) {
     if (block->needsScope) {
       emitOpcode(Opcode::create_lex_scope);
     }
@@ -241,6 +240,17 @@ namespace ceos {
 
     if (block->needsScope) {
       emitOpcode(Opcode::release_lex_scope);
+    }
+  }
+
+  unsigned Generator::uniqueString(std::string &str) {
+    auto it = std::find(m_strings.begin(), m_strings.end(), str);
+    if (it != m_strings.end()) {
+      return it - m_strings.begin();
+    } else {
+      unsigned id = m_strings.size();
+      m_strings.push_back(str);
+      return id;
     }
   }
 

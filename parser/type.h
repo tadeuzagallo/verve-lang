@@ -9,10 +9,8 @@
 namespace ceos {
 
   struct Type;
-  struct TypeInfo;
 
   typedef std::unordered_map<std::string, Type *> TypeMap;
-  typedef std::unordered_map<std::string, TypeInfo *> TypeInfoMap;
 
   struct Type {
     virtual bool equals(Type *) = 0;
@@ -39,26 +37,15 @@ namespace ceos {
   };
 
   struct GenericType : BasicType {
-    GenericType(std::string n) : BasicType(std::move(n)) {}
+    GenericType(std::string &&n) :
+      BasicType(std::move(n)) {}
   };
 
   struct DataType : BasicType {
-    DataType(std::string &&n , unsigned l) :
-      BasicType(std::move(n)),
-      length(l) {}
-
     unsigned length;
   };
 
   struct DataTypeInstance : Type {
-    DataTypeInstance(DataType *dt, Type **ts) :
-      dataType(dt)
-    {
-      for (unsigned i = 0; i < dt->length; i++) {
-        types.push_back(ts[i]);
-      }
-    }
-
     virtual bool equals(Type *other) override {
       DataTypeInstance *t;
       if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
@@ -99,12 +86,10 @@ namespace ceos {
   };
 
   struct TypeInterface;
-  struct TypeInfo : Type {
-    TypeInfo() {}
-
+  struct TypeFunction : Type {
     virtual bool equals(Type *other) override {
-      TypeInfo *t;
-      if (!(t = dynamic_cast<TypeInfo *>(other))) {
+      TypeFunction *t;
+      if (!(t = dynamic_cast<TypeFunction *>(other))) {
         return false;
       }
       for (unsigned i = 0; i < types.size(); i++) {
@@ -129,10 +114,14 @@ namespace ceos {
       return str.str();
     }
 
-    Type *returnType() { return types.back(); }
+    std::string name;
+    std::vector<std::string> generics;
     std::vector<Type *> types;
-    TypeMap generics;
-    bool external;
+    Type *returnType;
+    struct {
+      bool isExternal: 1;
+      bool isVirtual: 1;
+    };
     TypeInterface *interface;
   };
 
@@ -150,11 +139,15 @@ namespace ceos {
       std::stringstream str;
       str << "interface "
           << name
-          << "<"
-          << genericName
-          << ">";
+          << "<";
 
-      str << "{\n";
+      for (unsigned i = 0; i < generics.size(); i++) {
+        if (i) str << ", ";
+        str << generics[i];
+      }
+          
+      str << "> {\n";
+
       for (auto it : functions) {
         str << it.first << " :: " << it.second->toString() << "\n";
       }
@@ -164,18 +157,13 @@ namespace ceos {
     }
 
     std::string name;
-    std::string genericName;
-    std::unordered_map<Type *, TypeImplementation *> implementations;
-    std::unordered_map<std::string, TypeInfo *> functions;
+    std::vector<std::string> generics;
+    std::vector<TypeImplementation *> implementations;
+    std::unordered_map<std::string, TypeFunction *> functions;
   };
 
   struct TypeImplementation {
     TypeInterface *interface;
     Type *type;
-  };
-
-  struct Environment {
-    TypeMap types;
-    Environment *parent;
   };
 }

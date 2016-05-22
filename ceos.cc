@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
   fclose(prelude);
   fclose(source);
 
-  ceos::Lexer lexer(input, preludeSize + 1);
+  ceos::Lexer lexer(input + preludeSize + 1, 0);
   ceos::Parser parser(lexer);
 
   std::shared_ptr<ceos::AST::Program> ast = parser.parse();

@@ -7,52 +7,96 @@
 #pragma once
 
 namespace ceos {
-
   class Lexer;
-  class AST;
+  class Token;
 
   class Parser {
-    public:
-      Parser(Lexer &lexer);
+  public:
 
-      std::shared_ptr<AST::Program> parse(void);
+    Parser(Lexer &lexer);
+    AST::ProgramPtr parse();
 
-    private:
-      std::shared_ptr<AST::Call> parseCall(std::shared_ptr<AST> &&callee);
-      std::shared_ptr<AST::Number> parseNumber(void);
-      std::shared_ptr<AST> parseID(bool isCall = false);
-      std::shared_ptr<AST::Function> parseFunction(std::shared_ptr<AST::Call> &&, TypeMap &);
-      std::shared_ptr<AST::String> parseString(void);
-      std::shared_ptr<AST> parseFactor(bool isCall = false);
-      std::shared_ptr<AST> parseIf(void);
-      std::shared_ptr<AST::Block> parseBlock(Token::Type delim);
+  private:
 
-      std::shared_ptr<AST::Block> parseInterface();
-      std::shared_ptr<AST> parseImplementation();
+    AST::NodePtr parseDecl();
 
-      bool parseGenerics(TypeMap &);
-      Type *parseType();
-      TypeInfo *parsePrototype();
+    AST::BlockPtr parseInterface();
+    AST::BlockPtr parseImplementation();
 
-      void typeCheck(std::shared_ptr<AST::Call> &&);
+    TypeFunction *parseVirtual();
+    TypeFunction *parseExtern();
+    TypeFunction *parsePrototype();
 
-      // Helpers
-      unsigned uniqueString(std::string);
+    AST::FunctionPtr parseTypelessFunction();
+    AST::FunctionPtr parseFunction();
 
-      // Type helpers
-      template <typename T = Type *>
-      T getType(std::string);
+    AST::IfPtr parseIf();
 
-      void setType(std::string, Type *, bool parentScope = false);
+    AST::BlockPtr parseFactorOrBody();
+    AST::BlockPtr parseBody();
 
-      void pushScope();
-      void popScope();
-      void pushTypeScope();
-      void popTypeScope();
+    bool parseFunctionParams(
+        std::vector<AST::FunctionParameterPtr> &params,
+        std::vector<Type *> &types);
 
-      Lexer &m_lexer;
-      std::shared_ptr<AST::Program> m_ast;
-      std::shared_ptr<OldScope<std::shared_ptr<AST>>> m_scope;
-      Environment *m_environment;
+    void parseGenerics(std::vector<std::string> &generics);
+
+    AST::NodePtr parseIdentifierFunctionOrCall();
+    AST::NodePtr parseCall(AST::NodePtr callee);
+
+    AST::NodePtr parseFactor();
+
+    // Base nodes
+
+    AST::IdentifierPtr parseIdentifier();
+    AST::NumberPtr parseNumber();
+    AST::StringPtr parseString();
+    Type *parseType();
+
+    // Type helpers
+
+    struct Environment {
+      std::unordered_map<std::string, Type *> types;
+      std::shared_ptr<Environment> parent;
+    };
+
+    void setType(std::string &typeName, Type *type);
+    template<typename T = Type *> T getType(std::string typeName);
+
+    void pushTypeScope();
+    void popTypeScope();
+
+    // Var helpers
+
+    struct Scope {
+      std::unordered_map<std::string, AST::NodePtr> table;
+      std::shared_ptr<Scope> parent;
+    };
+
+    void setVar(std::string &varName, AST::NodePtr var);
+    AST::NodePtr getVar(std::string &varName);
+
+    void pushScope();
+    void popScope();
+
+    // Lexer aliases
+
+    inline Token &token();
+    inline Token &token(Token::Type t);
+
+    inline bool next(char c);
+    inline bool skip(char c);
+    inline void match(char c);
+
+    inline bool next(std::string str);
+    inline bool skip(std::string str);
+
+    inline bool next(Token::Type t);
+
+    // Properties
+
+    Lexer &m_lexer;
+    std::shared_ptr<Environment> m_environment;
+    std::shared_ptr<Scope> m_scope;
   };
 }
