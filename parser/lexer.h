@@ -44,6 +44,8 @@ namespace ceos {
 
       Pos getSourcePosition(Loc loc);
 
+      std::string tokenType(Token &token) const;
+
       const char *m_input;
       size_t m_pos;
       size_t m_offset;

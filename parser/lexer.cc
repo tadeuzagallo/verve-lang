@@ -114,6 +114,7 @@ start:
         } else {
           // TODO: proper error here
           std::cerr << "Invalid token `" << c << "`\n";
+          printSource();
           throw;
         }
     }
@@ -159,7 +160,7 @@ start:
     if (next(c)) {
       nextToken();
     } else {
-      std::cerr << "Invalid token found: expected `" << Token::typeName(m_token.type) << "` to be `" << c << "`" << "\n";
+      std::cerr << "Invalid token found: expected `" << tokenType(m_token) << "` to be `" << c << "`" << "\n";
       printSource();
       throw std::runtime_error("Parser error");
     }
@@ -170,7 +171,7 @@ start:
       std::cerr << "Unexpected end of input\n";
     } else {
       Pos pos = getSourcePosition(m_token.loc);
-      std::cerr << "Unexpected token `" << Token::typeName(m_token.type) << "` at " << pos.line << ":" << pos.column << std::endl;
+      std::cerr << "Unexpected token `" << tokenType(m_token) << "` at " << pos.line << ":" << pos.column << std::endl;
     }
     printSource();
     throw std::runtime_error("Parse error");
@@ -226,5 +227,13 @@ start:
     fputc('\n', stderr);
     printSource(loc);
     throw std::runtime_error("Parser error");
+  }
+
+  std::string Lexer::tokenType(Token &token) const {
+    if (token.type == Token::BASIC) {
+      return std::string(1, (char)token.number());
+    } else {
+      return std::string(Token::typeName(token.type));
+    }
   }
 }
