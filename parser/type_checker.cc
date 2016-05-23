@@ -14,8 +14,10 @@ static Type *getType(AST::NodePtr node, Environment *env) {
       return getType(AST::asFunction(node)->name, env);
 
     case AST::Type::Identifier:
-    case AST::Type::FunctionParameter:
       return env->get(AST::asIdentifier(node)->name);
+
+    case AST::Type::FunctionParameter:
+      return env->get(AST::asFunctionParameter(node)->name);
 
     case AST::Type::Block:
       {
