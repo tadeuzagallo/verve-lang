@@ -2,7 +2,7 @@
 
 #include "ast.h"
 #include "type.h"
-#include "utils/old_scope.h"
+#include "scope.h"
 
 #pragma once
 
