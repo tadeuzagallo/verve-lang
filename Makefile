@@ -37,7 +37,7 @@ error_test: $(ERROR_TESTS)
 
 .build/tests/errors/%.test: tests/errors/%.ceos tests/errors/%.err $(TARGET)
 	@mkdir -p $$(dirname $@)
-	@sh -c "trap '' 6; ./$(TARGET) $<" > /dev/null 2> $@_; \
+	@sh -c "trap '' 6; ./$(TARGET) $<" > /dev/null 2> $@; \
 	if [[ $$? == 0 ]]; then \
 		echo "$@: ERROR!"; \
 	else \
@@ -54,8 +54,8 @@ cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
 
 .build/tests/cpp/%.test: tests/cpp/%.cc $(OBJECTS) $(HEADERS)
 	@mkdir -p $$(dirname $@)
-	@$(CC) $(CFLAGS) $< $(filter-out %ceos.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@_
-	@$@_; \
+	@$(CC) $(CFLAGS) $< $(filter-out %ceos.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@
+	@$@; \
 	if [[ $$? != 0 ]]; then echo "$@: FAIL!"; else echo "$@: OK!"; fi
 
 # TESTS
@@ -68,8 +68,8 @@ test: $(TESTS) error_test cpp_test
 
 .build/tests/%.test: tests/%.ceos tests/%.out $(TARGET)
 	@mkdir -p $$(dirname $@)
-	-@./$(TARGET) $< > $@_; \
-	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
+	-@./$(TARGET) $< > $@; \
+	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
 
 .PHONY: tests/%.test
 
