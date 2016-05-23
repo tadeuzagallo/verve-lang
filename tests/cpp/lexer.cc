@@ -12,14 +12,25 @@ class LexerTest {
   static void testRewind() {
     Lexer l("1 (", 4);
     l.token(Token::Type::NUMBER);
-    l.ensure(Token::Type::L_PAREN);
+    l.match('(');
     l.rewind();
-    l.token(Token::Type::L_PAREN);
-    l.ensure(Token::Type::END);
+    l.match('(');
+    l.token(Token::Type::END);
+  }
+
+  static void testRewindToSpecificLoc() {
+    Lexer l("1 (", 4);
+    auto start = l.token().loc;
+    l.token(Token::Type::NUMBER);
+    l.match('(');
+    l.token(Token::Type::END);
+    l.rewind(start);
+    l.token(Token::Type::NUMBER);
   }
 
   static void test() {
     testRewind();
+    testRewindToSpecificLoc();
   }
 
 };
