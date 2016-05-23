@@ -31,7 +31,7 @@ $(TARGET): $(OBJECTS)
 
 ERROR_TESTS = $(patsubst %.ceos,.build/%.test,$(wildcard tests/errors/*.ceos))
 
-.PHONY: error_test tests/errors/%.test
+.PHONY: error_test .build/tests/errors/%.test
 
 error_test: $(ERROR_TESTS)
 
@@ -49,7 +49,7 @@ error_test: $(ERROR_TESTS)
 
 CPP_TESTS = $(patsubst %.cc,.build/%.test,$(wildcard tests/cpp/*.cc))
 
-.PHONY: cpp_test tests/cpp/%.test
+.PHONY: cpp_test .build/tests/cpp/%.test
 cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
 
 .build/tests/cpp/%.test: tests/cpp/%.cc $(OBJECTS) $(HEADERS)
@@ -62,7 +62,7 @@ cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
 
 TESTS = $(patsubst %.ceos,.build/%.test,$(wildcard tests/*.ceos))
 
-.PHONY: test tests/%.test
+.PHONY: test .build/tests/%.test
 
 test: $(TESTS) error_test cpp_test
 
@@ -70,6 +70,11 @@ test: $(TESTS) error_test cpp_test
 	@mkdir -p $$(dirname $@)
 	-@./$(TARGET) $< > $@_; \
 	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
+
+.PHONY: tests/%.test
+
+tests/%.test: .build/tests/%.test
+	@#
 
 # CLEAN
 
