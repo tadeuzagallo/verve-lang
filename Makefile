@@ -44,7 +44,7 @@ error_test: $(ERROR_TESTS)
 		diff \
 			-I "libc++abi.dylib: terminating" \
 			-I "Abort trap: 6" \
-			$@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; \
+			$@ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; \
 	fi
 
 CPP_TESTS = $(patsubst %.cc,.build/%.test,$(wildcard tests/cpp/*.cc))

@@ -2,6 +2,7 @@
 
 #include "lexer.h"
 #include "token.h"
+#include "type_checker.h"
 
 namespace ceos {
   Parser::Parser(Lexer &lexer) :
@@ -9,6 +10,20 @@ namespace ceos {
   {
     m_environment = std::make_shared<Environment>();
     m_scope = std::make_shared<ParseScope>();
+
+    setType("Int", new BasicType("Int"));
+    setType("Char", new BasicType("Char"));
+    setType("Float", new BasicType("Float"));
+    setType("Void", new BasicType("Void"));
+
+    auto List = new DataType("List");
+    List->length = 1;
+    setType("List", List);
+    
+    auto String = new DataTypeInstance();
+    String->dataType = List;
+    String->types.push_back(getType("Char"));
+    setType("String", String);
   }
 
   AST::ProgramPtr Parser::parse() {
@@ -72,13 +87,15 @@ namespace ceos {
     assert(interface);
 
     interface->implementations.push_back(implementation);
+    implementation->interface = interface;
 
     pushTypeScope();
 
     match('<');
     unsigned i = 0;
     do {
-      setType(interface->generics[i++], parseType());
+      implementation->type = parseType();
+      setType(interface->generics[i++], implementation->type);
     } while(!skip('>'));
 
     assert(i == interface->generics.size());
@@ -171,6 +188,7 @@ namespace ceos {
     fn->body = parseBody();
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
+    //TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment);
 
     popScope();
 
@@ -185,7 +203,7 @@ namespace ceos {
     fn->name = parseIdentifier();
     fnType->name = fn->name->name;
 
-    setType(fnType->name, fnType);
+    auto env = m_environment;
 
     pushScope();
 
@@ -197,12 +215,14 @@ namespace ceos {
     if (!parseFunctionParams(fn->parameters, fnType->types)) goto rewind;
     if (!skip(':')) goto rewind;
 
+    setType(fnType->name, fnType, env);
+
     fnType->returnType = parseType();
 
     fn->body = parseBody();
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
-    //Type::checkReturnType(fnType, fn->body, m_environment);
+    //TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment);
 
     popScope();
 
@@ -313,6 +333,7 @@ fail:
       if (!skip(',')) break;
     }
     match(')');
+    TypeChecker::checkCall(call, m_environment.get(), m_lexer);
     return parseCall(call);
   }
 
@@ -390,21 +411,13 @@ fail:
 
   // Type helpers
 
-  void Parser::setType(std::string &typeName, Type *type) {
-    m_environment->types[typeName] = type;
+  void Parser::setType(std::string typeName, Type *type, std::shared_ptr<Environment> env) {
+    (env ?: m_environment)->types[typeName] = type;
   }
 
   template <typename T>
   T Parser::getType(std::string typeName) {
-    auto env = m_environment;
-    while (env) {
-      auto it = env->types.find(typeName);
-      if (it != env->types.end()) {
-        return dynamic_cast<T>(it->second);
-      }
-      env = env->parent;
-    }
-    return nullptr;
+   return dynamic_cast<T>(m_environment->get(typeName));
   }
 
   void Parser::pushTypeScope() {

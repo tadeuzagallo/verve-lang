@@ -1,8 +1,9 @@
 #include <memory>
 
 #include "ast.h"
-#include "type.h"
+#include "environment.h"
 #include "scope.h"
+#include "type.h"
 
 #pragma once
 
@@ -55,12 +56,7 @@ namespace ceos {
 
     // Type helpers
 
-    struct Environment {
-      std::unordered_map<std::string, Type *> types;
-      std::shared_ptr<Environment> parent;
-    };
-
-    void setType(std::string &typeName, Type *type);
+    void setType(std::string typeName, Type *type, std::shared_ptr<Environment> env = nullptr);
     template<typename T = Type *> T getType(std::string typeName);
 
     void pushTypeScope();

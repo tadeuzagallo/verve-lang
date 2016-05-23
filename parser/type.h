@@ -37,11 +37,12 @@ namespace ceos {
   };
 
   struct GenericType : BasicType {
-    GenericType(std::string &&n) :
-      BasicType(std::move(n)) {}
+    using BasicType::BasicType;
   };
 
   struct DataType : BasicType {
+    using BasicType::BasicType;
+
     unsigned length;
   };
 
