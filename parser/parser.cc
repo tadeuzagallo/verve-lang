@@ -161,7 +161,7 @@ namespace ceos {
     while (!next(')')) {
       auto arg = AST::createFunctionParameter(token().loc);
       arg->name = token(Token::ID).string();
-      arg->uid = i++;
+      arg->index = i++;
       fn->parameters.push_back(arg);
       m_scope->set(arg->name, arg);
 
@@ -259,7 +259,7 @@ rewind:
       if (!next(Token::ID)) goto fail;
       auto param = AST::createFunctionParameter(token().loc);
       param->name = token(Token::ID).string();
-      param->uid = i++;
+      param->index = i++;
       params.push_back(param);
       m_scope->set(param->name, param);
 
@@ -327,7 +327,7 @@ fail:
       if (var && var->type == AST::Type::FunctionParameter) {
         auto param = AST::asFunctionParameter(var);
         auto ident = AST::createFunctionParameter(loc);
-        ident->uid = param->uid;
+        ident->index = param->index;
         ident->name = name;
 
         ParseScopePtr scope;

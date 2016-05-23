@@ -76,7 +76,6 @@ namespace AST {
     using Node::Node;
 
     std::string name;
-    unsigned uid;
   };
 
   struct String : public Identifier {
@@ -86,6 +85,7 @@ namespace AST {
   struct FunctionParameter : public Identifier {
     using Identifier::Identifier;
 
+    unsigned index;
     bool isCaptured;
   };
 

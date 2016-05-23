@@ -119,7 +119,7 @@ namespace ceos {
 
   void Generator::generateFunctionParameter(AST::FunctionParameterPtr arg) {
     emitOpcode(Opcode::push_arg);
-    write(arg->uid);
+    write(arg->index);
   }
 
   void Generator::generateFunctionDefinition(AST::FunctionPtr fn) {
