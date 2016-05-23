@@ -43,7 +43,7 @@
     __options  \
   }; \
  \
-  static const char *typeName(__name t) { \
+  __unused static const char *typeName(__name t) { \
     return (const char *[]) { \
       EVAL(MAP(APPEND_COMMA, __options)) \
     }[(int)t]; \
