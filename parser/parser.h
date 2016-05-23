@@ -24,8 +24,8 @@ namespace ceos {
     AST::BlockPtr parseInterface();
     AST::BlockPtr parseImplementation();
 
-    TypeFunction *parseVirtual();
-    TypeFunction *parseExtern();
+    TypeFunction *parseVirtual(std::shared_ptr<Environment> declScope = nullptr);
+    TypeFunction *parseExtern(std::shared_ptr<Environment> declScope = nullptr);
     TypeFunction *parsePrototype();
 
     AST::FunctionPtr parseTypelessFunction();
@@ -86,5 +86,6 @@ namespace ceos {
     Lexer &m_lexer;
     std::shared_ptr<Environment> m_environment;
     ParseScopePtr m_scope;
+    std::string m_implementationSuffix;
   };
 }

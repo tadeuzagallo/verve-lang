@@ -70,6 +70,8 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     throw std::runtime_error("type error");
   }
 
+  TypeImplementation *implementation = nullptr;
+
   for (unsigned i = 0; i < fnType->types.size(); i++) {
     auto arg = call->arguments[i];
 
@@ -80,6 +82,26 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     if ((ti = dynamic_cast<TypeInterface *>(expected))) {
       for (auto impl : ti->implementations) {
         if (impl->type->equals(actual)) {
+          goto skip;
+        }
+      }
+    }
+
+    GenericType *gt;
+    if (
+        fnType->isVirtual &&
+        (gt = dynamic_cast<GenericType *>(expected)) &&
+        gt->typeName == fnType->interface->genericTypeName
+       )
+    {
+      if (implementation) {
+        goto skip;
+      }
+
+      for (auto impl : fnType->interface->implementations) {
+        if (impl->type->equals(actual)) {
+          implementation = impl;
+          AST::asIdentifier(callee)->name += implementation->type->toString();
           goto skip;
         }
       }

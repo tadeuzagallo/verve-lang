@@ -58,6 +58,7 @@ namespace ceos {
     interface->name = token(Token::ID).string();
     setType(interface->name, interface);
 
+    auto declScope = m_environment;
     pushTypeScope();
 
     match('<');
@@ -71,7 +72,7 @@ namespace ceos {
     match('{');
     while (!skip('}')) {
       if (skip("virtual")) {
-        auto virtualFunction = parseVirtual();
+        auto virtualFunction = parseVirtual(declScope);
         virtualFunction->interface = interface;
       } else {
         auto fn = parseFunction();
@@ -94,6 +95,7 @@ namespace ceos {
     interface->implementations.push_back(implementation);
     implementation->interface = interface;
 
+    auto declScope = m_environment;
     pushTypeScope();
 
     match('<');
@@ -101,15 +103,19 @@ namespace ceos {
     setType(interface->genericTypeName, implementation->type);
     match('>');
 
+    m_implementationSuffix = implementation->type->toString();
+
     match('{');
     auto block = AST::createBlock(token().loc);
     while(!skip('}')) {
       if (skip("extern")) {
-        parseExtern();
+        parseExtern(declScope);
       } else {
         block->nodes.push_back(parseTypelessFunction());
       }
     }
+
+    m_implementationSuffix = "";
 
     popTypeScope();
 
@@ -131,25 +137,25 @@ namespace ceos {
     m_lexer.invalidToken();
   }
 
-  TypeFunction *Parser::parseVirtual() {
+  TypeFunction *Parser::parseVirtual(std::shared_ptr<Environment> declScope) {
     auto prototype = parsePrototype();
     prototype->isVirtual = true;
-    setType(prototype->name, prototype);
+    setType(prototype->name, prototype, declScope);
 
     return prototype;
   }
 
-  TypeFunction *Parser::parseExtern() {
+  TypeFunction *Parser::parseExtern(std::shared_ptr<Environment> scope) {
     auto prototype = parsePrototype();
     prototype->isExternal = true;
-    setType(prototype->name, prototype);
+    setType(prototype->name, prototype, scope);
 
     return prototype;
   }
 
   TypeFunction *Parser::parsePrototype() {
     auto fnType = new TypeFunction();
-    fnType->name = token(Token::ID).string();
+    fnType->name = token(Token::ID).string() + m_implementationSuffix;
 
     parseGenerics(fnType->generics);
 
@@ -169,6 +175,7 @@ namespace ceos {
   AST::FunctionPtr Parser::parseTypelessFunction() {
     auto fn = AST::createFunction(token().loc);
     fn->name = parseIdentifier();
+    fn->name->name += m_implementationSuffix;
 
     pushScope();
 
