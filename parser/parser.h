@@ -48,7 +48,7 @@ namespace ceos {
 
     // Base nodes
 
-    AST::IdentifierPtr parseIdentifier();
+    AST::IdentifierPtr parseIdentifier(bool checkScope = false);
     AST::NumberPtr parseNumber();
     AST::StringPtr parseString();
     Type *parseType();

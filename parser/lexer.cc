@@ -165,7 +165,7 @@ start:
     }
   }
 
-   void Lexer::invalidType() {
+   void Lexer::invalidToken() {
     if (m_token.type == Token::END) {
       std::cerr << "Unexpected end of input\n";
     } else {
@@ -173,7 +173,7 @@ start:
       std::cerr << "Unexpected token `" << Token::typeName(m_token.type) << "` at " << pos.line << ":" << pos.column << std::endl;
     }
     printSource();
-    throw std::runtime_error("Type error");
+    throw std::runtime_error("Parse error");
   }
 
   Pos Lexer::getSourcePosition(Loc loc) {

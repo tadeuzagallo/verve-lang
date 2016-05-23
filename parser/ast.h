@@ -22,10 +22,11 @@ static unsigned str_uid = 0;
     return std::static_pointer_cast<__class>(__n); \
   }
 
-#define DECLARE_CTOR(__class, ...)  \
-    static inline __class##Ptr create##__class() { \
-       auto node = std::make_shared<__class>(__VA_ARGS__); \
+#define DECLARE_CTOR(__class)  \
+    static inline __class##Ptr create##__class(Loc loc = {0, 0}) { \
+       auto node = std::make_shared<__class>(); \
       node->type = Type::__class; \
+      node->loc = loc; \
       return node; \
     } \
 

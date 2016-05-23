@@ -40,7 +40,7 @@ namespace ceos {
 
   AST::BlockPtr Parser::parseInterface() {
     auto interface = new TypeInterface();
-    interface->name = parseIdentifier()->name;
+    interface->name = token(Token::ID).string();
     setType(interface->name, interface);
 
     pushTypeScope();
@@ -110,7 +110,7 @@ namespace ceos {
         return parseIdentifierFunctionOrCall();
       }
     }
-    return nullptr;
+    m_lexer.invalidToken();
   }
 
   TypeFunction *Parser::parseVirtual() {
@@ -156,10 +156,8 @@ namespace ceos {
     match('(');
     unsigned i = 0;
     while (!next(')')) {
-      auto ident = parseIdentifier();
-
       auto arg = AST::createFunctionParameter();
-      arg->name = ident->name;
+      arg->name = token(Token::ID).string();
       arg->uid = i++;
       fn->parameters.push_back(arg);
 
@@ -188,10 +186,10 @@ namespace ceos {
 
     if (!skip('(')) goto rewind;
     if (!parseFunctionParams(fn->parameters, fnType->types)) goto rewind;
-    if (!skip(')')) goto rewind;
     if (!skip(':')) goto rewind;
 
     fnType->returnType = parseType();
+
     fn->body = parseBody();
     //Type::checkReturnType(fnType, fn->body, m_environment);
 
@@ -200,6 +198,7 @@ namespace ceos {
     return fn;
 
 rewind:
+    popScope();
     m_lexer.rewind(start);
     return nullptr;
   }
@@ -221,7 +220,7 @@ rewind:
   }
 
   AST::BlockPtr Parser::parseFactorOrBody() {
-    if (skip('{')) {
+    if (next('{')) {
       return parseBody();
     } else {
       auto block = AST::createBlock();
@@ -232,6 +231,7 @@ rewind:
 
   AST::BlockPtr Parser::parseBody() {
     auto block = AST::createBlock();
+    match('{');
     while (!skip('}')) {
       block->nodes.push_back(parseFactor());
     }
@@ -243,10 +243,10 @@ rewind:
       std::vector<Type *> &types)
   {
     unsigned i = 0;
-    do {
-      if (!next(Token::ID)) goto fail;
+    while (!next(')')) {
 
-      auto param = AST::createFunctionParameter();
+      if (!next(Token::ID)) goto fail;
+      auto param = AST::createFunctionParameter(token().loc);
       param->name = token(Token::ID).string();
       param->uid = i++;
       params.push_back(param);
@@ -257,7 +257,11 @@ rewind:
       auto type = parseType();
       types.push_back(type);
       setType(param->name, type);
-    } while (skip(','));
+
+      if (!skip(',')) break;
+    }
+
+    match(')');
 
     return true;
 
@@ -281,7 +285,7 @@ fail:
   AST::NodePtr Parser::parseIdentifierFunctionOrCall() {
     AST::NodePtr callee = parseFunction();
     if (!callee) {
-      callee = parseIdentifier();
+      callee = parseIdentifier(true);
     }
     return parseCall(callee);
   }
@@ -297,14 +301,27 @@ fail:
       if (!skip(',')) break;
     }
     match(')');
-    return parseCall(callee);
+    return parseCall(call);
   }
 
   // Base nodes
 
-  AST::IdentifierPtr Parser::parseIdentifier() {
+  AST::IdentifierPtr Parser::parseIdentifier(bool checkScope) {
+    auto loc = token().loc;
+    auto name = token(Token::ID).string();
+
+    if (checkScope) {
+      auto var = getVar(name);
+      if (var && var->type == AST::Type::FunctionParameter) {
+        auto ident = AST::createFunctionParameter(loc);
+        ident->uid = AST::asFunctionParameter(var)->uid;
+        ident->name = name;
+        return ident;
+      }
+    }
+
     auto identifier = AST::createIdentifier();
-    identifier->name = token(Token::ID).string();
+    identifier->name = name;
     return identifier;
   }
 

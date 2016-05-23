@@ -33,7 +33,7 @@ namespace ceos {
       bool skip(char c);
       void match(char c);
 
-      void _Noreturn invalidType();
+      void _Noreturn invalidToken();
       void printSource();
       void printSource(Loc loc);
       void _Noreturn error(Loc loc, const char *, ...);
