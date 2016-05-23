@@ -2,7 +2,6 @@
 #include "token.h"
 
 #include <cassert>
-#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -59,9 +58,6 @@ namespace AST {
 
   struct Block : public Node {
     std::vector<NodePtr> nodes;
-    std::function<void()> prologue;
-    bool needsScope;
-    bool capturesScope;
   };
 
   struct Number : public Node {
@@ -88,6 +84,8 @@ namespace AST {
     IdentifierPtr name;
     std::vector<FunctionParameterPtr> parameters;
     BlockPtr body;
+    bool needsScope;
+    bool capturesScope;
   };
 
   struct If : public Node {

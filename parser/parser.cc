@@ -8,7 +8,7 @@ namespace ceos {
     m_lexer(lexer)
   {
     m_environment = std::make_shared<Environment>();
-    m_scope = std::make_shared<Scope>();
+    m_scope = std::make_shared<ParseScope>();
   }
 
   AST::ProgramPtr Parser::parse() {
@@ -153,6 +153,9 @@ namespace ceos {
   AST::FunctionPtr Parser::parseTypelessFunction() {
     auto fn = AST::createFunction();
     fn->name = parseIdentifier();
+
+    pushScope();
+
     match('(');
     unsigned i = 0;
     while (!next(')')) {
@@ -160,11 +163,17 @@ namespace ceos {
       arg->name = token(Token::ID).string();
       arg->uid = i++;
       fn->parameters.push_back(arg);
+      m_scope->set(arg->name, arg);
 
       if (!skip(',')) break;
     }
     match(')');
     fn->body = parseBody();
+    fn->needsScope = m_scope->isRequired;
+    fn->capturesScope = m_scope->capturesScope;
+
+    popScope();
+
     return fn;
   }
 
@@ -191,6 +200,8 @@ namespace ceos {
     fnType->returnType = parseType();
 
     fn->body = parseBody();
+    fn->needsScope = m_scope->isRequired;
+    fn->capturesScope = m_scope->capturesScope;
     //Type::checkReturnType(fnType, fn->body, m_environment);
 
     popScope();
@@ -250,7 +261,7 @@ rewind:
       param->name = token(Token::ID).string();
       param->uid = i++;
       params.push_back(param);
-      setVar(param->name, param);
+      m_scope->set(param->name, param);
 
       if (!skip(':')) goto fail;
 
@@ -311,12 +322,21 @@ fail:
     auto name = token(Token::ID).string();
 
     if (checkScope) {
-      auto var = getVar(name);
+      auto var = m_scope->get(name);
       if (var && var->type == AST::Type::FunctionParameter) {
+        auto param = AST::asFunctionParameter(var);
         auto ident = AST::createFunctionParameter(loc);
-        ident->uid = AST::asFunctionParameter(var)->uid;
+        ident->uid = param->uid;
         ident->name = name;
-        return ident;
+
+        ParseScopePtr scope;
+        if ((scope = m_scope->scopeFor(name)) != m_scope) {
+          param->isCaptured = true;
+          scope->isRequired = true;
+          m_scope->capturesScope = true;
+        } else {
+          return ident;
+        }
       }
     }
 
@@ -398,32 +418,14 @@ fail:
 
   // Var helpers
 
-  void Parser::setVar(std::string &varName, AST::NodePtr var) {
-    m_scope->table[varName] = var;
-  }
-
-  AST::NodePtr Parser::getVar(std::string &varName) {
-    auto scope = m_scope;
-    while (scope) {
-      auto it = scope->table.find(varName);
-      if (it != scope->table.end()) {
-        return it->second;
-      }
-      scope = scope->parent;
-    }
-    return nullptr;
-  }
-
   void Parser::pushScope() {
-    auto scope = std::make_shared<Scope>();
-    scope->parent = m_scope;
-    m_scope = scope;
+    m_scope = m_scope->create();
 
     pushTypeScope();
   }
 
   void Parser::popScope() {
-    m_scope = m_scope->parent;
+    m_scope = m_scope->restore();
 
     popTypeScope();
   }

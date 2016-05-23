@@ -1,8 +1,8 @@
 #include <memory>
 
 #include "ast.h"
-#include "utils/old_scope.h"
 #include "type.h"
+#include "utils/old_scope.h"
 
 #pragma once
 
@@ -68,14 +68,6 @@ namespace ceos {
 
     // Var helpers
 
-    struct Scope {
-      std::unordered_map<std::string, AST::NodePtr> table;
-      std::shared_ptr<Scope> parent;
-    };
-
-    void setVar(std::string &varName, AST::NodePtr var);
-    AST::NodePtr getVar(std::string &varName);
-
     void pushScope();
     void popScope();
 
@@ -97,6 +89,6 @@ namespace ceos {
 
     Lexer &m_lexer;
     std::shared_ptr<Environment> m_environment;
-    std::shared_ptr<Scope> m_scope;
+    ParseScopePtr m_scope;
   };
 }

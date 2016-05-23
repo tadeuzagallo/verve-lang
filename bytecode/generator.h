@@ -4,7 +4,6 @@
 
 #include "parser/ast.h"
 #include "opcodes.h"
-#include "utils/old_scope.h"
 
 #pragma once
 
@@ -14,10 +13,7 @@ namespace ceos {
     public:
       Generator(AST::ProgramPtr ast, bool isDebug) :
         m_ast(ast),
-        m_isDebug(isDebug)
-      {
-        m_scope = std::make_shared<OldScope<AST::NodePtr>>();
-      }
+        m_isDebug(isDebug) {}
 
       std::stringstream &generate(void);
 
@@ -47,7 +43,6 @@ namespace ceos {
       static void printOpcode(std::stringstream &, Opcode::Type);
 
       AST::ProgramPtr  m_ast;
-      std::shared_ptr<OldScope<AST::NodePtr>> m_scope;
       std::stringstream m_output;
       std::vector<std::string> m_strings;
       std::vector<AST::FunctionPtr> m_functions;
