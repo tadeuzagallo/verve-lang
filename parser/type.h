@@ -37,7 +37,8 @@ namespace ceos {
   };
 
   struct GenericType : BasicType {
-    using BasicType::BasicType;
+    GenericType(std::string str) :
+      BasicType(std::move(str)) {}
   };
 
   struct DataType : BasicType {
@@ -140,14 +141,9 @@ namespace ceos {
       std::stringstream str;
       str << "interface "
           << name
-          << "<";
-
-      for (unsigned i = 0; i < generics.size(); i++) {
-        if (i) str << ", ";
-        str << generics[i];
-      }
-          
-      str << "> {\n";
+          << "<"
+          << genericTypeName
+          << "> {\n";
 
       for (auto it : functions) {
         str << it.first << " :: " << it.second->toString() << "\n";
@@ -158,7 +154,7 @@ namespace ceos {
     }
 
     std::string name;
-    std::vector<std::string> generics;
+    std::string genericTypeName;
     std::vector<TypeImplementation *> implementations;
     std::unordered_map<std::string, TypeFunction *> functions;
   };

@@ -19,7 +19,7 @@ namespace ceos {
     auto List = new DataType("List");
     List->length = 1;
     setType("List", List);
-    
+
     auto String = new DataTypeInstance();
     String->dataType = List;
     String->types.push_back(getType("Char"));
@@ -59,7 +59,12 @@ namespace ceos {
     setType(interface->name, interface);
 
     pushTypeScope();
-    parseGenerics(interface->generics);
+
+    match('<');
+    interface->genericTypeName = token(Token::ID).string();
+    match('>');
+
+    setType(interface->genericTypeName, new GenericType(interface->genericTypeName));
 
     auto block = AST::createBlock(token().loc);
 
@@ -92,13 +97,9 @@ namespace ceos {
     pushTypeScope();
 
     match('<');
-    unsigned i = 0;
-    do {
-      implementation->type = parseType();
-      setType(interface->generics[i++], implementation->type);
-    } while(!skip('>'));
-
-    assert(i == interface->generics.size());
+    implementation->type = parseType();
+    setType(interface->genericTypeName, implementation->type);
+    match('>');
 
     match('{');
     auto block = AST::createBlock(token().loc);
@@ -150,9 +151,7 @@ namespace ceos {
     auto fnType = new TypeFunction();
     fnType->name = token(Token::ID).string();
 
-    if (next('<')) {
-      parseGenerics(fnType->generics);
-    }
+    parseGenerics(fnType->generics);
 
     match('(');
     while (!next(')')) {
@@ -207,9 +206,7 @@ namespace ceos {
 
     pushScope();
 
-    if (next('<')) {
-      parseGenerics(fnType->generics);
-    }
+    parseGenerics(fnType->generics);
 
     if (!skip('(')) goto rewind;
     if (!parseFunctionParams(fn->parameters, fnType->types)) goto rewind;
@@ -301,7 +298,9 @@ fail:
   }
 
   void Parser::parseGenerics(std::vector<std::string> &generics) {
-    match('<');
+    if (!skip('<')) {
+      return;
+    }
 
     do {
       auto name = token(Token::ID).string();
