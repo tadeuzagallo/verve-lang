@@ -50,4 +50,5 @@ class Opcode {
     std::stringstream TO##_; \
     FROM.get(*TO##_.rdbuf(), '\0'); \
     std::string TO = TO##_.str(); \
+    FROM.clear(); \
     FROM.ignore(1);

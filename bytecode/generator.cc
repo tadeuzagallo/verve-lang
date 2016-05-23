@@ -209,7 +209,7 @@ namespace ceos {
 
     unsigned index = m_output.tellp();
     while (index++ % WORD_SIZE) {
-      m_output.put(0);
+      m_output.put(1);
     }
 
     if (functions.length()) {
@@ -303,7 +303,7 @@ section_strings:
       }
       static unsigned str_index = 0;
       READ_STR(bytecode, str);
-      while (bytecode.peek() == '\0') {
+      while (bytecode.peek() == '\1') {
         bytecode.get();
       }
       strings.push_back(str);

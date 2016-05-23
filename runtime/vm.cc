@@ -106,8 +106,9 @@ void symbolNotFound(char *symbolName) {
 
       pc -= sizeof(header);
       String str = readStr();
-      while (m_bytecode[pc] == '\0') pc++;
       m_stringTable.push_back(str);
+
+      while (m_bytecode[pc] == '\1') pc++;
     }
   }
 
