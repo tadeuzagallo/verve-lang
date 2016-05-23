@@ -12,8 +12,8 @@ namespace ceos {
   }
 
   AST::ProgramPtr Parser::parse() {
-    auto program = AST::createProgram();
-    program->body = AST::createBlock();
+    auto program = AST::createProgram(Loc{0, 0});
+    program->body = AST::createBlock(Loc{0, 0});
     while(!next(Token::END)) {
       auto node = parseDecl();
       if (node) {
@@ -46,7 +46,7 @@ namespace ceos {
     pushTypeScope();
     parseGenerics(interface->generics);
 
-    auto block = AST::createBlock();
+    auto block = AST::createBlock(token().loc);
 
     match('{');
     while (!skip('}')) {
@@ -84,7 +84,7 @@ namespace ceos {
     assert(i == interface->generics.size());
 
     match('{');
-    auto block = AST::createBlock();
+    auto block = AST::createBlock(token().loc);
     while(!skip('}')) {
       if (skip("extern")) {
         parseExtern();
@@ -151,7 +151,7 @@ namespace ceos {
   }
 
   AST::FunctionPtr Parser::parseTypelessFunction() {
-    auto fn = AST::createFunction();
+    auto fn = AST::createFunction(token().loc);
     fn->name = parseIdentifier();
 
     pushScope();
@@ -159,7 +159,7 @@ namespace ceos {
     match('(');
     unsigned i = 0;
     while (!next(')')) {
-      auto arg = AST::createFunctionParameter();
+      auto arg = AST::createFunctionParameter(token().loc);
       arg->name = token(Token::ID).string();
       arg->uid = i++;
       fn->parameters.push_back(arg);
@@ -180,7 +180,7 @@ namespace ceos {
   AST::FunctionPtr Parser::parseFunction() {
     auto start = token().loc;
 
-    auto fn = AST::createFunction();
+    auto fn = AST::createFunction(start);
     auto fnType = new TypeFunction();
     fn->name = parseIdentifier();
     fnType->name = fn->name->name;
@@ -215,7 +215,7 @@ rewind:
   }
 
   AST::IfPtr Parser::parseIf() {
-    auto iff = AST::createIf();
+    auto iff = AST::createIf(token().loc);
 
     match('(');
     iff->condition = parseFactor();
@@ -234,14 +234,14 @@ rewind:
     if (next('{')) {
       return parseBody();
     } else {
-      auto block = AST::createBlock();
+      auto block = AST::createBlock(token().loc);
       block->nodes.push_back(parseFactor());
       return block;
     }
   }
 
   AST::BlockPtr Parser::parseBody() {
-    auto block = AST::createBlock();
+    auto block = AST::createBlock(token().loc);
     match('{');
     while (!skip('}')) {
       block->nodes.push_back(parseFactor());
@@ -302,10 +302,11 @@ fail:
   }
 
   AST::NodePtr Parser::parseCall(AST::NodePtr callee) {
+    auto loc = token().loc;
     if (!skip('(')) {
       return callee;
     }
-    auto call = AST::createCall();
+    auto call = AST::createCall(loc);
     call->callee = callee;
     while (!next(')')) {
       call->arguments.push_back(parseFactor());
@@ -340,19 +341,19 @@ fail:
       }
     }
 
-    auto identifier = AST::createIdentifier();
+    auto identifier = AST::createIdentifier(loc);
     identifier->name = name;
     return identifier;
   }
 
   AST::NumberPtr Parser::parseNumber() {
-    auto number = AST::createNumber();
+    auto number = AST::createNumber(token().loc);
     number->value = token(Token::NUMBER).number();
     return number;
   }
 
   AST::StringPtr Parser::parseString() {
-    auto str = AST::createString();
+    auto str = AST::createString(token().loc);
     str->name = token(Token::STRING).string();
     return str;
   }

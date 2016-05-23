@@ -22,8 +22,8 @@ static unsigned str_uid = 0;
   }
 
 #define DECLARE_CTOR(__class)  \
-    static inline __class##Ptr create##__class(Loc loc = {0, 0}) { \
-       auto node = std::make_shared<__class>(); \
+    static inline __class##Ptr create##__class(Loc loc) { \
+       auto node = std::make_shared<__class>(loc); \
       node->type = Type::__class; \
       node->loc = loc; \
       return node; \
@@ -50,37 +50,55 @@ namespace AST {
   struct Node {
     Type type;
     Loc loc;
+
+    Node(Loc l): loc(l) {  }
   };
 
   struct Program : public Node {
+    using Node::Node;
+
     BlockPtr body;
   };
 
   struct Block : public Node {
+    using Node::Node;
+
     std::vector<NodePtr> nodes;
   };
 
   struct Number : public Node {
+    using Node::Node;
+
     int value;
   };
 
   struct Identifier : public Node {
+    using Node::Node;
+
     std::string name;
     unsigned uid;
   };
 
-  struct String : public Identifier {};
+  struct String : public Identifier {
+    using Identifier::Identifier;
+  };
 
   struct FunctionParameter : public Identifier {
+    using Identifier::Identifier;
+
     bool isCaptured;
   };
 
   struct Call : public Node {
+    using Node::Node;
+
     NodePtr callee;
     std::vector<NodePtr> arguments;
   };
 
   struct Function : public Node {
+    using Node::Node;
+
     IdentifierPtr name;
     std::vector<FunctionParameterPtr> parameters;
     BlockPtr body;
@@ -89,6 +107,8 @@ namespace AST {
   };
 
   struct If : public Node {
+    using Node::Node;
+
     NodePtr condition;
     BlockPtr ifBody;
     BlockPtr elseBody;
