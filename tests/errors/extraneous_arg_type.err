@@ -1,3 +1,3 @@
-Extraneous type annotation for arg #1
+Invalid token found: expected `:` to be `)`
 2:   print(a : String)
-     ^
+             ^
