@@ -28,7 +28,7 @@ namespace ceos {
     TypeFunction *parseExtern(std::shared_ptr<Environment> declScope = nullptr);
     TypeFunction *parsePrototype();
 
-    AST::FunctionPtr parseTypelessFunction();
+    AST::FunctionPtr parseTypelessFunction(std::shared_ptr<Environment> declScope = nullptr);
     AST::FunctionPtr parseFunction();
 
     AST::IfPtr parseIf();

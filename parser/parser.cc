@@ -111,7 +111,7 @@ namespace ceos {
       if (skip("extern")) {
         parseExtern(declScope);
       } else {
-        block->nodes.push_back(parseTypelessFunction());
+        block->nodes.push_back(parseTypelessFunction(declScope));
       }
     }
 
@@ -172,10 +172,13 @@ namespace ceos {
     return fnType;
   }
 
-  AST::FunctionPtr Parser::parseTypelessFunction() {
+  AST::FunctionPtr Parser::parseTypelessFunction(std::shared_ptr<Environment> declScope) {
     auto fn = AST::createFunction(token().loc);
     fn->name = parseIdentifier();
+
+    auto fnType = getType<TypeFunction *>(fn->name->name);
     fn->name->name += m_implementationSuffix;
+    setType(fn->name->name, fnType, declScope);
 
     pushScope();
 
@@ -187,6 +190,8 @@ namespace ceos {
       arg->index = i++;
       fn->parameters.push_back(arg);
       m_scope->set(arg->name, arg);
+
+      setType(arg->name, fnType->types[arg->index]);
 
       if (!skip(',')) break;
     }

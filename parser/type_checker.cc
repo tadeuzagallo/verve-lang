@@ -80,6 +80,12 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     auto actual = getType(arg, env);
 
     GenericType *gt;
+
+    Type *t;
+    while ((gt = dynamic_cast<GenericType *>(actual)) && (t = env->get(gt->typeName))) {
+      actual = t;
+    }
+
     if (
         fnType->isVirtual &&
         (gt = dynamic_cast<GenericType *>(expected)) &&
