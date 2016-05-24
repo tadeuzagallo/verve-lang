@@ -1,3 +1,3 @@
-Unexpected token `:` at 1:7
-1: foo(1): Int
+Unexpected token `:` at 3:7
+3: foo(1): Int
          ^
