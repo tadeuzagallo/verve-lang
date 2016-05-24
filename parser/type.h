@@ -13,7 +13,7 @@ namespace ceos {
   typedef std::unordered_map<std::string, Type *> TypeMap;
 
   struct Type {
-    virtual bool equals(Type *) = 0;
+    virtual bool accepts(Type *) = 0;
     virtual std::string toString() = 0;
     virtual ~Type() {}
   };
@@ -21,7 +21,7 @@ namespace ceos {
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
 
-    virtual bool equals(Type *other) override {
+    virtual bool accepts(Type *other) override {
       BasicType *t;
       if (!(t = dynamic_cast<BasicType *>(other))) {
         return false;
@@ -48,19 +48,19 @@ namespace ceos {
   };
 
   struct DataTypeInstance : Type {
-    virtual bool equals(Type *other) override {
+    virtual bool accepts(Type *other) override {
       DataTypeInstance *t;
       if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
         return false;
       }
-      if (!dataType->equals(t->dataType)) {
+      if (!dataType->accepts(t->dataType)) {
         return false;
       }
       if (types.size() != t->types.size()) {
         return false;
       }
       for (unsigned i = 0; i < types.size(); i++) {
-        if (!types[i]->equals(t->types[i])) {
+        if (!types[i]->accepts(t->types[i])) {
           return false;
         }
       }
@@ -89,13 +89,13 @@ namespace ceos {
 
   struct TypeInterface;
   struct TypeFunction : Type {
-    virtual bool equals(Type *other) override {
+    virtual bool accepts(Type *other) override {
       TypeFunction *t;
       if (!(t = dynamic_cast<TypeFunction *>(other))) {
         return false;
       }
       for (unsigned i = 0; i < types.size(); i++) {
-        if (!types[i]->equals(t->types[i])) {
+        if (!types[i]->accepts(t->types[i])) {
           return false;
         }
       }
@@ -127,14 +127,21 @@ namespace ceos {
     TypeInterface *interface;
   };
 
-  struct TypeImplementation;
+  struct TypeInterface;
+
+  struct TypeImplementation {
+    TypeInterface *interface;
+    Type *type;
+  };
+
   struct TypeInterface : Type {
-    virtual bool equals(Type *other) override {
-      TypeInterface *t;
-      if (!(t = dynamic_cast<TypeInterface *>(other))) {
-        return false;
+    virtual bool accepts(Type *other) override {
+      for (auto impl : implementations) {
+        if (impl->type->accepts(other)) {
+          return true;
+        }
       }
-      return name == t->name;
+      return false;
     }
 
     virtual std::string toString() override {
@@ -157,10 +164,5 @@ namespace ceos {
     std::string genericTypeName;
     std::vector<TypeImplementation *> implementations;
     std::unordered_map<std::string, TypeFunction *> functions;
-  };
-
-  struct TypeImplementation {
-    TypeInterface *interface;
-    Type *type;
   };
 }

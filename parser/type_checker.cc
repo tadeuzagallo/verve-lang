@@ -43,7 +43,7 @@ static Type *getType(AST::NodePtr node, Environment *env) {
         auto iffType = getType(iff->ifBody, env);
         if (iff->elseBody) {
           auto elseType = getType(iff->elseBody, env);
-          assert(iffType->equals(elseType));
+          assert(iffType->accepts(elseType));
         }
         return iffType;
       }
@@ -71,21 +71,13 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   }
 
   TypeImplementation *implementation = nullptr;
+  TypeMap generics;
 
   for (unsigned i = 0; i < fnType->types.size(); i++) {
     auto arg = call->arguments[i];
 
     auto expected = fnType->types[i];
     auto actual = getType(arg, env);
-
-    TypeInterface *ti;
-    if ((ti = dynamic_cast<TypeInterface *>(expected))) {
-      for (auto impl : ti->implementations) {
-        if (impl->type->equals(actual)) {
-          goto skip;
-        }
-      }
-    }
 
     GenericType *gt;
     if (
@@ -99,7 +91,7 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
       }
 
       for (auto impl : fnType->interface->implementations) {
-        if (impl->type->equals(actual)) {
+        if (impl->type->accepts(actual)) {
           implementation = impl;
           AST::asIdentifier(callee)->name += implementation->type->toString();
           goto skip;
@@ -107,7 +99,19 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
       }
     }
 
-    if (!expected->equals(actual)) {
+    if ((gt = dynamic_cast<GenericType *>(expected))) {
+      if (generics[gt->typeName]) {
+        expected = generics[gt->typeName];
+      } else {
+        auto it = std::find(fnType->generics.begin(), fnType->generics.end(), gt->typeName);
+        if (it != fnType->generics.end()) {
+          generics[gt->typeName] = actual;
+          goto skip;
+        }
+      }
+    }
+
+    if (!expected->accepts(actual)) {
       fprintf(stderr, "Expected `%s` but got `%s` on arg #%d for function `%s`\n",
           expected->toString().c_str(),
           actual->toString().c_str(),
@@ -119,6 +123,11 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
 
 skip:
     continue;
+  }
+
+  GenericType *gt;
+  if ((gt = dynamic_cast<GenericType *>(fnType->returnType))) {
+    fnType->returnType = generics[gt->typeName];
   }
 }
 
