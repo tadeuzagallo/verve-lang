@@ -107,12 +107,12 @@ namespace ceos {
       str << "(";
       for (unsigned i = 0; i < types.size(); i++) {
         if (i > 0) {
-          str << " -> ";
+          str << ", ";
         }
 
         str << types[i]->toString();
       }
-      str << ")";
+      str << "): " << returnType->toString();
       return str.str();
     }
 
@@ -146,7 +146,7 @@ namespace ceos {
           << "> {\n";
 
       for (auto it : functions) {
-        str << it.first << " :: " << it.second->toString() << "\n";
+        str << it.first << it.second->toString() << "\n";
       }
       str << "}";
 
