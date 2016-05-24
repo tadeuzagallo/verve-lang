@@ -103,19 +103,18 @@ namespace ceos {
     setType(interface->genericTypeName, implementation->type);
     match('>');
 
-    m_implementationSuffix = implementation->type->toString();
+    auto implementationSuffix = implementation->type->toString();
 
     match('{');
     auto block = AST::createBlock(token().loc);
     while(!skip('}')) {
       if (skip("extern")) {
-        parseExtern(declScope);
+        parseExtern(declScope, implementationSuffix);
       } else {
-        block->nodes.push_back(parseTypelessFunction(declScope));
+        auto fn = parseTypelessFunction(implementationSuffix, declScope);
+        block->nodes.push_back(fn);
       }
     }
-
-    m_implementationSuffix = "";
 
     popTypeScope();
 
@@ -145,17 +144,17 @@ namespace ceos {
     return prototype;
   }
 
-  TypeFunction *Parser::parseExtern(std::shared_ptr<Environment> scope) {
-    auto prototype = parsePrototype();
+  TypeFunction *Parser::parseExtern(std::shared_ptr<Environment> scope, std::string implementationSuffix) {
+    auto prototype = parsePrototype(implementationSuffix);
     prototype->isExternal = true;
     setType(prototype->name, prototype, scope);
 
     return prototype;
   }
 
-  TypeFunction *Parser::parsePrototype() {
+  TypeFunction *Parser::parsePrototype(std::string implementationSuffix) {
     auto fnType = new TypeFunction();
-    fnType->name = token(Token::ID).string() + m_implementationSuffix;
+    fnType->name = token(Token::ID).string() + implementationSuffix;
 
     parseGenerics(fnType->generics);
 
@@ -172,12 +171,12 @@ namespace ceos {
     return fnType;
   }
 
-  AST::FunctionPtr Parser::parseTypelessFunction(std::shared_ptr<Environment> declScope) {
+  AST::FunctionPtr Parser::parseTypelessFunction(std::string implementationName, std::shared_ptr<Environment> declScope) {
     auto fn = AST::createFunction(token().loc);
     fn->name = parseIdentifier();
 
     auto fnType = getType<TypeFunction *>(fn->name->name);
-    fn->name->name += m_implementationSuffix;
+    fn->name->name += implementationName;
     setType(fn->name->name, fnType, declScope);
 
     pushScope();
