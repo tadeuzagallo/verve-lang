@@ -44,8 +44,8 @@ _(): Void {
   foo()
 }()
 
-_(a: (): Int): Int {
-  baz(a)
-}(_(): Int { 42 })
+/*_(a: (): Int): Int {*/
+  /*baz(a)*/
+/*}(_(): Int { 42 })*/
 
 print("OK")
