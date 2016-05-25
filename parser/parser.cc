@@ -314,7 +314,7 @@ rewind:
 
         tagTest = AST::createObjectTagTest(token().loc);
 
-        std::vector<AST::ObjectLoadPtr> loads;
+        std::vector<std::pair<std::string, AST::ObjectLoadPtr>> loads;
 
         auto offset = 0u;
         while (!next(')')) {
@@ -322,8 +322,7 @@ rewind:
           load->offset = offset++;
           load->constructorName = name;
 
-          m_scope->set(token(Token::ID).string(), load);
-          loads.push_back(load);
+          loads.push_back(std::make_pair(token(Token::ID).string(), load));
 
           if (!skip(',')) break;
         }
@@ -335,8 +334,9 @@ rewind:
 
         auto object = parseFactor();
         tagTest->object = object;
-        for (auto load : loads) {
-          load->object = object;
+        for (auto it : loads) {
+          it.second->object = object;
+          m_scope->set(it.first, it.second);
         }
       } else {
         match('=');
