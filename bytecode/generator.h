@@ -31,6 +31,7 @@ namespace ceos {
       void generateIf(AST::IfPtr);
       void generateProgram(AST::ProgramPtr);
       void generateBlock(AST::BlockPtr);
+      void generateConstructor(AST::CallPtr);
 
       void emitOpcode(Opcode::Type);
       void emitJmp(Opcode::Type, AST::BlockPtr &);

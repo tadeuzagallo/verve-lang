@@ -165,4 +165,53 @@ namespace ceos {
     std::vector<TypeImplementation *> implementations;
     std::unordered_map<std::string, TypeFunction *> functions;
   };
+
+  struct TypeConstructor : Type {
+    virtual bool accepts(__unused Type *other) override {
+      return false;
+    }
+
+    virtual std::string toString() override {
+      std::stringstream str;
+      str << type->name
+          << "(";
+
+      unsigned i = 0;
+      for (auto it : type->types) {
+        if (i++ > 0) str << ",";
+
+        str << it->toString();
+      }
+      str << ")";
+
+      return str.str();
+    }
+
+    TypeFunction *type;
+    unsigned index;
+    unsigned size = 0;
+  };
+
+  struct EnumType : Type {
+    virtual bool accepts(Type *other) override {
+      return this == other;
+    }
+
+    virtual std::string toString() override {
+      std::stringstream str;
+      str << "type "
+          << name
+          << " {\n";
+
+      for (auto it : constructors) {
+        str << it->toString() << "\n";
+      }
+      str << "}";
+
+      return str.str();
+    }
+
+    std::string name;
+    std::vector<TypeConstructor *> constructors;
+  };
 }

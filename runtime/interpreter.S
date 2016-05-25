@@ -213,6 +213,23 @@ _op_put_to_scope:
   ccall _setScope
   skip 2
 
+.globl _op_alloc_obj
+_op_alloc_obj:
+  read 1, %rdi
+  shl $3, %rdi
+  call _malloc
+  push %rax
+  skip 1
+
+.globl _op_obj_store_at
+_op_obj_store_at:
+  pop %rdi // value
+  pop %rdx // object
+  read 1, %rsi // index
+  mov %rdi, (%rdx, %rsi, 8)
+  push %rdx
+  skip 1
+
 .globl _op_ret
 _op_ret:
   pop %rax

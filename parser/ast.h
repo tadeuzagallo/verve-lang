@@ -94,6 +94,9 @@ namespace AST {
 
     NodePtr callee;
     std::vector<NodePtr> arguments;
+    bool isConstructor = false;
+    unsigned index;
+    unsigned size;
   };
 
   struct Function : public Node {

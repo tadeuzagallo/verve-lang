@@ -1,0 +1,5 @@
+type Foo {
+  Bar(Int, Int)
+}
+
+_(a: Foo): Void { } (Bar(1, 2))

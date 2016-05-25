@@ -21,6 +21,9 @@ namespace ceos {
 
     AST::NodePtr parseDecl();
 
+    void parseTypeDecl();
+    void parseTypeConstructor(unsigned index, EnumType *owner);
+
     AST::BlockPtr parseInterface();
     AST::BlockPtr parseImplementation();
 

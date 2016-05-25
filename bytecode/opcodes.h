@@ -21,7 +21,9 @@
       exit, \
       create_lex_scope, \
       release_lex_scope, \
-      put_to_scope
+      put_to_scope, \
+      alloc_obj, \
+      obj_store_at
 
 EVAL(MAP(EXTERN_OPCODE, OPCODES))
 

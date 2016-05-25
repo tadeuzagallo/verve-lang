@@ -29,9 +29,10 @@ static Type *getType(AST::NodePtr node, Environment *env) {
       {
         auto call = AST::asCall(node);
         auto type = getType(call->callee, env);
-        TypeFunction *fnType;
-        if ((fnType = dynamic_cast<TypeFunction *>(type))) {
+        if (auto fnType = dynamic_cast<TypeFunction *>(type)) {
           return fnType->returnType;
+        } else if (auto ctorType = dynamic_cast<TypeConstructor *>(type)) {
+          return ctorType->type->returnType;
         } else {
           throw std::runtime_error("type error");
         }
@@ -58,7 +59,12 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   auto calleeType = getType(callee, env);
   TypeFunction *fnType;
 
-  if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
+  if (auto ctorType = dynamic_cast<TypeConstructor *>(calleeType)) {
+    call->isConstructor = true;
+    call->index = ctorType->index;
+    call->size = ctorType->size;
+    fnType = ctorType->type;
+  } else if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
     fprintf(stderr, "Can't find type information for function call\n");
     lexer.printSource(call->loc);
     throw std::runtime_error("type error");

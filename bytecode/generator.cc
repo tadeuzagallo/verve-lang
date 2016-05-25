@@ -87,6 +87,10 @@ namespace ceos {
   }
 
   void Generator::generateCall(AST::CallPtr call) {
+    if (call->isConstructor) {
+      return generateConstructor(call);
+    }
+
     for (unsigned i = call->arguments.size(); i > 0;) {
       generateNode(call->arguments[--i]);
     }
@@ -227,6 +231,23 @@ namespace ceos {
   void Generator::generateBlock(AST::BlockPtr block) {
     for (auto node : block->nodes) {
       generateNode(node);
+    }
+  }
+
+  void Generator::generateConstructor(AST::CallPtr call) {
+    emitOpcode(Opcode::alloc_obj);
+    write(call->size + 1); // args + tag
+
+    emitOpcode(Opcode::push);
+    write(call->index); // tag
+
+    emitOpcode(Opcode::obj_store_at);
+    write(0);
+
+    for (unsigned i = 0; i < call->arguments.size(); i++) {
+      generateNode(call->arguments[i]);
+      emitOpcode(Opcode::obj_store_at);
+      write(i + 1); // skip tag
     }
   }
 
@@ -411,6 +432,14 @@ section_code:
       case Opcode::bind:
         READ_INT(bytecode, stringID);
         WRITE(2, "bind $" << strings[stringID]);
+        break;
+      case Opcode::alloc_obj:
+        READ_INT(bytecode, size);
+        WRITE(2, "alloc_obj size(" << size << ")");
+        break;
+      case Opcode::obj_store_at:
+        READ_INT(bytecode, index);
+        WRITE(2, "obj_store_at #" << index);
         break;
       case Opcode::ret: {
         WRITE(1, "ret");

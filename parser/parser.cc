@@ -44,6 +44,9 @@ namespace ceos {
         return parseInterface();
       } else if (skip("implementation")) {
         return parseImplementation();
+      } else if (skip("type")) {
+        parseTypeDecl();
+        return nullptr;
       } else if (skip("extern")) {
         parseExtern();
         return nullptr;
@@ -51,6 +54,43 @@ namespace ceos {
     }
 
     return parseFactor();
+  }
+
+  void Parser::parseTypeDecl() {
+    auto type = new EnumType();
+    auto index = 0u;
+
+    type->name = token(Token::ID).string();
+
+    setType(type->name, type);
+
+    match('{');
+    while (!skip('}')) {
+      parseTypeConstructor(index++, type);
+    }
+  }
+
+  void Parser::parseTypeConstructor(unsigned index, EnumType *owner) {
+    auto ctor = new TypeConstructor();
+    ctor->type = new TypeFunction();
+
+    ctor->type->name = token(Token::ID).string();
+    ctor->type->returnType = owner;
+
+    setType(ctor->type->name, ctor);
+
+    ctor->index = index;
+
+    match('(');
+    while (!next(')')) {
+      ctor->size++;
+      ctor->type->types.push_back(parseType());
+
+      if (!skip(',')) {
+        break;
+      }
+    }
+    match(')');
   }
 
   AST::BlockPtr Parser::parseInterface() {
