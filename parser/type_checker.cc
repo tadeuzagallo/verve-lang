@@ -75,7 +75,12 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     call->size = ctorType->size;
     fnType = ctorType->type;
   } else if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
-    fprintf(stderr, "Can't find type information for function call\n");
+    if (lexer.next('{')) {
+      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
+    } else {
+      fprintf(stderr, "Can't find type information for function call\n");
+    }
+
     lexer.printSource(call->loc);
     throw std::runtime_error("type error");
   }

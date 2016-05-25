@@ -441,12 +441,6 @@ fail:
     }
     match(')');
 
-    if (next('{')) {
-      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
-      m_lexer.printSource();
-      throw std::runtime_error("parse error");
-    }
-
     TypeChecker::checkCall(call, m_environment.get(), m_lexer);
     return parseCall(call);
   }
