@@ -1,0 +1,3 @@
+Type Error: `if` and `else` branches evaluate to different types
+1: print(if (1) {
+            ^

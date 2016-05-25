@@ -2,7 +2,7 @@
 
 namespace ceos {
 
-static Type *getType(AST::NodePtr node, Environment *env) {
+static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
   switch (node->type) {
     case AST::Type::String:
       return env->get("String");
@@ -22,13 +22,13 @@ static Type *getType(AST::NodePtr node, Environment *env) {
     case AST::Type::Block:
       {
         auto block = AST::asBlock(node);
-        return block->nodes.empty() ? env->get("Void") : getType(block->nodes.back(), env);
+        return block->nodes.empty() ? env->get("Void") : getType(block->nodes.back(), env, lexer);
       }
 
     case AST::Type::Call:
       {
         auto call = AST::asCall(node);
-        auto type = getType(call->callee, env);
+        auto type = getType(call->callee, env, lexer);
         if (auto fnType = dynamic_cast<TypeFunction *>(type)) {
           return fnType->returnType;
         } else if (auto ctorType = dynamic_cast<TypeConstructor *>(type)) {
@@ -41,10 +41,19 @@ static Type *getType(AST::NodePtr node, Environment *env) {
     case AST::Type::If:
       {
         auto iff = AST::asIf(node);
-        auto iffType = getType(iff->ifBody, env);
+        auto iffType = getType(iff->ifBody, env, lexer);
         if (iff->elseBody) {
-          auto elseType = getType(iff->elseBody, env);
-          assert(iffType->accepts(elseType));
+          auto elseType = getType(iff->elseBody, env, lexer);
+          // return the least specific type
+          if (iffType->accepts(elseType)) {
+            return iffType;
+          } else if (elseType->accepts(iffType)) {
+            return elseType;
+          } else {
+            fprintf(stderr, "Type Error: `if` and `else` branches evaluate to different types\n");
+            lexer.printSource(iff->loc);
+            throw std::runtime_error("type error");
+          }
         }
         return iffType;
       }
@@ -66,7 +75,7 @@ static Type *getType(AST::NodePtr node, Environment *env) {
 
 void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   auto callee = call->callee;
-  auto calleeType = getType(callee, env);
+  auto calleeType = getType(callee, env, lexer);
   TypeFunction *fnType;
 
   if (auto ctorType = dynamic_cast<TypeConstructor *>(calleeType)) {
@@ -98,7 +107,7 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     auto arg = call->arguments[i];
 
     auto expected = fnType->types[i];
-    auto actual = getType(arg, env);
+    auto actual = getType(arg, env, lexer);
 
     GenericType *gt;
 
