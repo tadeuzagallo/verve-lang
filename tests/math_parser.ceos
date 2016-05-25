@@ -1,79 +1,81 @@
-parse-factor-(sum, expr) {
+type Result {
+  MakeResult(Int, String)
+}
+
+parse-factor-(sum: Int, expr: String): Result {
   if (gt(count(expr), 0)) {
-      _(c) {
+      _(c: Int): Result {
         if (and(gte(c, '0'), lte(c, '9'))) {
           parse-factor-(add(mul(10, sum), sub(c, '0')), substr(expr, 1))
         } else {
-          list(sum, expr)
+          MakeResult(sum, expr)
         }
       }(at(expr, 0))
   } else {
-    list(sum, expr)
+    MakeResult(sum, expr)
   }
 }
 
-parse-factor(e) {
+parse-factor(e: String): Result {
   parse-factor-(0, e)
 }
 
-eval-term(expr) {
+eval-term-(pair: Result): Result {
+  let MakeResult(lhs, expr) = pair {
+    if (lte(count(expr), 0)) {
+      pair
+    } else {
+      _(lookahead: Int, expr: String): Result {
+        if (or(equals(lookahead, '*'), equals(lookahead, '/'))) {
+          let MakeResult(rhs, expr) = parse-factor(expr) {
+            if (equals(lookahead, '*')) {
+              eval-term-(MakeResult(mul(lhs, rhs), expr))
+            } else {
+              eval-term-(MakeResult(div(lhs, rhs), expr))
+            }
+          }
+        } else {
+          pair
+        }
+      }(at(expr, 0), substr(expr, 1))
+    }
+  }
+}
+
+eval-term(expr: String): Result {
   eval-term-(parse-factor(expr))
 }
 
-eval-term-(pair) {
-  _(lhs, expr) {
+eval-expr-(pair: Result): Result {
+  let MakeResult(lhs, expr) = pair {
     if (lte(count(expr), 0)) {
       pair
     } else {
-      _(lookahead, expr) {
-        if (or(equals(lookahead, '*'), equals(lookahead, '/'))) {
-          _(pair) {
-            _(rhs, expr) {
-              if (equals(lookahead, '*')) {
-                eval-term-(list(mul(lhs, rhs), expr))
-              } else {
-                eval-term-(list(div(lhs, rhs), expr))
-              }
-            }(at(pair, 0), at(pair, 1))
-          }(parse-factor(expr))
+      _(lookahead: Int, expr: String): Result {
+        if (or(equals(lookahead, '+'), equals(lookahead, '-'))) {
+          let MakeResult(rhs, expr) = eval-term(expr) {
+            if (equals(lookahead, '+')) {
+              eval-expr-(MakeResult(add(lhs, rhs), expr))
+            } else {
+              eval-expr-(MakeResult(sub(lhs, rhs), expr))
+            }
+          }
         } else {
           pair
         }
       }(at(expr, 0), substr(expr, 1))
     }
-  }(at(pair, 0), at(pair, 1))
+  }
 }
 
-eval-expr(e) {
+eval-expr(e: String): Result {
   eval-expr-(eval-term(e))
 }
 
-eval-expr-(pair) {
-  _(lhs, expr) {
-    if (lte(count(expr), 0)) {
-      pair
-    } else {
-      _(lookahead, expr) {
-        if (or(equals(lookahead, '+'), equals(lookahead, '-'))) {
-          _(pair) {
-            _(rhs, expr) {
-              if (equals(lookahead, '+')) {
-                eval-expr-(list(add(lhs, rhs), expr))
-              } else {
-                eval-expr-(list(sub(lhs, rhs), expr))
-              }
-            }(at(pair, 0), at(pair, 1))
-          }(eval-term(expr))
-        } else {
-          pair
-        }
-      }(at(expr, 0), substr(expr, 1))
-    }
-  }(at(pair, 0), at(pair, 1))
-}
-
-eval(e) {
-  at(eval-expr(e), 0)
+eval(e: String): Int {
+  let MakeResult(res, _) = eval-expr(e) {
+    res
+  }
 }
 
 print(eval("22"))

@@ -9,6 +9,10 @@ implementation Stringify<String> { }
 
 extern print(Stringify): Void
 
+extern count(String): Int
+extern substr(String, Int): String
+extern at(String, Int): Int
+
 extern add(Int, Int): Int
 extern sub(Int, Int): Int
 extern mul(Int, Int): Int
