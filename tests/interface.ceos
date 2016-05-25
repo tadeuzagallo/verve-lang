@@ -4,15 +4,15 @@ interface Show<T> {
 
 implementation Show<String> {
   show(s) {
-    print("SHOW STRING")
+    "SHOW STRING"
   }
 }
 
 implementation Show<Int> {
   show(n) {
-    print("SHOW INT")
+    "SHOW INT"
   }
 }
 
-show("")
-show(0)
+print(show(""))
+print(show(0))
