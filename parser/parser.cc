@@ -426,10 +426,12 @@ fail:
           AST::asFunctionParameter(var)->isCaptured = true;
           scope->isRequired = true;
           m_scope->capturesScope = true;
+          goto ident;
         }
       }
       if (var) return var;
     }
+ident:
 
     auto identifier = AST::createIdentifier(loc);
     identifier->name = name;
