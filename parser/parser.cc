@@ -169,6 +169,8 @@ namespace ceos {
     } else if (next(Token::ID)) {
       if (skip("if")) {
         return parseIf();
+      } else if (skip("let")) {
+        return parseLet();
       } else {
         return parseIdentifierFunctionOrCall();
       }
@@ -213,11 +215,11 @@ namespace ceos {
 
   AST::FunctionPtr Parser::parseTypelessFunction(std::string implementationName, std::shared_ptr<Environment> declScope) {
     auto fn = AST::createFunction(token().loc);
-    fn->name = parseIdentifier();
+    fn->name = token(Token::ID).string();
 
-    auto fnType = getType<TypeFunction *>(fn->name->name);
-    fn->name->name += implementationName;
-    setType(fn->name->name, fnType, declScope);
+    auto fnType = getType<TypeFunction *>(fn->name);
+    fn->name += implementationName;
+    setType(fn->name, fnType, declScope);
 
     pushScope();
 
@@ -250,8 +252,8 @@ namespace ceos {
 
     auto fn = AST::createFunction(start);
     auto fnType = new TypeFunction();
-    fn->name = parseIdentifier();
-    fnType->name = fn->name->name;
+    fn->name = token(Token::ID).string();
+    fnType->name = fn->name;
 
     auto env = m_environment;
 
@@ -296,6 +298,22 @@ rewind:
     }
 
     return iff;
+  }
+
+  AST::BlockPtr Parser::parseLet() {
+    pushScope();
+
+    while (!next('{')) {
+      auto name = token(Token::ID).string();
+      match('=');
+      m_scope->set(name, parseFactor());
+    }
+
+    auto block = parseBody();
+
+    popScope();
+
+    return block;
   }
 
   AST::BlockPtr Parser::parseFactorOrBody() {
@@ -396,27 +414,21 @@ fail:
 
   // Base nodes
 
-  AST::IdentifierPtr Parser::parseIdentifier(bool checkScope) {
+  AST::NodePtr Parser::parseIdentifier(bool checkScope) {
     auto loc = token().loc;
     auto name = token(Token::ID).string();
 
     if (checkScope) {
       auto var = m_scope->get(name);
       if (var && var->type == AST::Type::FunctionParameter) {
-        auto param = AST::asFunctionParameter(var);
-        auto ident = AST::createFunctionParameter(loc);
-        ident->index = param->index;
-        ident->name = name;
-
         ParseScopePtr scope;
         if ((scope = m_scope->scopeFor(name)) != m_scope) {
-          param->isCaptured = true;
+          AST::asFunctionParameter(var)->isCaptured = true;
           scope->isRequired = true;
           m_scope->capturesScope = true;
-        } else {
-          return ident;
         }
       }
+      if (var) return var;
     }
 
     auto identifier = AST::createIdentifier(loc);

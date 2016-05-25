@@ -35,6 +35,7 @@ namespace ceos {
     AST::FunctionPtr parseFunction();
 
     AST::IfPtr parseIf();
+    AST::BlockPtr parseLet();
 
     AST::BlockPtr parseFactorOrBody();
     AST::BlockPtr parseBody();
@@ -52,7 +53,7 @@ namespace ceos {
 
     // Base nodes
 
-    AST::IdentifierPtr parseIdentifier(bool checkScope = false);
+    AST::NodePtr parseIdentifier(bool checkScope = false);
     AST::NumberPtr parseNumber();
     AST::StringPtr parseString();
     Type *parseType();

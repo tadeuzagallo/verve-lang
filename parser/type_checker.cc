@@ -11,7 +11,7 @@ static Type *getType(AST::NodePtr node, Environment *env) {
       return env->get("Int");
 
     case AST::Type::Function:
-      return getType(AST::asFunction(node)->name, env);
+      return env->get(AST::asFunction(node)->name);
 
     case AST::Type::Identifier:
       return env->get(AST::asIdentifier(node)->name);

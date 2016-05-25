@@ -43,6 +43,7 @@ start:
       BASIC_TOKEN('>')
       BASIC_TOKEN(',')
       BASIC_TOKEN(':')
+      BASIC_TOKEN('=')
 
       case '\0':
         start = m_token.loc.end > 0 ? m_token.loc.end - 1 : 0;

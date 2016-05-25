@@ -130,15 +130,15 @@ namespace ceos {
     emitOpcode(Opcode::create_closure);
     write(m_functions.size());
     write(fn->capturesScope);
-    if (fn->name->name != "_") {
+    if (fn->name != "_") {
       emitOpcode(Opcode::bind);
-      write(uniqueString(fn->name->name));
+      write(uniqueString(fn->name));
     }
     m_functions.push_back(fn);
   }
 
   void Generator::generateFunctionSource(AST::FunctionPtr fn) {
-    std::string fnName = fn->name->name;
+    std::string fnName = fn->name;
     if (fnName == "_") {
       static unsigned id = 0;
       fnName = "_" + std::to_string(id++);

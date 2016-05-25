@@ -102,7 +102,7 @@ namespace AST {
   struct Function : public Node {
     using Node::Node;
 
-    IdentifierPtr name;
+    std::string name;
     std::vector<FunctionParameterPtr> parameters;
     BlockPtr body;
     bool needsScope;
