@@ -3,14 +3,14 @@ type Result {
 }
 
 parse-factor-(sum: Int, expr: String): Result {
-  if (gt(count(expr), 0)) {
-      _(c: Int): Result {
-        if (and(gte(c, '0'), lte(c, '9'))) {
-          parse-factor-(add(mul(10, sum), sub(c, '0')), substr(expr, 1))
-        } else {
-          MakeResult(sum, expr)
-        }
-      }(at(expr, 0))
+  if (count(expr)) {
+    _(c: Int): Result {
+      if (and(gte(c, '0'), lte(c, '9'))) {
+        parse-factor-(add(mul(10, sum), sub(c, '0')), substr(expr, 1))
+      } else {
+        MakeResult(sum, expr)
+      }
+    }(at(expr, 0))
   } else {
     MakeResult(sum, expr)
   }
@@ -25,7 +25,8 @@ eval-term-(pair: Result): Result {
     if (lte(count(expr), 0)) {
       pair
     } else {
-      _(lookahead: Int, expr: String): Result {
+      let lookahead = at(expr, 0)
+          expr = substr(expr, 1) {
         if (or(equals(lookahead, '*'), equals(lookahead, '/'))) {
           let MakeResult(rhs, expr) = parse-factor(expr) {
             if (equals(lookahead, '*')) {
@@ -37,7 +38,7 @@ eval-term-(pair: Result): Result {
         } else {
           pair
         }
-      }(at(expr, 0), substr(expr, 1))
+      }
     }
   }
 }
@@ -51,7 +52,8 @@ eval-expr-(pair: Result): Result {
     if (lte(count(expr), 0)) {
       pair
     } else {
-      _(lookahead: Int, expr: String): Result {
+      let lookahead = at(expr, 0)
+          expr = substr(expr, 1) {
         if (or(equals(lookahead, '+'), equals(lookahead, '-'))) {
           let MakeResult(rhs, expr) = eval-term(expr) {
             if (equals(lookahead, '+')) {
@@ -63,7 +65,7 @@ eval-expr-(pair: Result): Result {
         } else {
           pair
         }
-      }(at(expr, 0), substr(expr, 1))
+      }
     }
   }
 }
