@@ -167,4 +167,13 @@ skip:
   }
 }
 
+void TypeChecker::checkReturnType(Type *expected, AST::BlockPtr body, Environment *env, Lexer &lexer) {
+  auto actual = getType(body, env, lexer);
+  if (!expected->accepts(actual)) {
+    fprintf(stderr, "Type Error: Invalid return type for function: expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
+    lexer.printSource(body->loc);
+    throw std::runtime_error("type error");
+  }
+}
+
 }

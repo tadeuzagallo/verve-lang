@@ -240,7 +240,7 @@ namespace ceos {
     fn->body = parseBody();
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
-    //TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment);
+    TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment.get(), m_lexer);
 
     popScope();
 
@@ -272,7 +272,7 @@ namespace ceos {
     fn->body = parseBody();
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
-    //TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment);
+    TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment.get(), m_lexer);
 
     popScope();
 
