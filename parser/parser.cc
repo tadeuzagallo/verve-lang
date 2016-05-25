@@ -58,7 +58,7 @@ namespace ceos {
 
   void Parser::parseTypeDecl() {
     auto type = new EnumType();
-    auto index = 0u;
+    auto tag = 0u;
 
     type->name = token(Token::ID).string();
 
@@ -66,11 +66,11 @@ namespace ceos {
 
     match('{');
     while (!skip('}')) {
-      parseTypeConstructor(index++, type);
+      parseTypeConstructor(tag++, type);
     }
   }
 
-  void Parser::parseTypeConstructor(unsigned index, EnumType *owner) {
+  void Parser::parseTypeConstructor(unsigned tag, EnumType *owner) {
     auto ctor = new TypeConstructor();
     ctor->type = new TypeFunction();
 
@@ -79,7 +79,7 @@ namespace ceos {
 
     setType(ctor->type->name, ctor);
 
-    ctor->index = index;
+    ctor->tag = tag;
 
     match('(');
     while (!next(')')) {
@@ -303,13 +303,52 @@ rewind:
   AST::BlockPtr Parser::parseLet() {
     pushScope();
 
+    AST::ObjectTagTestPtr tagTest = nullptr;
+
     while (!next('{')) {
       auto name = token(Token::ID).string();
-      match('=');
-      m_scope->set(name, parseFactor());
+
+      if (skip('(')) {
+        auto ctor = getType<TypeConstructor *>(name);
+        assert(ctor);
+
+        tagTest = AST::createObjectTagTest(token().loc);
+
+        std::vector<AST::ObjectLoadPtr> loads;
+
+        auto offset = 0u;
+        while (!next(')')) {
+          auto load = AST::createObjectLoad(token().loc);
+          load->offset = offset++;
+          load->constructorName = name;
+
+          m_scope->set(token(Token::ID).string(), load);
+          loads.push_back(load);
+
+          if (!skip(',')) break;
+        }
+        match(')');
+
+        match('=');
+
+        // assert(loads.size() == ctor->type->types.size()); ??
+
+        auto object = parseFactor();
+        tagTest->object = object;
+        for (auto load : loads) {
+          load->object = object;
+        }
+      } else {
+        match('=');
+        m_scope->set(name, parseFactor());
+      }
     }
 
     auto block = parseBody();
+
+    if (tagTest != nullptr) {
+      block->nodes.insert(block->nodes.begin(), tagTest);
+    }
 
     popScope();
 

@@ -44,6 +44,12 @@ namespace ceos {
       case AST::Type::Block:
         generateBlock(AST::asBlock(node));
         break;
+      case AST::Type::ObjectTagTest:
+        generateObjectTagTest(AST::asObjectTagTest(node));
+        break;
+      case AST::Type::ObjectLoad:
+        generateObjectLoad(AST::asObjectLoad(node));
+        break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
         throw;
@@ -234,12 +240,24 @@ namespace ceos {
     }
   }
 
+  void Generator::generateObjectTagTest(AST::ObjectTagTestPtr test) {
+    generateNode(test->object);
+    emitOpcode(Opcode::obj_tag_test);
+    write(test->tag);
+  }
+
+  void Generator::generateObjectLoad(AST::ObjectLoadPtr load) {
+    generateNode(load->object);
+    emitOpcode(Opcode::obj_load);
+    write(load->offset);
+  }
+
   void Generator::generateConstructor(AST::CallPtr call) {
     emitOpcode(Opcode::alloc_obj);
     write(call->size + 1); // args + tag
 
     emitOpcode(Opcode::push);
-    write(call->index); // tag
+    write(call->tag); // tag
 
     emitOpcode(Opcode::obj_store_at);
     write(0);
@@ -440,6 +458,14 @@ section_code:
       case Opcode::obj_store_at:
         READ_INT(bytecode, index);
         WRITE(2, "obj_store_at #" << index);
+        break;
+      case Opcode::obj_tag_test:
+        READ_INT(bytecode, tag);
+        WRITE(2, "obj_tag_test #" << tag);
+        break;
+      case Opcode::obj_load:
+        READ_INT(bytecode, offset);
+        WRITE(2, "obj_load #" << offset);
         break;
       case Opcode::ret: {
         WRITE(1, "ret");

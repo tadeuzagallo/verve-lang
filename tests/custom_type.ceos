@@ -2,4 +2,8 @@ type Foo {
   Bar(Int, Int)
 }
 
-_(a: Foo): Void { } (Bar(1, 2))
+_(a: Foo): Void { 
+  let Bar(x, y) = a {
+    print(add(x, y))
+  }
+} (Bar(1, 2))

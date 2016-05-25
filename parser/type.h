@@ -188,7 +188,7 @@ namespace ceos {
     }
 
     TypeFunction *type;
-    unsigned index;
+    unsigned tag;
     unsigned size = 0;
   };
 

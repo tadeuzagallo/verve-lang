@@ -49,6 +49,16 @@ static Type *getType(AST::NodePtr node, Environment *env) {
         return iffType;
       }
 
+    case AST::Type::ObjectLoad:
+      {
+        auto load = AST::asObjectLoad(node);
+        auto type = env->get(load->constructorName);
+        if (auto ctor = dynamic_cast<TypeConstructor *>(type)) {
+          return ctor->type->types[load->offset];
+        }
+        throw std::runtime_error("type error");
+      }
+
     default:
       throw std::runtime_error("unhandled node");
   }
@@ -61,7 +71,7 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
 
   if (auto ctorType = dynamic_cast<TypeConstructor *>(calleeType)) {
     call->isConstructor = true;
-    call->index = ctorType->index;
+    call->tag = ctorType->tag;
     call->size = ctorType->size;
     fnType = ctorType->type;
   } else if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {

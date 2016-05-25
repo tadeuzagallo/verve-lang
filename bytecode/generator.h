@@ -31,6 +31,8 @@ namespace ceos {
       void generateIf(AST::IfPtr);
       void generateProgram(AST::ProgramPtr);
       void generateBlock(AST::BlockPtr);
+      void generateObjectTagTest(AST::ObjectTagTestPtr);
+      void generateObjectLoad(AST::ObjectLoadPtr);
       void generateConstructor(AST::CallPtr);
 
       void emitOpcode(Opcode::Type);

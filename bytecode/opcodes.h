@@ -23,7 +23,9 @@
       release_lex_scope, \
       put_to_scope, \
       alloc_obj, \
-      obj_store_at
+      obj_store_at, \
+      obj_tag_test, \
+      obj_load
 
 EVAL(MAP(EXTERN_OPCODE, OPCODES))
 

@@ -231,6 +231,25 @@ _op_obj_store_at:
   push %rdx
   skip 1
 
+.globl _op_obj_tag_test
+_op_obj_tag_test:
+  pop %rdi // object
+  read 1, %rsi // expected tag
+  mov (%rdi), %rdi // object's tag
+  test %rdi, %rsi
+  je _op_obj_tag_test_ok
+  hlt
+_op_obj_tag_test_ok:
+  skip 1
+
+.globl _op_obj_load
+_op_obj_load:
+  pop %rdi // object
+  read 1, %rsi // offset
+  mov 0x8(%rdi, %rsi, 8), %rdi // skip tag
+  push %rdi
+  skip 1
+
 .globl _op_ret
 _op_ret:
   pop %rax

@@ -39,7 +39,9 @@ static unsigned str_uid = 0;
       String, \
       Function, \
       FunctionParameter, \
-      If
+      If, \
+      ObjectTagTest, \
+      ObjectLoad
 
 namespace ceos {
 namespace AST {
@@ -95,7 +97,7 @@ namespace AST {
     NodePtr callee;
     std::vector<NodePtr> arguments;
     bool isConstructor = false;
-    unsigned index;
+    unsigned tag;
     unsigned size;
   };
 
@@ -115,6 +117,21 @@ namespace AST {
     NodePtr condition;
     BlockPtr ifBody;
     BlockPtr elseBody;
+  };
+
+  struct ObjectTagTest : public Node {
+    using Node::Node;
+
+    NodePtr object;
+    unsigned tag;
+  };
+
+  struct ObjectLoad : public Node {
+    using Node::Node;
+
+    NodePtr object;
+    std::string constructorName;
+    unsigned offset;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))
