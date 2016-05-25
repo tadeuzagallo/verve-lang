@@ -215,9 +215,10 @@ _op_put_to_scope:
 
 .globl _op_alloc_obj
 _op_alloc_obj:
-  read 1, %rdi
-  shl $3, %rdi
-  call _malloc
+  mov %VM, %rdi
+  read 1, %rsi
+  shl $3, %rsi
+  call _allocate
   push %rax
   skip 1
 

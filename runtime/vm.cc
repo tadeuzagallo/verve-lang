@@ -63,6 +63,13 @@ void symbolNotFound(char *symbolName) {
   throw;
 }
 
+extern "C" uintptr_t allocate(VM *vm, unsigned size);
+uintptr_t allocate(VM *vm, unsigned size) {
+  auto address = malloc(size);
+  vm->trackAllocation(address, size);
+  return reinterpret_cast<uintptr_t>(address);
+}
+
   void VM::execute() {
     auto header = read<uint64_t>();
 
