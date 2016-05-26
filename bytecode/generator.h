@@ -33,6 +33,8 @@ namespace ceos {
       void generateBlock(AST::BlockPtr);
       void generateObjectTagTest(AST::ObjectTagTestPtr);
       void generateObjectLoad(AST::ObjectLoadPtr);
+      void generateStackStore(AST::StackStorePtr);
+      void generateStackLoad(AST::StackLoadPtr);
       void generateConstructor(AST::CallPtr);
 
       void emitOpcode(Opcode::Type);

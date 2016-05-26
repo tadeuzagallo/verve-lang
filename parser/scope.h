@@ -60,8 +60,13 @@ namespace ceos {
         return m_parent;
       }
 
+      inline unsigned stackSlot() {
+        return stackSlotCount++;
+      }
+
       bool isRequired;
       bool capturesScope;
+      unsigned stackSlotCount = 0;
     private:
       ParseScopePtr m_parent;
       std::unordered_map<std::string, AST::NodePtr> m_table;

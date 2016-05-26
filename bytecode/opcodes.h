@@ -25,7 +25,11 @@
       alloc_obj, \
       obj_store_at, \
       obj_tag_test, \
-      obj_load
+      obj_load, \
+      stack_alloc, \
+      stack_store, \
+      stack_load, \
+      stack_free
 
 EVAL(MAP(EXTERN_OPCODE, OPCODES))
 

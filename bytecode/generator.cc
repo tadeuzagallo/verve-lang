@@ -50,6 +50,12 @@ namespace ceos {
       case AST::Type::ObjectLoad:
         generateObjectLoad(AST::asObjectLoad(node));
         break;
+      case AST::Type::StackStore:
+        generateStackStore(AST::asStackStore(node));
+        break;
+      case AST::Type::StackLoad:
+        generateStackLoad(AST::asStackLoad(node));
+        break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
         throw;
@@ -235,8 +241,18 @@ namespace ceos {
   }
 
   void Generator::generateBlock(AST::BlockPtr block) {
+    if (block->stackSlotsNeeded > 0) {
+      emitOpcode(Opcode::stack_alloc);
+      write(block->stackSlotsNeeded * 8);
+    }
+
     for (auto node : block->nodes) {
       generateNode(node);
+    }
+
+    if (block->stackSlotsNeeded > 0) {
+      emitOpcode(Opcode::stack_free);
+      write(block->stackSlotsNeeded * 8);
     }
   }
 
@@ -250,6 +266,17 @@ namespace ceos {
     generateNode(load->object);
     emitOpcode(Opcode::obj_load);
     write(load->offset);
+  }
+
+  void Generator::generateStackStore(AST::StackStorePtr store) {
+    generateNode(store->value);
+    emitOpcode(Opcode::stack_store);
+    write(store->slot);
+  }
+
+  void Generator::generateStackLoad(AST::StackLoadPtr load) {
+    emitOpcode(Opcode::stack_load);
+    write(load->slot);
   }
 
   void Generator::generateConstructor(AST::CallPtr call) {
@@ -467,6 +494,26 @@ section_code:
         READ_INT(bytecode, offset);
         WRITE(2, "obj_load #" << offset);
         break;
+      case Opcode::stack_alloc: {
+        READ_INT(bytecode, size);
+        WRITE(2, "stack_alloc #" << size);
+        break;
+      }
+      case Opcode::stack_store: {
+        READ_INT(bytecode, slot);
+        WRITE(2, "stack_store #" << slot);
+        break;
+      }
+      case Opcode::stack_load: {
+        READ_INT(bytecode, slot);
+        WRITE(2, "stack_load #" << slot);
+        break;
+      }
+      case Opcode::stack_free: {
+        READ_INT(bytecode, size);
+        WRITE(2, "stack_free #" << size);
+        break;
+      }
       case Opcode::ret: {
         WRITE(1, "ret");
         break;

@@ -41,7 +41,9 @@ static unsigned str_uid = 0;
       FunctionParameter, \
       If, \
       ObjectTagTest, \
-      ObjectLoad
+      ObjectLoad, \
+      StackStore, \
+      StackLoad
 
 namespace ceos {
 namespace AST {
@@ -66,6 +68,7 @@ namespace AST {
     using Node::Node;
 
     std::vector<NodePtr> nodes;
+    unsigned stackSlotsNeeded = 0;
   };
 
   struct Number : public Node {
@@ -132,6 +135,20 @@ namespace AST {
     NodePtr object;
     std::string constructorName;
     unsigned offset;
+  };
+
+  struct StackStore : public Node {
+    using Node::Node;
+
+    unsigned slot;
+    NodePtr value;
+  };
+
+  struct StackLoad : public Node {
+    using Node::Node;
+
+    unsigned slot;
+    NodePtr value;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))

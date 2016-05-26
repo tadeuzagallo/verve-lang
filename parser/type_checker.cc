@@ -19,6 +19,9 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
     case AST::Type::FunctionParameter:
       return env->get(AST::asFunctionParameter(node)->name);
 
+    case AST::Type::StackLoad:
+      return getType(AST::asStackLoad(node)->value, env, lexer);
+
     case AST::Type::Block:
       {
         auto block = AST::asBlock(node);

@@ -303,7 +303,7 @@ rewind:
   AST::BlockPtr Parser::parseLet() {
     pushScope();
 
-    AST::ObjectTagTestPtr tagTest = nullptr;
+    auto block = AST::createBlock(token().loc);
 
     while (!next('{')) {
       auto name = token(Token::ID).string();
@@ -312,7 +312,8 @@ rewind:
         auto ctor = getType<TypeConstructor *>(name);
         assert(ctor);
 
-        tagTest = AST::createObjectTagTest(token().loc);
+        auto tagTest = AST::createObjectTagTest(token().loc);
+        block->nodes.push_back(tagTest);
 
         std::vector<std::pair<std::string, AST::ObjectLoadPtr>> loads;
 
@@ -340,15 +341,23 @@ rewind:
         }
       } else {
         match('=');
-        m_scope->set(name, parseFactor());
+
+        auto store = AST::createStackStore(token().loc);
+        store->slot = m_scope->stackSlot();
+        store->value = parseFactor();
+
+        auto load = AST::createStackLoad(token().loc);
+        load->slot = store->slot;
+        load->value = store->value;
+
+        block->nodes.push_back(store);
+        m_scope->set(name, load);
       }
     }
 
-    auto block = parseBody();
+    parseBody(block);
 
-    if (tagTest != nullptr) {
-      block->nodes.insert(block->nodes.begin(), tagTest);
-    }
+    block->stackSlotsNeeded = m_scope->stackSlotCount;
 
     popScope();
 
@@ -365,8 +374,11 @@ rewind:
     }
   }
 
-  AST::BlockPtr Parser::parseBody() {
-    auto block = AST::createBlock(token().loc);
+  AST::BlockPtr Parser::parseBody(AST::BlockPtr block) {
+    if (block == nullptr) {
+      block = AST::createBlock(token().loc);
+    }
+
     match('{');
     while (!skip('}')) {
       block->nodes.push_back(parseFactor());

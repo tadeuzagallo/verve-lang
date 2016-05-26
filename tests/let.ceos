@@ -1,3 +1,13 @@
 let a = 1 {
   print(a)
 }
+
+expensive(): String {
+  print("expensive")
+  "cheap"
+}
+
+let cheap = expensive() {
+  print(cheap)
+  print(cheap)
+}

@@ -2,7 +2,7 @@
 #define CLOSURE_TAG   1 << 4
 
 #define BYTECODE r12
-#define STRINGS r13
+#define SCOPE_STACK r13
 #define VM r14
 #define BCBASE r15
 #define LOOKUP rbx
@@ -249,6 +249,36 @@ _op_obj_load:
   read 1, %rsi // offset
   mov 0x8(%rdi, %rsi, 8), %rdi // skip tag
   push %rdi
+  skip 1
+
+.globl _op_stack_alloc
+_op_stack_alloc:
+  push %SCOPE_STACK
+  read 1, %rdi
+  sub %rdi, %rsp
+  mov %rsp, %SCOPE_STACK
+  skip 1
+
+.globl _op_stack_store
+_op_stack_store:
+  read 1, %rdi // slot - offset on stack
+  pop %rsi
+  mov %rsi, (%SCOPE_STACK, %rdi, 8)
+  skip 1
+
+.globl _op_stack_load
+_op_stack_load:
+  read 1, %rdi // slot - offset on stack
+  mov (%SCOPE_STACK, %rdi, 8), %rdi
+  push %rdi
+  skip 1
+
+.globl _op_stack_free
+_op_stack_free:
+  mov %SCOPE_STACK, %rsp
+  read 1, %rdi
+  add %rdi, %rsp
+  pop %SCOPE_STACK
   skip 1
 
 .globl _op_ret

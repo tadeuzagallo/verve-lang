@@ -38,7 +38,7 @@ namespace ceos {
     AST::BlockPtr parseLet();
 
     AST::BlockPtr parseFactorOrBody();
-    AST::BlockPtr parseBody();
+    AST::BlockPtr parseBody(AST::BlockPtr block = nullptr);
 
     bool parseFunctionParams(
         std::vector<AST::FunctionParameterPtr> &params,
