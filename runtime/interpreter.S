@@ -52,13 +52,12 @@
 _execute:
   push %rbp
   push %BYTECODE
-  push %STRINGS
   push %VM
   push %BCBASE
   push %LOOKUP
   mov %rsp, %rbp
   mov %rdi, %BYTECODE
-  mov %rsi, %STRINGS
+  mov %rsi, STRINGS(%rip)
   mov %rdx, %VM
   mov %rcx, %BCBASE
   mov %r8,  %LOOKUP
@@ -70,7 +69,6 @@ _op_exit:
   pop %LOOKUP
   pop %BCBASE
   pop %VM
-  pop %STRINGS
   pop %BYTECODE
   pop %rbp
   ret
@@ -164,7 +162,8 @@ _op_call_fast_closure:
 .globl _op_load_string
 _op_load_string:
   read 1, %rdi
-  mov (%STRINGS, %rdi, 8), %rdi
+  mov STRINGS(%rip), %rsi
+  mov (%rsi, %rdi, 8), %rdi
   rol $8, %rdi
   mov $STRING_TAG, %dil
   ror $8, %rdi
@@ -185,7 +184,8 @@ _op_bind:
   mov %VM, %rdi
   read 1, %rsi
   pop %rdx
-  mov (%STRINGS, %rsi, 8), %rsi
+  mov STRINGS(%rip), %rcx
+  mov (%rcx, %rsi, 8), %rsi
   ccall _setScope
   skip 1
 
@@ -207,7 +207,8 @@ _op_put_to_scope:
   read 1, %rsi
   read 2, %rdx
 
-  mov (%STRINGS, %rsi, 8), %rsi
+  mov STRINGS(%rip), %rcx
+  mov (%rcx, %rsi, 8), %rsi
   get_arg %rdx, %rdx
 
   ccall _setScope
@@ -272,8 +273,9 @@ skip:
 
 _op_lookup_slow_path:
   read 1, %rsi // string ID
+  mov STRINGS(%rip), %r9
+  mov (%r9, %rsi, 8), %rsi // actual char *
   mov (%VM), %r9 // VM::m_scope *
-  mov (%STRINGS, %rsi, 8), %rsi // actual char *
 
 _op_lookup_load:
   mov (%r9), %rax // Scope::table *
@@ -316,3 +318,6 @@ _op_lookup_found:
 _op_lookup_done:
   push %rax
   skip 2
+
+.data
+STRINGS: .quad 0
