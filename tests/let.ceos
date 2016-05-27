@@ -7,7 +7,18 @@ expensive(): String {
   "cheap"
 }
 
+// should call expensive() only once
 let cheap = expensive() {
   print(cheap)
   print(cheap)
 }
+
+// should not cache value as scope - should access directlyfrom stack
+foo(n: Int): Void {
+  let n- = n {
+    print(n-)
+  }
+}
+
+foo(1)
+foo(2)

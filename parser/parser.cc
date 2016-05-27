@@ -302,6 +302,7 @@ rewind:
 
   AST::BlockPtr Parser::parseLet() {
     pushScope();
+    m_scope->escapes = false;
 
     auto block = AST::createBlock(token().loc);
 
@@ -468,10 +469,22 @@ fail:
       if (var && var->type == AST::Type::FunctionParameter) {
         ParseScopePtr scope;
         if ((scope = m_scope->scopeFor(name)) != m_scope) {
-          AST::asFunctionParameter(var)->isCaptured = true;
-          scope->isRequired = true;
-          m_scope->capturesScope = true;
-          goto ident;
+          bool shouldCapture = false;
+          auto s = m_scope;
+          while (s != scope) {
+            if (s->escapes) {
+              shouldCapture = true;
+              break;
+            }
+            s = s->parent();
+          }
+
+          if (shouldCapture) {
+            AST::asFunctionParameter(var)->isCaptured = true;
+            scope->isRequired = true;
+            m_scope->capturesScope = true;
+            goto ident;
+          }
         }
       }
       if (var) return var;

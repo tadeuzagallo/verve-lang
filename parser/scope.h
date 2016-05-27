@@ -66,6 +66,7 @@ namespace ceos {
 
       bool isRequired;
       bool capturesScope;
+      bool escapes = true;
       unsigned stackSlotCount = 0;
     private:
       ParseScopePtr m_parent;
