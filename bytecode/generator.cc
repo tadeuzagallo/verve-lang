@@ -249,6 +249,11 @@ namespace ceos {
     for (auto node : block->nodes) {
       generateNode(node);
     }
+
+    if (block->stackSlots > 0) {
+      emitOpcode(Opcode::stack_free);
+      write(block->stackSlots * 8);
+    }
   }
 
   void Generator::generateObjectTagTest(AST::ObjectTagTestPtr test) {
@@ -502,6 +507,11 @@ section_code:
       case Opcode::stack_load: {
         READ_INT(bytecode, slot);
         WRITE(2, "stack_load #" << slot);
+        break;
+      }
+      case Opcode::stack_free: {
+        READ_INT(bytecode, size);
+        WRITE(2, "stack_free #" << size);
         break;
       }
       case Opcode::ret: {
