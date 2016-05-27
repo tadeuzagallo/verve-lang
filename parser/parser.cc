@@ -327,7 +327,7 @@ rewind:
         auto tagTest = AST::createObjectTagTest(token().loc);
         block->nodes.push_back(tagTest);
 
-        std::vector<std::pair<std::string, AST::ObjectLoadPtr>> loads;
+        std::vector<std::pair<std::string, AST::StackLoadPtr>> loads;
 
         auto offset = 0u;
         while (!next(')')) {
@@ -335,7 +335,16 @@ rewind:
           load->offset = offset++;
           load->constructorName = name;
 
-          loads.push_back(std::make_pair(token(Token::ID).string(), load));
+          auto store = AST::createStackStore(token().loc);
+          store->slot = m_blockStack.back()->stackSlots++;
+          store->value = load;
+
+          auto stackLoad = AST::createStackLoad(token().loc);
+          stackLoad->slot = store->slot;
+          stackLoad->value = load;
+
+          loads.push_back(std::make_pair(token(Token::ID).string(), stackLoad));
+          block->nodes.push_back(store);
 
           if (!skip(',')) break;
         }
@@ -348,7 +357,7 @@ rewind:
         auto object = parseFactor();
         tagTest->object = object;
         for (auto it : loads) {
-          it.second->object = object;
+          AST::asObjectLoad(it.second->value)->object = object;
           m_scope->set(it.first, it.second);
         }
       } else {
