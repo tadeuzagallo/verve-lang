@@ -273,14 +273,6 @@ _op_stack_load:
   push %rdi
   skip 1
 
-.globl _op_stack_free
-_op_stack_free:
-  mov %SCOPE_STACK, %rsp
-  read 1, %rdi
-  add %rdi, %rsp
-  pop %SCOPE_STACK
-  skip 1
-
 .globl _op_ret
 _op_ret:
   pop %rax
