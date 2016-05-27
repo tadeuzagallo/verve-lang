@@ -275,10 +275,12 @@ _op_stack_load:
 
 .globl _op_stack_free
 _op_stack_free:
+  pop %rdx
   mov %SCOPE_STACK, %rsp
   read 1, %rdi
   add %rdi, %rsp
   pop %SCOPE_STACK
+  push %rdx
   skip 1
 
 .globl _op_ret
