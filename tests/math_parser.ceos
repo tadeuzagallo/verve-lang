@@ -3,16 +3,11 @@ type Result {
 }
 
 parse-factor-(sum: Int, expr: String): Result {
-  if (count(expr)) {
-    _(c: Int): Result {
-      if (and(gte(c, '0'), lte(c, '9'))) {
-        parse-factor-(add(mul(10, sum), sub(c, '0')), substr(expr, 1))
-      } else {
-        MakeResult(sum, expr)
-      }
-    }(at(expr, 0))
-  } else {
-    MakeResult(sum, expr)
+  if (lte(count(expr), 0)) MakeResult(sum, expr)
+  else let c = at(expr, 0) {
+    if (and(gte(c, '0'), lte(c, '9'))) {
+      parse-factor-(add(mul(10, sum), sub(c, '0')), substr(expr, 1))
+    } else MakeResult(sum, expr)
   }
 }
 
@@ -22,23 +17,16 @@ parse-factor(e: String): Result {
 
 eval-term-(pair: Result): Result {
   let MakeResult(lhs, expr) = pair {
-    if (lte(count(expr), 0)) {
-      pair
-    } else {
-      let lookahead = at(expr, 0)
+    if (lte(count(expr), 0)) pair
+    else let lookahead = at(expr, 0)
           expr = substr(expr, 1) {
-        if (or(equals(lookahead, '*'), equals(lookahead, '/'))) {
-          let MakeResult(rhs, expr) = parse-factor(expr) {
-            if (equals(lookahead, '*')) {
-              eval-term-(MakeResult(mul(lhs, rhs), expr))
-            } else {
-              eval-term-(MakeResult(div(lhs, rhs), expr))
-            }
+      if (or(equals(lookahead, '*'), equals(lookahead, '/'))) {
+        let MakeResult(rhs, expr) = parse-factor(expr) {
+          let res = if (equals(lookahead, '*')) mul(lhs, rhs) else div(lhs, rhs) {
+            eval-term-(MakeResult(res, expr))
           }
-        } else {
-          pair
         }
-      }
+      } else pair
     }
   }
 }
@@ -49,23 +37,16 @@ eval-term(expr: String): Result {
 
 eval-expr-(pair: Result): Result {
   let MakeResult(lhs, expr) = pair {
-    if (lte(count(expr), 0)) {
-      pair
-    } else {
-      let lookahead = at(expr, 0)
-          expr = substr(expr, 1) {
-        if (or(equals(lookahead, '+'), equals(lookahead, '-'))) {
-          let MakeResult(rhs, expr) = eval-term(expr) {
-            if (equals(lookahead, '+')) {
-              eval-expr-(MakeResult(add(lhs, rhs), expr))
-            } else {
-              eval-expr-(MakeResult(sub(lhs, rhs), expr))
-            }
+    if (lte(count(expr), 0)) pair
+    else let lookahead = at(expr, 0)
+             expr = substr(expr, 1) {
+      if (or(equals(lookahead, '+'), equals(lookahead, '-'))) {
+        let MakeResult(rhs, expr) = eval-term(expr) {
+          let res = if (equals(lookahead, '+')) add(lhs, rhs) else sub(lhs, rhs) {
+            eval-expr-(MakeResult(res, expr))
           }
-        } else {
-          pair
         }
-      }
+      } else pair
     }
   }
 }
