@@ -29,12 +29,14 @@ namespace ceos {
   AST::ProgramPtr Parser::parse() {
     auto program = AST::createProgram(Loc{0, 0});
     program->body = AST::createBlock(Loc{0, 0});
+    m_blockStack.push_back(program->body);
     while(!next(Token::END)) {
       auto node = parseDecl();
       if (node) {
         program->body->nodes.push_back(node);
       }
     }
+    m_blockStack.pop_back();
     return program;
   }
 
@@ -237,7 +239,12 @@ namespace ceos {
       if (!skip(',')) break;
     }
     match(')');
-    fn->body = parseBody();
+
+    fn->body = AST::createBlock(token().loc);
+    m_blockStack.push_back(fn->body);
+    parseBody(fn->body);
+    m_blockStack.pop_back();
+
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
     TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment.get(), m_lexer);
@@ -269,7 +276,11 @@ namespace ceos {
 
     fnType->returnType = parseType();
 
-    fn->body = parseBody();
+    fn->body = AST::createBlock(token().loc);
+    m_blockStack.push_back(fn->body);
+    parseBody(fn->body);
+    m_blockStack.pop_back();
+
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
     TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment.get(), m_lexer);
@@ -344,7 +355,7 @@ rewind:
         match('=');
 
         auto store = AST::createStackStore(token().loc);
-        store->slot = m_scope->stackSlot();
+        store->slot = m_blockStack.back()->stackSlots++;
         store->value = parseFactor();
 
         auto load = AST::createStackLoad(token().loc);
@@ -357,8 +368,6 @@ rewind:
     }
 
     parseBody(block);
-
-    block->stackSlotsNeeded = m_scope->stackSlotCount;
 
     popScope();
 

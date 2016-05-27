@@ -90,5 +90,6 @@ namespace ceos {
     Lexer &m_lexer;
     std::shared_ptr<Environment> m_environment;
     ParseScopePtr m_scope;
+    std::vector<AST::BlockPtr> m_blockStack;
   };
 }

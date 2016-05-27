@@ -68,7 +68,7 @@ namespace AST {
     using Node::Node;
 
     std::vector<NodePtr> nodes;
-    unsigned stackSlotsNeeded = 0;
+    unsigned stackSlots = 0;
   };
 
   struct Number : public Node {

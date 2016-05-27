@@ -241,18 +241,18 @@ namespace ceos {
   }
 
   void Generator::generateBlock(AST::BlockPtr block) {
-    if (block->stackSlotsNeeded > 0) {
+    if (block->stackSlots > 0) {
       emitOpcode(Opcode::stack_alloc);
-      write(block->stackSlotsNeeded * 8);
+      write(block->stackSlots * 8);
     }
 
     for (auto node : block->nodes) {
       generateNode(node);
     }
 
-    if (block->stackSlotsNeeded > 0) {
+    if (block->stackSlots > 0) {
       emitOpcode(Opcode::stack_free);
-      write(block->stackSlotsNeeded * 8);
+      write(block->stackSlots * 8);
     }
   }
 
