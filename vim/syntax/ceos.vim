@@ -19,7 +19,7 @@ syn match	ceosChar "'[^']'"
 syn match ceosTypePrefix "\v:\s*" nextgroup=ceosTypes
 
 syn match ceosTypes contained "\v[A-Za-z]+"
-syn region ceosTemplate start="<" end=">" keepend contains=ceosTypes
+syn match ceosTemplate /\v\<([a-zA-Z],?\s*)+\>/ keepend contains=ceosTypes
 syn match ceosDecl /\v\([^:)']+\)\s*:/me=e-1 contains=ceosTypes
 
 let b:current_syntax = "ceos"
