@@ -8,11 +8,38 @@
 #include <sstream>
 #include <math.h>
 
-#define BASIC_TOKEN(CHAR) \
-  case CHAR: \
-    m_token = Token(Token::BASIC); \
-    m_token.value.number = CHAR; \
+#define CREATE_BASIC_TOKEN(__t, __char) \
+  __t = Token(Token::BASIC); \
+  __t.value.number = __char;
+
+#define BASIC_TOKEN(__char) \
+  case __char: \
+    CREATE_BASIC_TOKEN(m_token, __char); \
     break;
+
+#define BASIC_TOKEN_2_OPT(__char1, __char2) \
+  case __char1: \
+    if ((c = nextChar()) == __char2) { \
+      CREATE_BASIC_TOKEN(m_token, TUPLE_TOKEN(__char1, __char2)); \
+    } else { \
+      m_pos--; \
+      CREATE_BASIC_TOKEN(m_token, __char1); \
+    } \
+    break;
+
+#define BASIC_TOKEN_2_REQ(__char1, __char2) \
+  case __char1: \
+    assert(nextChar() == __char2); \
+    CREATE_BASIC_TOKEN(m_token, TUPLE_TOKEN(__char1, __char2)); \
+    break;
+
+// precedence
+// 0: || &&
+// 1: == !=
+// 2: < > <= >=
+// 3: + -
+// 4: * / %
+// 5: (prefixes) ! -
 
 namespace ceos {
 
@@ -39,11 +66,23 @@ start:
       BASIC_TOKEN(')')
       BASIC_TOKEN('{')
       BASIC_TOKEN('}')
-      BASIC_TOKEN('<')
-      BASIC_TOKEN('>')
       BASIC_TOKEN(',')
       BASIC_TOKEN(':')
-      BASIC_TOKEN('=')
+
+      BASIC_TOKEN('+')
+      BASIC_TOKEN('-')
+      BASIC_TOKEN('*')
+      BASIC_TOKEN('%')
+
+      // either first or first+second
+      BASIC_TOKEN_2_OPT('=', '=')
+      BASIC_TOKEN_2_OPT('<', '=')
+      BASIC_TOKEN_2_OPT('>', '=')
+      BASIC_TOKEN_2_OPT('!', '=')
+
+      // must find both together
+      BASIC_TOKEN_2_REQ('|', '|')
+      BASIC_TOKEN_2_REQ('&', '&')
 
       case '\0':
         start = m_token.loc.end > 0 ? m_token.loc.end - 1 : 0;
@@ -64,8 +103,9 @@ start:
             c = nextChar();
           } while (prev != '*' || c != '/');
         } else {
-          printSource();
-          throw std::runtime_error("Invalid token after /");
+          m_pos--;
+          CREATE_BASIC_TOKEN(m_token, '/');
+          break;
         }
         goto start;
       }

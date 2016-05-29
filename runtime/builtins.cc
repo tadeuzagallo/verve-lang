@@ -20,17 +20,22 @@ namespace ceos {
     REGISTER(print, print);
     REGISTER(list, list);
 
-    REGISTER(add, builtin_add);
-    REGISTER(sub, builtin_sub);
-    REGISTER(mul, mul);
-    REGISTER(div, div);
-    REGISTER(lt, builtin_lt);
-    REGISTER(gt, gt);
-    REGISTER(lte, lte);
-    REGISTER(gte, gte);
-    REGISTER(equals, equals);
-    REGISTER(and, _and);
-    REGISTER(or, _or);
+    REGISTER(+, builtin_add);
+    REGISTER(-, builtin_sub);
+    REGISTER(*, mul);
+    REGISTER(/, div);
+    REGISTER(%, mod);
+    REGISTER(<, builtin_lt);
+    REGISTER(>, gt);
+    REGISTER(<=, lte);
+    REGISTER(>=, gte);
+    REGISTER(==, equals);
+    REGISTER(&&, _and);
+    REGISTER(||, _or);
+
+    REGISTER(unary_!, _not);
+    REGISTER(unary_-, minus);
+
     REGISTER(at, at);
     REGISTER(substr, substr);
     REGISTER(count, count);
@@ -52,6 +57,7 @@ namespace ceos {
   BASIC_MATH(sub, -)
   BASIC_MATH(mul, *)
   BASIC_MATH(div, /)
+  BASIC_MATH(mod, %)
   BASIC_MATH(lt, <)
   BASIC_MATH(gt, >)
   BASIC_MATH(lte, <=)
@@ -59,6 +65,16 @@ namespace ceos {
   BASIC_MATH(equals, ==)
   BASIC_MATH(_and, &&)
   BASIC_MATH(_or, ||)
+
+  JS_FUNCTION(_not) {
+    assert(argc == 1);
+    return Value(!argv[0].asInt());
+  }
+
+  JS_FUNCTION(minus) {
+    assert(argc == 1);
+    return Value(-argv[0].asInt());
+  }
 
   JS_FUNCTION(print) {
     for (unsigned i = 0; i < argc; i++) {

@@ -55,6 +55,11 @@ namespace ceos {
         break;
       case AST::Type::StackLoad:
         generateStackLoad(AST::asStackLoad(node));
+      case AST::Type::BinaryOperation:
+        generateBinaryOperation(AST::asBinaryOperation(node));
+        break;
+      case AST::Type::UnaryOperation:
+        generateUnaryOperation(AST::asUnaryOperation(node));
         break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
@@ -277,6 +282,31 @@ namespace ceos {
   void Generator::generateStackLoad(AST::StackLoadPtr load) {
     emitOpcode(Opcode::stack_load);
     write(load->slot);
+  }
+
+  void Generator::generateBinaryOperation(AST::BinaryOperationPtr operation) {
+    generateNode(operation->rhs);
+    generateNode(operation->lhs);
+
+    emitOpcode(Opcode::lookup);
+    auto op = std::string(reinterpret_cast<char *>(&operation->op));
+    write(uniqueString(op));
+    write(lookupID++);
+
+    emitOpcode(Opcode::call);
+    write(2);
+  }
+
+  void Generator::generateUnaryOperation(AST::UnaryOperationPtr operation) {
+    generateNode(operation->operand);
+
+    emitOpcode(Opcode::lookup);
+    auto op = "unary_" + std::string(reinterpret_cast<char *>(&operation->op));
+    write(uniqueString(op));
+    write(lookupID++);
+
+    emitOpcode(Opcode::call);
+    write(1);
   }
 
   void Generator::generateConstructor(AST::CallPtr call) {

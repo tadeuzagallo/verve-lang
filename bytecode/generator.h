@@ -35,6 +35,9 @@ namespace ceos {
       void generateObjectLoad(AST::ObjectLoadPtr);
       void generateStackStore(AST::StackStorePtr);
       void generateStackLoad(AST::StackLoadPtr);
+      void generateBinaryOperation(AST::BinaryOperationPtr);
+      void generateUnaryOperation(AST::UnaryOperationPtr);
+
       void generateConstructor(AST::CallPtr);
 
       void emitOpcode(Opcode::Type);

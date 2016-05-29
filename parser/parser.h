@@ -37,7 +37,7 @@ namespace ceos {
     AST::IfPtr parseIf();
     AST::BlockPtr parseLet();
 
-    AST::BlockPtr parseFactorOrBody();
+    AST::BlockPtr parseExprOrBody();
     AST::BlockPtr parseBody(AST::BlockPtr block = nullptr);
 
     bool parseFunctionParams(
@@ -49,6 +49,7 @@ namespace ceos {
     AST::NodePtr parseIdentifierFunctionOrCall();
     AST::NodePtr parseCall(AST::NodePtr callee);
 
+    AST::NodePtr parseExpr(int precedence = 0);
     AST::NodePtr parseFactor();
 
     // Base nodes

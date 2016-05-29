@@ -7,6 +7,8 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
     case AST::Type::String:
       return env->get("String");
 
+    case AST::Type::BinaryOperation:
+    case AST::Type::UnaryOperation:
     case AST::Type::Number:
       return env->get("Int");
 

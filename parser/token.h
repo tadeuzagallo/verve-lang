@@ -1,9 +1,13 @@
 #include "utils/macros.h"
 
-#include <string>
 #include <cstdlib>
+#include <string>
+#include <unordered_map>
 
 #pragma once
+
+#define TUPLE_TOKEN(__char1, __char2) \
+  ((__char2 << 8) | __char1)
 
 namespace ceos {
   struct Loc {
@@ -76,6 +80,57 @@ namespace ceos {
         return value.number;
       }
 
+      static auto &precedenceTable() {
+        if (s_precedenceTable.empty()) {
+          s_precedenceTable = {
+            // 0
+            { TUPLE_TOKEN('&', '&'), 0 },
+            { TUPLE_TOKEN('|', '|'), 0 },
+
+            // 1
+            { TUPLE_TOKEN('=', '='), 1 },
+            { TUPLE_TOKEN('!', '='), 1 },
+
+            // 2
+            { '<', 2 },
+            { '>', 2 },
+            { TUPLE_TOKEN('<', '='), 2 },
+            { TUPLE_TOKEN('>', '='), 2 },
+
+            // 3
+            { '+', 3 },
+            { '-', 3 },
+
+            // 4
+            { '*', 4 },
+            { '/', 4 },
+            { '%', 4 },
+
+            // 5
+            { '!', 5 },
+            { '-', 5 },
+          };
+        }
+        return s_precedenceTable;
+      }
+
+      static int precedence(Token &token) {
+        auto &table = precedenceTable();
+        auto it = table.find(token.number());
+
+        if (it != table.end()) {
+          return it->second;
+        }
+
+        return -1;
+      }
+
+      static bool isUnaryOperator(Token &token) {
+        return token.type == Token::BASIC && (
+            token.number() == '!' ||
+            token.number() == '-');
+      }
+
       Type type;
       Loc loc;
     private:
@@ -83,5 +138,7 @@ namespace ceos {
         const char *string;
         int number;
       } value = {0};
+
+      static std::unordered_map<int, int> s_precedenceTable;
   };
 }

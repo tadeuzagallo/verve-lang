@@ -1,5 +1,5 @@
 CC = clang++
-CFLAGS = -g -O0 -Wall -Wextra -std=c++11 -I .
+CFLAGS = -g -O0 -Wall -Wextra -std=c++14 -I .
 LIBS = 
 
 define source_glob

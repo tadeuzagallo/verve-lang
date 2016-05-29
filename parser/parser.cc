@@ -55,7 +55,7 @@ namespace ceos {
       }
     }
 
-    return parseFactor();
+    return parseExpr();
   }
 
   void Parser::parseTypeDecl() {
@@ -163,8 +163,33 @@ namespace ceos {
     return block;
   }
 
+  AST::NodePtr Parser::parseExpr(int precedence) {
+    auto lhs = parseFactor();
+    int prec;
+    while ((prec = Token::precedence(token())) >= precedence) {
+      auto binop = AST::createBinaryOperation(token().loc);
+      binop->op = token(Token::BASIC).number();
+      binop->lhs = lhs;
+      binop->rhs = parseExpr(prec + 1);
+      lhs = binop;
+    }
+    return lhs;
+  }
+
   AST::NodePtr Parser::parseFactor() {
-    if (next(Token::NUMBER)) {
+    if (skip('(')) {
+      auto expr = parseExpr();
+      match(')');
+      return expr;
+    } else if (Token::isUnaryOperator(token())) {
+      auto prec = Token::precedence(token());
+
+      auto unop = AST::createUnaryOperation(token().loc);
+      unop->op = token(Token::BASIC).number();
+      unop->operand = parseExpr(prec);
+
+      return unop;
+    } else if (next(Token::NUMBER)) {
       return parseNumber();
     } else if (next(Token::STRING)) {
       return parseString();
@@ -299,13 +324,13 @@ rewind:
     auto iff = AST::createIf(token().loc);
 
     match('(');
-    iff->condition = parseFactor();
+    iff->condition = parseExpr();
     match(')');
 
-    iff->ifBody = parseFactorOrBody();
+    iff->ifBody = parseExprOrBody();
 
     if (skip("else")) {
-      iff->elseBody = parseFactorOrBody();
+      iff->elseBody = parseExprOrBody();
     }
 
     return iff;
@@ -354,7 +379,7 @@ rewind:
 
         // assert(loads.size() == ctor->type->types.size()); ??
 
-        auto object = parseFactor();
+        auto object = parseExpr();
         tagTest->object = object;
         for (auto it : loads) {
           AST::asObjectLoad(it.second->value)->object = object;
@@ -365,7 +390,7 @@ rewind:
 
         auto store = AST::createStackStore(token().loc);
         store->slot = m_blockStack.back()->stackSlots++;
-        store->value = parseFactor();
+        store->value = parseExpr();
 
         auto load = AST::createStackLoad(token().loc);
         load->slot = store->slot;
@@ -383,12 +408,12 @@ rewind:
     return block;
   }
 
-  AST::BlockPtr Parser::parseFactorOrBody() {
+  AST::BlockPtr Parser::parseExprOrBody() {
     if (next('{')) {
       return parseBody();
     } else {
       auto block = AST::createBlock(token().loc);
-      block->nodes.push_back(parseFactor());
+      block->nodes.push_back(parseExpr());
       return block;
     }
   }
@@ -400,7 +425,7 @@ rewind:
 
     match('{');
     while (!skip('}')) {
-      block->nodes.push_back(parseFactor());
+      block->nodes.push_back(parseExpr());
     }
     return block;
   }
@@ -467,7 +492,7 @@ fail:
     auto call = AST::createCall(loc);
     call->callee = callee;
     while (!next(')')) {
-      call->arguments.push_back(parseFactor());
+      call->arguments.push_back(parseExpr());
       if (!skip(',')) break;
     }
     match(')');

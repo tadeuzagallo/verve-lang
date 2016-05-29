@@ -43,7 +43,9 @@ static unsigned str_uid = 0;
       ObjectTagTest, \
       ObjectLoad, \
       StackStore, \
-      StackLoad
+      StackLoad, \
+      BinaryOperation, \
+      UnaryOperation
 
 namespace ceos {
 namespace AST {
@@ -149,6 +151,21 @@ namespace AST {
 
     unsigned slot;
     NodePtr value;
+  };
+
+  struct BinaryOperation : public Node {
+    using Node::Node;
+
+    unsigned op;
+    NodePtr lhs;
+    NodePtr rhs;
+  };
+
+  struct UnaryOperation : public Node {
+    using Node::Node;
+
+    unsigned op;
+    NodePtr operand;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))
