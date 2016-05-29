@@ -122,6 +122,18 @@ start:
         break;
       }
 
+      case '`': {
+        auto start = m_pos;
+        unsigned length = 0;
+        while ((c = nextChar()) != '`') {
+          length++;
+        }
+        const char *str = (const char *)calloc(length + 1, 1);
+        memcpy((void *)str, m_input+start, length);
+        m_token = Token(Token::ID, str);
+        break;
+      }
+
       case '\'': {
         int number = nextChar();
         assert(nextChar() == '\'');

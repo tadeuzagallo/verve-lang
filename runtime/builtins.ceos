@@ -13,4 +13,25 @@ extern count(String): Int
 extern substr(String, Int): String
 extern at(String, Int): Int
 
+extern `+`(Int, Int): Int
+extern `-`(Int, Int): Int
+extern `*`(Int, Int): Int
+extern `/`(Int, Int): Int
+extern `%`(Int, Int): Int
+
+// should be bool
+extern `&&`(Int, Int): Int
+extern `||`(Int, Int): Int
+
+extern `<`(Int, Int): Int
+extern `>`(Int, Int): Int
+extern `<=`(Int, Int): Int
+extern `>=`(Int, Int): Int
+
+extern `==`(Int, Int): Int
+extern `!=`(Int, Int): Int
+
+extern `unary_!`(Int): Int
+extern `unary_-`(Int): Int
+
 extern __heap-size__(): Int
