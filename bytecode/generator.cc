@@ -55,6 +55,7 @@ namespace ceos {
         break;
       case AST::Type::StackLoad:
         generateStackLoad(AST::asStackLoad(node));
+        break;
       case AST::Type::BinaryOperation:
         generateBinaryOperation(AST::asBinaryOperation(node));
         break;

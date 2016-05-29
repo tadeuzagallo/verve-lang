@@ -13,24 +13,4 @@ extern count(String): Int
 extern substr(String, Int): String
 extern at(String, Int): Int
 
-extern add(Int, Int): Int
-extern sub(Int, Int): Int
-extern mul(Int, Int): Int
-extern div(Int, Int): Int
-
-// should be bool
-extern and(Int, Int): Int
-extern or(Int, Int): Int
-
-extern lt(Int, Int): Int
-extern gt(Int, Int): Int
-extern lte(Int, Int): Int
-extern gte(Int, Int): Int
-
-extern equals(Int, Int): Int
-
-// at(List(a), a
-// substr((String, ():String): String
-// list(a..., List(a)
-
 extern __heap-size__(): Int

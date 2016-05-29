@@ -1,5 +1,5 @@
 square(n: Int): Int {
-  mul(n, n)
+  n * n
 }
 
 print(square(4))

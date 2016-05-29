@@ -26,10 +26,10 @@ foo(2)
 // inner let should access parents' scope
 let a = 1 {
   let b = 2 {
-    foo(add(a, b))
+    foo(a + b)
   }
 
   let c = 7 {
-    foo(add(a, c))
+    foo(a + c)
   }
 }

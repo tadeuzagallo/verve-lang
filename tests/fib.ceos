@@ -1,12 +1,6 @@
 fib(n: Int): Int {
-  if (lt(n, 2)) {
-    n
-  } else {
-    add(
-      fib(sub(n, 1)),
-      fib(sub(n, 2))
-    )
-  }
+  if (n < 2) n
+  else fib(n - 1) + fib(n - 2)
 }
 
 print(fib(4))

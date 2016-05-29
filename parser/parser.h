@@ -44,7 +44,7 @@ namespace ceos {
         std::vector<AST::FunctionParameterPtr> &params,
         std::vector<Type *> &types);
 
-    void parseGenerics(std::vector<std::string> &generics);
+    bool parseGenerics(std::vector<std::string> &generics);
 
     AST::NodePtr parseIdentifierFunctionOrCall();
     AST::NodePtr parseCall(AST::NodePtr callee);

@@ -291,7 +291,7 @@ namespace ceos {
 
     pushScope();
 
-    parseGenerics(fnType->generics);
+    if (!parseGenerics(fnType->generics)) goto rewind;
 
     if (!skip('(')) goto rewind;
     if (!parseFunctionParams(fn->parameters, fnType->types)) goto rewind;
@@ -461,19 +461,23 @@ fail:
     return false;
   }
 
-  void Parser::parseGenerics(std::vector<std::string> &generics) {
+  bool Parser::parseGenerics(std::vector<std::string> &generics) {
     if (!skip('<')) {
-      return;
+      return true;
     }
 
     do {
+      if (token().type != Token::ID) {
+        return false;
+      }
+
       auto name = token(Token::ID).string();
       generics.push_back(name);
 
       setType(name, new GenericType(std::move(name)));
     } while (skip(','));
 
-    match('>');
+    return skip('>');
   }
 
   AST::NodePtr Parser::parseIdentifierFunctionOrCall() {
