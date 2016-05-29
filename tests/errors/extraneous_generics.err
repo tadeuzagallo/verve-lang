@@ -1,3 +1,0 @@
-Unexpected token `<` at 1:4
-1: foo<T>(1)
-      ^
