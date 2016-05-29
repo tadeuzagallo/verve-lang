@@ -1,13 +1,13 @@
 type Result {
-  MakeResult(Int, String)
+  Result(Int, String)
 }
 
 parse-factor-(sum: Int, expr: String): Result {
-  if (!count(expr)) MakeResult(sum, expr)
+  if (!count(expr)) Result(sum, expr)
   else let c = at(expr, 0) {
     if (c >= '0' && c <= '9') {
       parse-factor-(10 * sum + c - '0', substr(expr, 1))
-    } else MakeResult(sum, expr)
+    } else Result(sum, expr)
   }
 }
 
@@ -16,14 +16,14 @@ parse-factor(e: String): Result {
 }
 
 eval-term-(pair: Result): Result {
-  let MakeResult(lhs, expr) = pair {
+  let Result(lhs, expr) = pair {
     if (!count(expr)) pair
     else let lookahead = at(expr, 0)
           expr = substr(expr, 1) {
       if (lookahead == '*' || lookahead == '/') {
-        let MakeResult(rhs, expr) = parse-factor(expr) {
+        let Result(rhs, expr) = parse-factor(expr) {
           let res = if (lookahead == '*') lhs * rhs else lhs / rhs {
-            eval-term-(MakeResult(res, expr))
+            eval-term-(Result(res, expr))
           }
         }
       } else pair
@@ -36,14 +36,14 @@ eval-term(expr: String): Result {
 }
 
 eval-expr-(pair: Result): Result {
-  let MakeResult(lhs, expr) = pair {
+  let Result(lhs, expr) = pair {
     if (!count(expr)) pair
     else let lookahead = at(expr, 0)
              expr = substr(expr, 1) {
       if (lookahead == '+' || lookahead == '-') {
-        let MakeResult(rhs, expr) = eval-term(expr) {
+        let Result(rhs, expr) = eval-term(expr) {
           let res = if (lookahead == '+') lhs + rhs else lhs - rhs {
-            eval-expr-(MakeResult(res, expr))
+            eval-expr-(Result(res, expr))
           }
         }
       } else pair
@@ -56,7 +56,7 @@ eval-expr(e: String): Result {
 }
 
 eval(e: String): Int {
-  let MakeResult(res, _) = eval-expr(e) {
+  let Result(res, _) = eval-expr(e) {
     res
   }
 }

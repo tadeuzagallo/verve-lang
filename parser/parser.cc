@@ -79,6 +79,11 @@ namespace ceos {
     ctor->type->name = token(Token::ID).string();
     ctor->type->returnType = owner;
 
+    if (ctor->type->name == owner->name) {
+      // keep track of the enclosing enum that is going to be shadowed in the type scope
+      ctor->owner = owner;
+    }
+
     setType(ctor->type->name, ctor);
 
     ctor->tag = tag;

@@ -166,10 +166,9 @@ namespace ceos {
     std::unordered_map<std::string, TypeFunction *> functions;
   };
 
+  struct EnumType;
   struct TypeConstructor : Type {
-    virtual bool accepts(__unused Type *other) override {
-      return false;
-    }
+    virtual bool accepts(Type *other) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -188,13 +187,17 @@ namespace ceos {
     }
 
     TypeFunction *type;
+    EnumType *owner = nullptr;
     unsigned tag;
     unsigned size = 0;
   };
 
   struct EnumType : Type {
     virtual bool accepts(Type *other) override {
-      return this == other;
+      if (auto otherCtor = dynamic_cast<TypeConstructor *>(other)) {
+        return otherCtor->type->returnType == this;
+      }
+      return other == this;
     }
 
     virtual std::string toString() override {
@@ -214,4 +217,5 @@ namespace ceos {
     std::string name;
     std::vector<TypeConstructor *> constructors;
   };
+
 }
