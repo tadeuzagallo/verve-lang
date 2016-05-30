@@ -31,15 +31,25 @@ namespace ceos {
     }
 
     void resize(unsigned size) {
+      Entry *oldTable = nullptr;
+      size_t oldSize = 0;
       if (size) {
+        oldSize = tableSize;
         tableSize = size;
-        free(table);
+        oldTable = table;
       } else {
         tableSize = DEFAULT_SIZE;
       }
 
       tableHash = tableSize - 1;
-      table = (Entry *)calloc(sizeof(Entry), tableSize);
+      table = (Entry *)calloc(tableSize, sizeof(Entry));
+
+      if (oldTable) {
+        for (unsigned i = 0; i < oldSize; i++) {
+          set(oldTable[i].key, oldTable[i].value);
+        }
+        free(oldTable);
+      }
     }
 
     Scope *inc() {
