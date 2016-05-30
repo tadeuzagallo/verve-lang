@@ -1,5 +1,5 @@
-allocate(): Void {
-  list(
+allocate(): List<String> {
+  [
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
@@ -200,24 +200,24 @@ allocate(): Void {
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
-  )
+  ]
 }
 
-a(): Void{ allocate() allocate() }
-b(): Void { a() a() }
-c(): Void { b() b() }
-d(): Void { c() c() }
-e(): Void { d() d() }
-f(): Void { e() e() }
-g(): Void { f() f() }
-h(): Void { g() g() }
-i(): Void { h() h() }
-j(): Void { i() i() }
-k(): Void { j() j() }
+a(): List<String> { allocate() allocate() }
+b(): List<String> { a() a() }
+c(): List<String> { b() b() }
+d(): List<String> { c() c() }
+e(): List<String> { d() d() }
+f(): List<String> { e() e() }
+g(): List<String> { f() f() }
+h(): List<String> { g() g() }
+i(): List<String> { h() h() }
+j(): List<String> { i() i() }
+k(): List<String> { j() j() }
 
 k()
 
 // this will allocate 4243744b (~4mb)
 // the GC should get it down to ~20k
 // here we just test it's less than ~30k
-print(lt(__heap-size__(), 30000))
+print(__heap-size__() < 30000)

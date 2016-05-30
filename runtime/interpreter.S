@@ -219,7 +219,7 @@ _op_put_to_scope:
 _op_alloc_obj:
   mov %VM, %rdi
   read 1, %rsi
-  call _allocate
+  ccall _allocate
   push %rax
   skip 1
 
@@ -227,7 +227,7 @@ _op_alloc_obj:
 _op_alloc_list:
   mov %VM, %rdi
   read 1, %rsi
-  call _allocate
+  ccall _allocate
   read 1, %rsi
   dec %rsi
   mov %rsi, (%rax)

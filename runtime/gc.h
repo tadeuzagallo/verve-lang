@@ -5,6 +5,12 @@
 #include <set>
 #include <vector>
 
+#ifdef LOG_GC_ENABLED
+#define LOG_GC(...) printf(__VA_ARGS__)
+#else
+#define LOG_GC(...)
+#endif
+
 #pragma once
 
 namespace ceos {
@@ -70,6 +76,7 @@ namespace ceos {
       }
 
       static void sweep(Heap &heap, size_t *heapSize) {
+        LOG_GC("Sweeping... initial heap size: %ld\n", *heapSize);
         auto it = heap.begin();
         while (it != heap.end()) {
           if (GC::isMarked(it->second)) {
@@ -81,6 +88,7 @@ namespace ceos {
             it = heap.erase(it);
           }
         }
+        LOG_GC("Done sweeping, heap size: %ld\n", *heapSize);
 
       }
 
