@@ -1,0 +1,40 @@
+type BigObject {
+  BigObject(String, String, String, String, String, String, String, String) // 8 Strings
+}
+
+type Pair {
+  Pair(Int, Int)
+}
+
+allocate(): BigObject {
+  BigObject(
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo",
+    "foooooooooooooooooooooooooooooooooooooooooooo"
+  )
+}
+
+a(): BigObject { allocate() allocate() }
+b(): BigObject { a() a() }
+c(): BigObject { b() b() }
+d(): BigObject { c() c() }
+e(): BigObject { d() d() }
+f(): BigObject { e() e() }
+g(): BigObject { f() f() }
+h(): BigObject { g() g() }
+i(): BigObject { h() h() }
+j(): BigObject { i() i() }
+k(): BigObject { j() j() }
+l(): BigObject { k() k() }
+m(): BigObject { l() l() }
+n(): BigObject { m() m() }
+
+// this will allocate 4243744b (~4mb)
+// the GC should get it down to ~20k
+// here we just test it's less than ~30k
+print(__heap-size__() < 30000)
