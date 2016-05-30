@@ -53,7 +53,8 @@ namespace ceos {
     }
 
     ALWAYS_INLINE Value(int v) {
-      value.raw = v;
+      value.raw = 0;
+      value.data.i = v;
     }
 
     ALWAYS_INLINE int asInt() { return value.data.i; }
