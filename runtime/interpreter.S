@@ -1,4 +1,5 @@
 #define STRING_TAG    1 << 1
+#define LIST_TAG     1 << 2
 #define CLOSURE_TAG   1 << 4
 
 #define BYTECODE r12
@@ -218,8 +219,21 @@ _op_put_to_scope:
 _op_alloc_obj:
   mov %VM, %rdi
   read 1, %rsi
-  shl $3, %rsi
   call _allocate
+  push %rax
+  skip 1
+
+.globl _op_alloc_list
+_op_alloc_list:
+  mov %VM, %rdi
+  read 1, %rsi
+  call _allocate
+  read 1, %rsi
+  dec %rsi
+  mov %rsi, (%rax)
+  rol $8, %rax
+  mov $LIST_TAG, %al
+  ror $8, %rax
   push %rax
   skip 1
 
@@ -227,14 +241,17 @@ _op_alloc_obj:
 _op_obj_store_at:
   pop %rdi // value
   pop %rdx // object
+  mov %rdx, %rcx
+  unmask %rdx
   read 1, %rsi // index
   mov %rdi, (%rdx, %rsi, 8)
-  push %rdx
+  push %rcx
   skip 1
 
 .globl _op_obj_tag_test
 _op_obj_tag_test:
   pop %rdi // object
+  unmask %rdi
   read 1, %rsi // expected tag
   mov (%rdi), %rdi // object's tag
   test %rdi, %rsi
@@ -246,6 +263,7 @@ _op_obj_tag_test_ok:
 .globl _op_obj_load
 _op_obj_load:
   pop %rdi // object
+  unmask %rdi
   read 1, %rsi // offset
   mov 0x8(%rdi, %rsi, 8), %rdi // skip tag
   push %rdi

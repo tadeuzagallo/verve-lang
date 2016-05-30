@@ -57,6 +57,7 @@ namespace ceos {
     AST::NodePtr parseIdentifier(bool checkScope = false);
     AST::NumberPtr parseNumber();
     AST::StringPtr parseString();
+    AST::ListPtr parseList();
     Type *parseType();
 
     // Type helpers

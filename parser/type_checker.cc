@@ -73,6 +73,26 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
         throw std::runtime_error("type error");
       }
 
+    case AST::Type::List:
+      {
+        auto dataType = dynamic_cast<DataType *>(env->get("List"));
+        Type *t = nullptr;
+        for (auto i : AST::asList(node)->items) {
+          auto type = getType(i, env, lexer);
+
+          if (!t) {
+            t = type;
+          } else {
+            assert(t == type);
+          }
+        }
+
+        auto dti = new DataTypeInstance();
+        dti->dataType = dataType;
+        dti->types.push_back(t);
+        return dti;
+      }
+
     default:
       throw std::runtime_error("unhandled node");
   }

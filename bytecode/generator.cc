@@ -32,6 +32,9 @@ namespace ceos {
       case AST::Type::String:
         generateString(AST::asString(node));
         break;
+      case AST::Type::List:
+        generateList(AST::asList(node));
+        break;
       case AST::Type::FunctionParameter:
         generateFunctionParameter(AST::asFunctionParameter(node));
         break;
@@ -137,6 +140,18 @@ namespace ceos {
   void Generator::generateString(AST::StringPtr str) {
     emitOpcode(Opcode::load_string);
     write(uniqueString(str->name));
+  }
+
+  void Generator::generateList(AST::ListPtr list) {
+    emitOpcode(Opcode::alloc_list);
+    write(list->items.size() + 1);
+
+    unsigned index = 1;
+    for (auto item : list->items) {
+      generateNode(item);
+      emitOpcode(Opcode::obj_store_at);
+      write(index++);
+    }
   }
 
   void Generator::generateFunctionParameter(AST::FunctionParameterPtr arg) {

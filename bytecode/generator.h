@@ -25,6 +25,7 @@ namespace ceos {
       void generateNumber(AST::NumberPtr);
       void generateIdentifier(AST::IdentifierPtr);
       void generateString(AST::StringPtr);
+      void generateList(AST::ListPtr);
       void generateFunctionParameter(AST::FunctionParameterPtr);
       void generateFunctionDefinition(AST::FunctionPtr);
       void generateFunctionSource(AST::FunctionPtr);

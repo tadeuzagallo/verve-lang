@@ -45,7 +45,8 @@ static unsigned str_uid = 0;
       StackStore, \
       StackLoad, \
       BinaryOperation, \
-      UnaryOperation
+      UnaryOperation, \
+      List
 
 namespace ceos {
 namespace AST {
@@ -166,6 +167,12 @@ namespace AST {
 
     unsigned op;
     NodePtr operand;
+  };
+
+  struct List : public Node {
+    using Node::Node;
+
+    std::vector<NodePtr> items;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))

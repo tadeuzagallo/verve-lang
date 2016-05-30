@@ -23,6 +23,7 @@
       release_lex_scope, \
       put_to_scope, \
       alloc_obj, \
+      alloc_list, \
       obj_store_at, \
       obj_tag_test, \
       obj_load, \

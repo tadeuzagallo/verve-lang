@@ -65,7 +65,7 @@ void symbolNotFound(char *symbolName) {
 
 extern "C" uintptr_t allocate(VM *vm, unsigned size);
 uintptr_t allocate(VM *vm, unsigned size) {
-  auto address = malloc(size);
+  auto address = calloc(size, 8);
   vm->trackAllocation(address, size);
   return reinterpret_cast<uintptr_t>(address);
 }

@@ -186,6 +186,8 @@ namespace ceos {
       auto expr = parseExpr();
       match(')');
       return expr;
+    } else if (skip('[')) {
+      return parseList();
     } else if (Token::isUnaryOperator(token())) {
       auto prec = Token::precedence(token());
 
@@ -558,6 +560,16 @@ ident:
     auto str = AST::createString(token().loc);
     str->name = token(Token::STRING).string();
     return str;
+  }
+
+  AST::ListPtr Parser::parseList() {
+    auto list = AST::createList(token().loc);
+    while (!next(']')) {
+      list->items.push_back(parseExpr());
+      if (!skip(',')) break;
+    }
+    match(']');
+    return list;
   }
 
   Type *Parser::parseType() {

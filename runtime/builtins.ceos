@@ -6,6 +6,8 @@ interface Stringify<T> {
 
 implementation Stringify<Int> { }
 implementation Stringify<String> { }
+implementation Stringify<List<Int>> { }
+implementation Stringify<List<String>> { }
 
 extern print(Stringify): Void
 

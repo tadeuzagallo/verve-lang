@@ -11,7 +11,6 @@ namespace ceos {
   struct Value;
 
   JS_FUNCTION(print);
-  JS_FUNCTION(list);
   JS_FUNCTION(add);
   JS_FUNCTION(sub);
   JS_FUNCTION(mul);

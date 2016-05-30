@@ -18,7 +18,7 @@ namespace ceos {
         scopes.clear();
       }
 
-      static void markValue(Value &value, Heap &heap) {
+      static void markValue(Value value, Heap &heap) {
         if (!value.isHeapAllocated()) {
           return;
         }
@@ -40,9 +40,9 @@ namespace ceos {
         if (it != heap.end()) {
           it->second = mark(it->second);
 
-          if (value.isArray()) {
-            for (auto i : *value.asArray()) {
-              markValue(i, heap);
+          if (value.isList()) {
+            for (unsigned i = 0; i < value.asList()->length; i++) {
+              markValue(value.asList()->at(i), heap);
             }
           } else if (value.isClosure()) {
             Scope *scope;

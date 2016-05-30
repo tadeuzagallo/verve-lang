@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -10,6 +11,12 @@
 namespace ceos {
   class VM;
   struct Closure;
+
+  struct Value;
+  struct List {
+    Value at(unsigned index);
+    uint64_t length;
+  };
 
   struct Value {
     union {
@@ -30,7 +37,7 @@ namespace ceos {
     TAG(Int, 0); // fast path from assembly
     TAG(Undefined, 1 << 0);
     TAG(String,    1 << 1);
-    TAG(Array,     1 << 2);
+    TAG(List,      1 << 2);
     TAG(Builtin,   1 << 3);
     TAG(Closure,   1 << 4);
 
@@ -61,7 +68,7 @@ namespace ceos {
       return reinterpret_cast<TYPE *>(unmask(value.ptr)); \
     }
 
-    POINTER_TYPE(std::vector<Value>, Array)
+    POINTER_TYPE(List, List)
     POINTER_TYPE(Closure, Closure)
 
     ALWAYS_INLINE Value(String str) {
@@ -91,7 +98,7 @@ namespace ceos {
     }
 
     ALWAYS_INLINE bool isHeapAllocated() {
-      return value.data.tag & (Value::ClosureTag | Value::ArrayTag | Value::StringTag);
+      return value.data.tag & (Value::ClosureTag | Value::ListTag | Value::StringTag);
     }
 
     ALWAYS_INLINE uint64_t encode() {
@@ -112,6 +119,10 @@ namespace ceos {
     }
   };
 
+  inline Value List::at(unsigned index) {
+    assert(index < length);
+    return ((Value *)this)[index + 1];
+  }
 }
 
 using Builtin = ceos::Value::Builtin;

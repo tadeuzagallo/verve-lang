@@ -66,6 +66,8 @@ start:
       BASIC_TOKEN(')')
       BASIC_TOKEN('{')
       BASIC_TOKEN('}')
+      BASIC_TOKEN('[')
+      BASIC_TOKEN(']')
       BASIC_TOKEN(',')
       BASIC_TOKEN(':')
 

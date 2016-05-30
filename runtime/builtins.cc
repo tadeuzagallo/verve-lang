@@ -18,7 +18,6 @@ namespace ceos {
     } while(0)
 
     REGISTER(print, print);
-    REGISTER(list, list);
 
     REGISTER(+, builtin_add);
     REGISTER(-, builtin_sub);
@@ -76,22 +75,26 @@ namespace ceos {
     return Value(-argv[0].asInt());
   }
 
+
+  static void printValue(Value value) {
+    if (value.isString()) {
+      printf("%s", value.asString().str());
+    } else if (value.isList()) {
+      for (unsigned i = 0; i < value.asList()->length; i++) {
+        if (i) putchar(' ');
+        printValue(value.asList()->at(i));
+      }
+    } else if (value.isInt()){
+      printf("%d", value.asInt());
+    } else {
+      throw std::runtime_error("Trying to print unsupported type");
+    }
+  }
+
   JS_FUNCTION(print) {
     for (unsigned i = 0; i < argc; i++) {
-      Value arg = argv[i];
-      if (arg.isString()) {
-        printf("%s", arg.asString().str());
-      } else if (arg.isArray()) {
-        for (auto a : *arg.asArray()) {
-          printf("%d ", a.asInt());
-        }
-      } else {
-        printf("%d", arg.asInt());
-      }
-
-      if (i < argc - 1) {
-        putchar(' ');
-      }
+      if (i) putchar(' ');
+      printValue(argv[i]);
     }
     putchar('\n');
 
@@ -104,9 +107,8 @@ namespace ceos {
     Value arg = argv[0];
     if (arg.isString()) {
       return arg.asString()[argv[1].asInt()];
-    } else if (arg.isArray()) {
-      auto array = arg.asArray();
-      return array->at(argv[1].asInt());
+    } else if (arg.isList()) {
+      return arg.asList()->at(argv[1].asInt());
     }
 
     return Value(0);
@@ -150,15 +152,6 @@ namespace ceos {
     }
 
     return 0;
-  }
-
-  JS_FUNCTION(list) {
-    auto list = new std::vector<Value>();
-    EACH_ARG(arg) {
-      list->push_back(arg);
-    }
-    vm->trackAllocation(list, sizeof(std::vector<Value>) + list->capacity() * sizeof(Value));
-    return Value(list);
   }
 
   JS_FUNCTION(heapSize) {
