@@ -215,9 +215,12 @@ i(): List<String> { h() h() }
 j(): List<String> { i() i() }
 k(): List<String> { j() j() }
 
-k()
+_(a: List<String>): Void {
+  k()
+  print(a)
+}(["test"])
 
 // this will allocate 4243744b (~4mb)
-// the GC should get it down to ~20k
-// here we just test it's less than ~30k
-print(__heap-size__() < 30000)
+// the GC should get it down to ~9k
+// here we just test it's less than ~12k
+print(__heap-size__() < 12000)

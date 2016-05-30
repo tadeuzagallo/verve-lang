@@ -6,7 +6,7 @@
 #include <vector>
 
 #ifdef LOG_GC_ENABLED
-#define LOG_GC(...) printf(__VA_ARGS__)
+#define LOG_GC(...) fprintf(stderr, __VA_ARGS__)
 #else
 #define LOG_GC(...)
 #endif

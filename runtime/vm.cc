@@ -159,10 +159,15 @@ uintptr_t allocate(VM *vm, unsigned size) {
   void VM::collect() {
     GC::start();
 
-    // TODO: walk the actual stack
-    //for (auto value : stack) {
-      //GC::markValue(value, blocks);
-    //}
+    volatile void **rsp;
+    asm("movq %%rsp, %0" : "=r"(rsp));
+
+    pthread_t self = pthread_self();
+    void *stackBottom = pthread_get_stackaddr_np(self);
+    while (rsp != stackBottom) {
+      GC::markValue(Value::decode((uintptr_t)*rsp), blocks);
+      rsp++;
+    }
 
     GC::markScope(m_scope, blocks);
 
