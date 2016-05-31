@@ -4,7 +4,7 @@
 #define OBJECT_TAG    1 << 5
 
 #define BYTECODE r12
-#define SCOPE_STACK r13
+#define SCOPE_VARS r13
 #define VM r14
 #define BCBASE r15
 #define LOOKUP rbx
@@ -280,33 +280,33 @@ _op_obj_load:
 
 .globl _op_stack_alloc
 _op_stack_alloc:
-  push %SCOPE_STACK
+  push %SCOPE_VARS
   READ 1, %rdi
   sub %rdi, %rsp
-  mov %rsp, %SCOPE_STACK
+  mov %rsp, %SCOPE_VARS
   SKIP 1
 
 .globl _op_stack_store
 _op_stack_store:
   READ 1, %rdi // slot - offset on stack
   pop %rsi
-  mov %rsi, (%SCOPE_STACK, %rdi, 8)
+  mov %rsi, (%SCOPE_VARS, %rdi, 8)
   SKIP 1
 
 .globl _op_stack_load
 _op_stack_load:
   READ 1, %rdi // slot - offset on stack
-  mov (%SCOPE_STACK, %rdi, 8), %rdi
+  mov (%SCOPE_VARS, %rdi, 8), %rdi
   push %rdi
   SKIP 1
 
 .globl _op_stack_free
 _op_stack_free:
   pop %rdx
-  mov %SCOPE_STACK, %rsp
+  mov %SCOPE_VARS, %rsp
   READ 1, %rdi
   add %rdi, %rsp
-  pop %SCOPE_STACK
+  pop %SCOPE_VARS
   push %rdx
   SKIP 1
 
