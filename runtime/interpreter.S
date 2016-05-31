@@ -9,7 +9,7 @@
 #define BCBASE r15
 #define LOOKUP rbx
 
-.macro read
+.macro READ
 .if $0 == 1
   mov 0x8(%BYTECODE), $1
 .elseif $0 == 2
@@ -19,7 +19,7 @@
 .endif
 .endmacro
 
-.macro skip
+.macro SKIP
 .if $0 == 0
   add $$0x8, %BYTECODE
 .elseif $0 == 1
@@ -32,12 +32,12 @@
   jmp *(%BYTECODE)
 .endmacro
 
-.macro unmask
+.macro UNMASK
   shl $$8, $0
   shr $$8, $0
 .endmacro
 
-.macro ccall
+.macro CCALL
   push %rbx
   mov %rsp, %rbx
   and $-0x10, %rsp
@@ -46,7 +46,7 @@
   pop %rbx
 .endmacro
 
-.macro get_arg
+.macro GET_ARG
   mov 0x20(%rbp, $0, 8), $1
 .endmacro
 
@@ -78,40 +78,40 @@ _op_exit:
 .globl _op_lookup
 _op_lookup:
 _op_lookup_fast_path:
-  read 2, %rdi
+  READ 2, %rdi
   mov (%LOOKUP, %rdi, 8), %rsi // Cached address
   test %rsi, %rsi
   jz _op_lookup_slow_path
   push %rsi
-  skip 2
+  SKIP 2
 
 .globl _op_push
 _op_push:
-  read 1, %rdi
+  READ 1, %rdi
   push %rdi
-  skip 1
+  SKIP 1
 
 .globl _op_push_arg
 _op_push_arg:
-  read 1, %rdi
-  get_arg %rdi, %rax
+  READ 1, %rdi
+  GET_ARG %rdi, %rax
   push %rax
-  skip 1
+  SKIP 1
 
 .globl _op_jz
 _op_jz:
   pop %rdi
   test %rdi, %rdi
   jz _jz
-  skip 1
+  SKIP 1
 _jz:
-  read 1, %rdi
+  READ 1, %rdi
   add %rdi, %BYTECODE
   jmp *(%BYTECODE)
 
 .globl _op_jmp
 _op_jmp:
-  read 1, %rdi
+  READ 1, %rdi
   add %rdi, %BYTECODE
   jmp *(%BYTECODE)
 
@@ -121,7 +121,7 @@ _op_call:
   pop %rcx
 
   // setup args
-  read 1, %rdi //argc
+  READ 1, %rdi //argc
   mov %rsp, %rsi // argv just lives in the stack
   mov %VM, %rdx
 
@@ -133,11 +133,11 @@ _op_call:
 _op_call_builtin:
   shr $8, %rcx
   push %rdi
-  ccall *%rcx
+  CCALL *%rcx
   pop %rdi
   lea (%rsp, %rdi, 8), %rsp
   push %rax
-  skip 1
+  SKIP 1
 
 _op_call_closure:
   shr $8, %rcx
@@ -151,7 +151,7 @@ _op_call_closure:
   jnz _op_call_fast_closure
 
 _op_call_slow_closure:
-  ccall _prepareClosure
+  CCALL _prepareClosure
   lea (%BCBASE, %rax, 1), %BYTECODE
   jmp *(%BYTECODE)
 
@@ -163,152 +163,152 @@ _op_call_fast_closure:
 
 .globl _op_load_string
 _op_load_string:
-  read 1, %rdi
+  READ 1, %rdi
   mov STRINGS(%rip), %rsi
   mov (%rsi, %rdi, 8), %rdi
   rol $8, %rdi
   mov $STRING_TAG, %dil
   ror $8, %rdi
   push %rdi
-  skip 1
+  SKIP 1
 
 .globl _op_create_closure
 _op_create_closure:
   mov %VM, %rdi
-  read 1, %rsi
-  read 2, %rdx
-  ccall _createClosure
+  READ 1, %rsi
+  READ 2, %rdx
+  CCALL _createClosure
   push %rax
-  skip 2
+  SKIP 2
 
 .globl _op_bind
 _op_bind:
   mov %VM, %rdi
-  read 1, %rsi
+  READ 1, %rsi
   pop %rdx
   mov STRINGS(%rip), %rcx
   mov (%rcx, %rsi, 8), %rsi
-  ccall _setScope
-  skip 1
+  CCALL _setScope
+  SKIP 1
 
 .globl _op_create_lex_scope
 _op_create_lex_scope:
   mov %VM, %rdi
-  ccall _pushScope
-  skip 0
+  CCALL _pushScope
+  SKIP 0
 
 .globl _op_release_lex_scope
 _op_release_lex_scope:
   mov %VM, %rdi
-  ccall _restoreScope
-  skip 0
+  CCALL _restoreScope
+  SKIP 0
 
 .globl _op_put_to_scope
 _op_put_to_scope:
   mov %VM, %rdi
-  read 1, %rsi
-  read 2, %rdx
+  READ 1, %rsi
+  READ 2, %rdx
 
   mov STRINGS(%rip), %rcx
   mov (%rcx, %rsi, 8), %rsi
-  get_arg %rdx, %rdx
+  GET_ARG %rdx, %rdx
 
-  ccall _setScope
-  skip 2
+  CCALL _setScope
+  SKIP 2
 
 .globl _op_alloc_obj
 _op_alloc_obj:
   mov %VM, %rdi
-  read 1, %esi
-  ccall _allocate
-  read 2, %esi // tag
+  READ 1, %esi
+  CCALL _allocate
+  READ 2, %esi // tag
   mov %rsi, (%rax)
-  read 1, %esi // size
+  READ 1, %esi // size
   dec %esi
   mov %esi, 0x4(%rax)
   rol $8, %rax
   mov $OBJECT_TAG, %al
   ror $8, %rax
   push %rax
-  skip 2
+  SKIP 2
 
 .globl _op_alloc_list
 _op_alloc_list:
   mov %VM, %rdi
-  read 1, %rsi
-  ccall _allocate
-  read 1, %rsi
+  READ 1, %rsi
+  CCALL _allocate
+  READ 1, %rsi
   dec %rsi
   mov %rsi, (%rax)
   rol $8, %rax
   mov $LIST_TAG, %al
   ror $8, %rax
   push %rax
-  skip 1
+  SKIP 1
 
 .globl _op_obj_store_at
 _op_obj_store_at:
   pop %rdi // value
   pop %rdx // object
   mov %rdx, %rcx
-  unmask %rdx
-  read 1, %rsi // index
+  UNMASK %rdx
+  READ 1, %rsi // index
   mov %rdi, (%rdx, %rsi, 8)
   push %rcx
-  skip 1
+  SKIP 1
 
 .globl _op_obj_tag_test
 _op_obj_tag_test:
   pop %rdi // object
-  unmask %rdi
-  read 1, %rsi // expected tag
+  UNMASK %rdi
+  READ 1, %rsi // expected tag
   mov (%rdi), %edi // object's tag
   test %edi, %esi
   je _op_obj_tag_test_ok
   hlt
 _op_obj_tag_test_ok:
-  skip 1
+  SKIP 1
 
 .globl _op_obj_load
 _op_obj_load:
   pop %rdi // object
-  unmask %rdi
-  read 1, %rsi // offset
-  mov 0x8(%rdi, %rsi, 8), %rdi // skip tag
+  UNMASK %rdi
+  READ 1, %rsi // offset
+  mov 0x8(%rdi, %rsi, 8), %rdi // SKIP tag
   push %rdi
-  skip 1
+  SKIP 1
 
 .globl _op_stack_alloc
 _op_stack_alloc:
   push %SCOPE_STACK
-  read 1, %rdi
+  READ 1, %rdi
   sub %rdi, %rsp
   mov %rsp, %SCOPE_STACK
-  skip 1
+  SKIP 1
 
 .globl _op_stack_store
 _op_stack_store:
-  read 1, %rdi // slot - offset on stack
+  READ 1, %rdi // slot - offset on stack
   pop %rsi
   mov %rsi, (%SCOPE_STACK, %rdi, 8)
-  skip 1
+  SKIP 1
 
 .globl _op_stack_load
 _op_stack_load:
-  read 1, %rdi // slot - offset on stack
+  READ 1, %rdi // slot - offset on stack
   mov (%SCOPE_STACK, %rdi, 8), %rdi
   push %rdi
-  skip 1
+  SKIP 1
 
 .globl _op_stack_free
 _op_stack_free:
   pop %rdx
   mov %SCOPE_STACK, %rsp
-  read 1, %rdi
+  READ 1, %rdi
   add %rdi, %rsp
   pop %SCOPE_STACK
   push %rdx
-  skip 1
+  SKIP 1
 
 .globl _op_ret
 _op_ret:
@@ -322,16 +322,16 @@ _op_ret:
   push %rax
 restore_scope:
   test $1, %rsi
-  jnz skip
+  jnz SKIP
 
   mov %VM, %rdi // VM::m_scope : Scope
   // %rsi is the Closure *
-  ccall _finishClosure
-skip:
-  skip 1
+  CCALL _finishClosure
+SKIP:
+  SKIP 1
 
 _op_lookup_slow_path:
-  read 1, %rsi // string ID
+  READ 1, %rsi // string ID
   mov STRINGS(%rip), %r9
   mov (%r9, %rsi, 8), %rsi // actual char *
   mov (%VM), %r9 // VM::m_scope *
@@ -365,18 +365,18 @@ _op_lookup_check_parent:
 
 _op_lookup_not_found:
   mov %rsi, %rdi
-  ccall _symbolNotFound
+  CCALL _symbolNotFound
 
 _op_lookup_found:
   mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value
-  read 2, %rdx
+  READ 2, %rdx
   test %rdx, %rdx
   jz _op_lookup_done
   mov %rax, (%LOOKUP, %rdx, 8) // cache value
 
 _op_lookup_done:
   push %rax
-  skip 2
+  SKIP 2
 
 .data
 STRINGS: .quad 0
