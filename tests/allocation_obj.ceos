@@ -6,6 +6,10 @@ type Pair {
   Pair(Int, Int)
 }
 
+type Wrapper {
+  Wrapper(Pair)
+}
+
 allocate(): BigObject {
   BigObject(
     "foooooooooooooooooooooooooooooooooooooooooooo",
@@ -33,6 +37,17 @@ k(): BigObject { j() j() }
 l(): BigObject { k() k() }
 m(): BigObject { l() l() }
 n(): BigObject { m() m() }
+
+test(wrapped: Wrapper): Void {
+  n() // allocate a lot and trigger garbage collection
+  let Wrapper(pair) = wrapped {
+    let Pair(a, b) = pair { 
+      print([a, b])
+    }
+  }
+}
+
+test(Wrapper(Pair(42, 13)))
 
 // this will allocate 4243744b (~4mb)
 // the GC should get it down to ~20k

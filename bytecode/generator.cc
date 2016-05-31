@@ -328,12 +328,7 @@ namespace ceos {
   void Generator::generateConstructor(AST::CallPtr call) {
     emitOpcode(Opcode::alloc_obj);
     write(call->size + 1); // args + tag
-
-    emitOpcode(Opcode::push);
     write(call->tag); // tag
-
-    emitOpcode(Opcode::obj_store_at);
-    write(0);
 
     for (unsigned i = 0; i < call->arguments.size(); i++) {
       generateNode(call->arguments[i]);

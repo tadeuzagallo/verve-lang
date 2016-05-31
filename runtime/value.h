@@ -18,6 +18,12 @@ namespace ceos {
     uint64_t length;
   };
 
+  struct Object {
+    unsigned tag;
+    unsigned size;
+    Value at(unsigned index);
+  };
+
   struct Value {
     union {
       uint64_t raw;
@@ -40,6 +46,7 @@ namespace ceos {
     TAG(List,      1 << 2);
     TAG(Builtin,   1 << 3);
     TAG(Closure,   1 << 4);
+    TAG(Object,    1 << 5);
 
 #undef TAG
 
@@ -71,6 +78,7 @@ namespace ceos {
 
     POINTER_TYPE(List, List)
     POINTER_TYPE(Closure, Closure)
+    POINTER_TYPE(Object, Object)
 
     ALWAYS_INLINE Value(String str) {
       value.ptr = reinterpret_cast<uintptr_t>(str.str());
@@ -99,7 +107,7 @@ namespace ceos {
     }
 
     ALWAYS_INLINE bool isHeapAllocated() {
-      return value.data.tag & (Value::ClosureTag | Value::ListTag | Value::StringTag);
+      return value.data.tag & (Value::ClosureTag | Value::ListTag | Value::StringTag | Value::ObjectTag);
     }
 
     ALWAYS_INLINE uint64_t encode() {
@@ -122,6 +130,11 @@ namespace ceos {
 
   inline Value List::at(unsigned index) {
     assert(index < length);
+    return ((Value *)this)[index + 1];
+  }
+
+  inline Value Object::at(unsigned index) {
+    assert(index < size);
     return ((Value *)this)[index + 1];
   }
 }

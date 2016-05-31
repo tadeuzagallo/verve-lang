@@ -50,6 +50,10 @@ namespace ceos {
             for (unsigned i = 0; i < value.asList()->length; i++) {
               markValue(value.asList()->at(i), heap);
             }
+          } else if (value.isObject()) {
+            for (unsigned i = 0; i < value.asObject()->size; i++) {
+              markValue(value.asObject()->at(i), heap);
+            }
           } else if (value.isClosure()) {
             Scope *scope;
             if ((scope = value.asClosure()->scope) != NULL) {
