@@ -520,13 +520,24 @@ section_code:
         WRITE(2, "bind $" << strings[stringID]);
         break;
       case Opcode::alloc_obj:
-        READ_INT(bytecode, size);
-        WRITE(2, "alloc_obj size(" << size << ")");
+        {
+          READ_INT(bytecode, size);
+          READ_INT(bytecode, tag);
+          WRITE(3, "alloc_obj (size=" << size << ", tag=" << tag << ")");
+        }
         break;
+      case Opcode::alloc_list:
+        {
+          READ_INT(bytecode, size);
+          WRITE(2, "alloc_list (size=" << size << ")");
+          break;
+        }
       case Opcode::obj_store_at:
-        READ_INT(bytecode, index);
-        WRITE(2, "obj_store_at #" << index);
-        break;
+        {
+          READ_INT(bytecode, index);
+          WRITE(2, "obj_store_at #" << index);
+          break;
+        }
       case Opcode::obj_tag_test:
         READ_INT(bytecode, tag);
         WRITE(2, "obj_tag_test #" << tag);
