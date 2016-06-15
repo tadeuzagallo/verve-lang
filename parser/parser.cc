@@ -121,9 +121,12 @@ namespace ceos {
       if (skip("virtual")) {
         auto virtualFunction = parseVirtual(declScope);
         virtualFunction->interface = interface;
-      } else {
+      } else if (skip("fn")) {
         auto fn = parseFunction();
         block->nodes.push_back(fn);
+      } else {
+        match('}');
+        break;
       }
     }
 
@@ -298,14 +301,12 @@ namespace ceos {
 
     pushScope();
 
-    if (!parseGenerics(fnType->generics)) goto rewind;
+    parseGenerics(fnType->generics);
 
-    if (!skip('(')) goto rewind;
-    if (!parseFunctionParams(fn->parameters, fnType->types)) goto rewind;
-    if (!skip(TUPLE_TOKEN('-', '>'))) goto rewind;
+    parseFunctionParams(fn->parameters, fnType->types);
 
+    match(TUPLE_TOKEN('-', '>'));
     setType(fnType->name, fnType, env);
-
     fnType->returnType = parseType();
 
     fn->body = AST::createBlock(token().loc);
@@ -320,11 +321,6 @@ namespace ceos {
     popScope();
 
     return fn;
-
-rewind:
-    popScope();
-    m_lexer.rewind(start);
-    return nullptr;
   }
 
   AST::IfPtr Parser::parseIf() {
@@ -437,21 +433,21 @@ rewind:
     return block;
   }
 
-  bool Parser::parseFunctionParams(
+  void Parser::parseFunctionParams(
       std::vector<AST::FunctionParameterPtr> &params,
       std::vector<Type *> &types)
   {
+    match('(');
+
     unsigned i = 0;
     while (!next(')')) {
-
-      if (!next(Token::ID)) goto fail;
       auto param = AST::createFunctionParameter(token().loc);
       param->name = token(Token::ID).string();
       param->index = i++;
       params.push_back(param);
       m_scope->set(param->name, param);
 
-      if (!skip(':')) goto fail;
+      match(':');
 
       auto type = parseType();
       types.push_back(type);
@@ -461,35 +457,29 @@ rewind:
     }
 
     match(')');
-
-    return true;
-
-fail:
-    return false;
   }
 
-  bool Parser::parseGenerics(std::vector<std::string> &generics) {
+  void Parser::parseGenerics(std::vector<std::string> &generics) {
     if (!skip('<')) {
-      return true;
+      return;
     }
 
     do {
-      if (token().type != Token::ID) {
-        return false;
-      }
-
       auto name = token(Token::ID).string();
       generics.push_back(name);
 
       setType(name, new GenericType(std::move(name)));
     } while (skip(','));
 
-    return skip('>');
+    return match('>');
   }
 
   AST::NodePtr Parser::parseIdentifierFunctionOrCall() {
-    AST::NodePtr callee = parseFunction();
-    if (!callee) {
+    AST::NodePtr callee;
+
+    if (skip("fn")) {
+      callee = parseFunction();
+    } else {
       callee = parseIdentifier(true);
     }
     return parseCall(callee);

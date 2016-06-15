@@ -25,27 +25,26 @@ interface Foo<T> {
 }
 
 
-foo() -> Void {
-}
+fn foo() -> Void { }
 
-bar(a: Int) -> Int {
+fn bar(a: Int) -> Int {
   a
 }
 
-baz(a: () -> Int) -> Int {
+fn baz(a: () -> Int) -> Int {
   a()
 }
 
-_(a: Int) -> Int {
+fn _(a: Int) -> Int {
   bar(a)
 }(42)
 
-_() -> Void {
+fn _() -> Void {
   foo()
 }()
 
-/*_(a: () -> Int) -> Int {*/
+/*fn _(a: () -> Int) -> Int {*/
   /*baz(a)*/
-/*}(_() -> Int { 42 })*/
+/*}(fn _() -> Int { 42 })*/
 
 print("OK")

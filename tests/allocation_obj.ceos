@@ -10,7 +10,7 @@ type Wrapper {
   Wrapper(Pair)
 }
 
-allocate() -> BigObject {
+fn allocate() -> BigObject {
   BigObject(
     "foooooooooooooooooooooooooooooooooooooooooooo",
     "foooooooooooooooooooooooooooooooooooooooooooo",
@@ -23,22 +23,22 @@ allocate() -> BigObject {
   )
 }
 
-a() -> BigObject { allocate() allocate() }
-b() -> BigObject { a() a() }
-c() -> BigObject { b() b() }
-d() -> BigObject { c() c() }
-e() -> BigObject { d() d() }
-f() -> BigObject { e() e() }
-g() -> BigObject { f() f() }
-h() -> BigObject { g() g() }
-i() -> BigObject { h() h() }
-j() -> BigObject { i() i() }
-k() -> BigObject { j() j() }
-l() -> BigObject { k() k() }
-m() -> BigObject { l() l() }
-n() -> BigObject { m() m() }
+fn a() -> BigObject { allocate() allocate() }
+fn b() -> BigObject { a() a() }
+fn c() -> BigObject { b() b() }
+fn d() -> BigObject { c() c() }
+fn e() -> BigObject { d() d() }
+fn f() -> BigObject { e() e() }
+fn g() -> BigObject { f() f() }
+fn h() -> BigObject { g() g() }
+fn i() -> BigObject { h() h() }
+fn j() -> BigObject { i() i() }
+fn k() -> BigObject { j() j() }
+fn l() -> BigObject { k() k() }
+fn m() -> BigObject { l() l() }
+fn n() -> BigObject { m() m() }
 
-test(wrapped: Wrapper) -> Void {
+fn test(wrapped: Wrapper) -> Void {
   n() // allocate a lot and trigger garbage collection
   let Wrapper(pair) = wrapped {
     let Pair(a, b) = pair { 

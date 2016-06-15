@@ -1,4 +1,4 @@
-allocate() -> List<String> {
+fn allocate() -> List<String> {
   [
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
   "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
@@ -203,19 +203,19 @@ allocate() -> List<String> {
   ]
 }
 
-a() -> List<String> { allocate() allocate() }
-b() -> List<String> { a() a() }
-c() -> List<String> { b() b() }
-d() -> List<String> { c() c() }
-e() -> List<String> { d() d() }
-f() -> List<String> { e() e() }
-g() -> List<String> { f() f() }
-h() -> List<String> { g() g() }
-i() -> List<String> { h() h() }
-j() -> List<String> { i() i() }
-k() -> List<String> { j() j() }
+fn a() -> List<String> { allocate() allocate() }
+fn b() -> List<String> { a() a() }
+fn c() -> List<String> { b() b() }
+fn d() -> List<String> { c() c() }
+fn e() -> List<String> { d() d() }
+fn f() -> List<String> { e() e() }
+fn g() -> List<String> { f() f() }
+fn h() -> List<String> { g() g() }
+fn i() -> List<String> { h() h() }
+fn j() -> List<String> { i() i() }
+fn k() -> List<String> { j() j() }
 
-_(a: List<String>) -> Void {
+fn _(a: List<String>) -> Void {
   k()
   print(a)
 }(["test"])

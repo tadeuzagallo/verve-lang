@@ -1,4 +1,4 @@
-id<T>(a: T) -> T {
+fn id<T>(a: T) -> T {
   a
 }
 

@@ -40,11 +40,11 @@ namespace ceos {
     AST::BlockPtr parseExprOrBody();
     AST::BlockPtr parseBody(AST::BlockPtr block = nullptr);
 
-    bool parseFunctionParams(
+    void parseFunctionParams(
         std::vector<AST::FunctionParameterPtr> &params,
         std::vector<Type *> &types);
 
-    bool parseGenerics(std::vector<std::string> &generics);
+    void parseGenerics(std::vector<std::string> &generics);
 
     AST::NodePtr parseIdentifierFunctionOrCall();
     AST::NodePtr parseCall(AST::NodePtr callee);

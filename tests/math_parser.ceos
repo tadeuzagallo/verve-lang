@@ -2,7 +2,7 @@ type Result {
   Result(Int, String)
 }
 
-parse-factor-(sum: Int, expr: String) -> Result {
+fn parse-factor-(sum: Int, expr: String) -> Result {
   if (!count(expr)) Result(sum, expr)
   else let c = at(expr, 0) {
     if (c >= '0' && c <= '9') {
@@ -11,11 +11,11 @@ parse-factor-(sum: Int, expr: String) -> Result {
   }
 }
 
-parse-factor(e: String) -> Result {
+fn parse-factor(e: String) -> Result {
   parse-factor-(0, e)
 }
 
-eval-term-(pair: Result) -> Result {
+fn eval-term-(pair: Result) -> Result {
   let Result(lhs, expr) = pair {
     if (!count(expr)) pair
     else let lookahead = at(expr, 0)
@@ -31,11 +31,11 @@ eval-term-(pair: Result) -> Result {
   }
 }
 
-eval-term(expr: String) -> Result {
+fn eval-term(expr: String) -> Result {
   eval-term-(parse-factor(expr))
 }
 
-eval-expr-(pair: Result) -> Result {
+fn eval-expr-(pair: Result) -> Result {
   let Result(lhs, expr) = pair {
     if (!count(expr)) pair
     else let lookahead = at(expr, 0)
@@ -51,11 +51,11 @@ eval-expr-(pair: Result) -> Result {
   }
 }
 
-eval-expr(e: String) -> Result {
+fn eval-expr(e: String) -> Result {
   eval-expr-(eval-term(e))
 }
 
-eval(e: String) -> Int {
+fn eval(e: String) -> Int {
   let Result(res, _) = eval-expr(e) {
     res
   }
