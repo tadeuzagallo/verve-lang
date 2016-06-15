@@ -1,3 +1,3 @@
-Invalid token found: expected `:` to be `41`
+Invalid token found: expected `:` to be `)`
 2:   print(a : String)
              ^

@@ -215,7 +215,7 @@ start:
     if (next(c)) {
       nextToken();
     } else {
-      std::cerr << "Invalid token found: expected `" << tokenType(m_token) << "` to be `" << c << "`" << "\n";
+      std::cerr << "Invalid token found: expected `" << tokenType(m_token) << "` to be `" << (char)c << "`" << "\n";
       printSource();
       throw std::runtime_error("Parser error");
     }
