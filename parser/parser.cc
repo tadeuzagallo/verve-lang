@@ -241,7 +241,7 @@ namespace ceos {
     }
     match(')');
 
-    match(':');
+    match(TUPLE_TOKEN('-', '>'));
     fnType->returnType = parseType();
 
     return fnType;
@@ -302,7 +302,7 @@ namespace ceos {
 
     if (!skip('(')) goto rewind;
     if (!parseFunctionParams(fn->parameters, fnType->types)) goto rewind;
-    if (!skip(':')) goto rewind;
+    if (!skip(TUPLE_TOKEN('-', '>'))) goto rewind;
 
     setType(fnType->name, fnType, env);
 
@@ -580,7 +580,7 @@ ident:
         if (!skip(',')) break;
       }
       match(')');
-      match(':');
+      match(TUPLE_TOKEN('-', '>'));
       type->returnType = parseType();
       return type;
     } else {
@@ -647,15 +647,15 @@ ident:
     return m_lexer.token(t);
   }
 
-  inline bool Parser::next(char c) {
+  inline bool Parser::next(int c) {
     return m_lexer.next(c);
   }
 
-  inline bool Parser::skip(char c) {
+  inline bool Parser::skip(int c) {
     return m_lexer.skip(c);
   }
 
-  void Parser::match(char c) {
+  void Parser::match(int c) {
     m_lexer.match(c);
   }
 

@@ -72,11 +72,11 @@ start:
       BASIC_TOKEN(':')
 
       BASIC_TOKEN('+')
-      BASIC_TOKEN('-')
       BASIC_TOKEN('*')
       BASIC_TOKEN('%')
 
       // either first or first+second
+      BASIC_TOKEN_2_OPT('-', '>')
       BASIC_TOKEN_2_OPT('=', '=')
       BASIC_TOKEN_2_OPT('<', '=')
       BASIC_TOKEN_2_OPT('>', '=')
@@ -199,11 +199,11 @@ start:
     nextToken();
   }
 
-  bool Lexer::next(char c) {
+  bool Lexer::next(int c) {
     return m_token.type == Token::BASIC && m_token.number() == c;
   }
 
-  bool Lexer::skip(char c) {
+  bool Lexer::skip(int c) {
     if (next(c)) {
       nextToken();
       return true;
@@ -211,7 +211,7 @@ start:
     return false;
   }
 
-  void Lexer::match(char c) {
+  void Lexer::match(int c) {
     if (next(c)) {
       nextToken();
     } else {

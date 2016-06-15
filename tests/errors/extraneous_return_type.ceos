@@ -1,3 +1,3 @@
-extern foo(Int): Void
+extern foo(Int) -> Void
 
-foo(1): Int
+foo(1) -> Int

@@ -29,9 +29,9 @@ namespace ceos {
       void rewind();
       void rewind(Loc &loc);
 
-      bool next(char c);
-      bool skip(char c);
-      void match(char c);
+      bool next(int c);
+      bool skip(int c);
+      void match(int c);
 
       void _Noreturn invalidToken();
       void printSource();

@@ -1,4 +1,4 @@
-id<T>(a: T): T {
+id<T>(a: T) -> T {
   a
 }
 
@@ -6,7 +6,7 @@ print(id("foo"))
 print(id(42))
 
 interface Foo<T> {
-  virtual bar<U>(T, U): U
+  virtual bar<U>(T, U) -> U
 }
 
 implementation Foo<String> {

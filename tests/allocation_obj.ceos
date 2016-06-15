@@ -10,7 +10,7 @@ type Wrapper {
   Wrapper(Pair)
 }
 
-allocate(): BigObject {
+allocate() -> BigObject {
   BigObject(
     "foooooooooooooooooooooooooooooooooooooooooooo",
     "foooooooooooooooooooooooooooooooooooooooooooo",
@@ -23,22 +23,22 @@ allocate(): BigObject {
   )
 }
 
-a(): BigObject { allocate() allocate() }
-b(): BigObject { a() a() }
-c(): BigObject { b() b() }
-d(): BigObject { c() c() }
-e(): BigObject { d() d() }
-f(): BigObject { e() e() }
-g(): BigObject { f() f() }
-h(): BigObject { g() g() }
-i(): BigObject { h() h() }
-j(): BigObject { i() i() }
-k(): BigObject { j() j() }
-l(): BigObject { k() k() }
-m(): BigObject { l() l() }
-n(): BigObject { m() m() }
+a() -> BigObject { allocate() allocate() }
+b() -> BigObject { a() a() }
+c() -> BigObject { b() b() }
+d() -> BigObject { c() c() }
+e() -> BigObject { d() d() }
+f() -> BigObject { e() e() }
+g() -> BigObject { f() f() }
+h() -> BigObject { g() g() }
+i() -> BigObject { h() h() }
+j() -> BigObject { i() i() }
+k() -> BigObject { j() j() }
+l() -> BigObject { k() k() }
+m() -> BigObject { l() l() }
+n() -> BigObject { m() m() }
 
-test(wrapped: Wrapper): Void {
+test(wrapped: Wrapper) -> Void {
   n() // allocate a lot and trigger garbage collection
   let Wrapper(pair) = wrapped {
     let Pair(a, b) = pair { 

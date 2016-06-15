@@ -78,9 +78,9 @@ namespace ceos {
     inline Token &token();
     inline Token &token(Token::Type t);
 
-    inline bool next(char c);
-    inline bool skip(char c);
-    inline void match(char c);
+    inline bool next(int c);
+    inline bool skip(int c);
+    inline void match(int c);
 
     inline bool next(std::string str);
     inline bool skip(std::string str);

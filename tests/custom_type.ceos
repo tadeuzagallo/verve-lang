@@ -2,7 +2,7 @@ type Foo {
   Bar(Int, Int)
 }
 
-_(a: Foo): Void { 
+_(a: Foo) -> Void { 
   let Bar(x, y) = a {
     print(x + y)
   }

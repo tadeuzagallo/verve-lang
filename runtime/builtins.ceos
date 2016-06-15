@@ -1,7 +1,7 @@
-extern test((Int): String): Void
+extern test((Int) -> String) -> Void
 
 interface Stringify<T> {
-  virtual stringify(T): String
+  virtual stringify(T) -> String
 }
 
 implementation Stringify<Int> { }
@@ -9,31 +9,31 @@ implementation Stringify<String> { }
 implementation Stringify<List<Int>> { }
 implementation Stringify<List<String>> { }
 
-extern print(Stringify): Void
+extern print(Stringify) -> Void
 
-extern count(String): Int
-extern substr(String, Int): String
-extern at(String, Int): Int
+extern count(String) -> Int
+extern substr(String, Int) -> String
+extern at(String, Int) -> Int
 
-extern `+`(Int, Int): Int
-extern `-`(Int, Int): Int
-extern `*`(Int, Int): Int
-extern `/`(Int, Int): Int
-extern `%`(Int, Int): Int
+extern `+`(Int, Int) -> Int
+extern `-`(Int, Int) -> Int
+extern `*`(Int, Int) -> Int
+extern `/`(Int, Int) -> Int
+extern `%`(Int, Int) -> Int
 
 // should be bool
-extern `&&`(Int, Int): Int
-extern `||`(Int, Int): Int
+extern `&&`(Int, Int) -> Int
+extern `||`(Int, Int) -> Int
 
-extern `<`(Int, Int): Int
-extern `>`(Int, Int): Int
-extern `<=`(Int, Int): Int
-extern `>=`(Int, Int): Int
+extern `<`(Int, Int) -> Int
+extern `>`(Int, Int) -> Int
+extern `<=`(Int, Int) -> Int
+extern `>=`(Int, Int) -> Int
 
-extern `==`(Int, Int): Int
-extern `!=`(Int, Int): Int
+extern `==`(Int, Int) -> Int
+extern `!=`(Int, Int) -> Int
 
-extern `unary_!`(Int): Int
-extern `unary_-`(Int): Int
+extern `unary_!`(Int) -> Int
+extern `unary_-`(Int) -> Int
 
-extern __heap-size__(): Int
+extern __heap-size__() -> Int

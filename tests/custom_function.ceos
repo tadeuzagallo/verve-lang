@@ -1,4 +1,4 @@
-square(n: Int): Int {
+square(n: Int) -> Int {
   n * n
 }
 
