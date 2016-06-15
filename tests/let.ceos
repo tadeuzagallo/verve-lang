@@ -15,8 +15,8 @@ let cheap = expensive() {
 
 // should not cache value as scope - should access directlyfrom stack
 fn foo(n: Int) -> Void {
-  let n- = n {
-    print(n-)
+  let n_ = n {
+    print(n_)
   }
 }
 

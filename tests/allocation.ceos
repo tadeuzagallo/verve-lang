@@ -223,4 +223,4 @@ fn _(a: List<String>) -> Void {
 // this will allocate 4243744b (~4mb)
 // the GC should get it down to ~9k
 // here we just test it's less than ~12k
-print(__heap-size__() < 12000)
+print(`__heap-size__`() < 12000)

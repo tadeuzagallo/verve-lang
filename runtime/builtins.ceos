@@ -35,4 +35,4 @@ extern `!=` (Int, Int) -> Int
 extern `unary_!` (Int) -> Int
 extern `unary_-` (Int) -> Int
 
-extern __heap-size__ () -> Int
+extern `__heap-size__` () -> Int

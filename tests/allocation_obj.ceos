@@ -52,4 +52,4 @@ test(Wrapper(Pair(42, 13)))
 // this will allocate 4243744b (~4mb)
 // the GC should get it down to ~20k
 // here we just test it's less than ~30k
-print(__heap-size__() < 30000)
+print(`__heap-size__`() < 30000)

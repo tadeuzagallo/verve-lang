@@ -159,7 +159,7 @@ start:
           unsigned length = 0;
           do {
             length++;
-          } while (isalpha(c = nextChar()) || isnumber(c) || c == '_' || c == '-');
+          } while (isalpha(c = nextChar()) || isnumber(c) || c == '_');
 
           m_pos--;
 
