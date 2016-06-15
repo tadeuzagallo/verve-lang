@@ -215,7 +215,7 @@ start:
     if (next(c)) {
       nextToken();
     } else {
-      std::cerr << "Invalid token found: expected `" << tokenType(m_token) << "` to be `" << (char)c << "`" << "\n";
+      std::cerr << "Invalid token found: expected `" << tokenType(m_token) << "` to be `" << basicTokenToString(c) << "`" << "\n";
       printSource();
       throw std::runtime_error("Parser error");
     }
@@ -286,9 +286,13 @@ start:
 
   std::string Lexer::tokenType(Token &token) const {
     if (token.type == Token::BASIC) {
-      return std::string(1, (char)token.number());
+      return basicTokenToString(token.number());
     } else {
       return std::string(Token::typeName(token.type));
     }
+  }
+
+  std::string Lexer::basicTokenToString(int t) const {
+    return std::string((const char *)&t);
   }
 }
