@@ -38,6 +38,7 @@ namespace ceos {
       void generateStackLoad(AST::StackLoadPtr);
       void generateBinaryOperation(AST::BinaryOperationPtr);
       void generateUnaryOperation(AST::UnaryOperationPtr);
+      void generateMatch(AST::MatchPtr);
 
       void generateConstructor(AST::CallPtr);
 

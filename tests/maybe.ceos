@@ -1,0 +1,14 @@
+type MaybeInt {
+  JustInt(Int)
+  None()
+}
+
+fn print_maybe(a: MaybeInt) -> Void {
+  match a {
+    JustInt(x) => print(x)
+    None() => print("None")
+  }
+}
+
+print_maybe(JustInt(42))
+print_maybe(None())

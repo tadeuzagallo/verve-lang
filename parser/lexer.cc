@@ -77,7 +77,6 @@ start:
 
       // either first or first+second
       BASIC_TOKEN_2_OPT('-', '>')
-      BASIC_TOKEN_2_OPT('=', '=')
       BASIC_TOKEN_2_OPT('<', '=')
       BASIC_TOKEN_2_OPT('>', '=')
       BASIC_TOKEN_2_OPT('!', '=')
@@ -85,6 +84,17 @@ start:
       // must find both together
       BASIC_TOKEN_2_REQ('|', '|')
       BASIC_TOKEN_2_REQ('&', '&')
+
+      // =, == or =>
+      case '=':
+        c = nextChar();
+        if (c == '=' || c == '>') {
+          CREATE_BASIC_TOKEN(m_token, TUPLE_TOKEN('=', c));
+        } else {
+          m_pos--;
+          CREATE_BASIC_TOKEN(m_token, '=');
+        }
+        break;
 
       case '\0':
         start = m_token.loc.end > 0 ? m_token.loc.end - 1 : 0;

@@ -65,6 +65,9 @@ namespace ceos {
       case AST::Type::UnaryOperation:
         generateUnaryOperation(AST::asUnaryOperation(node));
         break;
+      case AST::Type::Match:
+        generateMatch(AST::asMatch(node));
+        break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
         throw;
@@ -323,6 +326,49 @@ namespace ceos {
 
     emitOpcode(Opcode::call);
     write(1);
+  }
+
+  void Generator::generateMatch(AST::MatchPtr match) {
+    auto size = match->cases.size();
+    long long pos[size - 1];
+    for (unsigned i = 0; i < size; i++) {
+      auto kase = match->cases[i];
+
+      generateNode(match->value);
+
+      emitOpcode(Opcode::obj_load);
+      write(-1);
+
+      emitOpcode(Opcode::push);
+      write(kase->pattern->tag);
+
+      std::string fnName = std::string("==");
+      emitOpcode(Opcode::lookup);
+      write(uniqueString(fnName));
+      write(lookupID++);
+      emitOpcode(Opcode::call);
+      write(2);
+
+
+      for (int j = kase->pattern->stores.size() - 1; j >= 0; j--) {
+        kase->body->nodes.insert(kase->body->nodes.begin(), kase->pattern->stores[j]);
+      }
+
+      auto jmp = i < size - 1;
+      emitJmp(Opcode::jz, kase->body, jmp);
+      if (jmp) {
+        emitOpcode(Opcode::jmp);
+        pos[i] = m_output.tellp();
+        write(0);
+      }
+    }
+    auto p = m_output.tellp();
+    for (unsigned i = 0; i < size - 1; i++) {
+      m_output.seekp(pos[i] );
+      unsigned off = p - pos[i];
+      write(off + WORD_SIZE);
+    }
+    m_output.seekp(p);
   }
 
   void Generator::generateConstructor(AST::CallPtr call) {

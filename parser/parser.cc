@@ -208,6 +208,8 @@ namespace ceos {
         return parseIf();
       } else if (skip("let")) {
         return parseLet();
+      } else if (skip("match")) {
+        return parseMatch();
       } else {
         return parseIdentifierFunctionOrCall();
       }
@@ -409,6 +411,63 @@ namespace ceos {
     popScope();
 
     return block;
+  }
+
+  AST::MatchPtr Parser::parseMatch() {
+    auto match = AST::createMatch(token().loc);
+    match->value = parseExpr();
+
+    this->match('{');
+    while (!skip('}')) {
+      pushScope();
+
+      auto kase = AST::createCase(token().loc);
+      kase->pattern = parsePattern(match->value);
+      this->match(TUPLE_TOKEN('=', '>'));
+      kase->body = parseExprOrBody();
+      match->cases.push_back(kase);
+
+      popScope();
+    }
+
+    return match;
+  }
+
+  AST::PatternPtr Parser::parsePattern(AST::NodePtr value) {
+    auto pattern = AST::createPattern(token().loc);
+
+    auto name = token(Token::ID).string();
+    auto ctor = getType<TypeConstructor *>(name);
+    assert(ctor);
+
+    pattern->tag = ctor->tag;
+
+    match('(');
+    auto offset = 0u;
+    while (!next(')')) {
+      auto load = AST::createObjectLoad(token().loc);
+      load->offset = offset++;
+      load->object = value;
+      load->constructorName = name;
+
+      auto name = token(Token::ID).string();
+
+      auto store = AST::createStackStore(token().loc);
+      store->slot = m_blockStack.back()->stackSlots++;
+      store->value = load;
+
+      pattern->stores.push_back(store);
+
+      auto stackLoad = AST::createStackLoad(token().loc);
+      stackLoad->slot = store->slot;
+      stackLoad->value = load;
+      m_scope->set(name, stackLoad);
+
+      if (!skip(',')) break;
+    }
+    match(')');
+
+    return pattern;
   }
 
   AST::BlockPtr Parser::parseExprOrBody() {

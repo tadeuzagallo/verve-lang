@@ -93,6 +93,27 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
         return dti;
       }
 
+    case AST::Type::Match:
+      {
+        auto match = AST::asMatch(node);
+        assert(match->cases.size());
+        Type *t = nullptr;
+        for (auto kase : match->cases) {
+          auto type = getType(kase, env, lexer);
+          if (!t) {
+            t = type; 
+          } else {
+            assert(type == t);
+          }
+        }
+        return t;
+      }
+
+    case AST::Type::Case:
+      {
+        return getType(AST::asCase(node)->body, env, lexer);
+      }
+
     default:
       throw std::runtime_error("unhandled node");
   }

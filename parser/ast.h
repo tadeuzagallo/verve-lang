@@ -46,7 +46,10 @@ static unsigned str_uid = 0;
       StackLoad, \
       BinaryOperation, \
       UnaryOperation, \
-      List
+      List, \
+      Match, \
+      Case, \
+      Pattern
 
 namespace ceos {
 namespace AST {
@@ -173,6 +176,27 @@ namespace AST {
     using Node::Node;
 
     std::vector<NodePtr> items;
+  };
+
+  struct Pattern : public Node {
+    using Node::Node;
+
+    unsigned tag;
+    std::vector<StackStorePtr> stores;
+  };
+
+  struct Case : public Node {
+    using Node::Node;
+
+    PatternPtr pattern;
+    BlockPtr body;
+  };
+
+  struct Match : public Node {
+    using Node::Node;
+
+    NodePtr value;
+    std::vector<CasePtr> cases;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))
