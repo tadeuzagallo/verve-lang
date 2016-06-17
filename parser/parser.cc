@@ -328,9 +328,7 @@ namespace ceos {
   AST::IfPtr Parser::parseIf() {
     auto iff = AST::createIf(token().loc);
 
-    match('(');
     iff->condition = parseExpr();
-    match(')');
 
     iff->ifBody = parseExprOrBody();
 
