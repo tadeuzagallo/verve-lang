@@ -1,0 +1,13 @@
+type Foo { Foo(Int) }
+
+fn bar(foo: Foo) -> ()  -> Void {
+  fn _() -> Void {
+    let Foo(x) = foo {
+      print(x)
+    }
+  }
+}
+
+let f = bar(Foo(42)) {
+  f()
+}

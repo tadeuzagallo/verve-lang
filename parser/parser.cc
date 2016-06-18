@@ -406,6 +406,12 @@ namespace ceos {
 
     parseBody(block);
 
+    if (m_scope->isRequired) {
+      m_scope->parent()->isRequired = true;
+    }
+    if (m_scope->capturesScope) {
+      m_scope->parent()->capturesScope = true;
+    }
     popScope();
 
     return block;
@@ -657,7 +663,7 @@ ident:
 
   template <typename T>
   T Parser::getType(std::string typeName) {
-   return dynamic_cast<T>(m_environment->get(typeName));
+    return dynamic_cast<T>(m_environment->get(typeName));
   }
 
   void Parser::pushTypeScope() {
