@@ -278,6 +278,7 @@ namespace ceos {
     match(')');
 
     fn->body = AST::createBlock(token().loc);
+    fn->body->env = m_environment;
     m_blockStack.push_back(fn->body);
     parseBody(fn->body);
     m_blockStack.pop_back();
@@ -312,6 +313,7 @@ namespace ceos {
     fnType->returnType = parseType();
 
     fn->body = AST::createBlock(token().loc);
+    fn->body->env = m_environment;
     m_blockStack.push_back(fn->body);
     parseBody(fn->body);
     m_blockStack.pop_back();
@@ -339,11 +341,14 @@ namespace ceos {
     return iff;
   }
 
-  AST::BlockPtr Parser::parseLet() {
+  AST::LetPtr Parser::parseLet() {
+    auto let = AST::createLet(token().loc);
+
     pushScope();
     m_scope->escapes = false;
 
-    auto block = AST::createBlock(token().loc);
+    let->block = AST::createBlock(token().loc);
+    let->block->env = m_environment;
 
     while (!next('{')) {
       auto name = token(Token::ID).string();
@@ -353,9 +358,7 @@ namespace ceos {
         assert(ctor);
 
         auto tagTest = AST::createObjectTagTest(token().loc);
-        block->nodes.push_back(tagTest);
-
-        std::vector<std::pair<std::string, AST::StackLoadPtr>> loads;
+        let->block->nodes.push_back(tagTest);
 
         auto offset = 0u;
         while (!next(')')) {
@@ -366,13 +369,16 @@ namespace ceos {
           auto store = AST::createStackStore(token().loc);
           store->slot = m_blockStack.back()->stackSlots++;
           store->value = load;
+          let->stores.push_back(store);
 
           auto stackLoad = AST::createStackLoad(token().loc);
           stackLoad->slot = store->slot;
           stackLoad->value = load;
+          stackLoad->name = token(Token::ID).string();
+          stackLoad->isCaptured = true;
+          let->loads.push_back(stackLoad);
 
-          loads.push_back(std::make_pair(token(Token::ID).string(), stackLoad));
-          block->nodes.push_back(store);
+          setType(stackLoad->name, ctor->type->types[load->offset]);
 
           if (!skip(',')) break;
         }
@@ -384,9 +390,9 @@ namespace ceos {
 
         auto object = parseExpr();
         tagTest->object = object;
-        for (auto it : loads) {
-          AST::asObjectLoad(it.second->value)->object = object;
-          m_scope->set(it.first, it.second);
+        for (auto load : let->loads) {
+          AST::asObjectLoad(load->value)->object = object;
+          m_scope->set(load->name, load);
         }
       } else {
         match('=');
@@ -394,17 +400,16 @@ namespace ceos {
         auto store = AST::createStackStore(token().loc);
         store->slot = m_blockStack.back()->stackSlots++;
         store->value = parseExpr();
+        let->block->nodes.push_back(store);
 
         auto load = AST::createStackLoad(token().loc);
         load->slot = store->slot;
         load->value = store->value;
-
-        block->nodes.push_back(store);
         m_scope->set(name, load);
       }
     }
 
-    parseBody(block);
+    parseBody(let->block);
 
     if (m_scope->isRequired) {
       m_scope->parent()->isRequired = true;
@@ -414,7 +419,7 @@ namespace ceos {
     }
     popScope();
 
-    return block;
+    return let;
   }
 
   AST::MatchPtr Parser::parseMatch() {
@@ -429,6 +434,7 @@ namespace ceos {
       kase->pattern = parsePattern(match->value);
       this->match(TUPLE_TOKEN('=', '>'));
       kase->body = parseExprOrBody();
+      kase->body->env = m_environment;
       match->cases.push_back(kase);
 
       popScope();
@@ -573,7 +579,7 @@ namespace ceos {
 
     if (checkScope) {
       auto var = m_scope->get(name);
-      if (var && var->type == AST::Type::FunctionParameter) {
+      if (var && (var->type == AST::Type::FunctionParameter || var->type == AST::Type::StackLoad)) {
         ParseScopePtr scope;
         if ((scope = m_scope->scopeFor(name)) != m_scope) {
           bool shouldCapture = false;
@@ -587,7 +593,11 @@ namespace ceos {
           }
 
           if (shouldCapture) {
-            AST::asFunctionParameter(var)->isCaptured = true;
+            if (var->type == AST::Type::FunctionParameter) {
+              AST::asFunctionParameter(var)->isCaptured = true;
+            } else if (var->type == AST::Type::StackLoad) {
+              AST::asStackLoad(var)->isCaptured = true;
+            }
             scope->isRequired = true;
             m_scope->capturesScope = true;
             goto ident;

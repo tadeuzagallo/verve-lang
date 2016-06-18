@@ -39,6 +39,7 @@ namespace ceos {
       void generateBinaryOperation(AST::BinaryOperationPtr);
       void generateUnaryOperation(AST::UnaryOperationPtr);
       void generateMatch(AST::MatchPtr);
+      void generateLet(AST::LetPtr);
 
       void generateConstructor(AST::CallPtr);
 

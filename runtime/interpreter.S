@@ -207,14 +207,13 @@ _op_release_lex_scope:
 _op_put_to_scope:
   mov %VM, %rdi
   READ 1, %rsi
-  READ 2, %rdx
+  pop %rdx
 
   mov STRINGS(%rip), %rcx
   mov (%rcx, %rsi, 8), %rsi
-  GET_ARG %rdx, %rdx
 
   CCALL _setScope
-  SKIP 2
+  SKIP 1
 
 .globl _op_alloc_obj
 _op_alloc_obj:

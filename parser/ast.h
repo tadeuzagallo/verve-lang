@@ -1,4 +1,6 @@
 #include "utils/macros.h"
+
+#include "environment.h"
 #include "token.h"
 
 #include <cassert>
@@ -49,7 +51,8 @@ static unsigned str_uid = 0;
       List, \
       Match, \
       Case, \
-      Pattern
+      Pattern, \
+      Let
 
 namespace ceos {
 namespace AST {
@@ -75,6 +78,7 @@ namespace AST {
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
+    std::shared_ptr<Environment> env;
   };
 
   struct Number : public Node {
@@ -153,6 +157,8 @@ namespace AST {
   struct StackLoad : public Node {
     using Node::Node;
 
+    bool isCaptured;
+    std::string name;
     unsigned slot;
     NodePtr value;
   };
@@ -197,6 +203,14 @@ namespace AST {
 
     NodePtr value;
     std::vector<CasePtr> cases;
+  };
+
+  struct Let : public Node {
+    using Node::Node;
+
+    std::vector<StackLoadPtr> loads;
+    std::vector<StackStorePtr> stores;
+    BlockPtr block;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))

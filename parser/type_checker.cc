@@ -27,7 +27,7 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
     case AST::Type::Block:
       {
         auto block = AST::asBlock(node);
-        return block->nodes.empty() ? env->get("Void") : getType(block->nodes.back(), env, lexer);
+        return block->nodes.empty() ? env->get("Void") : getType(block->nodes.back(), block->env.get() ?: env, lexer);
       }
 
     case AST::Type::Call:
@@ -113,6 +113,9 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
       {
         return getType(AST::asCase(node)->body, env, lexer);
       }
+
+    case AST::Type::Let:
+      return getType(AST::asLet(node)->block, env, lexer);
 
     default:
       throw std::runtime_error("unhandled node");

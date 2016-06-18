@@ -68,6 +68,9 @@ namespace ceos {
       case AST::Type::Match:
         generateMatch(AST::asMatch(node));
         break;
+      case AST::Type::Let:
+        generateLet(AST::asLet(node));
+        break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
         throw;
@@ -196,9 +199,10 @@ namespace ceos {
     }
 
     for (auto i : captured) {
+      emitOpcode(Opcode::push_arg);
+      write(i);
       emitOpcode(Opcode::put_to_scope);
       write(uniqueString(fn->parameters[i]->name));
-      write(i);
     }
 
     capturesScope = fn->capturesScope;
@@ -369,6 +373,24 @@ namespace ceos {
       write(off + WORD_SIZE);
     }
     m_output.seekp(p);
+  }
+
+  void Generator::generateLet(AST::LetPtr let) {
+    for (auto store : let->stores) {
+      generateNode(store);
+    }
+
+    for (auto load : let->loads) {
+      if (load->isCaptured) {
+        emitOpcode(Opcode::stack_load);
+        write(load->slot);
+
+        emitOpcode(Opcode::put_to_scope);
+        write(uniqueString(load->name));
+      }
+    }
+
+    generateNode(let->block);
   }
 
   void Generator::generateConstructor(AST::CallPtr call) {
@@ -557,8 +579,7 @@ section_code:
       }
       case Opcode::put_to_scope: {
         READ_INT(bytecode, arg);
-        READ_INT(bytecode, arg2);
-        WRITE(3, "put_to_scope $" << strings[arg] << " = $" << arg2);
+        WRITE(2, "put_to_scope $" << strings[arg]);
         break;
       }
       case Opcode::bind:
