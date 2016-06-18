@@ -225,4 +225,13 @@ void TypeChecker::checkReturnType(Type *expected, AST::BlockPtr body, Environmen
   }
 }
 
+void TypeChecker::checkPatternMatch(TypeConstructor *ctor, AST::NodePtr value, Loc loc, Environment *env, Lexer &lexer) {
+  auto valueType = getType(value, env, lexer);
+  if (!valueType->accepts(ctor)) {
+    fprintf(stderr, "Type Error: Trying to pattern match value of type `%s` with constructor `%s`\n", valueType->toString().c_str(), ctor->toString().c_str());
+    lexer.printSource(loc);
+    throw std::runtime_error("type error");
+  }
+}
+
 }

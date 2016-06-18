@@ -112,7 +112,7 @@ namespace ceos {
 
         str << types[i]->toString();
       }
-      str << "): " << returnType->toString();
+      str << ") -> " << returnType->toString();
       return str.str();
     }
 
@@ -150,12 +150,7 @@ namespace ceos {
           << name
           << "<"
           << genericTypeName
-          << "> {\n";
-
-      for (auto it : functions) {
-        str << it.first << it.second->toString() << "\n";
-      }
-      str << "}";
+          << ">\n";
 
       return str.str();
     }
@@ -173,15 +168,7 @@ namespace ceos {
     virtual std::string toString() override {
       std::stringstream str;
       str << type->name
-          << "(";
-
-      unsigned i = 0;
-      for (auto it : type->types) {
-        if (i++ > 0) str << ",";
-
-        str << it->toString();
-      }
-      str << ")";
+          << type->toString();
 
       return str.str();
     }
@@ -202,14 +189,7 @@ namespace ceos {
 
     virtual std::string toString() override {
       std::stringstream str;
-      str << "type "
-          << name
-          << " {\n";
-
-      for (auto it : constructors) {
-        str << it->toString() << "\n";
-      }
-      str << "}";
+      str << name;
 
       return str.str();
     }

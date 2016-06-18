@@ -1,0 +1,3 @@
+Type Error: Trying to pattern match value of type `Foo` with constructor `Y(Int) -> Bar`
+5:   let Y(y) = x {
+          ^

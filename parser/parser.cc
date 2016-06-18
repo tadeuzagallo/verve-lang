@@ -353,6 +353,7 @@ namespace ceos {
     while (!next('{')) {
       auto name = token(Token::ID).string();
 
+      auto loc = token().loc;
       if (skip('(')) {
         auto ctor = getType<TypeConstructor *>(name);
         assert(ctor);
@@ -391,6 +392,7 @@ namespace ceos {
 
         auto object = parseExpr();
         tagTest->object = object;
+        TypeChecker::checkPatternMatch(ctor, object, loc, m_environment.get(), m_lexer);
         for (auto load : let->loads) {
           AST::asObjectLoad(load->value)->object = object;
           m_scope->set(load->name, load);

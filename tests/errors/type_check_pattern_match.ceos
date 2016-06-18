@@ -1,0 +1,8 @@
+type Foo { X(Int) }
+type Bar { Y(Int) }
+
+fn _(x: Foo) -> Void {
+  let Y(y) = x {
+    print(y)
+  }
+}(X(42))
