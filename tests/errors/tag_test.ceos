@@ -1,0 +1,8 @@
+type Foo {
+  Bar(Int)
+  Baz(Int)
+}
+
+let Baz(x) = Bar(42) {
+  print(x)
+}

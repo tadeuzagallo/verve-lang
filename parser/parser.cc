@@ -358,6 +358,7 @@ namespace ceos {
         assert(ctor);
 
         auto tagTest = AST::createObjectTagTest(token().loc);
+        tagTest->tag = ctor->tag;
         let->block->nodes.push_back(tagTest);
 
         auto offset = 0u;

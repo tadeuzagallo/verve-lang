@@ -221,7 +221,7 @@ _op_alloc_obj:
   READ 1, %esi
   CCALL _allocate
   READ 2, %esi // tag
-  mov %rsi, (%rax)
+  mov %esi, (%rax)
   READ 1, %esi // size
   dec %esi
   mov %esi, 0x4(%rax)
@@ -262,9 +262,9 @@ _op_obj_tag_test:
   UNMASK %rdi
   READ 1, %rsi // expected tag
   mov (%rdi), %edi // object's tag
-  test %edi, %esi
+  cmp %edi, %esi
   je _op_obj_tag_test_ok
-  hlt
+  call _tagTestFailed
 _op_obj_tag_test_ok:
   SKIP 1
 

@@ -63,6 +63,12 @@ void symbolNotFound(char *symbolName) {
   throw;
 }
 
+extern "C" void tagTestFailed(unsigned, unsigned);
+void tagTestFailed(unsigned actual, unsigned expected) {
+  fprintf(stderr, "Invalid pattern match: Object has tag `%u` but expected tag `%u`\n", actual, expected);
+  throw;
+}
+
 extern "C" uintptr_t allocate(VM *vm, unsigned size);
 uintptr_t allocate(VM *vm, unsigned size) {
   auto address = calloc(size, 8);
