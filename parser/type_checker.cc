@@ -11,6 +11,7 @@ static Type *simplifyType(Type *type, Environment *env) {
       return simplifyType(t, env);
     }
   } else if (auto dti = dynamic_cast<DataTypeInstance *>(type)) {
+    dti->dataType = simplifyType(dti->dataType, env);
     for (unsigned i = 0; i < dti->types.size(); i++) {
       dti->types[i] = simplifyType(dti->types[i], env);
     }
@@ -164,12 +165,12 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
         auto dataType = dynamic_cast<EnumType *>(env->get("List"));
         Type *t = nullptr;
         for (auto i : AST::asList(node)->items) {
-          auto type = getType(i, env, lexer);
+          auto type = simplifyType(getType(i, env, lexer), env);
 
           if (!t) {
             t = type;
           } else {
-            assert(t == type);
+            assert(t->accepts(type, env));
           }
         }
 
@@ -185,11 +186,11 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
         assert(match->cases.size());
         Type *t = nullptr;
         for (auto kase : match->cases) {
-          auto type = getType(kase, env, lexer);
+          auto type = simplifyType(getType(kase, env, lexer), env);
           if (!t) {
             t = type;
           } else {
-            assert(type == t);
+            assert(t->accepts(type, env) || type->accepts(t, env));
           }
         }
         return t;
@@ -213,7 +214,8 @@ void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
 }
 
 void TypeChecker::checkReturnType(Type *expected, AST::BlockPtr body, Environment *env, Lexer &lexer) {
-  auto actual = getType(body, env, lexer);
+  expected = simplifyType(expected, env);
+  auto actual = simplifyType(getType(body, env, lexer), env);
   if (!expected->accepts(actual, env)) {
     fprintf(stderr, "Type Error: Invalid return type for function: expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
     lexer.printSource(body->loc);

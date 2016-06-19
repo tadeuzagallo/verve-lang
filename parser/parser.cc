@@ -266,6 +266,10 @@ namespace ceos {
     fn->name += implementationName;
     setType(fn->name, fnType, declScope);
 
+    for (auto g : fnType->generics) {
+      setType(g, new GenericType(g));
+    }
+
     pushScope();
 
     match('(');
@@ -277,7 +281,8 @@ namespace ceos {
       fn->parameters.push_back(arg);
       m_scope->set(arg->name, arg);
 
-      setType(arg->name, fnType->types[arg->index]);
+      auto type = fnType->types[arg->index];
+      setType(arg->name, type);
 
       if (!skip(',')) break;
     }
@@ -532,8 +537,10 @@ namespace ceos {
       setType(param->name, type);
 
       if (auto dti = dynamic_cast<DataTypeInstance *>(type)) {
-        for (unsigned i = 0; i < dti->types.size(); i++) {
-          setType(dti->dataType->generics[i], dti->types[i]);
+        if (auto dt = dynamic_cast<EnumType *>(dti->dataType)) {
+          for (unsigned i = 0; i < dti->types.size(); i++) {
+            setType(dt->generics[i], dti->types[i]);
+          }
         }
       }
 
@@ -671,14 +678,13 @@ ident:
       }
 
       auto dti = new DataTypeInstance();
-      dti->dataType = dynamic_cast<EnumType *>(type);
-      assert(dti->dataType);
+      dti->dataType = type;
       do {
         dti->types.push_back(parseType());
         if (!next('>')) break;
       } while(!next('>'));
       match('>');
-      assert(dti->types.size() == dti->dataType->generics.size());
+      //assert(dti->types.size() == dti->dataType->generics.size());
       return dti;
     }
   }

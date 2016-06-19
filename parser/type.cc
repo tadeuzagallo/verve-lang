@@ -37,7 +37,7 @@ namespace ceos {
       return false;
     }
     for (unsigned i = 0; i < types.size(); i++) {
-      if (!types[i]->accepts(t->types[i], env)) {
+      if (!types[i]->accepts(t->types[i], env) && !t->types[i]->accepts(types[i], env)) {
         return false;
       }
     }

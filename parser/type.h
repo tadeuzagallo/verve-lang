@@ -11,6 +11,7 @@ namespace ceos {
   struct Environment;
   struct Type;
   struct EnumType;
+  struct TypeInterface;
 
   typedef std::unordered_map<std::string, Type *> TypeMap;
 
@@ -39,7 +40,6 @@ namespace ceos {
     virtual bool accepts(Type *, Environment *) override;
   };
 
-  struct TypeInterface;
   struct TypeFunction : Type {
     virtual bool accepts(Type *, Environment *) override;
 
@@ -67,8 +67,6 @@ namespace ceos {
     };
     TypeInterface *interface;
   };
-
-  struct TypeInterface;
 
   struct TypeImplementation {
     TypeInterface *interface;
@@ -146,7 +144,7 @@ namespace ceos {
       return str.str();
     }
 
-    EnumType *dataType;
+    Type *dataType;
     std::vector<Type *> types;
   };
 

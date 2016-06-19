@@ -1,0 +1,38 @@
+type Maybe<T> {
+  Just(T)
+  Nothing()
+}
+
+interface Monad<M> {
+  virtual return <T>(T) -> M<T>
+  virtual bind <T, U>(M<T>, (T) -> M<U>) -> M<U>
+}
+
+implementation Monad<Maybe> {
+  fn return(x) {
+    Just(x)
+  }
+
+  fn bind(maybe, f) {
+    match maybe {
+      Nothing() => Nothing()
+      Just(x) => f(x)
+    }
+  }
+}
+
+fn printMaybe(maybe: Maybe<Stringify>) -> Void {
+  match maybe {
+    Nothing() => print("Nothing")
+    Just(x) => print(x)
+  }
+}
+
+printMaybe(Just(5))
+printMaybe(Nothing())
+
+fn square(n: Int) -> Maybe<Int> {
+  Just(n * n)
+}
+
+printMaybe(bind(bind(Just(3), square), square))
