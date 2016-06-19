@@ -27,12 +27,6 @@ namespace ceos {
 
   bool DataTypeInstance::accepts(Type *other, Environment *env) {
     DataTypeInstance *t;
-    if (auto et = dynamic_cast<EnumType *>(other)) {
-      if (et == dataType) {
-        return true;
-      }
-    }
-
     if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
       return false;
     }

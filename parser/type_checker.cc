@@ -81,6 +81,17 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     return env->get(gt->typeName);
   }
 
+  if (auto et = dynamic_cast<EnumType *>(fnType->returnType)) {
+    if (et->generics.size()) {
+      auto returnType = new DataTypeInstance();
+      returnType->dataType = et;
+      for (auto t : et->generics) {
+        returnType->types.push_back(env->get(t));
+      }
+      return returnType;
+    }
+  }
+
   return fnType->returnType;
 }
 
