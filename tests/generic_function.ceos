@@ -10,7 +10,7 @@ interface Foo<T> {
 }
 
 implementation Foo<String> {
-  bar(str, int) {
+  fn bar(str, int) {
     print(str)
     int
   }

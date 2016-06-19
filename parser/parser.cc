@@ -160,9 +160,12 @@ namespace ceos {
     while(!skip('}')) {
       if (skip("extern")) {
         parseExtern(declScope, implementationSuffix);
-      } else {
+      } else if (skip("fn")) {
         auto fn = parseTypelessFunction(implementationSuffix, declScope);
         block->nodes.push_back(fn);
+      } else {
+        match('}');
+        break;
       }
     }
 

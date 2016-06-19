@@ -3,13 +3,13 @@ interface Show<T> {
 }
 
 implementation Show<String> {
-  show(s) {
+  fn show(s) {
     "SHOW STRING"
   }
 }
 
 implementation Show<Int> {
-  show(n) {
+  fn show(n) {
     "SHOW INT"
   }
 }
