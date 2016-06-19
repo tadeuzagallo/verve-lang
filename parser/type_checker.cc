@@ -10,6 +10,10 @@ static Type *simplifyType(Type *type, Environment *env) {
     if (t != type) {
       return simplifyType(t, env);
     }
+  } else if (auto dti = dynamic_cast<DataTypeInstance *>(type)) {
+    for (unsigned i = 0; i < dti->types.size(); i++) {
+      dti->types[i] = simplifyType(dti->types[i], env);
+    }
   }
   return type;
 }
@@ -146,7 +150,7 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
 
     case AST::Type::List:
       {
-        auto dataType = dynamic_cast<DataType *>(env->get("List"));
+        auto dataType = dynamic_cast<EnumType *>(env->get("List"));
         Type *t = nullptr;
         for (auto i : AST::asList(node)->items) {
           auto type = getType(i, env, lexer);

@@ -16,8 +16,9 @@ namespace ceos {
     setType("Float", new BasicType("Float"));
     setType("Void", new BasicType("Void"));
 
-    auto List = new DataType("List");
-    List->length = 1;
+    auto List = new EnumType();
+    List->name = "List";
+    List->generics.push_back("T");
     setType("List", List);
 
     auto String = new DataTypeInstance();
@@ -65,6 +66,8 @@ namespace ceos {
     type->name = token(Token::ID).string();
 
     setType(type->name, type);
+
+    parseGenerics(type->generics);
 
     match('{');
     while (!skip('}')) {
@@ -528,6 +531,12 @@ namespace ceos {
       types.push_back(type);
       setType(param->name, type);
 
+      if (auto dti = dynamic_cast<DataTypeInstance *>(type)) {
+        for (unsigned i = 0; i < dti->types.size(); i++) {
+          setType(dti->dataType->generics[i], dti->types[i]);
+        }
+      }
+
       if (!skip(',')) break;
     }
 
@@ -662,14 +671,14 @@ ident:
       }
 
       auto dti = new DataTypeInstance();
-      dti->dataType = dynamic_cast<DataType *>(type);
+      dti->dataType = dynamic_cast<EnumType *>(type);
       assert(dti->dataType);
       do {
         dti->types.push_back(parseType());
         if (!next('>')) break;
       } while(!next('>'));
       match('>');
-      assert(dti->types.size() == dti->dataType->length);
+      assert(dti->types.size() == dti->dataType->generics.size());
       return dti;
     }
   }

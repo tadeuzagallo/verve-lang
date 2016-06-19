@@ -27,6 +27,12 @@ namespace ceos {
 
   bool DataTypeInstance::accepts(Type *other, Environment *env) {
     DataTypeInstance *t;
+    if (auto et = dynamic_cast<EnumType *>(other)) {
+      if (et == dataType) {
+        return true;
+      }
+    }
+
     if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
       return false;
     }
@@ -61,12 +67,17 @@ namespace ceos {
   }
 
   bool TypeInterface::accepts(Type *other, Environment *env) {
+    if (other == this) {
+      return true;
+    }
+
     for (auto impl : implementations) {
       if (impl->type->accepts(other, env)) {
         env->types[genericTypeName] = other;
         return true;
       }
     }
+
     return false;
   }
 

@@ -7,3 +7,20 @@ fn _(a: Foo) -> Void {
     print(x + y)
   }
 } (Bar(1, 2))
+
+type List_<T> {
+  Nil()
+  Cons(T, List_<T>)
+}
+
+fn printList(l: List_<Stringify>) -> Void {
+  match l {
+    Nil() => {}
+    Cons(x, rest) => {
+      print(x)
+      printList(rest)
+    }
+  }
+}
+
+printList(Cons(1, Cons(2, Cons(3, Nil()))))

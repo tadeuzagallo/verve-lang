@@ -10,6 +10,7 @@ namespace ceos {
 
   struct Environment;
   struct Type;
+  struct EnumType;
 
   typedef std::unordered_map<std::string, Type *> TypeMap;
 
@@ -36,35 +37,6 @@ namespace ceos {
       BasicType(std::move(str)) {}
 
     virtual bool accepts(Type *, Environment *) override;
-  };
-
-  struct DataType : BasicType {
-    using BasicType::BasicType;
-
-    unsigned length;
-  };
-
-  struct DataTypeInstance : Type {
-    virtual bool accepts(Type *, Environment *) override;
-
-    virtual std::string toString() override {
-      std::stringstream str;
-      str << dataType->toString();
-      str << "<";
-      bool first = true;
-      for (auto type : types) {
-        if (!first) {
-          str << ", ";
-        }
-        first = false;
-        str << type->toString();
-      }
-      str << ">";
-      return str.str();
-    }
-
-    DataType *dataType;
-    std::vector<Type *> types;
   };
 
   struct TypeInterface;
@@ -123,7 +95,6 @@ namespace ceos {
     std::unordered_map<std::string, TypeFunction *> functions;
   };
 
-  struct EnumType;
   struct TypeConstructor : Type {
     virtual bool accepts(Type *, Environment *) override;
 
@@ -153,6 +124,30 @@ namespace ceos {
 
     std::string name;
     std::vector<TypeConstructor *> constructors;
+    std::vector<std::string> generics;
+  };
+
+  struct DataTypeInstance : Type {
+    virtual bool accepts(Type *, Environment *) override;
+
+    virtual std::string toString() override {
+      std::stringstream str;
+      str << dataType->toString();
+      str << "<";
+      bool first = true;
+      for (auto type : types) {
+        if (!first) {
+          str << ", ";
+        }
+        first = false;
+        str << type->toString();
+      }
+      str << ">";
+      return str.str();
+    }
+
+    EnumType *dataType;
+    std::vector<Type *> types;
   };
 
 }
