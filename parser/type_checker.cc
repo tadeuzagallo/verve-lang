@@ -54,7 +54,13 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
       lexer.printSource(arg->loc);
       throw std::runtime_error("type error");
     }
+  }
 
+  if (fnType->isVirtual) {
+    auto name = AST::asIdentifier(callee)->name + env->types[fnType->interface->genericTypeName]->toString();
+    if (env->get(name)) {
+      AST::asIdentifier(callee)->name = name;
+    }
   }
 
   if (auto gt = dynamic_cast<GenericType *>(fnType->returnType)) {

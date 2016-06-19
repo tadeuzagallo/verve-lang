@@ -60,6 +60,7 @@ namespace ceos {
   bool TypeInterface::accepts(Type *other, Environment *env) {
     for (auto impl : implementations) {
       if (impl->type->accepts(other, env)) {
+        env->types[genericTypeName] = other;
         return true;
       }
     }
