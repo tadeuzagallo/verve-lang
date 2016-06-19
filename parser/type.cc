@@ -19,6 +19,9 @@ namespace ceos {
         return true;
       }
     }
+    if (auto gt = dynamic_cast<GenericType *>(other)) {
+      return typeName == gt->typeName;
+    }
     return false;
   }
 

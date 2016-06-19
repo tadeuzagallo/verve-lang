@@ -4,6 +4,16 @@ namespace ceos {
 
 static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer);
 
+static Type *simplifyType(Type *type, Environment *env) {
+  if (auto gt = dynamic_cast<GenericType *>(type)) {
+    auto t = env->get(gt->typeName);
+    if (t != type) {
+      return simplifyType(t, env);
+    }
+  }
+  return type;
+}
+
 static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   auto callee = call->callee;
   auto calleeType = getType(callee, env, lexer);
@@ -42,8 +52,8 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   for (unsigned i = 0; i < fnType->types.size(); i++) {
     auto arg = call->arguments[i];
 
-    auto expected = fnType->types[i];
-    auto actual = getType(arg, env, lexer);
+    auto expected = simplifyType(fnType->types[i], env);
+    auto actual = simplifyType(getType(arg, env, lexer), env);
 
     if (!expected->accepts(actual, env)) {
       fprintf(stderr, "Expected `%s` but got `%s` on arg #%d for function `%s`\n",

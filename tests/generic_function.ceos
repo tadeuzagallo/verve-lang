@@ -6,13 +6,13 @@ print(id("foo"))
 print(id(42))
 
 interface Foo<T> {
-  virtual bar<U>(T, U) -> U
+  virtual bar<U> (T, U) -> U
 }
 
 implementation Foo<String> {
-  fn bar(str, int) {
+  fn bar(str, x) {
     print(str)
-    int
+    x
   }
 }
 
