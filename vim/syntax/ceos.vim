@@ -22,9 +22,9 @@ syn match ceosTypePrefix "\v:\s*" contains=redColon nextgroup=ceosTypes
 syn match ceosTypePrefix2 "\v-\>\s*" contains=redArrow nextgroup=ceosTypes
 
 
-syn match ceosTypes contained "\v[A-Za-z]+"
+syn match ceosTypes contained "\v[A-Za-z_]+"
 syn match ceosTemplate /\v\<[^>]+\>+/
-syn match ceosDecl /\v\([^(:)]*\)\s*-\>[^,){]+/
+syn match ceosDecl /\v\([^:]*\)\s*-\>[^,){]+/
 
 
 syn match redFn "fn"
