@@ -2,6 +2,68 @@
 
 namespace ceos {
 
+static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer);
+
+static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
+  auto callee = call->callee;
+  auto calleeType = getType(callee, env, lexer);
+  TypeFunction *fnType;
+
+  if (auto ctorType = dynamic_cast<TypeConstructor *>(calleeType)) {
+    call->isConstructor = true;
+    call->tag = ctorType->tag;
+    call->size = ctorType->size;
+    fnType = ctorType->type;
+  } else if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
+    if (lexer.next('{')) {
+      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
+    } else {
+      fprintf(stderr, "Can't find type information for function call\n");
+    }
+
+    lexer.printSource(call->loc);
+    throw std::runtime_error("type error");
+  }
+
+  if (call->arguments.size() != fnType->types.size()) {
+    fprintf(stderr, "Wrong number of arguments for function call\n");
+    lexer.printSource(call->loc);
+    throw std::runtime_error("type error");
+  }
+
+  if (fnType->isVirtual) {
+    env->types[fnType->interface->genericTypeName] = fnType->interface;
+  }
+
+  for (auto generic : fnType->generics) {
+    env->types[generic] = new GenericType(generic);
+  }
+
+  for (unsigned i = 0; i < fnType->types.size(); i++) {
+    auto arg = call->arguments[i];
+
+    auto expected = fnType->types[i];
+    auto actual = getType(arg, env, lexer);
+
+    if (!expected->accepts(actual, env)) {
+      fprintf(stderr, "Expected `%s` but got `%s` on arg #%d for function `%s`\n",
+          expected->toString().c_str(),
+          actual->toString().c_str(),
+          i + 1,
+          fnType->name.c_str());
+      lexer.printSource(arg->loc);
+      throw std::runtime_error("type error");
+    }
+
+  }
+
+  if (auto gt = dynamic_cast<GenericType *>(fnType->returnType)) {
+    return env->get(gt->typeName);
+  }
+
+  return fnType->returnType;
+}
+
 static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
   switch (node->type) {
     case AST::Type::String:
@@ -33,14 +95,7 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
     case AST::Type::Call:
       {
         auto call = AST::asCall(node);
-        auto type = getType(call->callee, env, lexer);
-        if (auto fnType = dynamic_cast<TypeFunction *>(type)) {
-          return fnType->returnType;
-        } else if (auto ctorType = dynamic_cast<TypeConstructor *>(type)) {
-          return ctorType->type->returnType;
-        } else {
-          throw std::runtime_error("type error");
-        }
+        return typeOfCall(call, env, lexer);
       }
 
     case AST::Type::If:
@@ -50,9 +105,9 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
         if (iff->elseBody) {
           auto elseType = getType(iff->elseBody, env, lexer);
           // return the least specific type
-          if (iffType->accepts(elseType)) {
+          if (iffType->accepts(elseType, env)) {
             return iffType;
-          } else if (elseType->accepts(iffType)) {
+          } else if (elseType->accepts(iffType, env)) {
             return elseType;
           } else {
             fprintf(stderr, "Type Error: `if` and `else` branches evaluate to different types\n");
@@ -101,7 +156,7 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
         for (auto kase : match->cases) {
           auto type = getType(kase, env, lexer);
           if (!t) {
-            t = type; 
+            t = type;
           } else {
             assert(type == t);
           }
@@ -123,102 +178,12 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
 }
 
 void TypeChecker::checkCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
-  auto callee = call->callee;
-  auto calleeType = getType(callee, env, lexer);
-  TypeFunction *fnType;
-
-  if (auto ctorType = dynamic_cast<TypeConstructor *>(calleeType)) {
-    call->isConstructor = true;
-    call->tag = ctorType->tag;
-    call->size = ctorType->size;
-    fnType = ctorType->type;
-  } else if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
-    if (lexer.next('{')) {
-      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
-    } else {
-      fprintf(stderr, "Can't find type information for function call\n");
-    }
-
-    lexer.printSource(call->loc);
-    throw std::runtime_error("type error");
-  }
-
-  if (call->arguments.size() != fnType->types.size()) {
-    fprintf(stderr, "Wrong number of arguments for function call\n");
-    lexer.printSource(call->loc);
-    throw std::runtime_error("type error");
-  }
-
-  TypeImplementation *implementation = nullptr;
-  TypeMap generics;
-
-  for (unsigned i = 0; i < fnType->types.size(); i++) {
-    auto arg = call->arguments[i];
-
-    auto expected = fnType->types[i];
-    auto actual = getType(arg, env, lexer);
-
-    GenericType *gt;
-
-    Type *t;
-    while ((gt = dynamic_cast<GenericType *>(actual)) && (t = env->get(gt->typeName))) {
-      actual = t;
-    }
-
-    if (
-        fnType->isVirtual &&
-        (gt = dynamic_cast<GenericType *>(expected)) &&
-        gt->typeName == fnType->interface->genericTypeName
-       )
-    {
-      if (implementation) {
-        goto skip;
-      }
-
-      for (auto impl : fnType->interface->implementations) {
-        if (impl->type->accepts(actual)) {
-          implementation = impl;
-          AST::asIdentifier(callee)->name += implementation->type->toString();
-          goto skip;
-        }
-      }
-    }
-
-    if ((gt = dynamic_cast<GenericType *>(expected))) {
-      if (generics[gt->typeName]) {
-        expected = generics[gt->typeName];
-      } else {
-        auto it = std::find(fnType->generics.begin(), fnType->generics.end(), gt->typeName);
-        if (it != fnType->generics.end()) {
-          generics[gt->typeName] = actual;
-          goto skip;
-        }
-      }
-    }
-
-    if (!expected->accepts(actual)) {
-      fprintf(stderr, "Expected `%s` but got `%s` on arg #%d for function `%s`\n",
-          expected->toString().c_str(),
-          actual->toString().c_str(),
-          i + 1,
-          fnType->name.c_str());
-      lexer.printSource(arg->loc);
-      throw std::runtime_error("type error");
-    }
-
-skip:
-    continue;
-  }
-
-  GenericType *gt;
-  if ((gt = dynamic_cast<GenericType *>(fnType->returnType))) {
-    fnType->returnType = generics[gt->typeName];
-  }
+  getType(call, env, lexer);
 }
 
 void TypeChecker::checkReturnType(Type *expected, AST::BlockPtr body, Environment *env, Lexer &lexer) {
   auto actual = getType(body, env, lexer);
-  if (!expected->accepts(actual)) {
+  if (!expected->accepts(actual, env)) {
     fprintf(stderr, "Type Error: Invalid return type for function: expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
     lexer.printSource(body->loc);
     throw std::runtime_error("type error");
@@ -227,7 +192,7 @@ void TypeChecker::checkReturnType(Type *expected, AST::BlockPtr body, Environmen
 
 void TypeChecker::checkPatternMatch(TypeConstructor *ctor, AST::NodePtr value, Loc loc, Environment *env, Lexer &lexer) {
   auto valueType = getType(value, env, lexer);
-  if (!valueType->accepts(ctor)) {
+  if (!valueType->accepts(ctor, env)) {
     fprintf(stderr, "Type Error: Trying to pattern match value of type `%s` with constructor `%s`\n", valueType->toString().c_str(), ctor->toString().c_str());
     lexer.printSource(loc);
     throw std::runtime_error("type error");

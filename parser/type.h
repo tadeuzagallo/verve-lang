@@ -8,14 +8,13 @@
 
 namespace ceos {
 
+  struct Environment;
   struct Type;
-
-  class Environment;
 
   typedef std::unordered_map<std::string, Type *> TypeMap;
 
   struct Type {
-    virtual bool accepts(Type *) = 0;
+    virtual bool accepts(Type *, Environment *) = 0;
     virtual std::string toString() = 0;
     virtual ~Type() {}
   };
@@ -23,7 +22,7 @@ namespace ceos {
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
 
-    virtual bool accepts(Type *) override;
+    virtual bool accepts(Type *, Environment *) override;
 
     virtual std::string toString() override {
       return typeName;
@@ -35,6 +34,8 @@ namespace ceos {
   struct GenericType : BasicType {
     GenericType(std::string str) :
       BasicType(std::move(str)) {}
+
+    virtual bool accepts(Type *, Environment *) override;
   };
 
   struct DataType : BasicType {
@@ -44,7 +45,7 @@ namespace ceos {
   };
 
   struct DataTypeInstance : Type {
-    virtual bool accepts(Type *) override;
+    virtual bool accepts(Type *, Environment *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -68,7 +69,7 @@ namespace ceos {
 
   struct TypeInterface;
   struct TypeFunction : Type {
-    virtual bool accepts(Type *) override;
+    virtual bool accepts(Type *, Environment *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -103,7 +104,7 @@ namespace ceos {
   };
 
   struct TypeInterface : Type {
-    virtual bool accepts(Type *) override;
+    virtual bool accepts(Type *, Environment *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -124,7 +125,7 @@ namespace ceos {
 
   struct EnumType;
   struct TypeConstructor : Type {
-    virtual bool accepts(Type *) override;
+    virtual bool accepts(Type *, Environment *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -141,7 +142,7 @@ namespace ceos {
   };
 
   struct EnumType : Type {
-    virtual bool accepts(Type *) override;
+    virtual bool accepts(Type *, Environment *) override;
 
     virtual std::string toString() override {
       std::stringstream str;

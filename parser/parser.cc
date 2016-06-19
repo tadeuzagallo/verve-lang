@@ -570,7 +570,10 @@ namespace ceos {
     }
     match(')');
 
+    pushTypeScope();
     TypeChecker::checkCall(call, m_environment.get(), m_lexer);
+    popTypeScope();
+
     return parseCall(call);
   }
 

@@ -1,0 +1,7 @@
+fn apply<T, U>(value: T, f: (T) -> U) -> U {
+  f(value)
+}
+
+print(apply(1, fn _(n: Int) -> String {
+  "bar"
+}))
