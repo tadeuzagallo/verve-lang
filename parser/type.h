@@ -10,6 +10,8 @@ namespace ceos {
 
   struct Type;
 
+  class Environment;
+
   typedef std::unordered_map<std::string, Type *> TypeMap;
 
   struct Type {
@@ -21,13 +23,7 @@ namespace ceos {
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
 
-    virtual bool accepts(Type *other) override {
-      BasicType *t;
-      if (!(t = dynamic_cast<BasicType *>(other))) {
-        return false;
-      }
-      return typeName == t->typeName;
-    }
+    virtual bool accepts(Type *) override;
 
     virtual std::string toString() override {
       return typeName;
@@ -48,24 +44,7 @@ namespace ceos {
   };
 
   struct DataTypeInstance : Type {
-    virtual bool accepts(Type *other) override {
-      DataTypeInstance *t;
-      if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
-        return false;
-      }
-      if (!dataType->accepts(t->dataType)) {
-        return false;
-      }
-      if (types.size() != t->types.size()) {
-        return false;
-      }
-      for (unsigned i = 0; i < types.size(); i++) {
-        if (!types[i]->accepts(t->types[i])) {
-          return false;
-        }
-      }
-      return true;
-    }
+    virtual bool accepts(Type *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -89,18 +68,7 @@ namespace ceos {
 
   struct TypeInterface;
   struct TypeFunction : Type {
-    virtual bool accepts(Type *other) override {
-      TypeFunction *t;
-      if (!(t = dynamic_cast<TypeFunction *>(other))) {
-        return false;
-      }
-      for (unsigned i = 0; i < types.size(); i++) {
-        if (!types[i]->accepts(t->types[i])) {
-          return false;
-        }
-      }
-      return true;
-    }
+    virtual bool accepts(Type *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -135,14 +103,7 @@ namespace ceos {
   };
 
   struct TypeInterface : Type {
-    virtual bool accepts(Type *other) override {
-      for (auto impl : implementations) {
-        if (impl->type->accepts(other)) {
-          return true;
-        }
-      }
-      return false;
-    }
+    virtual bool accepts(Type *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -163,7 +124,7 @@ namespace ceos {
 
   struct EnumType;
   struct TypeConstructor : Type {
-    virtual bool accepts(Type *other) override;
+    virtual bool accepts(Type *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
@@ -180,12 +141,7 @@ namespace ceos {
   };
 
   struct EnumType : Type {
-    virtual bool accepts(Type *other) override {
-      if (auto otherCtor = dynamic_cast<TypeConstructor *>(other)) {
-        return otherCtor->type->returnType == this;
-      }
-      return other == this;
-    }
+    virtual bool accepts(Type *) override;
 
     virtual std::string toString() override {
       std::stringstream str;
