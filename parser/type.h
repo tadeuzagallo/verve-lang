@@ -112,7 +112,7 @@ namespace ceos {
           << name
           << "<"
           << genericTypeName
-          << ">\n";
+          << ">";
 
       return str.str();
     }
