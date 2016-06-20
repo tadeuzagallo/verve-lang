@@ -14,11 +14,12 @@ namespace ceos {
   class Parser {
   public:
 
-    Parser(Lexer &lexer);
+    Parser(Lexer &lexer, std::string dirname);
     AST::ProgramPtr parse();
 
   private:
 
+    AST::NodePtr parseImport();
     AST::NodePtr parseDecl();
 
     void parseTypeDecl();
@@ -86,6 +87,7 @@ namespace ceos {
 
     inline bool next(std::string str);
     inline bool skip(std::string str);
+    inline void match(std::string str);
 
     inline bool next(Token::Type t);
 
@@ -95,5 +97,7 @@ namespace ceos {
     std::shared_ptr<Environment> m_environment;
     ParseScopePtr m_scope;
     std::vector<AST::BlockPtr> m_blockStack;
+    std::string m_dirname;
+    AST::ProgramPtr m_ast;
   };
 }

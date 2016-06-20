@@ -1,0 +1,3 @@
+fn square(n: Int) -> Int {
+  n * n
+}

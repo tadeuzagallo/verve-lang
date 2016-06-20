@@ -4,9 +4,11 @@
 #include "token.h"
 #include "type_checker.h"
 
+#include "utils/file.h"
+
 namespace ceos {
-  Parser::Parser(Lexer &lexer) :
-    m_lexer(lexer)
+  Parser::Parser(Lexer &lexer, std::string dirname) :
+    m_lexer(lexer), m_dirname(dirname)
   {
     m_environment = std::make_shared<Environment>();
     m_scope = std::make_shared<ParseScope>();
@@ -32,13 +34,49 @@ namespace ceos {
     program->body = AST::createBlock(Loc{0, 0});
     m_blockStack.push_back(program->body);
     while(!next(Token::END)) {
+      while (skip("import")) {
+        auto node = parseImport();
+        if (node) {
+          program->body->nodes.push_back(node);
+        }
+      }
       auto node = parseDecl();
       if (node) {
         program->body->nodes.push_back(node);
       }
     }
     m_blockStack.pop_back();
+    m_ast = program;
     return program;
+  }
+
+  AST::NodePtr Parser::parseImport() {
+    bool importAll = false;
+    std::vector<std::string> imports;
+    if (skip('*')) {
+      importAll = true;
+    } else {
+      match('{');
+      while (!next('}')) {
+        imports.push_back(token(Token::ID).string());
+        if (!skip(',')) break;
+      }
+      match('}');
+    }
+
+    match("from");
+
+    auto path = token(Token::STRING).string();
+    auto parser = parseFile(path, m_dirname);
+
+    if (importAll) {
+    } else {
+      for (auto import : imports) {
+        m_environment->types[import] = parser.m_environment->types[import];
+      }
+    }
+
+    return parser.m_ast->body;
   }
 
   AST::NodePtr Parser::parseDecl() {
@@ -756,6 +794,16 @@ ident:
       return true;
     } else {
       return false;
+    }
+  }
+
+  void Parser::match(std::string expected) {
+    if (next(expected)) {
+      token(Token::ID);
+    } else {
+      std::cerr << "Invalid token found: expected `" << Lexer::tokenType(m_lexer.token()) << "` to be `" << expected << "`" << "\n";
+      m_lexer.printSource();
+      throw std::runtime_error("Parser error");
     }
   }
 

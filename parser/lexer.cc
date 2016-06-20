@@ -294,7 +294,7 @@ start:
     throw std::runtime_error("Parser error");
   }
 
-  std::string Lexer::tokenType(Token &token) const {
+  std::string Lexer::tokenType(Token &token) {
     if (token.type == Token::BASIC) {
       return basicTokenToString(token.number());
     } else {
@@ -302,7 +302,7 @@ start:
     }
   }
 
-  std::string Lexer::basicTokenToString(int t) const {
+  std::string Lexer::basicTokenToString(int t) {
     return std::string((const char *)&t);
   }
 }

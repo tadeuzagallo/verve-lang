@@ -1,0 +1,6 @@
+import { square } from "./import_helper_1"
+/*import * from "./import_helper_2" as Helper*/
+
+print(square(2))
+/*print(Helper#add(40, 2))*/
+/*print(Helper#sub(40, 2))*/

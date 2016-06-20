@@ -38,14 +38,15 @@ namespace ceos {
       void printSource(Loc loc);
       void _Noreturn error(Loc loc, const char *, ...);
 
+      static std::string tokenType(Token &token);
+
     private:
       void nextToken();
       char nextChar();
 
       Pos getSourcePosition(Loc loc);
 
-      std::string tokenType(Token &token) const;
-      std::string basicTokenToString(int t) const;
+      static std::string basicTokenToString(int t);
 
       const char *m_input;
       size_t m_pos;

@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include <fstream>
+#include <libgen.h>
 
 #include "./parser/lexer.h"
 #include "./parser/parser.h"
@@ -20,8 +21,10 @@ int main(int argc, char **argv) {
     assert(argc == 2);
   }
 
+  auto filename = isDebug || isCompile ? argv[2] : argv[1];
+
   FILE *prelude = fopen("runtime/builtins.ceos", "r");
-  FILE *source = fopen(isDebug || isCompile ? argv[2] : argv[1], "r");
+  FILE *source = fopen(filename, "r");
   fseek(prelude, 0, SEEK_END);
   fseek(source, 0, SEEK_END);
   size_t preludeSize = ftell(prelude);
@@ -39,7 +42,10 @@ int main(int argc, char **argv) {
   fclose(source);
 
   ceos::Lexer lexer(input, preludeSize + 1);
-  ceos::Parser parser(lexer);
+
+  char *dir = dirname(filename);
+
+  ceos::Parser parser(lexer, dir);
 
   std::shared_ptr<ceos::AST::Program> ast = parser.parse();
 
