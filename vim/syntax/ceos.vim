@@ -2,7 +2,7 @@
 " Language:	Ceos
 " Current Maintainer:	tadeuzagallo (https://github.com/tadeuzagallo)
 
-syn keyword ceosLanguageKeywords if else interface implementation extern virtual type let
+syn keyword ceosLanguageKeywords if else interface implementation extern virtual type let import from as
 
 
 " Integer with - + or nothing in front
@@ -12,7 +12,7 @@ syn match ceosNumber '[-+]\d\+'
 syn region ceosString	start=+"+ skip=+\\\\\|\\"+ end=+"+ contains=@Spell extend
 syn match	ceosChar "'[^']'"
 
-syn match ceosOperator "\v(\+|-|\/|\*|\=|\!|\<|\>)+"
+syn match ceosOperator "\v(\+|-|\/|\*|\=|\!|\<|\>|#)+"
 
 syn match blueArrow "->"
 syn match redArrow "->"
