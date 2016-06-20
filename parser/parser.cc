@@ -70,6 +70,9 @@ namespace ceos {
     auto parser = parseFile(path, m_dirname);
 
     if (importAll) {
+      for (auto it : parser.m_environment->types) {
+        m_environment->types[it.first] = it.second;
+      }
     } else {
       for (auto import : imports) {
         m_environment->types[import] = parser.m_environment->types[import];
