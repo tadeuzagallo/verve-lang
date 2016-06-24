@@ -9,7 +9,7 @@
 
 namespace ceos {
 
-Parser parseFile(std::string filename, std::string dirname) {
+Parser parseFile(std::string filename, std::string dirname, std::string ns) {
   filename = dirname + "/" + filename + ".ceos";
 
   FILE *source = fopen(filename.c_str(), "r");
@@ -19,12 +19,12 @@ Parser parseFile(std::string filename, std::string dirname) {
 
   char *input = (char *)malloc(sourceSize + 1);
   fread(input, 1, sourceSize, source);
-  input[sourceSize + 1] = '\0';
+  input[sourceSize] = '\0';
 
   fclose(source);
 
   Lexer lexer(input, 0);
-  Parser parser(lexer, dirname);
+  Parser parser(lexer, dirname, ns);
 
   parser.parse();
 

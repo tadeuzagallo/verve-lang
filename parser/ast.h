@@ -91,6 +91,7 @@ namespace AST {
     using Node::Node;
 
     std::string name;
+    std::string ns;
   };
 
   struct String : public Identifier {
@@ -118,6 +119,7 @@ namespace AST {
     using Node::Node;
 
     std::string name;
+    std::string ns;
     std::vector<FunctionParameterPtr> parameters;
     BlockPtr body;
     bool needsScope;

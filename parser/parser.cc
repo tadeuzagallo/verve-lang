@@ -7,8 +7,8 @@
 #include "utils/file.h"
 
 namespace ceos {
-  Parser::Parser(Lexer &lexer, std::string dirname) :
-    m_lexer(lexer), m_dirname(dirname)
+  Parser::Parser(Lexer &lexer, std::string dirname, std::string ns) :
+    m_lexer(lexer), m_dirname(dirname), m_ns(ns)
   {
     m_environment = std::make_shared<Environment>();
     m_scope = std::make_shared<ParseScope>();
@@ -67,11 +67,17 @@ namespace ceos {
     match("from");
 
     auto path = token(Token::STRING).string();
-    auto parser = parseFile(path, m_dirname);
+
+    std::string ns = "";
+    if (skip("as")) {
+      ns = token(Token::ID).string();
+    }
+
+    auto parser = parseFile(path, m_dirname, ns);
 
     if (importAll) {
       for (auto it : parser.m_environment->types) {
-        m_environment->types[it.first] = it.second;
+        m_environment->types[ns + it.first] = it.second;
       }
     } else {
       for (auto import : imports) {
@@ -351,6 +357,7 @@ namespace ceos {
     auto fnType = new TypeFunction();
     fn->name = token(Token::ID).string();
     fnType->name = fn->name;
+    fn->ns = m_ns;
 
     auto env = m_environment;
 
@@ -624,6 +631,15 @@ namespace ceos {
     }
     auto call = AST::createCall(loc);
     call->callee = callee;
+
+    if (callee->type == AST::Type::Identifier) {
+      auto calleeID = AST::asIdentifier(callee);
+      auto fn = m_scope->get(calleeID->name);
+      if (fn && fn->type == AST::Type::Function) {
+        calleeID->ns = AST::asFunction(fn)->ns;
+      }
+    }
+
     while (!next(')')) {
       call->arguments.push_back(parseExpr());
       if (!skip(',')) break;
@@ -642,6 +658,10 @@ namespace ceos {
   AST::NodePtr Parser::parseIdentifier(bool checkScope) {
     auto loc = token().loc;
     auto name = token(Token::ID).string();
+
+    if (skip('#')) {
+      name += token(Token::ID).string();
+    }
 
     if (checkScope) {
       auto var = m_scope->get(name);

@@ -135,7 +135,8 @@ namespace ceos {
 
   void Generator::generateIdentifier(AST::IdentifierPtr ident) {
     emitOpcode(Opcode::lookup);
-    write(uniqueString(ident->name));
+    auto name = ident->ns + ident->name;
+    write(uniqueString(name));
     if (capturesScope) {
       write(0);
     } else {
@@ -171,7 +172,8 @@ namespace ceos {
     write(fn->capturesScope);
     if (fn->name != "_") {
       emitOpcode(Opcode::bind);
-      write(uniqueString(fn->name));
+      auto name = fn->ns + fn->name;
+      write(uniqueString(name));
     }
     m_functions.push_back(fn);
   }

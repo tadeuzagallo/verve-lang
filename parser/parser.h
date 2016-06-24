@@ -14,7 +14,7 @@ namespace ceos {
   class Parser {
   public:
 
-    Parser(Lexer &lexer, std::string dirname);
+    Parser(Lexer &lexer, std::string dirname, std::string ns = "");
     AST::ProgramPtr parse();
 
   private:
@@ -99,5 +99,6 @@ namespace ceos {
     std::vector<AST::BlockPtr> m_blockStack;
     std::string m_dirname;
     AST::ProgramPtr m_ast;
+    std::string m_ns;
   };
 }
