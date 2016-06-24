@@ -101,4 +101,12 @@ namespace ceos {
     AST::ProgramPtr m_ast;
     std::string m_ns;
   };
+
+  __used static std::string namespaced(std::string ns, std::string name) {
+    if (!ns.empty()) {
+      return ns + "#" + name;
+    } else {
+      return name;
+    }
+  }
 }

@@ -2,6 +2,8 @@
 #include "opcodes.h"
 #include "sections.h"
 
+#include "parser/parser.h"
+
 #include <iostream>
 #include <iomanip>
 
@@ -135,7 +137,7 @@ namespace ceos {
 
   void Generator::generateIdentifier(AST::IdentifierPtr ident) {
     emitOpcode(Opcode::lookup);
-    auto name = ident->ns + ident->name;
+    auto name = namespaced(ident->ns, ident->name);
     write(uniqueString(name));
     if (capturesScope) {
       write(0);
@@ -172,7 +174,7 @@ namespace ceos {
     write(fn->capturesScope);
     if (fn->name != "_") {
       emitOpcode(Opcode::bind);
-      auto name = fn->ns + fn->name;
+      auto name = namespaced(fn->ns, fn->name);
       write(uniqueString(name));
     }
     m_functions.push_back(fn);

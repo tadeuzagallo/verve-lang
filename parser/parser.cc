@@ -77,7 +77,7 @@ namespace ceos {
 
     if (importAll) {
       for (auto it : parser.m_environment->types) {
-        m_environment->types[ns + it.first] = it.second;
+        m_environment->types[namespaced(ns, it.first)] = it.second;
       }
     } else {
       for (auto import : imports) {
@@ -660,7 +660,7 @@ namespace ceos {
     auto name = token(Token::ID).string();
 
     if (skip('#')) {
-      name += token(Token::ID).string();
+      name = namespaced(name, token(Token::ID).string());
     }
 
     if (checkScope) {
