@@ -1,0 +1,84 @@
+program ::= { import }  { top_level }
+
+import ::= "import" pattern "from" STRING (e | "as" UCID)
+
+pattern ::= "*" | "{" (LCID ",")+ "}"
+
+top_level ::= interface | implementation | extern | expr | type_decl
+
+expr(prec) ::= factor {binop expr(q)}
+
+factor ::= "(" expr ")" | unop_prefix expr(q) | NUMBER | STRING | call_function_or_id | if | let | list | match
+
+binop ::= "+" | "-" | "*" | "/" | "%" | ">" | "<" | ">=" | "<=" | "&&" | "||" | "==" | "!="
+
+unop_prefix ::= "!" | "-"
+
+list ::= "[" args_list "]"
+
+type_decl ::= "type" LCID generics "{" type_constructor+ "}"
+
+type_constructors ::= UCID "(" type+ ")"
+
+interface ::= "inteface" LCID "<" UCID ">" "{" {interface_decl} "}"
+
+interface_decl ::= virtual | function
+
+implementation ::= "implementation" LCID "<" type ">" "{" {implementation_decl} "}"
+
+implementation_decl ::= typeless_function | extern
+
+typeless_function ::= "fn" LCID "(" {LCID ","} ")" body
+
+virtual ::= "virtual" prototype
+
+extern ::= "extern" prototype
+
+prototype ::= "fn" LCID generics "(" {type ","} ")" "::=" type
+
+function ::= "fn" LCID generics "(" function_params ")" "::=" type body
+
+generics ::= e | "<" (LCID ",")+ ">"
+
+function_params ::= e | function_param function_params'
+
+function_params' ::= e | "," function_param function_params'
+
+function_param ::= LCID ":" type
+
+expr_list ::= e | expr expr_list
+
+call_function_or_id ::= (LCID | function) call
+
+call ::= e | "(" args_list ")" call
+
+args_list ::= e | expr args_list'
+
+args_list' ::= e | "," expr args_list
+
+if ::= "if" expr expr_or_body else_body
+
+expr_or_body ::= expr | body
+
+body ::= "{" expr_list "}"
+
+else_body ::= e | "else" expr_or_body
+
+type ::= id_type | function_type
+
+id_type ::= LCID (e | "<" (type ",")+ ">")
+
+function_type ::= "(" {type} ")" "::=" type
+
+let ::= "let" let_decl body
+
+let_decl ::= let_lhs "=" expr
+
+let_lhs ::= LCID | UCID "(" {LCID ","} ")"
+
+match ::= "match" expr "{" case_list "}"
+
+case_list ::= let_lhs "::=" expr_or_body (e | case_list)
+
+LCID ::= [a-z_]+
+UCID ::= [A-Z][a-zA-Z]*
