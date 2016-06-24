@@ -49,7 +49,7 @@ namespace ceos {
       static std::string basicTokenToString(int t);
 
       const char *m_input;
-      size_t m_pos;
+      unsigned m_pos;
       size_t m_offset;
       Token m_token;
       Token m_prevToken;

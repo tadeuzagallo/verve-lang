@@ -60,7 +60,7 @@ start:
       c = nextChar();
     } while(isspace(c));
 
-    int start = m_pos - 1;
+    auto start = m_pos - 1;
     switch (c) {
       BASIC_TOKEN('(')
       BASIC_TOKEN(')')
@@ -179,7 +179,7 @@ start:
         } else {
           // TODO: proper error here
           std::cerr << "Invalid token `" << c << "`\n";
-          printSource();
+          printSource(Loc{start, m_pos});
           throw;
         }
     }
