@@ -10,227 +10,9 @@
 #define WORD_SIZE 8
 
 namespace ceos {
-  static unsigned lookupID = 1;
-  static bool capturesScope = true;
 
   std::stringstream &Generator::generate() {
-    generateProgram(m_ast);
-    emitOpcode(Opcode::exit);
-    m_output.seekg(0);
-    return m_output;
-  }
-
-  void Generator::generateNode(AST::NodePtr node) {
-    switch (node->type) {
-      case AST::Type::Call:
-        generateCall(AST::asCall(node));
-        break;
-      case AST::Type::Number:
-        generateNumber(AST::asNumber(node));
-        break;
-      case AST::Type::Identifier:
-        generateIdentifier(AST::asIdentifier(node));
-        break;
-      case AST::Type::String:
-        generateString(AST::asString(node));
-        break;
-      case AST::Type::List:
-        generateList(AST::asList(node));
-        break;
-      case AST::Type::FunctionParameter:
-        generateFunctionParameter(AST::asFunctionParameter(node));
-        break;
-      case AST::Type::Function:
-        generateFunctionDefinition(AST::asFunction(node));
-        break;
-      case AST::Type::If:
-        generateIf(AST::asIf(node));
-        break;
-      case AST::Type::Block:
-        generateBlock(AST::asBlock(node));
-        break;
-      case AST::Type::ObjectTagTest:
-        generateObjectTagTest(AST::asObjectTagTest(node));
-        break;
-      case AST::Type::ObjectLoad:
-        generateObjectLoad(AST::asObjectLoad(node));
-        break;
-      case AST::Type::StackStore:
-        generateStackStore(AST::asStackStore(node));
-        break;
-      case AST::Type::StackLoad:
-        generateStackLoad(AST::asStackLoad(node));
-        break;
-      case AST::Type::BinaryOperation:
-        generateBinaryOperation(AST::asBinaryOperation(node));
-        break;
-      case AST::Type::UnaryOperation:
-        generateUnaryOperation(AST::asUnaryOperation(node));
-        break;
-      case AST::Type::Match:
-        generateMatch(AST::asMatch(node));
-        break;
-      case AST::Type::Let:
-        generateLet(AST::asLet(node));
-        break;
-      case AST::Type::Constructor:
-        generateConstructor(AST::asConstructor(node));
-        break;
-      default:
-        std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
-        throw;
-    }
-  }
-
-  void Generator::write(int64_t data) {
-    m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
-  }
-
-  void Generator::write(const std::string &data) {
-    m_output << data;
-    m_output.put(0);
-  }
-
-  void Generator::emitOpcode(Opcode::Type opcode) {
-    if (m_isDebug) {
-      write(opcode);
-    } else {
-      write(Opcode::opcodeAddress(opcode));
-    }
-  }
-
-  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body)  {
-    emitJmp(jmpType, body, false);
-  }
-
-  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body, bool skipNextJump)  {
-    emitOpcode(jmpType);
-    unsigned beforePos = m_output.tellp();
-    write(0); // placeholder
-
-    generateNode(body);
-
-    unsigned afterPos = m_output.tellp();
-    m_output.seekp(beforePos);
-    write((afterPos - beforePos)
-        + (skipNextJump ? (3 * WORD_SIZE) : WORD_SIZE) // special case for if with else
-    );
-    m_output.seekp(afterPos);
-  }
-
-  void Generator::generateCall(AST::CallPtr call) {
-    for (unsigned i = call->arguments.size(); i > 0;) {
-      generateNode(call->arguments[--i]);
-    }
-
-    generateNode(call->callee);
-
-    emitOpcode(Opcode::call);
-    write(call->arguments.size());
-  }
-
-  void Generator::generateNumber(AST::NumberPtr number) {
-    emitOpcode(Opcode::push);
-    write(number->value);
-  }
-
-  void Generator::generateIdentifier(AST::IdentifierPtr ident) {
-    emitOpcode(Opcode::lookup);
-    auto name = namespaced(ident->ns, ident->name);
-    write(uniqueString(name));
-    if (capturesScope) {
-      write(0);
-    } else {
-      write(lookupID++);
-    }
-  }
-
-  void Generator::generateString(AST::StringPtr str) {
-    emitOpcode(Opcode::load_string);
-    write(uniqueString(str->name));
-  }
-
-  void Generator::generateList(AST::ListPtr list) {
-    emitOpcode(Opcode::alloc_list);
-    write(list->items.size() + 1);
-
-    unsigned index = 1;
-    for (auto item : list->items) {
-      generateNode(item);
-      emitOpcode(Opcode::obj_store_at);
-      write(index++);
-    }
-  }
-
-  void Generator::generateFunctionParameter(AST::FunctionParameterPtr arg) {
-    emitOpcode(Opcode::push_arg);
-    write(arg->index);
-  }
-
-  void Generator::generateFunctionDefinition(AST::FunctionPtr fn) {
-    emitOpcode(Opcode::create_closure);
-    write(m_functions.size());
-    write(fn->capturesScope);
-    if (fn->name != "_") {
-      emitOpcode(Opcode::bind);
-      auto name = namespaced(fn->ns, fn->name);
-      write(uniqueString(name));
-    }
-    m_functions.push_back(fn);
-  }
-
-  void Generator::generateFunctionSource(AST::FunctionPtr fn) {
-    std::string fnName = fn->name;
-    if (fnName == "_") {
-      static unsigned id = 0;
-      fnName = "_" + std::to_string(id++);
-    }
-    write(uniqueString(fnName));
-    write(fn->parameters.size());
-
-    std::vector<unsigned> captured;
-    for (unsigned i = 0; i < fn->parameters.size(); i++) {
-      write(uniqueString(fn->parameters[i]->name));
-
-      if (fn->parameters[i]->isCaptured) {
-        captured.push_back(i);
-      }
-    }
-
-    if (fn->needsScope) {
-      emitOpcode(Opcode::create_lex_scope);
-    }
-
-    for (auto i : captured) {
-      emitOpcode(Opcode::push_arg);
-      write(i);
-      emitOpcode(Opcode::put_to_scope);
-      write(uniqueString(fn->parameters[i]->name));
-    }
-
-    capturesScope = fn->capturesScope;
-    generateNode(fn->body);
-
-    if (fn->needsScope) {
-      emitOpcode(Opcode::release_lex_scope);
-    }
-
-    emitOpcode(Opcode::ret);
-  }
-
-  void Generator::generateIf(AST::IfPtr iff) {
-    generateNode(iff->condition);
-
-    bool hasElse = iff->elseBody != nullptr && iff->elseBody->nodes.size() > 0;
-    emitJmp(Opcode::jz, iff->ifBody, hasElse);
-
-    if (hasElse) {
-      emitJmp(Opcode::jmp, iff->elseBody);
-    }
-  }
-
-  void Generator::generateProgram(AST::ProgramPtr program) {
-    generateBlock(program->body);
+    m_ast->generateBytecode(this);
 
     auto text = m_output.str();
     m_output = std::stringstream();
@@ -269,143 +51,86 @@ namespace ceos {
     write(Section::Text);
     write(lookupID);
     m_output << text;
+
+    emitOpcode(Opcode::exit);
+    m_output.seekg(0);
+
+    return m_output;
   }
 
-  void Generator::generateBlock(AST::BlockPtr block) {
-    if (block->stackSlots > 0) {
-      emitOpcode(Opcode::stack_alloc);
-      write(block->stackSlots * 8);
+  void Generator::generateFunctionSource(AST::Function *fn) {
+    std::string fnName = fn->name;
+    if (fnName == "_") {
+      static unsigned id = 0;
+      fnName = "_" + std::to_string(id++);
     }
+    write(uniqueString(fnName));
+    write(fn->parameters.size());
 
-    for (auto node : block->nodes) {
-      generateNode(node);
-    }
+    std::vector<unsigned> captured;
+    for (unsigned i = 0; i < fn->parameters.size(); i++) {
+      write(uniqueString(fn->parameters[i]->name));
 
-    if (block->stackSlots > 0) {
-      emitOpcode(Opcode::stack_free);
-      write(block->stackSlots * 8);
-    }
-  }
-
-  void Generator::generateObjectTagTest(AST::ObjectTagTestPtr test) {
-    generateNode(test->object);
-    emitOpcode(Opcode::obj_tag_test);
-    write(test->tag);
-  }
-
-  void Generator::generateObjectLoad(AST::ObjectLoadPtr load) {
-    generateNode(load->object);
-    emitOpcode(Opcode::obj_load);
-    write(load->offset);
-  }
-
-  void Generator::generateStackStore(AST::StackStorePtr store) {
-    generateNode(store->value);
-    emitOpcode(Opcode::stack_store);
-    write(store->slot);
-  }
-
-  void Generator::generateStackLoad(AST::StackLoadPtr load) {
-    emitOpcode(Opcode::stack_load);
-    write(load->slot);
-  }
-
-  void Generator::generateBinaryOperation(AST::BinaryOperationPtr operation) {
-    generateNode(operation->rhs);
-    generateNode(operation->lhs);
-
-    emitOpcode(Opcode::lookup);
-    auto op = std::string(reinterpret_cast<char *>(&operation->op));
-    write(uniqueString(op));
-    write(lookupID++);
-
-    emitOpcode(Opcode::call);
-    write(2);
-  }
-
-  void Generator::generateUnaryOperation(AST::UnaryOperationPtr operation) {
-    generateNode(operation->operand);
-
-    emitOpcode(Opcode::lookup);
-    auto op = "unary_" + std::string(reinterpret_cast<char *>(&operation->op));
-    write(uniqueString(op));
-    write(lookupID++);
-
-    emitOpcode(Opcode::call);
-    write(1);
-  }
-
-  void Generator::generateMatch(AST::MatchPtr match) {
-    auto size = match->cases.size();
-    long long pos[size - 1];
-    for (unsigned i = 0; i < size; i++) {
-      auto kase = match->cases[i];
-
-      generateNode(match->value);
-
-      emitOpcode(Opcode::obj_load);
-      write(-1);
-
-      emitOpcode(Opcode::push);
-      write(kase->pattern->tag);
-
-      std::string fnName = std::string("==");
-      emitOpcode(Opcode::lookup);
-      write(uniqueString(fnName));
-      write(lookupID++);
-      emitOpcode(Opcode::call);
-      write(2);
-
-
-      for (int j = kase->pattern->stores.size() - 1; j >= 0; j--) {
-        kase->body->nodes.insert(kase->body->nodes.begin(), kase->pattern->stores[j]);
-      }
-
-      auto jmp = i < size - 1;
-      emitJmp(Opcode::jz, kase->body, jmp);
-      if (jmp) {
-        emitOpcode(Opcode::jmp);
-        pos[i] = m_output.tellp();
-        write(0);
-      }
-    }
-    auto p = m_output.tellp();
-    for (unsigned i = 0; i < size - 1; i++) {
-      m_output.seekp(pos[i] );
-      unsigned off = p - pos[i];
-      write(off + WORD_SIZE);
-    }
-    m_output.seekp(p);
-  }
-
-  void Generator::generateLet(AST::LetPtr let) {
-    for (auto store : let->stores) {
-      generateNode(store);
-    }
-
-    for (auto load : let->loads) {
-      if (load->isCaptured) {
-        emitOpcode(Opcode::stack_load);
-        write(load->slot);
-
-        emitOpcode(Opcode::put_to_scope);
-        write(uniqueString(load->name));
+      if (fn->parameters[i]->isCaptured) {
+        captured.push_back(i);
       }
     }
 
-    generateNode(let->block);
+    if (fn->needsScope) {
+      emitOpcode(Opcode::create_lex_scope);
+    }
+
+    for (auto i : captured) {
+      emitOpcode(Opcode::push_arg);
+      write(i);
+      emitOpcode(Opcode::put_to_scope);
+      write(uniqueString(fn->parameters[i]->name));
+    }
+
+    capturesScope = fn->capturesScope;
+    fn->body->generateBytecode(this);
+
+    if (fn->needsScope) {
+      emitOpcode(Opcode::release_lex_scope);
+    }
+
+    emitOpcode(Opcode::ret);
   }
 
-  void Generator::generateConstructor(AST::ConstructorPtr ctor) {
-    emitOpcode(Opcode::alloc_obj);
-    write(ctor->size + 1); // args + tag
-    write(ctor->tag); // tag
+  void Generator::write(int64_t data) {
+    m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
+  }
 
-    for (unsigned i = 0; i < ctor->arguments.size(); i++) {
-      generateNode(ctor->arguments[i]);
-      emitOpcode(Opcode::obj_store_at);
-      write(i + 1); // skip tag
+  void Generator::write(const std::string &data) {
+    m_output << data;
+    m_output.put(0);
+  }
+
+  void Generator::emitOpcode(Opcode::Type opcode) {
+    if (m_isDebug) {
+      write(opcode);
+    } else {
+      write(Opcode::opcodeAddress(opcode));
     }
+  }
+
+  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body)  {
+    emitJmp(jmpType, body, false);
+  }
+
+  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body, bool skipNextJump)  {
+    emitOpcode(jmpType);
+    unsigned beforePos = m_output.tellp();
+    write(0); // placeholder
+
+    body->generateBytecode(this);
+
+    unsigned afterPos = m_output.tellp();
+    m_output.seekp(beforePos);
+    write((afterPos - beforePos)
+        + (skipNextJump ? (3 * WORD_SIZE) : WORD_SIZE) // special case for if with else
+    );
+    m_output.seekp(afterPos);
   }
 
   unsigned Generator::uniqueString(std::string &str) {
@@ -657,4 +382,225 @@ section_code:
     }
   }
 #undef WRITE
+
+namespace AST {
+
+void Number::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::push);
+  gen->write(value);
+}
+
+void Call::generateBytecode(Generator *gen) {
+  for (unsigned i = arguments.size(); i > 0;) {
+    arguments[--i]->generateBytecode(gen);
+  }
+
+  callee->generateBytecode(gen);
+
+  gen->emitOpcode(Opcode::call);
+  gen->write(arguments.size());
+}
+
+
+void Identifier::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::lookup);
+  auto name = namespaced(ns, this->name);
+  gen->write(gen->uniqueString(name));
+  if (gen->capturesScope) {
+    gen->write(0);
+  } else {
+    gen->write(gen->lookupID++);
+  }
+}
+
+void String::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::load_string);
+  gen->write(gen->uniqueString(name));
+}
+
+void List::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::alloc_list);
+  gen->write(items.size() + 1);
+
+  unsigned index = 1;
+  for (auto item : items) {
+    item->generateBytecode(gen);
+    gen->emitOpcode(Opcode::obj_store_at);
+    gen->write(index++);
+  }
+}
+
+void FunctionParameter::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::push_arg);
+  gen->write(index);
+}
+
+void If::generateBytecode(Generator *gen) {
+  condition->generateBytecode(gen);
+
+  bool hasElse = elseBody != nullptr && elseBody->nodes.size() > 0;
+  gen->emitJmp(Opcode::jz, ifBody, hasElse);
+
+  if (hasElse) {
+    gen->emitJmp(Opcode::jmp, elseBody);
+  }
+}
+
+void Program::generateBytecode(Generator *gen) {
+  body->generateBytecode(gen);
+}
+
+void Block::generateBytecode(Generator *gen) {
+  if (stackSlots > 0) {
+    gen->emitOpcode(Opcode::stack_alloc);
+    gen->write(stackSlots * WORD_SIZE);
+  }
+
+  for (auto node : nodes) {
+    node->generateBytecode(gen);
+  }
+
+  if (stackSlots > 0) {
+    gen->emitOpcode(Opcode::stack_free);
+    gen->write(stackSlots * WORD_SIZE);
+  }
+}
+
+void ObjectTagTest::generateBytecode(Generator *gen) {
+  object->generateBytecode(gen);
+  gen->emitOpcode(Opcode::obj_tag_test);
+  gen->write(tag);
+}
+
+void ObjectLoad::generateBytecode(Generator *gen) {
+  object->generateBytecode(gen);
+  gen->emitOpcode(Opcode::obj_load);
+  gen->write(offset);
+}
+
+void StackStore::generateBytecode(Generator *gen) {
+  value->generateBytecode(gen);
+  gen->emitOpcode(Opcode::stack_store);
+  gen->write(slot);
+}
+
+void StackLoad::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::stack_load);
+  gen->write(slot);
+}
+
+void BinaryOperation::generateBytecode(Generator *gen) {
+  rhs->generateBytecode(gen);
+  lhs->generateBytecode(gen);
+
+  auto opstr = std::string(reinterpret_cast<char *>(&op));
+
+  gen->emitOpcode(Opcode::lookup);
+  gen->write(gen->uniqueString(opstr));
+  gen->write(gen->lookupID++);
+
+  gen->emitOpcode(Opcode::call);
+  gen->write(2);
+}
+
+void UnaryOperation::generateBytecode(Generator *gen) {
+  operand->generateBytecode(gen);
+
+  auto opstr = "unary_" + std::string(reinterpret_cast<char *>(&op));
+
+  gen->emitOpcode(Opcode::lookup);
+  gen->write(gen->uniqueString(opstr));
+  gen->write(gen->lookupID++);
+
+  gen->emitOpcode(Opcode::call);
+  gen->write(1);
+}
+
+void Match::generateBytecode(Generator *gen) {
+  auto size = cases.size();
+  long long pos[size - 1];
+  for (unsigned i = 0; i < size; i++) {
+    auto kase = cases[i];
+
+    value->generateBytecode(gen);
+
+    gen->emitOpcode(Opcode::obj_load);
+    gen->write(-1);
+
+    gen->emitOpcode(Opcode::push);
+    gen->write(kase->pattern->tag);
+
+    std::string fnName = std::string("==");
+    gen->emitOpcode(Opcode::lookup);
+    gen->write(gen->uniqueString(fnName));
+    gen->write(gen->lookupID++);
+    gen->emitOpcode(Opcode::call);
+    gen->write(2);
+
+
+    for (int j = kase->pattern->stores.size() - 1; j >= 0; j--) {
+      kase->body->nodes.insert(kase->body->nodes.begin(), kase->pattern->stores[j]);
+    }
+
+    auto jmp = i < size - 1;
+    gen->emitJmp(Opcode::jz, kase->body, jmp);
+    if (jmp) {
+      gen->emitOpcode(Opcode::jmp);
+      pos[i] = gen->m_output.tellp();
+      gen->write(0);
+    }
+  }
+
+  auto p = gen->m_output.tellp();
+  for (unsigned i = 0; i < size - 1; i++) {
+    gen->m_output.seekp(pos[i] );
+    unsigned off = p - pos[i];
+    gen->write(off + WORD_SIZE);
+  }
+  gen->m_output.seekp(p);
+}
+
+void Let::generateBytecode(Generator *gen) {
+  for (auto store : stores) {
+    store->generateBytecode(gen);
+  }
+
+  for (auto load : loads) {
+    if (load->isCaptured) {
+      gen->emitOpcode(Opcode::stack_load);
+      gen->write(load->slot);
+
+      gen->emitOpcode(Opcode::put_to_scope);
+      gen->write(gen->uniqueString(load->name));
+    }
+  }
+
+  block->generateBytecode(gen);
+}
+
+void Constructor::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::alloc_obj);
+  gen->write(size + 1); // args + tag
+  gen->write(tag); // tag
+
+  for (unsigned i = 0; i < arguments.size(); i++) {
+    arguments[i]->generateBytecode(gen);
+    gen->emitOpcode(Opcode::obj_store_at);
+    gen->write(i + 1); // skip tag
+  }
+}
+
+void Function::generateBytecode(Generator *gen) {
+  gen->emitOpcode(Opcode::create_closure);
+  gen->write(gen->m_functions.size());
+  gen->write(capturesScope);
+  if (name != "_") {
+    gen->emitOpcode(Opcode::bind);
+    auto name = namespaced(ns, this->name);
+    gen->write(gen->uniqueString(name));
+  }
+  gen->m_functions.push_back(this);
+}
+
+}
 }

@@ -56,8 +56,9 @@ static unsigned str_uid = 0;
       Constructor
 
 namespace ceos {
-namespace AST {
+  struct Generator;
 
+namespace AST {
   ENUM_CLASS(Type, AST_TYPES)
   EVAL(MAP(DECLARE_TYPE, AST_TYPES))
 
@@ -66,16 +67,24 @@ namespace AST {
     Loc loc;
 
     Node(Loc l): loc(l) {  }
+
+    virtual void generateBytecode(__unused Generator *gen) {
+      throw std::runtime_error("Trying to generate bytecode for virtual node");
+    }
   };
 
   struct Program : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     BlockPtr body;
   };
 
   struct Block : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
@@ -85,11 +94,15 @@ namespace AST {
   struct Number : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     int value;
   };
 
   struct Identifier : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     std::string name;
     std::string ns;
@@ -97,10 +110,14 @@ namespace AST {
 
   struct String : public Identifier {
     using Identifier::Identifier;
+
+    virtual void generateBytecode(Generator *gen);
   };
 
   struct FunctionParameter : public Identifier {
     using Identifier::Identifier;
+
+    virtual void generateBytecode(Generator *gen);
 
     unsigned index;
     bool isCaptured;
@@ -109,12 +126,16 @@ namespace AST {
   struct Call : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     NodePtr callee;
     std::vector<NodePtr> arguments;
   };
 
   struct Function : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     std::string name;
     std::string ns;
@@ -127,6 +148,8 @@ namespace AST {
   struct If : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     NodePtr condition;
     BlockPtr ifBody;
     BlockPtr elseBody;
@@ -135,12 +158,16 @@ namespace AST {
   struct ObjectTagTest : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     NodePtr object;
     unsigned tag;
   };
 
   struct ObjectLoad : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     NodePtr object;
     std::string constructorName;
@@ -150,12 +177,16 @@ namespace AST {
   struct StackStore : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     unsigned slot;
     NodePtr value;
   };
 
   struct StackLoad : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     bool isCaptured;
     std::string name;
@@ -166,6 +197,8 @@ namespace AST {
   struct BinaryOperation : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     unsigned op;
     NodePtr lhs;
     NodePtr rhs;
@@ -174,6 +207,8 @@ namespace AST {
   struct UnaryOperation : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     unsigned op;
     NodePtr operand;
   };
@@ -181,11 +216,17 @@ namespace AST {
   struct List : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     std::vector<NodePtr> items;
   };
 
   struct Pattern : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(__unused Generator *gen) {
+      throw std::runtime_error("Implemented inline");
+    }
 
     unsigned tag;
     std::vector<StackStorePtr> stores;
@@ -194,12 +235,18 @@ namespace AST {
   struct Case : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(__unused Generator *gen) {
+      throw std::runtime_error("Implemented inline");
+    }
+
     PatternPtr pattern;
     BlockPtr body;
   };
 
   struct Match : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     NodePtr value;
     std::vector<CasePtr> cases;
@@ -208,6 +255,8 @@ namespace AST {
   struct Let : public Node {
     using Node::Node;
 
+    virtual void generateBytecode(Generator *gen);
+
     std::vector<StackLoadPtr> loads;
     std::vector<StackStorePtr> stores;
     BlockPtr block;
@@ -215,6 +264,8 @@ namespace AST {
 
   struct Constructor : public Node {
     using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
 
     std::string name;
     std::vector<NodePtr> arguments;
