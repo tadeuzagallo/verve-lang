@@ -2,7 +2,7 @@
 " Language:	Ceos
 " Current Maintainer:	tadeuzagallo (https://github.com/tadeuzagallo)
 
-syn keyword ceosLanguageKeywords if else interface implementation extern virtual type let import from as
+syn keyword ceosLanguageKeywords if else interface implementation extern virtual type let import from as match
 
 
 " Integer with - + or nothing in front
