@@ -48,7 +48,9 @@ function_param ::= LCID ":" type
 
 expr_list ::= e | expr expr_list
 
-call_function_or_id ::= (LCID | function) call
+call_function_or_id ::= (namespace | LCID | function) call
+
+namespace ::= UCID "#" LCID
 
 call ::= e | "(" args_list ")" call
 
