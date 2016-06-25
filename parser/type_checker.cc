@@ -19,30 +19,10 @@ static Type *simplifyType(Type *type, Environment *env) {
   return type;
 }
 
-static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
-  auto callee = call->callee;
-  auto calleeType = getType(callee, env, lexer);
-  TypeFunction *fnType;
-
-  if (auto ctorType = dynamic_cast<TypeConstructor *>(calleeType)) {
-    call->isConstructor = true;
-    call->tag = ctorType->tag;
-    call->size = ctorType->size;
-    fnType = ctorType->type;
-  } else if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
-    if (lexer.next('{')) {
-      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
-    } else {
-      fprintf(stderr, "Can't find type information for function call\n");
-    }
-
-    lexer.printSource(call->loc);
-    throw std::runtime_error("type error");
-  }
-
-  if (call->arguments.size() != fnType->types.size()) {
+static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFunction *fnType, Environment *env, Lexer &lexer, Loc &loc) {
+  if (arguments.size() != fnType->types.size()) {
     fprintf(stderr, "Wrong number of arguments for function call\n");
-    lexer.printSource(call->loc);
+    lexer.printSource(loc);
     throw std::runtime_error("type error");
   }
 
@@ -55,7 +35,7 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   }
 
   for (unsigned i = 0; i < fnType->types.size(); i++) {
-    auto arg = call->arguments[i];
+    auto arg = arguments[i];
 
     auto expected = simplifyType(fnType->types[i], env);
     auto actual = simplifyType(getType(arg, env, lexer), env);
@@ -71,17 +51,6 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
     }
   }
 
-  if (fnType->isVirtual) {
-    auto name = AST::asIdentifier(callee)->name + env->types[fnType->interface->genericTypeName]->toString();
-    if (env->get(name)) {
-      AST::asIdentifier(callee)->name = name;
-    }
-  }
-
-  if (auto gt = dynamic_cast<GenericType *>(fnType->returnType)) {
-    return env->get(gt->typeName);
-  }
-
   if (auto et = dynamic_cast<EnumType *>(fnType->returnType)) {
     if (et->generics.size()) {
       auto returnType = new DataTypeInstance();
@@ -94,6 +63,38 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
   }
 
   return fnType->returnType;
+}
+
+static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
+  auto callee = call->callee;
+  auto calleeType = getType(callee, env, lexer);
+  TypeFunction *fnType;
+
+  if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
+    if (lexer.next('{')) {
+      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
+    } else {
+      fprintf(stderr, "Can't find type information for function call\n");
+    }
+
+    lexer.printSource(call->loc);
+    throw std::runtime_error("type error");
+  }
+
+  auto returnType = typeCheckArguments(call->arguments, fnType, env, lexer, call->loc);
+
+  if (fnType->isVirtual) {
+    auto name = AST::asIdentifier(callee)->name + env->types[fnType->interface->genericTypeName]->toString();
+    if (env->get(name)) {
+      AST::asIdentifier(callee)->name = name;
+    }
+  }
+
+  if (auto gt = dynamic_cast<GenericType *>(fnType->returnType)) {
+    return env->get(gt->typeName);
+  }
+
+  return returnType;
 }
 
 static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
@@ -203,6 +204,15 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
 
     case AST::Type::Let:
       return getType(AST::asLet(node)->block, env, lexer);
+
+    case AST::Type::Constructor:
+      {
+        auto ctor = AST::asConstructor(node);
+        auto type = env->get(ctor->name);
+        auto ctorType = dynamic_cast<TypeConstructor *>(type);
+        assert(ctorType);
+        return typeCheckArguments(ctor->arguments, ctorType->type, env, lexer, ctor->loc);
+      }
 
     default:
       throw std::runtime_error("unhandled node");

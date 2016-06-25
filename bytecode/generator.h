@@ -41,7 +41,7 @@ namespace ceos {
       void generateMatch(AST::MatchPtr);
       void generateLet(AST::LetPtr);
 
-      void generateConstructor(AST::CallPtr);
+      void generateConstructor(AST::ConstructorPtr);
 
       void emitOpcode(Opcode::Type);
       void emitJmp(Opcode::Type, AST::BlockPtr &);

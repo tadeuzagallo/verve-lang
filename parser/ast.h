@@ -52,7 +52,8 @@ static unsigned str_uid = 0;
       Match, \
       Case, \
       Pattern, \
-      Let
+      Let, \
+      Constructor
 
 namespace ceos {
 namespace AST {
@@ -110,9 +111,6 @@ namespace AST {
 
     NodePtr callee;
     std::vector<NodePtr> arguments;
-    bool isConstructor = false;
-    unsigned tag;
-    unsigned size;
   };
 
   struct Function : public Node {
@@ -213,6 +211,15 @@ namespace AST {
     std::vector<StackLoadPtr> loads;
     std::vector<StackStorePtr> stores;
     BlockPtr block;
+  };
+
+  struct Constructor : public Node {
+    using Node::Node;
+
+    std::string name;
+    std::vector<NodePtr> arguments;
+    unsigned tag;
+    unsigned size;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))

@@ -73,6 +73,9 @@ namespace ceos {
       case AST::Type::Let:
         generateLet(AST::asLet(node));
         break;
+      case AST::Type::Constructor:
+        generateConstructor(AST::asConstructor(node));
+        break;
       default:
         std::cerr <<  "Unhandled node: `" << AST::typeName(node->type) << "`\n";
         throw;
@@ -116,10 +119,6 @@ namespace ceos {
   }
 
   void Generator::generateCall(AST::CallPtr call) {
-    if (call->isConstructor) {
-      return generateConstructor(call);
-    }
-
     for (unsigned i = call->arguments.size(); i > 0;) {
       generateNode(call->arguments[--i]);
     }
@@ -397,13 +396,13 @@ namespace ceos {
     generateNode(let->block);
   }
 
-  void Generator::generateConstructor(AST::CallPtr call) {
+  void Generator::generateConstructor(AST::ConstructorPtr ctor) {
     emitOpcode(Opcode::alloc_obj);
-    write(call->size + 1); // args + tag
-    write(call->tag); // tag
+    write(ctor->size + 1); // args + tag
+    write(ctor->tag); // tag
 
-    for (unsigned i = 0; i < call->arguments.size(); i++) {
-      generateNode(call->arguments[i]);
+    for (unsigned i = 0; i < ctor->arguments.size(); i++) {
+      generateNode(ctor->arguments[i]);
       emitOpcode(Opcode::obj_store_at);
       write(i + 1); // skip tag
     }

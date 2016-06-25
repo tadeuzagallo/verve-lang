@@ -633,25 +633,26 @@ namespace ceos {
     return parseCall(callee);
   }
 
-  AST::CallPtr Parser::parseConstructor(std::string ucid) {
-    auto callee = AST::createIdentifier(token().loc);
-    callee->name = ucid;
+  AST::ConstructorPtr Parser::parseConstructor(std::string ucid) {
+    auto ctor = AST::createConstructor(token().loc);
+    ctor->name = ucid;
 
-    auto call = AST::createCall(token().loc);
-    call->callee = callee;
+    auto ctorType = getType<TypeConstructor *>(ucid);
+    assert(ctorType);
+
+    ctor->tag = ctorType->tag;
+    ctor->size = ctorType->size;
 
     match('(');
     while (!next(')')) {
-      call->arguments.push_back(parseExpr());
+      ctor->arguments.push_back(parseExpr());
       if (!skip(',')) break;
     }
     match(')');
 
-    pushTypeScope();
-    TypeChecker::checkCall(call, m_environment.get(), m_lexer);
-    popTypeScope();
+    //TypeChecker::checkCtor(ctor, m_environment.get(), m_lexer);
 
-    return call;
+    return ctor;
   }
 
   AST::NodePtr Parser::parseCall(AST::NodePtr callee) {
