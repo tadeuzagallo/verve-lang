@@ -1,26 +1,26 @@
-type Foo {
-  Bar(Int, Int)
+type foo {
+  Bar(int, int)
 }
 
-fn _(a: Foo) -> Void { 
+fn _(a: foo) -> void { 
   let Bar(x, y) = a {
     print(x + y)
   }
 } (Bar(1, 2))
 
-type List_<T> {
+type list_<t> {
   Nil()
-  Cons(T, List_<T>)
+  Cons(t, list_<t>)
 }
 
-fn printList(l: List_<Stringify>) -> Void {
+fn print_list(l: list_<stringify>) -> void {
   match l {
     Nil() => {}
     Cons(x, rest) => {
       print(x)
-      printList(rest)
+      print_list(rest)
     }
   }
 }
 
-printList(Cons(1, Cons(2, Cons(3, Nil()))))
+print_list(Cons(1, Cons(2, Cons(3, Nil()))))

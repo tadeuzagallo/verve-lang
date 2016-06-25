@@ -13,20 +13,20 @@ namespace ceos {
     m_environment = std::make_shared<Environment>();
     m_scope = std::make_shared<ParseScope>();
 
-    setType("Int", new BasicType("Int"));
-    setType("Char", new BasicType("Char"));
-    setType("Float", new BasicType("Float"));
-    setType("Void", new BasicType("Void"));
+    setType("int", new BasicType("int"));
+    setType("char", new BasicType("char"));
+    setType("float", new BasicType("float"));
+    setType("void", new BasicType("void"));
 
-    auto List = new EnumType();
-    List->name = "List";
-    List->generics.push_back("T");
-    setType("List", List);
+    auto list = new EnumType();
+    list->name = "list";
+    list->generics.push_back("T");
+    setType("list", list);
 
-    auto String = new DataTypeInstance();
-    String->dataType = List;
-    String->types.push_back(getType("Char"));
-    setType("String", String);
+    auto string = new DataTypeInstance();
+    string->dataType = list;
+    string->types.push_back(getType("char"));
+    setType("string", string);
   }
 
   AST::ProgramPtr Parser::parse() {
@@ -58,7 +58,7 @@ namespace ceos {
     } else {
       match('{');
       while (!next('}')) {
-        imports.push_back(token(Token::ID).string());
+        imports.push_back(token(Token::LCID).string());
         if (!skip(',')) break;
       }
       match('}');
@@ -70,7 +70,7 @@ namespace ceos {
 
     std::string ns = "";
     if (skip("as")) {
-      ns = token(Token::ID).string();
+      ns = token(Token::UCID).string();
     }
 
     auto parser = parseFile(path, m_dirname, ns);
@@ -89,7 +89,7 @@ namespace ceos {
   }
 
   AST::NodePtr Parser::parseDecl() {
-    if (next(Token::ID)) {
+    if (next(Token::LCID)) {
       if (skip("interface")) {
         return parseInterface();
       } else if (skip("implementation")) {
@@ -110,7 +110,7 @@ namespace ceos {
     auto type = new EnumType();
     auto tag = 0u;
 
-    type->name = token(Token::ID).string();
+    type->name = token(Token::LCID).string();
 
     setType(type->name, type);
 
@@ -126,7 +126,7 @@ namespace ceos {
     auto ctor = new TypeConstructor();
     ctor->type = new TypeFunction();
 
-    ctor->type->name = token(Token::ID).string();
+    ctor->type->name = token(Token::UCID).string();
     ctor->type->returnType = owner;
 
     if (ctor->type->name == owner->name) {
@@ -152,14 +152,14 @@ namespace ceos {
 
   AST::BlockPtr Parser::parseInterface() {
     auto interface = new TypeInterface();
-    interface->name = token(Token::ID).string();
+    interface->name = token(Token::LCID).string();
     setType(interface->name, interface);
 
     auto declScope = m_environment;
     pushTypeScope();
 
     match('<');
-    interface->genericTypeName = token(Token::ID).string();
+    interface->genericTypeName = token(Token::LCID).string();
     match('>');
 
     setType(interface->genericTypeName, new GenericType(interface->genericTypeName));
@@ -187,7 +187,7 @@ namespace ceos {
 
   AST::BlockPtr Parser::parseImplementation() {
     auto implementation = new TypeImplementation();
-    auto interfaceName = token(Token::ID).string();
+    auto interfaceName = token(Token::LCID).string();
 
     auto interface = getType<TypeInterface *>(interfaceName);
     assert(interface);
@@ -256,7 +256,7 @@ namespace ceos {
       return parseNumber();
     } else if (next(Token::STRING)) {
       return parseString();
-    } else if (next(Token::ID)) {
+    } else if (next(Token::LCID)) {
       if (skip("if")) {
         return parseIf();
       } else if (skip("let")) {
@@ -265,6 +265,13 @@ namespace ceos {
         return parseMatch();
       } else {
         return parseIdentifierFunctionOrCall();
+      }
+    } else if (next(Token::UCID)) {
+      auto ucid = token(Token::UCID).string();
+      if (skip('#')) {
+        return parseCall(parseIdentifier(ucid));
+      } else {
+        return parseConstructor(ucid);
       }
     }
     m_lexer.invalidToken();
@@ -288,7 +295,7 @@ namespace ceos {
 
   TypeFunction *Parser::parsePrototype(std::string implementationSuffix) {
     auto fnType = new TypeFunction();
-    fnType->name = token(Token::ID).string() + implementationSuffix;
+    fnType->name = token(Token::LCID).string() + implementationSuffix;
 
     parseGenerics(fnType->generics);
 
@@ -307,7 +314,7 @@ namespace ceos {
 
   AST::FunctionPtr Parser::parseTypelessFunction(std::string implementationName, std::shared_ptr<Environment> declScope) {
     auto fn = AST::createFunction(token().loc);
-    fn->name = token(Token::ID).string();
+    fn->name = token(Token::LCID).string();
 
     auto fnType = getType<TypeFunction *>(fn->name);
     fn->name += implementationName;
@@ -323,7 +330,7 @@ namespace ceos {
     unsigned i = 0;
     while (!next(')')) {
       auto arg = AST::createFunctionParameter(token().loc);
-      arg->name = token(Token::ID).string();
+      arg->name = token(Token::LCID).string();
       arg->index = i++;
       fn->parameters.push_back(arg);
       m_scope->set(arg->name, arg);
@@ -355,7 +362,7 @@ namespace ceos {
 
     auto fn = AST::createFunction(start);
     auto fnType = new TypeFunction();
-    fn->name = token(Token::ID).string();
+    fn->name = token(Token::LCID).string();
     fnType->name = fn->name;
     fn->ns = m_ns;
 
@@ -410,10 +417,9 @@ namespace ceos {
     let->block->env = m_environment;
 
     while (!next('{')) {
-      auto name = token(Token::ID).string();
-
-      auto loc = token().loc;
-      if (skip('(')) {
+      if (next(Token::UCID)) {
+        auto name = token(Token::UCID).string();
+        auto loc = token().loc;
         auto ctor = getType<TypeConstructor *>(name);
         assert(ctor);
 
@@ -422,6 +428,7 @@ namespace ceos {
         let->block->nodes.push_back(tagTest);
 
         auto offset = 0u;
+        match('(');
         while (!next(')')) {
           auto load = AST::createObjectLoad(token().loc);
           load->offset = offset++;
@@ -435,7 +442,7 @@ namespace ceos {
           auto stackLoad = AST::createStackLoad(token().loc);
           stackLoad->slot = store->slot;
           stackLoad->value = load;
-          stackLoad->name = token(Token::ID).string();
+          stackLoad->name = token(Token::LCID).string();
           stackLoad->isCaptured = true;
           let->loads.push_back(stackLoad);
 
@@ -457,6 +464,8 @@ namespace ceos {
           m_scope->set(load->name, load);
         }
       } else {
+        auto name = token(Token::LCID).string();
+
         match('=');
 
         auto store = AST::createStackStore(token().loc);
@@ -508,7 +517,7 @@ namespace ceos {
   AST::PatternPtr Parser::parsePattern(AST::NodePtr value) {
     auto pattern = AST::createPattern(token().loc);
 
-    auto name = token(Token::ID).string();
+    auto name = token(Token::UCID).string();
     auto ctor = getType<TypeConstructor *>(name);
     assert(ctor);
 
@@ -522,7 +531,7 @@ namespace ceos {
       load->object = value;
       load->constructorName = name;
 
-      auto name = token(Token::ID).string();
+      auto name = token(Token::LCID).string();
 
       auto store = AST::createStackStore(token().loc);
       store->slot = m_blockStack.back()->stackSlots++;
@@ -573,7 +582,7 @@ namespace ceos {
     unsigned i = 0;
     while (!next(')')) {
       auto param = AST::createFunctionParameter(token().loc);
-      param->name = token(Token::ID).string();
+      param->name = token(Token::LCID).string();
       param->index = i++;
       params.push_back(param);
       m_scope->set(param->name, param);
@@ -604,7 +613,7 @@ namespace ceos {
     }
 
     do {
-      auto name = token(Token::ID).string();
+      auto name = token(Token::LCID).string();
       generics.push_back(name);
 
       setType(name, new GenericType(std::move(name)));
@@ -619,9 +628,30 @@ namespace ceos {
     if (skip("fn")) {
       callee = parseFunction();
     } else {
-      callee = parseIdentifier(true);
+      callee = parseIdentifier();
     }
     return parseCall(callee);
+  }
+
+  AST::CallPtr Parser::parseConstructor(std::string ucid) {
+    auto callee = AST::createIdentifier(token().loc);
+    callee->name = ucid;
+
+    auto call = AST::createCall(token().loc);
+    call->callee = callee;
+
+    match('(');
+    while (!next(')')) {
+      call->arguments.push_back(parseExpr());
+      if (!skip(',')) break;
+    }
+    match(')');
+
+    pushTypeScope();
+    TypeChecker::checkCall(call, m_environment.get(), m_lexer);
+    popTypeScope();
+
+    return call;
   }
 
   AST::NodePtr Parser::parseCall(AST::NodePtr callee) {
@@ -655,43 +685,36 @@ namespace ceos {
 
   // Base nodes
 
-  AST::NodePtr Parser::parseIdentifier(bool checkScope) {
+  AST::NodePtr Parser::parseIdentifier(std::string ns) {
     auto loc = token().loc;
-    auto name = token(Token::ID).string();
-
-    if (skip('#')) {
-      name = namespaced(name, token(Token::ID).string());
-    }
-
-    if (checkScope) {
-      auto var = m_scope->get(name);
-      if (var && (var->type == AST::Type::FunctionParameter || var->type == AST::Type::StackLoad)) {
-        ParseScopePtr scope;
-        if ((scope = m_scope->scopeFor(name)) != m_scope) {
-          bool shouldCapture = false;
-          auto s = m_scope;
-          while (s != scope) {
-            if (s->escapes) {
-              shouldCapture = true;
-              break;
-            }
-            s = s->parent();
+    auto name = namespaced(ns, token(Token::LCID).string());
+    auto var = m_scope->get(name);
+    if (var && (var->type == AST::Type::FunctionParameter || var->type == AST::Type::StackLoad)) {
+      ParseScopePtr scope;
+      if ((scope = m_scope->scopeFor(name)) != m_scope) {
+        bool shouldCapture = false;
+        auto s = m_scope;
+        while (s != scope) {
+          if (s->escapes) {
+            shouldCapture = true;
+            break;
           }
+          s = s->parent();
+        }
 
-          if (shouldCapture) {
-            if (var->type == AST::Type::FunctionParameter) {
-              AST::asFunctionParameter(var)->isCaptured = true;
-            } else if (var->type == AST::Type::StackLoad) {
-              AST::asStackLoad(var)->isCaptured = true;
-            }
-            scope->isRequired = true;
-            m_scope->capturesScope = true;
-            goto ident;
+        if (shouldCapture) {
+          if (var->type == AST::Type::FunctionParameter) {
+            AST::asFunctionParameter(var)->isCaptured = true;
+          } else if (var->type == AST::Type::StackLoad) {
+            AST::asStackLoad(var)->isCaptured = true;
           }
+          scope->isRequired = true;
+          m_scope->capturesScope = true;
+          goto ident;
         }
       }
-      if (var) return var;
     }
+    if (var) return var;
 ident:
 
     auto identifier = AST::createIdentifier(loc);
@@ -733,7 +756,7 @@ ident:
       type->returnType = parseType();
       return type;
     } else {
-      auto type = getType(token(Token::ID).string());
+      auto type = getType(token(Token::LCID).string());
       if (!skip('<')) {
         return type;
       }
@@ -808,12 +831,12 @@ ident:
   }
 
   inline bool Parser::next(std::string str) {
-    return m_lexer.token().type == Token::ID && m_lexer.token().string() == str;
+    return (m_lexer.token().type == Token::LCID || m_lexer.token().type == Token::UCID) && m_lexer.token().string() == str;
   }
 
   inline bool Parser::skip(std::string str) {
     if (next(str)) {
-      token(Token::ID);
+      m_lexer.nextToken();
       return true;
     } else {
       return false;
@@ -821,9 +844,7 @@ ident:
   }
 
   void Parser::match(std::string expected) {
-    if (next(expected)) {
-      token(Token::ID);
-    } else {
+    if (!skip(expected)) {
       std::cerr << "Invalid token found: expected `" << Lexer::tokenType(m_lexer.token()) << "` to be `" << expected << "`" << "\n";
       m_lexer.printSource();
       throw std::runtime_error("Parser error");

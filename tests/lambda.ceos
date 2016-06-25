@@ -1,4 +1,4 @@
-fn _(n: String) -> Void { print(n) }("hello")
+fn _(n: string) -> void { print(n) }("hello")
 
 // Inifinite recursive type
 /*_(fact: (Int): Int): Void {*/

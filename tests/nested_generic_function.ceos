@@ -1,7 +1,7 @@
-fn apply<T, U>(value: T, f: (T) -> U) -> U {
+fn apply<t, u>(value: t, f: (t) -> u) -> u {
   f(value)
 }
 
-print(apply(1, fn _(n: Int) -> String {
+print(apply(1, fn _(n: int) -> string {
   "bar"
 }))

@@ -1,5 +1,5 @@
-fn adder(a: Int) -> (Int) -> Int {
-  fn _(b: Int) -> Int {
+fn adder(a: int) -> (int) -> int {
+  fn _(b: int) -> int {
     a + b
   }
 }

@@ -19,13 +19,10 @@ namespace ceos {
     friend class Lexer;
 
     public:
-      class ID;
-      class Number;
-      class String;
-
       ENUM(Type,
           END,
-          ID,
+          LCID,
+          UCID,
           NUMBER,
           STRING,
           BASIC
@@ -66,7 +63,7 @@ namespace ceos {
       };
 
       ~Token() {
-        if ((type == Token::STRING || type == Token::ID) && value.string != NULL) {
+        if ((type == Token::STRING || type == Token::LCID || type == Token::UCID) && value.string != NULL) {
           free((void *)value.string);
           value.string = NULL;
         }

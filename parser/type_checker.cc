@@ -99,12 +99,12 @@ static Type *typeOfCall(AST::CallPtr call, Environment *env, Lexer &lexer) {
 static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
   switch (node->type) {
     case AST::Type::String:
-      return env->get("String");
+      return env->get("string");
 
     case AST::Type::BinaryOperation:
     case AST::Type::UnaryOperation:
     case AST::Type::Number:
-      return env->get("Int");
+      return env->get("int");
 
     case AST::Type::Function:
       return env->get(AST::asFunction(node)->name);
@@ -121,7 +121,7 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
     case AST::Type::Block:
       {
         auto block = AST::asBlock(node);
-        return block->nodes.empty() ? env->get("Void") : getType(block->nodes.back(), block->env.get() ?: env, lexer);
+        return block->nodes.empty() ? env->get("void") : getType(block->nodes.back(), block->env.get() ?: env, lexer);
       }
 
     case AST::Type::Call:
@@ -162,7 +162,7 @@ static Type *getType(AST::NodePtr node, Environment *env, Lexer &lexer) {
 
     case AST::Type::List:
       {
-        auto dataType = dynamic_cast<EnumType *>(env->get("List"));
+        auto dataType = dynamic_cast<EnumType *>(env->get("list"));
         Type *t = nullptr;
         for (auto i : AST::asList(node)->items) {
           auto type = simplifyType(getType(i, env, lexer), env);

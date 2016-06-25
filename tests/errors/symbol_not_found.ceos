@@ -1,3 +1,3 @@
-extern foo(Int) -> Int
+extern foo(int) -> int
 
 foo(1)

@@ -1,29 +1,29 @@
-type Result {
-  Result(Int, String)
+type result {
+  Result(int, string)
 }
 
-fn _parseFactor(sum: Int, expr: String) -> Result {
+fn _parse_factor(sum: int, expr: string) -> result {
   if (!count(expr)) Result(sum, expr)
   else let c = at(expr, 0) {
     if (c >= '0' && c <= '9') {
-      _parseFactor(10 * sum + c - '0', substr(expr, 1))
+      _parse_factor(10 * sum + c - '0', substr(expr, 1))
     } else Result(sum, expr)
   }
 }
 
-fn parseFactor(e: String) -> Result {
-  _parseFactor(0, e)
+fn parse_factor(e: string) -> result {
+  _parse_factor(0, e)
 }
 
-fn _evalTerm(pair: Result) -> Result {
+fn _eval_term(pair: result) -> result {
   let Result(lhs, expr) = pair {
     if (!count(expr)) pair
     else let lookahead = at(expr, 0)
           expr = substr(expr, 1) {
       if (lookahead == '*' || lookahead == '/') {
-        let Result(rhs, expr) = parseFactor(expr) {
+        let Result(rhs, expr) = parse_factor(expr) {
           let res = if (lookahead == '*') lhs * rhs else lhs / rhs {
-            _evalTerm(Result(res, expr))
+            _eval_term(Result(res, expr))
           }
         }
       } else pair
@@ -31,19 +31,19 @@ fn _evalTerm(pair: Result) -> Result {
   }
 }
 
-fn evalTerm(expr: String) -> Result {
-  _evalTerm(parseFactor(expr))
+fn eval_term(expr: string) -> result {
+  _eval_term(parse_factor(expr))
 }
 
-fn _evalExpr(pair: Result) -> Result {
+fn _eval_expr(pair: result) -> result {
   let Result(lhs, expr) = pair {
     if (!count(expr)) pair
     else let lookahead = at(expr, 0)
              expr = substr(expr, 1) {
       if (lookahead == '+' || lookahead == '-') {
-        let Result(rhs, expr) = evalTerm(expr) {
+        let Result(rhs, expr) = eval_term(expr) {
           let res = if (lookahead == '+') lhs + rhs else lhs - rhs {
-            _evalExpr(Result(res, expr))
+            _eval_expr(Result(res, expr))
           }
         }
       } else pair
@@ -51,12 +51,12 @@ fn _evalExpr(pair: Result) -> Result {
   }
 }
 
-fn evalExpr(e: String) -> Result {
-  _evalExpr(evalTerm(e))
+fn eval_expr(e: string) -> result {
+  _eval_expr(eval_term(e))
 }
 
-fn eval(e: String) -> Int {
-  let Result(res, _) = evalExpr(e) {
+fn eval(e: string) -> int {
+  let Result(res, _) = eval_expr(e) {
     res
   }
 }

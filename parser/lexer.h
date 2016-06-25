@@ -33,6 +33,8 @@ namespace ceos {
       bool skip(int c);
       void match(int c);
 
+      void nextToken();
+
       void _Noreturn invalidToken();
       void printSource();
       void printSource(Loc loc);
@@ -41,7 +43,6 @@ namespace ceos {
       static std::string tokenType(Token &token);
 
     private:
-      void nextToken();
       char nextChar();
 
       Pos getSourcePosition(Loc loc);

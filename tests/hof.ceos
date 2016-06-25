@@ -1,4 +1,4 @@
-fn math(f: (Int, Int) -> Int, a: Int, b: Int) -> Int {
+fn math(f: (int, int) -> int, a: int, b: int) -> int {
   f(a, b)
 }
 
@@ -7,7 +7,7 @@ print(math(`+`, 2, 1))
 print(math(`*`, 2, 1))
 print(math(`/`, 6, 3))
 
-fn foo(a: Int, b: Int) -> Int {
+fn foo(a: int, b: int) -> int {
   a * a + b * b
 }
 

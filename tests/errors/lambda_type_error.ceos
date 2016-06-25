@@ -1,1 +1,1 @@
-fn _(a: Int) -> Int { a } ("foo")
+fn _(a: int) -> int { a } ("foo")

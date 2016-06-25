@@ -8,7 +8,7 @@ top_level ::= interface | implementation | extern | expr | type_decl
 
 expr(prec) ::= factor {binop expr(q)}
 
-factor ::= "(" expr ")" | unop_prefix expr(q) | NUMBER | STRING | call_function_or_id | if | let | list | match
+factor ::= "(" expr ")" | unop_prefix expr(q) | NUMBER | STRING | call_function_or_id | if | let | list | match | type_ctor
 
 binop ::= "+" | "-" | "*" | "/" | "%" | ">" | "<" | ">=" | "<=" | "&&" | "||" | "==" | "!="
 
@@ -16,11 +16,11 @@ unop_prefix ::= "!" | "-"
 
 list ::= "[" args_list "]"
 
-type_decl ::= "type" LCID generics "{" type_constructor+ "}"
+type_decl ::= "type" LCID generics "{" type_ctor_decl+ "}"
 
-type_constructors ::= UCID "(" type+ ")"
+type_ctor_decl ::= UCID "(" type+ ")"
 
-interface ::= "inteface" LCID "<" UCID ">" "{" {interface_decl} "}"
+interface ::= "inteface" LCID "<" LCID ">" "{" {interface_decl} "}"
 
 interface_decl ::= virtual | function
 

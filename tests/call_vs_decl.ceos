@@ -3,20 +3,20 @@
  */
 
 // basic prototype
-/*extern myTake<A>(List<A>, Int) -> A*/
+/*extern myTake<A>(List<A>, int) -> A*/
 
 // with callback
 /*extern myMap<T, U>(List<T>, (T) -> U) -> List<U>*/
 
 // Returning callback
-extern makeThunk<T>(T) -> () -> T
+extern make_thunk<t>(t) -> () -> t
 
 /**
  * On interface
  */
-interface Foo<T> {
+interface foo<t> {
   // virtual function - required
-  virtual equals(T, T) -> Bool
+  virtual equals(t, t) -> bool
 
   // function with default implementation - can be overriden
   /*notEquals(a: T, b: T) -> Bool {*/
@@ -25,26 +25,26 @@ interface Foo<T> {
 }
 
 
-fn foo() -> Void { }
+fn foo() -> void { }
 
-fn bar(a: Int) -> Int {
+fn bar(a: int) -> int {
   a
 }
 
-fn baz(a: () -> Int) -> Int {
+fn baz(a: () -> int) -> int {
   a()
 }
 
-fn _(a: Int) -> Int {
+fn _(a: int) -> int {
   bar(a)
 }(42)
 
-fn _() -> Void {
+fn _() -> void {
   foo()
 }()
 
-/*fn _(a: () -> Int) -> Int {*/
+/*fn _(a: () -> int) -> int {*/
   /*baz(a)*/
-/*}(fn _() -> Int { 42 })*/
+/*}(fn _() -> int { 42 })*/
 
 print("OK")

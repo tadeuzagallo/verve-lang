@@ -1,15 +1,15 @@
-fn id<T>(a: T) -> T {
+fn id<t>(a: t) -> t {
   a
 }
 
 print(id("foo"))
 print(id(42))
 
-interface Foo<T> {
-  virtual bar<U> (T, U) -> U
+interface foo<t> {
+  virtual bar<u> (t, u) -> u
 }
 
-implementation Foo<String> {
+implementation foo<string> {
   fn bar(str, x) {
     print(str)
     x

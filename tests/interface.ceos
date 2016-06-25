@@ -1,14 +1,14 @@
-interface Show<T> {
-  virtual show(T) -> String
+interface show_<t> {
+  virtual show(t) -> string
 }
 
-implementation Show<String> {
+implementation show_<string> {
   fn show(s) {
     "SHOW STRING"
   }
 }
 
-implementation Show<Int> {
+implementation show_<int> {
   fn show(n) {
     "SHOW INT"
   }

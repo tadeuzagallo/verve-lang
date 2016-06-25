@@ -143,7 +143,7 @@ start:
         }
         const char *str = (const char *)calloc(length + 1, 1);
         memcpy((void *)str, m_input+start, length);
-        m_token = Token(Token::ID, str);
+        m_token = Token(Token::LCID, str);
         break;
       }
 
@@ -165,7 +165,19 @@ start:
           m_pos--;
 
           m_token = Token(Token::NUMBER, number);
-        } else if (isalpha(c) || c == '_') {
+        } else if (islower(c) || c == '_') {
+          auto start = m_pos - 1;
+          unsigned length = 0;
+          do {
+            length++;
+          } while (islower(c = nextChar()) || isnumber(c) || c == '_');
+
+          m_pos--;
+
+          const char *str = (const char *)calloc(length + 1, 1);
+          memcpy((void *)str, m_input + start, length);
+          m_token = Token(Token::LCID, str);
+        } else if (isupper(c)) {
           auto start = m_pos - 1;
           unsigned length = 0;
           do {
@@ -176,7 +188,7 @@ start:
 
           const char *str = (const char *)calloc(length + 1, 1);
           memcpy((void *)str, m_input + start, length);
-          m_token = Token(Token::ID, str);
+          m_token = Token(Token::UCID, str);
         } else {
           // TODO: proper error here
           std::cerr << "Invalid token `" << c << "`\n";
@@ -194,7 +206,9 @@ start:
   }
 
   Token &Lexer::token(Token::Type type) {
-    assert(m_token.type == type);
+    if (type != m_token.type) {
+      invalidToken();
+    }
     nextToken();
     return m_prevToken;
   }

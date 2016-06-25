@@ -49,6 +49,7 @@ namespace ceos {
 
     void parseGenerics(std::vector<std::string> &generics);
 
+    AST::CallPtr parseConstructor(std::string ucid);
     AST::NodePtr parseIdentifierFunctionOrCall();
     AST::NodePtr parseCall(AST::NodePtr callee);
 
@@ -57,7 +58,7 @@ namespace ceos {
 
     // Base nodes
 
-    AST::NodePtr parseIdentifier(bool checkScope = false);
+    AST::NodePtr parseIdentifier(std::string ns = "");
     AST::NumberPtr parseNumber();
     AST::StringPtr parseString();
     AST::ListPtr parseList();

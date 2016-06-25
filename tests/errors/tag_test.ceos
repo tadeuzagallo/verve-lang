@@ -1,6 +1,6 @@
-type Foo {
-  Bar(Int)
-  Baz(Int)
+type foo {
+  Bar(int)
+  Baz(int)
 }
 
 let Baz(x) = Bar(42) {

@@ -1,4 +1,4 @@
-fn mul(a: Int, b: Int) -> Int {
+fn mul(a: int, b: int) -> int {
   0
 }
 

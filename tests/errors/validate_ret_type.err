@@ -1,3 +1,3 @@
-Type Error: Invalid return type for function: expected `Int` but got `List<Char>`
-1: fn foo() -> Int {
+Type Error: Invalid return type for function: expected `int` but got `list<char>`
+1: fn foo() -> int {
                    ^

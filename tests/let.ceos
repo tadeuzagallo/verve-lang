@@ -2,7 +2,7 @@ let a = 1 {
   print(a)
 }
 
-fn expensive() -> String {
+fn expensive() -> string {
   print("expensive")
   "cheap"
 }
@@ -14,7 +14,7 @@ let cheap = expensive() {
 }
 
 // should not cache value as scope - should access directlyfrom stack
-fn foo(n: Int) -> Void {
+fn foo(n: int) -> void {
   let n_ = n {
     print(n_)
   }

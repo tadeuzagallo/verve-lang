@@ -1,7 +1,7 @@
-type Foo { X(Int) }
-type Bar { Y(Int) }
+type foo { X(int) }
+type bar { Y(int) }
 
-fn _(x: Foo) -> Void {
+fn _(x: foo) -> void {
   let Y(y) = x {
     print(y)
   }

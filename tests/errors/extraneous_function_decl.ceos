@@ -1,1 +1,1 @@
-fn foo<T>(n: T) -> T { n }(1){  }
+fn foo<t>(n: t) -> t { n }(1){  }
