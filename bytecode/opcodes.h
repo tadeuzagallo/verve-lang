@@ -2,6 +2,8 @@
 
 #pragma once
 
+#define WORD_SIZE 8
+
 #define OPCODE_ADDRESS(__op) (uintptr_t)op_##__op,
 
 #define EXTERN_OPCODE(opcode) \
@@ -49,15 +51,3 @@ class Opcode {
 };
 
 }
-
-#define READ_INT(FROM, TO) \
-    int64_t TO; \
-    FROM.read(reinterpret_cast<char *>(&TO), sizeof(TO)); \
-    if (FROM.eof() || FROM.fail()) return
-
-#define READ_STR(FROM, TO) \
-    std::stringstream TO##_; \
-    FROM.get(*TO##_.rdbuf(), '\0'); \
-    std::string TO = TO##_.str(); \
-    FROM.clear(); \
-    FROM.ignore(1);

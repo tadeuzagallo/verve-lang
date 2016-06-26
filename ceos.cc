@@ -3,10 +3,11 @@
 #include <fstream>
 #include <libgen.h>
 
-#include "./parser/lexer.h"
-#include "./parser/parser.h"
-#include "./bytecode/generator.h"
-#include "./runtime/vm.h"
+#include "parser/lexer.h"
+#include "parser/parser.h"
+#include "bytecode/generator.h"
+#include "bytecode/disassembler.h"
+#include "runtime/vm.h"
 
 int main(int argc, char **argv) {
   char *first = argv[1];
@@ -56,7 +57,8 @@ int main(int argc, char **argv) {
   std::stringstream &bytecode = generator.generate();
 
   if (isDebug) {
-    ceos::Generator::disassemble(bytecode);
+    ceos::Disassembler disassembler(std::move(bytecode));
+    disassembler.dump();
   } else if (isCompile) {
     std::ofstream output(argv[3], std::ios_base::binary);
     output << bytecode.str();
