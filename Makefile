@@ -6,6 +6,10 @@ define source_glob
 $(shell find . -name $(1) -not -path './tests/*')
 endef
 
+SUCCESS = ✅
+FAILURE = ❌
+ERROR = ‼️
+
 HEADERS = $(call source_glob, '*.h')
 SOURCES = $(call source_glob, '*.cc') $(call source_glob, '*.S')
 OBJECTS = $(patsubst %,.build/%.o,$(SOURCES))
@@ -39,12 +43,12 @@ error_test: $(ERROR_TESTS)
 	@mkdir -p $$(dirname $@)
 	@sh -c "trap '' 6; ./$(TARGET) $<" > /dev/null 2> $@_; \
 	if [[ $$? == 0 ]]; then \
-		echo "$@: ERROR!"; \
+		echo "$@: $(ERROR)"; \
 	else \
 		diff \
 			-I "libc++abi.dylib: terminating" \
 			-I "Abort trap: 6" \
-			$@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; \
+			$@_ $(word 2, $^) && echo "$@: $(SUCCESS)" || echo "$@: $(FAILURE)"; \
 	fi
 
 CPP_TESTS = $(patsubst %.cc,.build/%.test,$(wildcard tests/cpp/*.cc))
@@ -56,7 +60,7 @@ cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
 	@mkdir -p $$(dirname $@)
 	@$(CC) $(CFLAGS) $< $(filter-out %ceos.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@_
 	@$@_; \
-	if [[ $$? != 0 ]]; then echo "$@: FAIL!"; else echo "$@: OK!"; fi
+	if [[ $$? != 0 ]]; then echo "$@: $(FAILURE)"; else echo "$@: $(SUCCESS)"; fi
 
 # TESTS
 
@@ -70,7 +74,7 @@ test: $(TESTS) error_test cpp_test
 .build/tests/%.test: tests/%.ceos tests/%.out $(TARGET)
 	@mkdir -p $$(dirname $@)
 	-@./$(TARGET) $< > $@_; \
-	if [[ $$? != 0 ]]; then echo "$@: ERROR!"; else diff $@_ $(word 2, $^) && echo "$@: OK!" || echo "$@: FAIL!"; fi
+	if [[ $$? != 0 ]]; then echo "$@: $(ERROR)"; else diff $@_ $(word 2, $^) && echo "$@: $(SUCCESS)" || echo "$@: $(FAILURE)"; fi
 
 .PHONY: tests/%.test
 
