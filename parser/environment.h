@@ -1,8 +1,15 @@
-#include "type.h"
+#include <memory>
+#include <unordered_map>
+#include <string>
 
 #pragma once
 
 namespace ceos {
+  struct Environment;
+  struct Type;
+
+  typedef std::shared_ptr<Environment> EnvPtr;
+
   struct Environment {
     Type *get(std::string typeName) {
       auto env = this;
@@ -17,7 +24,7 @@ namespace ceos {
     }
 
     std::unordered_map<std::string, Type *> types;
-    std::shared_ptr<Environment> parent;
+    EnvPtr parent;
   };
 }
 

@@ -6,9 +6,6 @@
 namespace ceos {
   class TypeChecker {
     public:
-      static void checkCall(AST::CallPtr call, Environment *env, Lexer &lexer);
-      static void checkReturnType(Type *expected, AST::BlockPtr body, Environment *env, Lexer &lexer);
-      static void checkPatternMatch(TypeConstructor *ctor, AST::NodePtr value, Loc loc, Environment *env, Lexer &lexer);
-
+      static void check(AST::NodePtr call, EnvPtr env, Lexer &lexer);
   };
 }

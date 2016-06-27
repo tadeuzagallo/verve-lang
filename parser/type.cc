@@ -3,14 +3,14 @@
 #include "environment.h"
 
 namespace ceos {
-  bool BasicType::accepts(Type *other, __unused Environment *env) {
+  bool BasicType::accepts(Type *other, __unused EnvPtr env) {
     if (auto t = dynamic_cast<BasicType *>(other)) {
       return typeName == t->typeName;
     }
     return false;
   }
 
-  bool GenericType::accepts(Type *other, Environment *env) {
+  bool GenericType::accepts(Type *other, EnvPtr env) {
     if (auto t = env->get(typeName)) {
       if (t != this) {
         return t->accepts(other, env);
@@ -25,7 +25,7 @@ namespace ceos {
     return false;
   }
 
-  bool DataTypeInstance::accepts(Type *other, Environment *env) {
+  bool DataTypeInstance::accepts(Type *other, EnvPtr env) {
     DataTypeInstance *t;
     if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
       return false;
@@ -44,7 +44,7 @@ namespace ceos {
     return true;
   }
 
-  bool TypeFunction::accepts(Type *other, Environment *env) {
+  bool TypeFunction::accepts(Type *other, EnvPtr env) {
     TypeFunction *t;
     if (!(t = dynamic_cast<TypeFunction *>(other))) {
       return false;
@@ -60,7 +60,7 @@ namespace ceos {
     return true;
   }
 
-  bool TypeInterface::accepts(Type *other, Environment *env) {
+  bool TypeInterface::accepts(Type *other, EnvPtr env) {
     if (other == this) {
       return true;
     }
@@ -75,14 +75,14 @@ namespace ceos {
     return false;
   }
 
-  bool TypeConstructor::accepts(Type *other, Environment *env) {
+  bool TypeConstructor::accepts(Type *other, EnvPtr env) {
     if (owner) {
       return owner->accepts(other, env);
     }
     return false;
   }
 
-  bool EnumType::accepts(Type *other, __unused Environment *env) {
+  bool EnumType::accepts(Type *other, __unused EnvPtr env) {
     if (auto ctor = dynamic_cast<TypeConstructor *>(other)) {
       return ctor->type->returnType == this;
     }

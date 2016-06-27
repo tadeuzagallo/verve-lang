@@ -42,6 +42,9 @@ namespace ceos {
       }
       auto node = parseDecl();
       if (node) {
+        pushTypeScope();
+        TypeChecker::check(node, m_environment, m_lexer);
+        popTypeScope();
         program->body->nodes.push_back(node);
       }
     }
@@ -350,7 +353,6 @@ namespace ceos {
 
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
-    TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment.get(), m_lexer);
 
     popScope();
 
@@ -386,7 +388,6 @@ namespace ceos {
 
     fn->needsScope = m_scope->isRequired;
     fn->capturesScope = m_scope->capturesScope;
-    TypeChecker::checkReturnType(fnType->returnType, fn->body, m_environment.get(), m_lexer);
 
     popScope();
 
@@ -419,7 +420,6 @@ namespace ceos {
     while (!next('{')) {
       if (next(Token::UCID)) {
         auto name = token(Token::UCID).string();
-        auto loc = token().loc;
         auto ctor = getType<TypeConstructor *>(name);
         assert(ctor);
 
@@ -458,7 +458,6 @@ namespace ceos {
 
         auto object = parseExpr();
         tagTest->object = object;
-        TypeChecker::checkPatternMatch(ctor, object, loc, m_environment.get(), m_lexer);
         for (auto load : let->loads) {
           AST::asObjectLoad(load->value)->object = object;
           m_scope->set(load->name, load);
@@ -650,8 +649,6 @@ namespace ceos {
     }
     match(')');
 
-    //TypeChecker::checkCtor(ctor, m_environment.get(), m_lexer);
-
     return ctor;
   }
 
@@ -676,10 +673,6 @@ namespace ceos {
       if (!skip(',')) break;
     }
     match(')');
-
-    pushTypeScope();
-    TypeChecker::checkCall(call, m_environment.get(), m_lexer);
-    popTypeScope();
 
     return parseCall(call);
   }

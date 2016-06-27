@@ -28,11 +28,11 @@ namespace ceos {
     AST::BlockPtr parseInterface();
     AST::BlockPtr parseImplementation();
 
-    TypeFunction *parseVirtual(std::shared_ptr<Environment> declScope = nullptr);
-    TypeFunction *parseExtern(std::shared_ptr<Environment> declScope = nullptr, std::string implementationSuffix = "");
+    TypeFunction *parseVirtual(EnvPtr declScope = nullptr);
+    TypeFunction *parseExtern(EnvPtr declScope = nullptr, std::string implementationSuffix = "");
     TypeFunction *parsePrototype(std::string implementationSuffix = "");
 
-    AST::FunctionPtr parseTypelessFunction(std::string implementationName, std::shared_ptr<Environment> declScope = nullptr);
+    AST::FunctionPtr parseTypelessFunction(std::string implementationName, EnvPtr declScope = nullptr);
     AST::FunctionPtr parseFunction();
 
     AST::IfPtr parseIf();
@@ -66,7 +66,7 @@ namespace ceos {
 
     // Type helpers
 
-    void setType(std::string typeName, Type *type, std::shared_ptr<Environment> env = nullptr);
+    void setType(std::string typeName, Type *type, EnvPtr env = nullptr);
     template<typename T = Type *> T getType(std::string typeName);
 
     void pushTypeScope();
@@ -95,7 +95,7 @@ namespace ceos {
     // Properties
 
     Lexer &m_lexer;
-    std::shared_ptr<Environment> m_environment;
+    EnvPtr m_environment;
     ParseScopePtr m_scope;
     std::vector<AST::BlockPtr> m_blockStack;
     std::string m_dirname;

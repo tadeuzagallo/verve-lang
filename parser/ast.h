@@ -88,7 +88,7 @@ namespace AST {
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
-    std::shared_ptr<Environment> env;
+    EnvPtr env;
   };
 
   struct Number : public Node {
