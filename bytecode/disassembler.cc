@@ -51,13 +51,18 @@ namespace ceos {
     dumpFunctions();
     dumpText();
 
+    assert(m_bytecode.eof());
   }
 
   void Disassembler::dumpStrings() {
-    assert(read() == Section::Strings);
+    auto header = read();
+    if (header != Section::Strings) {
+      m_bytecode.seekg(-sizeof(header), m_bytecode.cur);
+      return;
+    }
 
     m_padding = "";
-    write(1) << "STRINGS:";
+    write(2) << "STRINGS:";
     m_padding = "  ";
 
     unsigned str_index = 0;
@@ -67,17 +72,22 @@ namespace ceos {
         return;
       }
       m_bytecode.seekg(-sizeof(ceos), m_bytecode.cur);
+      auto p = m_bytecode.tellg();
       auto str = readStr();
       while (m_bytecode.peek() == '\1') {
         m_bytecode.get();
       }
       m_strings.push_back(str);
-      write((float)(str.length() + 1)/WORD_SIZE) <<  "$" << str_index++ << ": " << str;
+      write((float)(m_bytecode.tellg() - p)/WORD_SIZE) <<  "$" << str_index++ << ": " << str;
     }
   }
 
   void Disassembler::dumpFunctions() {
-    assert(read() == Section::Functions);
+    auto header = read();
+    if (header != Section::Functions) {
+      m_bytecode.seekg(-sizeof(header), m_bytecode.cur);
+      return;
+    }
 
     m_padding = "";
     write(1) << "FUNCTIONS:";
@@ -120,7 +130,11 @@ namespace ceos {
   }
 
   void Disassembler::dumpText() {
-    assert(read() == Section::Text);
+    auto header = read();
+    if (header != Section::Text) {
+      m_bytecode.seekg(-sizeof(header), m_bytecode.cur);
+      return;
+    }
 
     m_padding = "";
     write(1) << "TEXT:";
