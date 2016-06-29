@@ -82,6 +82,8 @@ namespace ceos {
       write(uniqueString(fn->parameters[i]->name));
     }
 
+    m_slots.clear();
+    stackSlot = 0;
     capturesScope = fn->capturesScope;
     fn->body->generateBytecode(this);
 
@@ -159,6 +161,15 @@ void Call::generateBytecode(Generator *gen) {
 
 
 void Identifier::generateBytecode(Generator *gen) {
+  if (!isCaptured) {
+    auto it = gen->m_slots.find(name);
+    if (it != gen->m_slots.end()) {
+      gen->emitOpcode(Opcode::stack_load);
+      gen->write(it->second);
+      return;
+    }
+  }
+
   gen->emitOpcode(Opcode::lookup);
   auto name = namespaced(ns, this->name);
   gen->write(gen->uniqueString(name));
@@ -222,29 +233,6 @@ void Block::generateBytecode(Generator *gen) {
   }
 }
 
-void ObjectTagTest::generateBytecode(Generator *gen) {
-  object->generateBytecode(gen);
-  gen->emitOpcode(Opcode::obj_tag_test);
-  gen->write(tag);
-}
-
-void ObjectLoad::generateBytecode(Generator *gen) {
-  object->generateBytecode(gen);
-  gen->emitOpcode(Opcode::obj_load);
-  gen->write(offset);
-}
-
-void StackStore::generateBytecode(Generator *gen) {
-  value->generateBytecode(gen);
-  gen->emitOpcode(Opcode::stack_store);
-  gen->write(slot);
-}
-
-void StackLoad::generateBytecode(Generator *gen) {
-  gen->emitOpcode(Opcode::stack_load);
-  gen->write(slot);
-}
-
 void BinaryOperation::generateBytecode(Generator *gen) {
   rhs->generateBytecode(gen);
   lhs->generateBytecode(gen);
@@ -293,13 +281,31 @@ void Match::generateBytecode(Generator *gen) {
     gen->emitOpcode(Opcode::call);
     gen->write(2);
 
+    gen->emitOpcode(Opcode::jz);
+    auto offset = gen->m_output.tellp();
+    gen->write(0);
+    for (unsigned j = 0; j < kase->pattern->values.size(); j++) {
+      auto slot = gen->stackSlot++;
+      gen->m_slots[kase->pattern->values[j]->name] = slot;
+      value->generateBytecode(gen);
+      gen->emitOpcode(Opcode::obj_load);
+      gen->write(j);
+      gen->emitOpcode(Opcode::stack_store);
+      gen->write(slot);
+    }
+    kase->body->generateBytecode(gen);
+    auto end = gen->m_output.tellp();
+    gen->m_output.seekp(offset);
 
-    for (int j = kase->pattern->stores.size() - 1; j >= 0; j--) {
-      kase->body->nodes.insert(kase->body->nodes.begin(), kase->pattern->stores[j]);
+    unsigned extra = WORD_SIZE;
+    auto jmp = i < size - 1;
+    if (jmp) {
+      extra += 2 * WORD_SIZE;
     }
 
-    auto jmp = i < size - 1;
-    gen->emitJmp(Opcode::jz, kase->body, jmp);
+    gen->write((unsigned)(end - offset) + extra);
+    gen->m_output.seekp(end);
+
     if (jmp) {
       gen->emitOpcode(Opcode::jmp);
       pos[i] = gen->m_output.tellp();
@@ -317,21 +323,55 @@ void Match::generateBytecode(Generator *gen) {
 }
 
 void Let::generateBytecode(Generator *gen) {
-  for (auto store : stores) {
-    store->generateBytecode(gen);
-  }
-
-  for (auto load : loads) {
-    if (load->isCaptured) {
-      gen->emitOpcode(Opcode::stack_load);
-      gen->write(load->slot);
-
-      gen->emitOpcode(Opcode::put_to_scope);
-      gen->write(gen->uniqueString(load->name));
-    }
+  for (auto assignment : assignments) {
+    assignment->generateBytecode(gen);
   }
 
   block->generateBytecode(gen);
+}
+
+static void handleCapture(AST::IdentifierPtr ident, unsigned stackSlot, Generator *gen) {
+  if (ident->isCaptured) {
+    gen->emitOpcode(Opcode::stack_load);
+    gen->write(stackSlot);
+    gen->emitOpcode(Opcode::put_to_scope);
+    gen->write(gen->uniqueString(ident->name));
+  }
+}
+
+void Assignment::generateBytecode(Generator *gen) {
+  if (left->type == AST::Type::Identifier) {
+    auto ident = AST::asIdentifier(left);
+    auto slot = gen->stackSlot++;
+    value->generateBytecode(gen);
+    gen->m_slots[ident->name] = slot;
+    gen->emitOpcode(Opcode::stack_store);
+    gen->write(slot);
+
+    handleCapture(ident, slot, gen);
+  } else if (left->type == AST::Type::Pattern) {
+    auto pattern = AST::asPattern(left);
+    value->generateBytecode(gen);
+
+    gen->emitOpcode(Opcode::obj_tag_test);
+    gen->write(pattern->tag);
+
+    for (unsigned i = 0; i < pattern->values.size(); i++) {
+      value->generateBytecode(gen);
+      gen->emitOpcode(Opcode::obj_load);
+      gen->write(i);
+
+      auto slot = gen->stackSlot++;
+      auto ident = pattern->values[i];
+      gen->m_slots[ident->name] = slot;
+      gen->emitOpcode(Opcode::stack_store);
+      gen->write(slot);
+
+      handleCapture(ident, slot, gen);
+    }
+  } else {
+    assert(false);
+  }
 }
 
 void Constructor::generateBytecode(Generator *gen) {

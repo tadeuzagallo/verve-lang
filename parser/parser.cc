@@ -418,64 +418,25 @@ namespace ceos {
     let->block->env = m_environment;
 
     while (!next('{')) {
-      if (next(Token::UCID)) {
-        auto name = token(Token::UCID).string();
-        auto ctor = getType<TypeConstructor *>(name);
-        assert(ctor);
+      auto assignment = AST::createAssignment(token().loc);
 
-        auto tagTest = AST::createObjectTagTest(token().loc);
-        tagTest->tag = ctor->tag;
-        let->block->nodes.push_back(tagTest);
-
-        auto offset = 0u;
-        match('(');
-        while (!next(')')) {
-          auto load = AST::createObjectLoad(token().loc);
-          load->offset = offset++;
-          load->constructorName = name;
-
-          auto store = AST::createStackStore(token().loc);
-          store->slot = m_blockStack.back()->stackSlots++;
-          store->value = load;
-          let->stores.push_back(store);
-
-          auto stackLoad = AST::createStackLoad(token().loc);
-          stackLoad->slot = store->slot;
-          stackLoad->value = load;
-          stackLoad->name = token(Token::LCID).string();
-          stackLoad->isCaptured = true;
-          let->loads.push_back(stackLoad);
-
-          setType(stackLoad->name, ctor->type->types[load->offset]);
-
-          if (!skip(',')) break;
-        }
-        match(')');
-
-        match('=');
-
-        // assert(loads.size() == ctor->type->types.size()); ??
-
-        auto object = parseExpr();
-        tagTest->object = object;
-        for (auto load : let->loads) {
-          AST::asObjectLoad(load->value)->object = object;
-          m_scope->set(load->name, load);
-        }
+      bool isIdent = false;
+      if (next(Token::LCID)) {
+        m_blockStack.back()->stackSlots++;
+        assignment->left = parseIdentifier();
+        isIdent = true;
       } else {
-        auto name = token(Token::LCID).string();
+        assignment->left = parsePattern();
+      }
 
-        match('=');
+      match('=');
+      assignment->value = parseExpr();
+      let->assignments.push_back(assignment);
 
-        auto store = AST::createStackStore(token().loc);
-        store->slot = m_blockStack.back()->stackSlots++;
-        store->value = parseExpr();
-        let->block->nodes.push_back(store);
-
-        auto load = AST::createStackLoad(token().loc);
-        load->slot = store->slot;
-        load->value = store->value;
-        m_scope->set(name, load);
+      if (isIdent) {
+        auto ident = AST::asIdentifier(assignment->left);
+        setType(ident->name, TypeChecker::typeof(assignment->value, m_environment, m_lexer));
+        m_scope->set(ident->name, ident);
       }
     }
 
@@ -501,7 +462,7 @@ namespace ceos {
       pushScope();
 
       auto kase = AST::createCase(token().loc);
-      kase->pattern = parsePattern(match->value);
+      kase->pattern = parsePattern();
       this->match(TUPLE_TOKEN('=', '>'));
       kase->body = parseExprOrBody();
       kase->body->env = m_environment;
@@ -513,36 +474,22 @@ namespace ceos {
     return match;
   }
 
-  AST::PatternPtr Parser::parsePattern(AST::NodePtr value) {
+  AST::PatternPtr Parser::parsePattern() {
     auto pattern = AST::createPattern(token().loc);
+    pattern->constructorName = token(Token::UCID).string();
 
-    auto name = token(Token::UCID).string();
-    auto ctor = getType<TypeConstructor *>(name);
-    assert(ctor);
-
+    auto ctor = getType<TypeConstructor *>(pattern->constructorName);
     pattern->tag = ctor->tag;
 
     match('(');
-    auto offset = 0u;
+    unsigned i = 0;
     while (!next(')')) {
-      auto load = AST::createObjectLoad(token().loc);
-      load->offset = offset++;
-      load->object = value;
-      load->constructorName = name;
+      m_blockStack.back()->stackSlots++;
 
-      auto name = token(Token::LCID).string();
-
-      auto store = AST::createStackStore(token().loc);
-      store->slot = m_blockStack.back()->stackSlots++;
-      store->value = load;
-
-      pattern->stores.push_back(store);
-
-      auto stackLoad = AST::createStackLoad(token().loc);
-      stackLoad->slot = store->slot;
-      stackLoad->value = load;
-      m_scope->set(name, stackLoad);
-
+      auto ident = AST::asIdentifier(parseIdentifier());
+      m_scope->set(ident->name, ident);
+      setType(ident->name, ctor->type->types[i++]);
+      pattern->values.push_back(ident);
       if (!skip(',')) break;
     }
     match(')');
@@ -683,7 +630,7 @@ namespace ceos {
     auto loc = token().loc;
     auto name = namespaced(ns, token(Token::LCID).string());
     auto var = m_scope->get(name);
-    if (var && (var->type == AST::Type::FunctionParameter || var->type == AST::Type::StackLoad)) {
+    if (auto ident = dynamic_cast<AST::Identifier *>(var.get())) {
       ParseScopePtr scope;
       if ((scope = m_scope->scopeFor(name)) != m_scope) {
         bool shouldCapture = false;
@@ -697,11 +644,7 @@ namespace ceos {
         }
 
         if (shouldCapture) {
-          if (var->type == AST::Type::FunctionParameter) {
-            AST::asFunctionParameter(var)->isCaptured = true;
-          } else if (var->type == AST::Type::StackLoad) {
-            AST::asStackLoad(var)->isCaptured = true;
-          }
+          ident->isCaptured = true;
           scope->isRequired = true;
           m_scope->capturesScope = true;
           goto ident;

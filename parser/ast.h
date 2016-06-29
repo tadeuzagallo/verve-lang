@@ -42,10 +42,6 @@ static unsigned str_uid = 0;
       Function, \
       FunctionParameter, \
       If, \
-      ObjectTagTest, \
-      ObjectLoad, \
-      StackStore, \
-      StackLoad, \
       BinaryOperation, \
       UnaryOperation, \
       List, \
@@ -53,7 +49,8 @@ static unsigned str_uid = 0;
       Case, \
       Pattern, \
       Let, \
-      Constructor
+      Constructor, \
+      Assignment
 
 namespace ceos {
   struct Generator;
@@ -106,6 +103,7 @@ namespace AST {
 
     std::string name;
     std::string ns;
+    bool isCaptured;
   };
 
   struct String : public Identifier {
@@ -120,7 +118,6 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
 
     unsigned index;
-    bool isCaptured;
   };
 
   struct Call : public Node {
@@ -153,45 +150,6 @@ namespace AST {
     NodePtr condition;
     BlockPtr ifBody;
     BlockPtr elseBody;
-  };
-
-  struct ObjectTagTest : public Node {
-    using Node::Node;
-
-    virtual void generateBytecode(Generator *gen);
-
-    NodePtr object;
-    unsigned tag;
-  };
-
-  struct ObjectLoad : public Node {
-    using Node::Node;
-
-    virtual void generateBytecode(Generator *gen);
-
-    NodePtr object;
-    std::string constructorName;
-    unsigned offset;
-  };
-
-  struct StackStore : public Node {
-    using Node::Node;
-
-    virtual void generateBytecode(Generator *gen);
-
-    unsigned slot;
-    NodePtr value;
-  };
-
-  struct StackLoad : public Node {
-    using Node::Node;
-
-    virtual void generateBytecode(Generator *gen);
-
-    bool isCaptured;
-    std::string name;
-    unsigned slot;
-    NodePtr value;
   };
 
   struct BinaryOperation : public Node {
@@ -229,7 +187,8 @@ namespace AST {
     }
 
     unsigned tag;
-    std::vector<StackStorePtr> stores;
+    std::string constructorName;
+    std::vector<IdentifierPtr> values;
   };
 
   struct Case : public Node {
@@ -252,13 +211,21 @@ namespace AST {
     std::vector<CasePtr> cases;
   };
 
+  struct Assignment : public Node {
+    using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
+
+    NodePtr left;
+    NodePtr value;
+  };
+
   struct Let : public Node {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
 
-    std::vector<StackLoadPtr> loads;
-    std::vector<StackStorePtr> stores;
+    std::vector<AssignmentPtr> assignments;
     BlockPtr block;
   };
 

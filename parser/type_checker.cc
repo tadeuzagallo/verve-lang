@@ -143,9 +143,6 @@ static Type *_getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
     case AST::Type::FunctionParameter:
       return env->get(AST::asFunctionParameter(node)->name);
 
-    case AST::Type::StackLoad:
-      return getType(AST::asStackLoad(node)->value, env, lexer);
-
     case AST::Type::Block:
       {
         auto block = AST::asBlock(node);
@@ -184,16 +181,6 @@ static Type *_getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
           }
         }
         return iffType;
-      }
-
-    case AST::Type::ObjectLoad:
-      {
-        auto load = AST::asObjectLoad(node);
-        auto type = env->get(load->constructorName);
-        if (auto ctor = dynamic_cast<TypeConstructor *>(type)) {
-          return ctor->type->types[load->offset];
-        }
-        throw std::runtime_error("type error");
       }
 
     case AST::Type::List:
@@ -240,19 +227,28 @@ static Type *_getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
     case AST::Type::Let:
       {
         auto let = AST::asLet(node);
-        for (auto load : let->loads) {
-          if (load->value->type != AST::Type::ObjectLoad)
-            continue;
-          auto l = AST::asObjectLoad(load->value);
-          auto valueType = simplifyType(getType(l->object, env, lexer), env);
-          auto ctor = dynamic_cast<TypeConstructor *>(env->get(l->constructorName));
-          if (!valueType->accepts(ctor, env)) {
-            fprintf(stderr, "Type Error: Trying to pattern match value of type `%s` with constructor `%s`\n", valueType->toString().c_str(), ctor->toString().c_str());
-            lexer.printSource(let->loc);
-            throw std::runtime_error("type error");
-          }
+        for (auto assignment : let->assignments) {
+          assert(getType(assignment, env, lexer));
         }
         return getType(let->block, env, lexer);
+      }
+
+    case AST::Type::Assignment:
+      {
+        auto assignment = AST::asAssignment(node);
+        auto valueType = getType(assignment->value, env, lexer);
+        if (assignment->left->type == AST::Type::Pattern) {
+          auto pattern = AST::asPattern(assignment->left);
+          auto patternType = env->get(pattern->constructorName);
+          if (!valueType->accepts(patternType, env)) {
+            fprintf(stderr, "Type Error: Trying to pattern match value of type `%s` with constructor `%s`\n", valueType->toString().c_str(), patternType->toString().c_str());
+            lexer.printSource(pattern->loc);
+            throw std::runtime_error("type error");
+          }
+        } else {
+          assert(assignment->left->type == AST::Type::Identifier);
+        }
+        return valueType;
       }
 
     case AST::Type::Constructor:
@@ -262,12 +258,6 @@ static Type *_getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
         auto ctorType = dynamic_cast<TypeConstructor *>(type);
         assert(ctorType);
         return typeCheckArguments(ctor->arguments, ctorType->type, env, lexer, ctor->loc);
-      }
-
-    case AST::Type::ObjectTagTest:
-    case AST::Type::StackStore:
-      {
-        return env->get("void");
       }
 
     default:
@@ -282,6 +272,10 @@ static Type *getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
   auto t = _getType(node, _env, lexer);
 
   return t;
+}
+
+Type *TypeChecker::typeof(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
+  return getType(node, env, lexer);
 }
 
 void TypeChecker::check(AST::NodePtr node, EnvPtr env, Lexer &lexer) {

@@ -33,9 +33,11 @@ namespace ceos {
       std::stringstream m_output;
       std::vector<std::string> m_strings;
       std::vector<AST::Function *> m_functions;
+      std::unordered_map<std::string, unsigned> m_slots;
       bool m_isDebug;
 
       unsigned lookupID = 1;
+      unsigned stackSlot = 0;
       bool capturesScope = true;
   };
 

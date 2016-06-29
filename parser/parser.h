@@ -38,7 +38,7 @@ namespace ceos {
     AST::IfPtr parseIf();
     AST::LetPtr parseLet();
     AST::MatchPtr parseMatch();
-    AST::PatternPtr parsePattern(AST::NodePtr value);
+    AST::PatternPtr parsePattern();
 
     AST::BlockPtr parseExprOrBody();
     AST::BlockPtr parseBody(AST::BlockPtr block = nullptr);

@@ -7,5 +7,6 @@ namespace ceos {
   class TypeChecker {
     public:
       static void check(AST::NodePtr call, EnvPtr env, Lexer &lexer);
+      static Type *typeof(AST::NodePtr call, EnvPtr env, Lexer &lexer);
   };
 }
