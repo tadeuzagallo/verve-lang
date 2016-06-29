@@ -40,7 +40,7 @@ namespace ceos {
   }
 
   int Disassembler::calculateJmpTarget(int target) {
-    return (int)m_bytecode.tellg() - (2 * WORD_SIZE) + target;
+    return (int)m_bytecode.tellg() - WORD_SIZE + target;
   }
 
   void Disassembler::dump() {
