@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
   class Lexer;
   class Token;
 

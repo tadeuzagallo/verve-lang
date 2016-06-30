@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
   class ParseScope;
 
   typedef std::shared_ptr<ParseScope> ParseScopePtr;

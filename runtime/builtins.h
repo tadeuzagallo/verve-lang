@@ -6,7 +6,7 @@
       __attribute__((unused)) Value *argv, \
       __attribute__((unused)) VM *vm)
 
-namespace verve {
+namespace Verve {
   class VM;
   struct Value;
 

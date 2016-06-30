@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
 
   struct Environment;
   struct Type;

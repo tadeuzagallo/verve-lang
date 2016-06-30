@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-namespace verve {
+namespace Verve {
 
 class LexerTest {
   public:
@@ -38,6 +38,6 @@ class LexerTest {
 }
 
 int main() {
-  verve::LexerTest::test();
+  Verve::LexerTest::test();
   return 0;
 }

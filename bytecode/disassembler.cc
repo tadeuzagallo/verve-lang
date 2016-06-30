@@ -5,7 +5,7 @@
 
 #include "disassembler.h"
 
-namespace verve {
+namespace Verve {
   Disassembler::Disassembler(std::stringstream &&bytecode):
     m_bytecode(std::move(bytecode))
   {

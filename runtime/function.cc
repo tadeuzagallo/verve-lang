@@ -2,7 +2,7 @@
 
 #include "vm.h"
 
-namespace verve {
+namespace Verve {
 
   String Function::name(VM *vm) {
     return vm->m_stringTable[id];

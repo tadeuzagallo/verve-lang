@@ -7,7 +7,7 @@ extern "C" void *builtin_sub();
 extern "C" void *builtin_add();
 extern "C" void *builtin_lt();
 
-namespace verve {
+namespace Verve {
 
   void registerBuiltins(VM &vm) {
 

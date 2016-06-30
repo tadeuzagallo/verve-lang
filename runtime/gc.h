@@ -13,7 +13,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
 
   typedef std::vector<std::pair<size_t, void *>> Heap;
 

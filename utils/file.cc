@@ -7,7 +7,7 @@
 #include <cstdio>
 #include <fstream>
 
-namespace verve {
+namespace Verve {
 
 Parser parseFile(std::string filename, std::string dirname, std::string ns) {
   filename = dirname + "/" + filename + ".v";

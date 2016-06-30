@@ -42,28 +42,28 @@ int main(int argc, char **argv) {
   fclose(prelude);
   fclose(source);
 
-  verve::Lexer lexer(input, preludeSize + 1);
+  Verve::Lexer lexer(input, preludeSize + 1);
 
   char *dir = dirname(filename);
 
-  verve::Parser parser(lexer, dir);
+  Verve::Parser parser(lexer, dir);
 
-  std::shared_ptr<verve::AST::Program> ast = parser.parse();
+  std::shared_ptr<Verve::AST::Program> ast = parser.parse();
 
   free(input);
 
-  verve::Generator generator(ast, isDebug);
+  Verve::Generator generator(ast, isDebug);
 
   std::stringstream &bytecode = generator.generate();
 
   if (isDebug) {
-    verve::Disassembler disassembler(std::move(bytecode));
+    Verve::Disassembler disassembler(std::move(bytecode));
     disassembler.dump();
   } else if (isCompile) {
     std::ofstream output(argv[3], std::ios_base::binary);
     output << bytecode.str();
   } else {
-    verve::VM vm(bytecode);
+    Verve::VM vm(bytecode);
     vm.execute();
   }
 

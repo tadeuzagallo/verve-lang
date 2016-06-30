@@ -5,7 +5,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
   class VM;
 
   struct Function {

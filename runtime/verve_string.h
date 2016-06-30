@@ -6,7 +6,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
 
 class String {
   public:

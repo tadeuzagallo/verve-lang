@@ -9,7 +9,7 @@
 
 #define DEFAULT_SIZE 8
 
-namespace verve {
+namespace Verve {
   class ScopeTest;
 
   struct Scope {

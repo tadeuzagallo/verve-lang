@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-namespace verve {
+namespace Verve {
 
 class ScopeTest {
   public:
@@ -63,6 +63,6 @@ class ScopeTest {
 }
 
 int main() {
-  verve::ScopeTest::test();
+  Verve::ScopeTest::test();
   return 0;
 }

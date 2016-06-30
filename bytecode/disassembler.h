@@ -4,7 +4,7 @@
 #include "opcodes.h"
 #include "sections.h"
 
-namespace verve {
+namespace Verve {
 
 class Disassembler {
 public:

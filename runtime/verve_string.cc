@@ -1,6 +1,6 @@
 #include "verve_string.h"
 
-namespace verve {
+namespace Verve {
 
 unsigned String::s_size;
 String::Entry *String::s_strings;

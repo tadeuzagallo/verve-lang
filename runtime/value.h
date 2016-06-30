@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace verve {
+namespace Verve {
   class VM;
   struct Closure;
 
@@ -139,4 +139,4 @@ namespace verve {
   }
 }
 
-using Builtin = verve::Value::Builtin;
+using Builtin = Verve::Value::Builtin;
