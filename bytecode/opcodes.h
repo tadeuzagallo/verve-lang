@@ -36,7 +36,7 @@
 
 EVAL(MAP(EXTERN_OPCODE, OPCODES))
 
-namespace ceos {
+namespace verve {
 
 class Opcode {
   public:

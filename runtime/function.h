@@ -1,11 +1,11 @@
 #include <iostream>
 #include <vector>
 
-#include "ceos_string.h"
+#include "verve_string.h"
 
 #pragma once
 
-namespace ceos {
+namespace verve {
   class VM;
 
   struct Function {

@@ -1,5 +1,5 @@
 *.o
 *.dSYM
-ceos
+verve
 **/*.test_
 .build

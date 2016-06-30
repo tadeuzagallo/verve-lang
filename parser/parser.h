@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace ceos {
+namespace verve {
   class Lexer;
   class Token;
 

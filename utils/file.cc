@@ -7,10 +7,10 @@
 #include <cstdio>
 #include <fstream>
 
-namespace ceos {
+namespace verve {
 
 Parser parseFile(std::string filename, std::string dirname, std::string ns) {
-  filename = dirname + "/" + filename + ".ceos";
+  filename = dirname + "/" + filename + ".v";
 
   FILE *source = fopen(filename.c_str(), "r");
   fseek(source, 0, SEEK_END);

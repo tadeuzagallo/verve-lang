@@ -7,7 +7,7 @@
 
 #pragma once
 
-namespace ceos {
+namespace verve {
 
   struct Generator {
       Generator(AST::ProgramPtr ast, bool isDebug) :

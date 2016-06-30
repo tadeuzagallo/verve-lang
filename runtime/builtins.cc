@@ -7,7 +7,7 @@ extern "C" void *builtin_sub();
 extern "C" void *builtin_add();
 extern "C" void *builtin_lt();
 
-namespace ceos {
+namespace verve {
 
   void registerBuiltins(VM &vm) {
 

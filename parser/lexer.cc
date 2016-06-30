@@ -41,7 +41,7 @@
 // 4: * / %
 // 5: (prefixes) ! -
 
-namespace ceos {
+namespace verve {
 
   char Lexer::nextChar() {
     char c = m_input[m_pos];

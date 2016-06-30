@@ -4,7 +4,7 @@
 
 #include "parser/parser.h"
 
-namespace ceos {
+namespace verve {
 
   std::stringstream &Generator::generate() {
     m_ast->generateBytecode(this);

@@ -5,7 +5,7 @@
 
 #pragma once
 
-namespace ceos {
+namespace verve {
   struct Pos {
     int line;
     int column;

@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
   auto filename = isDebug || isCompile ? argv[2] : argv[1];
 
-  FILE *prelude = fopen("runtime/builtins.ceos", "r");
+  FILE *prelude = fopen("runtime/builtins.v", "r");
   FILE *source = fopen(filename, "r");
   fseek(prelude, 0, SEEK_END);
   fseek(source, 0, SEEK_END);
@@ -42,28 +42,28 @@ int main(int argc, char **argv) {
   fclose(prelude);
   fclose(source);
 
-  ceos::Lexer lexer(input, preludeSize + 1);
+  verve::Lexer lexer(input, preludeSize + 1);
 
   char *dir = dirname(filename);
 
-  ceos::Parser parser(lexer, dir);
+  verve::Parser parser(lexer, dir);
 
-  std::shared_ptr<ceos::AST::Program> ast = parser.parse();
+  std::shared_ptr<verve::AST::Program> ast = parser.parse();
 
   free(input);
 
-  ceos::Generator generator(ast, isDebug);
+  verve::Generator generator(ast, isDebug);
 
   std::stringstream &bytecode = generator.generate();
 
   if (isDebug) {
-    ceos::Disassembler disassembler(std::move(bytecode));
+    verve::Disassembler disassembler(std::move(bytecode));
     disassembler.dump();
   } else if (isCompile) {
     std::ofstream output(argv[3], std::ios_base::binary);
     output << bytecode.str();
   } else {
-    ceos::VM vm(bytecode);
+    verve::VM vm(bytecode);
     vm.execute();
   }
 

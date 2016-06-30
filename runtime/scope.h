@@ -1,4 +1,4 @@
-#include "ceos_string.h"
+#include "verve_string.h"
 #include "value.h"
 
 #include <cassert>
@@ -9,7 +9,7 @@
 
 #define DEFAULT_SIZE 8
 
-namespace ceos {
+namespace verve {
   class ScopeTest;
 
   struct Scope {

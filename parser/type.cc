@@ -2,7 +2,7 @@
 
 #include "environment.h"
 
-namespace ceos {
+namespace verve {
   bool BasicType::accepts(Type *other, __unused EnvPtr env) {
     if (auto t = dynamic_cast<BasicType *>(other)) {
       return typeName == t->typeName;

@@ -3,12 +3,12 @@
 #include <string>
 #include <vector>
 
-#include "ceos_string.h"
+#include "verve_string.h"
 #include "utils/macros.h"
 
 #pragma once
 
-namespace ceos {
+namespace verve {
   class VM;
   struct Closure;
 
@@ -139,4 +139,4 @@ namespace ceos {
   }
 }
 
-using Builtin = ceos::Value::Builtin;
+using Builtin = verve::Value::Builtin;

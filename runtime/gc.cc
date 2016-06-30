@@ -1,6 +1,6 @@
 #include "gc.h"
 
-namespace ceos {
+namespace verve {
 
   std::set<uint64_t> GC::roots;
   std::set<Scope *> GC::scopes;

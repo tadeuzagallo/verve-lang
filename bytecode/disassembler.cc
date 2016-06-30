@@ -5,7 +5,7 @@
 
 #include "disassembler.h"
 
-namespace ceos {
+namespace verve {
   Disassembler::Disassembler(std::stringstream &&bytecode):
     m_bytecode(std::move(bytecode))
   {
@@ -44,8 +44,8 @@ namespace ceos {
   }
 
   void Disassembler::dump() {
-    auto ceos = read();
-    assert(ceos == Section::Header);
+    auto verve = read();
+    assert(verve == Section::Header);
 
     dumpStrings();
     dumpFunctions();
@@ -67,11 +67,11 @@ namespace ceos {
 
     unsigned str_index = 0;
     while (true) {
-      auto ceos = read();
-      if (ceos == Section::Header)  {
+      auto verve = read();
+      if (verve == Section::Header)  {
         return;
       }
-      m_bytecode.seekg(-sizeof(ceos), m_bytecode.cur);
+      m_bytecode.seekg(-sizeof(verve), m_bytecode.cur);
       auto p = m_bytecode.tellg();
       auto str = readStr();
       while (m_bytecode.peek() == '\1') {

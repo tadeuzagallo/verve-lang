@@ -6,7 +6,7 @@
 
 #include "utils/file.h"
 
-namespace ceos {
+namespace verve {
   Parser::Parser(Lexer &lexer, std::string dirname, std::string ns) :
     m_lexer(lexer), m_dirname(dirname), m_ns(ns)
   {

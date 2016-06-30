@@ -1,5 +1,5 @@
 #include "builtins.h"
-#include "ceos_string.h"
+#include "verve_string.h"
 #include "closure.h"
 #include "gc.h"
 #include "function.h"
@@ -12,7 +12,7 @@
 
 #pragma once
 
-namespace ceos {
+namespace verve {
 
   class VM {
     public:

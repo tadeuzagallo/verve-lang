@@ -5,7 +5,7 @@
 
 #include <cassert>
 
-namespace ceos {
+namespace verve {
 
 extern "C" void execute(
     const uint8_t *bytecode,
@@ -99,7 +99,7 @@ uintptr_t allocate(VM *vm, unsigned size) {
         case Section::Text: {
           auto lookupTableSize = read<uint64_t>();
           void *lookupTable = calloc(lookupTableSize * 8, 1);
-          ::ceos::execute(m_bytecode + pc, &m_stringTable[0], this, m_bytecode, lookupTable);
+          ::verve::execute(m_bytecode + pc, &m_stringTable[0], this, m_bytecode, lookupTable);
           return;
         }
         default:

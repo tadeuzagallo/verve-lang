@@ -4,7 +4,7 @@
 
 #pragma once
 
-namespace ceos {
+namespace verve {
 
   struct Closure {
     Scope *scope;

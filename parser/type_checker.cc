@@ -3,7 +3,7 @@
 #include <cstdarg>
 #include <cstdio>
 
-namespace ceos {
+namespace verve {
 
 class TypeException : public std::exception {
 public:
@@ -162,7 +162,7 @@ Type *AST::Block::typeof(EnvPtr env) {
   if (nodes.empty()) {
     return env->get("void");
   } else {
-    ::ceos::Type *t;
+    ::verve::Type *t;
     for (auto node : nodes) {
       env = this->env ?: env;
       t = node->typeof(env->create());
@@ -210,7 +210,7 @@ Type *AST::If::typeof(EnvPtr env) {
 
 Type *AST::List::typeof(EnvPtr env) {
   auto dataType = dynamic_cast<EnumType *>(env->get("list"));
-  ::ceos::Type *t = nullptr;
+  ::verve::Type *t = nullptr;
   for (auto item : items) {
     auto type = simplifyType(item->typeof(env), env);
 
@@ -229,7 +229,7 @@ Type *AST::List::typeof(EnvPtr env) {
 
 Type *AST::Match::typeof(EnvPtr env) {
   assert(cases.size());
-  ::ceos::Type *t = nullptr;
+  ::verve::Type *t = nullptr;
   for (auto kase : cases) {
     auto type = simplifyType(kase->typeof(env), env);
     if (!t) {

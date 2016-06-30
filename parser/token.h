@@ -9,7 +9,7 @@
 #define TUPLE_TOKEN(__char1, __char2) \
   ((__char2 << 8) | __char1)
 
-namespace ceos {
+namespace verve {
   struct Loc {
     unsigned start;
     unsigned end;
