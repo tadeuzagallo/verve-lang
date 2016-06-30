@@ -10,7 +10,7 @@ namespace ceos {
 
   typedef std::shared_ptr<Environment> EnvPtr;
 
-  struct Environment {
+  struct Environment : public std::enable_shared_from_this<Environment> {
     Type *get(std::string typeName) {
       auto env = this;
       while (env) {
@@ -21,6 +21,12 @@ namespace ceos {
         env = env->parent.get();
       }
       return nullptr;
+    }
+
+    EnvPtr create() {
+      auto env = std::make_shared<Environment>();
+      env->parent = shared_from_this();
+      return env;
     }
 
     std::unordered_map<std::string, Type *> types;

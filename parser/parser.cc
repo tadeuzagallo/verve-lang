@@ -43,7 +43,7 @@ namespace ceos {
       auto node = parseDecl();
       if (node) {
         pushTypeScope();
-        TypeChecker::check(node, m_environment, m_lexer);
+        TypeChecker::typeof(node, m_environment, m_lexer);
         popTypeScope();
         program->body->nodes.push_back(node);
       }

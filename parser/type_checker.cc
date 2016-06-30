@@ -1,8 +1,42 @@
 #include "type_checker.h"
 
+#include <cstdarg>
+#include <cstdio>
+
 namespace ceos {
 
-static Type *getType(AST::NodePtr node, EnvPtr env, Lexer &lexer);
+class TypeException : public std::exception {
+public:
+  TypeException(Loc loc, const char *format, ...) :
+    m_loc(loc)
+  {
+    va_list args1;
+    va_list args2;
+    va_start(args1, format);
+    va_start(args2, format);
+    auto length = vsnprintf(NULL, 0, format, args1);
+    m_msg = (char *)malloc(length + 1);
+    vsnprintf(m_msg, length + 1, format, args2);
+    va_end(args1);
+    va_end(args2);
+  }
+
+  ~TypeException() {
+    free(m_msg);
+  }
+
+  virtual const char *what() const noexcept {
+    return m_msg;
+  }
+
+  Loc &loc() {
+    return m_loc;
+  }
+
+private:
+  Loc m_loc;
+  char *m_msg;
+};
 
 static Type *simplifyType(Type *type, EnvPtr env) {
   if (auto gt = dynamic_cast<GenericType *>(type)) {
@@ -34,11 +68,9 @@ static void loadFnGenerics(TypeFunction *fnType, EnvPtr env) {
   }
 }
 
-static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFunction *fnType, EnvPtr env, Lexer &lexer, Loc &loc) {
+static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFunction *fnType, EnvPtr env, Loc &loc) {
   if (arguments.size() != fnType->types.size()) {
-    fprintf(stderr, "Wrong number of arguments for function call\n");
-    lexer.printSource(loc);
-    throw std::runtime_error("type error");
+    throw TypeException(loc, "Wrong number of arguments for function call");
   }
 
   loadFnGenerics(fnType, env);
@@ -47,16 +79,14 @@ static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFuncti
     auto arg = arguments[i];
 
     auto expected = simplifyType(fnType->types[i], env);
-    auto actual = simplifyType(getType(arg, env, lexer), env);
+    auto actual = simplifyType(arg->typeof(env), env);
 
     if (!expected->accepts(actual, env)) {
-      fprintf(stderr, "Expected `%s` but got `%s` on arg #%d for function `%s`\n",
+      throw TypeException(arg->loc, "Expected `%s` but got `%s` on arg #%d for function `%s`",
           expected->toString().c_str(),
           actual->toString().c_str(),
           i + 1,
           fnType->name.c_str());
-      lexer.printSource(arg->loc);
-      throw std::runtime_error("type error");
     }
   }
 
@@ -74,48 +104,52 @@ static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFuncti
   return simplifyType(fnType->returnType, env);
 }
 
-static Type *typeOfCall(AST::CallPtr call, EnvPtr env, Lexer &lexer) {
-  auto callee = call->callee;
-  auto calleeType = getType(callee, env, lexer);
-  TypeFunction *fnType;
-
-  if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
-    if (lexer.next('{')) {
-      fprintf(stderr, "Parse error: Maybe type information is missing for function declaration?\n");
-    } else {
-      fprintf(stderr, "Can't find type information for function call\n");
+Type *TypeChecker::typeof(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
+  try {
+    auto type = node->typeof(env);
+    if (!type) {
+      throw TypeException(node->loc, "Type Error");
     }
-
-    lexer.printSource(call->loc);
+    return type;
+  } catch (TypeException &ex) {
+    fprintf(stderr, "Type Error: %s\n", ex.what());
+    lexer.printSource(ex.loc());
     throw std::runtime_error("type error");
   }
-
-  auto returnType = typeCheckArguments(call->arguments, fnType, env, lexer, call->loc);
-
-  if (fnType->isVirtual) {
-    auto name = AST::asIdentifier(callee)->name + env->types[fnType->interface->genericTypeName]->toString();
-    if (env->get(name)) {
-      AST::asIdentifier(callee)->name = name;
-    }
-  }
-
-  return simplifyType(returnType, env);
 }
 
-static Type *typeCheckFunction(AST::FunctionPtr fn, EnvPtr env, Lexer &lexer) {
-  auto type = env->get(fn->name);
+Type *AST::String::typeof(EnvPtr env) {
+  return env->get("string");
+}
+
+Type *AST::BinaryOperation::typeof(EnvPtr env) {
+  return env->get("int");
+}
+
+Type *AST::UnaryOperation::typeof(EnvPtr env) {
+  return env->get("int");
+}
+
+Type *AST::Number::typeof(EnvPtr env) {
+  return env->get("int");
+}
+
+Type *AST::Identifier::typeof(EnvPtr env) {
+  return env->get(name);
+}
+
+Type *AST::Function::typeof(EnvPtr env) {
+  auto type = env->get(name);
   auto fnType = dynamic_cast<TypeFunction *>(type);
   assert(fnType);
 
   loadFnGenerics(fnType, env);
 
   auto expected = simplifyType(fnType->returnType, env);
-  auto actual = simplifyType(getType(fn->body, env, lexer), env);
+  auto actual = simplifyType(body->typeof(env), env);
 
   if (!expected->accepts(actual, env)) {
-    fprintf(stderr, "Type Error: Invalid return type for function: expected `%s` but got `%s`\n", expected->toString().c_str(), actual->toString().c_str());
-    lexer.printSource(fn->body->loc);
-    throw std::runtime_error("type error");
+    throw TypeException(body->loc, "Invalid return type for function: expected `%s` but got `%s`", expected->toString().c_str(), actual->toString().c_str());
   }
 
   auto t = new TypeFunction(*fnType);
@@ -124,166 +158,119 @@ static Type *typeCheckFunction(AST::FunctionPtr fn, EnvPtr env, Lexer &lexer) {
   return t;
 }
 
-static Type *_getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
-  switch (node->type) {
-    case AST::Type::String:
-      return env->get("string");
-
-    case AST::Type::BinaryOperation:
-    case AST::Type::UnaryOperation:
-    case AST::Type::Number:
-      return env->get("int");
-
-    case AST::Type::Function:
-      return typeCheckFunction(AST::asFunction(node), env, lexer);
-
-    case AST::Type::Identifier:
-      return env->get(AST::asIdentifier(node)->name);
-
-    case AST::Type::FunctionParameter:
-      return env->get(AST::asFunctionParameter(node)->name);
-
-    case AST::Type::Block:
-      {
-        auto block = AST::asBlock(node);
-        if (block->nodes.empty()) {
-          return env->get("void");
-        } else {
-          Type *t;
-          for (auto node : block->nodes) {
-            t = getType(node, block->env ?: env, lexer);
-          }
-          return t;
-        }
-      }
-
-    case AST::Type::Call:
-      {
-        auto call = AST::asCall(node);
-        return typeOfCall(call, env, lexer);
-      }
-
-    case AST::Type::If:
-      {
-        auto iff = AST::asIf(node);
-        auto iffType = getType(iff->ifBody, env, lexer);
-        if (iff->elseBody) {
-          auto elseType = getType(iff->elseBody, env, lexer);
-          // return the least specific type
-          if (iffType->accepts(elseType, env)) {
-            return iffType;
-          } else if (elseType->accepts(iffType, env)) {
-            return elseType;
-          } else {
-            fprintf(stderr, "Type Error: `if` and `else` branches evaluate to different types\n");
-            lexer.printSource(iff->loc);
-            throw std::runtime_error("type error");
-          }
-        }
-        return iffType;
-      }
-
-    case AST::Type::List:
-      {
-        auto dataType = dynamic_cast<EnumType *>(env->get("list"));
-        Type *t = nullptr;
-        for (auto i : AST::asList(node)->items) {
-          auto type = simplifyType(getType(i, env, lexer), env);
-
-          if (!t) {
-            t = type;
-          } else {
-            assert(t->accepts(type, env));
-          }
-        }
-
-        auto dti = new DataTypeInstance();
-        dti->dataType = dataType;
-        dti->types.push_back(t);
-        return dti;
-      }
-
-    case AST::Type::Match:
-      {
-        auto match = AST::asMatch(node);
-        assert(match->cases.size());
-        Type *t = nullptr;
-        for (auto kase : match->cases) {
-          auto type = simplifyType(getType(kase, env, lexer), env);
-          if (!t) {
-            t = type;
-          } else {
-            assert(t->accepts(type, env) || type->accepts(t, env));
-          }
-        }
-        return t;
-      }
-
-    case AST::Type::Case:
-      {
-        return getType(AST::asCase(node)->body, env, lexer);
-      }
-
-    case AST::Type::Let:
-      {
-        auto let = AST::asLet(node);
-        for (auto assignment : let->assignments) {
-          assert(getType(assignment, env, lexer));
-        }
-        return getType(let->block, env, lexer);
-      }
-
-    case AST::Type::Assignment:
-      {
-        auto assignment = AST::asAssignment(node);
-        auto valueType = getType(assignment->value, env, lexer);
-        if (assignment->left->type == AST::Type::Pattern) {
-          auto pattern = AST::asPattern(assignment->left);
-          auto patternType = env->get(pattern->constructorName);
-          if (!valueType->accepts(patternType, env)) {
-            fprintf(stderr, "Type Error: Trying to pattern match value of type `%s` with constructor `%s`\n", valueType->toString().c_str(), patternType->toString().c_str());
-            lexer.printSource(pattern->loc);
-            throw std::runtime_error("type error");
-          }
-        } else {
-          assert(assignment->left->type == AST::Type::Identifier);
-        }
-        return valueType;
-      }
-
-    case AST::Type::Constructor:
-      {
-        auto ctor = AST::asConstructor(node);
-        auto type = env->get(ctor->name);
-        auto ctorType = dynamic_cast<TypeConstructor *>(type);
-        assert(ctorType);
-        return typeCheckArguments(ctor->arguments, ctorType->type, env, lexer, ctor->loc);
-      }
-
-    default:
-      throw std::runtime_error("unhandled node");
+Type *AST::Block::typeof(EnvPtr env) {
+  if (nodes.empty()) {
+    return env->get("void");
+  } else {
+    ::ceos::Type *t;
+    for (auto node : nodes) {
+      env = this->env ?: env;
+      t = node->typeof(env->create());
+    }
+    return t;
   }
 }
 
-static Type *getType(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
-  auto _env = std::make_shared<Environment>();
-  _env->parent = env;
+Type *AST::Call::typeof(EnvPtr env) {
+  auto calleeType = callee->typeof(env);
+  TypeFunction *fnType;
 
-  auto t = _getType(node, _env, lexer);
+  if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
+    throw TypeException(loc, "Can't find type information for function call");
+  }
 
+  auto returnType = typeCheckArguments(arguments, fnType, env, loc);
+
+  if (fnType->isVirtual) {
+    auto ident = AST::asIdentifier(callee);
+    auto name = ident->name + env->types[fnType->interface->genericTypeName]->toString();
+    if (env->get(name)) {
+      ident->name = name;
+    }
+  }
+
+  return simplifyType(returnType, env);
+}
+
+Type *AST::If::typeof(EnvPtr env) {
+  auto iffType = ifBody->typeof(env);
+  if (elseBody) {
+    auto elseType = elseBody->typeof(env);
+    // return the least specific type
+    if (iffType->accepts(elseType, env)) {
+      return iffType;
+    } else if (elseType->accepts(iffType, env)) {
+      return elseType;
+    } else {
+      throw TypeException(loc, "`if` and `else` branches evaluate to different types");
+    }
+  }
+  return iffType;
+}
+
+Type *AST::List::typeof(EnvPtr env) {
+  auto dataType = dynamic_cast<EnumType *>(env->get("list"));
+  ::ceos::Type *t = nullptr;
+  for (auto item : items) {
+    auto type = simplifyType(item->typeof(env), env);
+
+    if (!t) {
+      t = type;
+    } else {
+      assert(t->accepts(type, env));
+    }
+  }
+
+  auto dti = new DataTypeInstance();
+  dti->dataType = dataType;
+  dti->types.push_back(t);
+  return dti;
+}
+
+Type *AST::Match::typeof(EnvPtr env) {
+  assert(cases.size());
+  ::ceos::Type *t = nullptr;
+  for (auto kase : cases) {
+    auto type = simplifyType(kase->typeof(env), env);
+    if (!t) {
+      t = type;
+    } else {
+      assert(t->accepts(type, env) || type->accepts(t, env));
+    }
+  }
   return t;
 }
 
-Type *TypeChecker::typeof(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
-  return getType(node, env, lexer);
+Type *AST::Case::typeof(EnvPtr env) {
+  return body->typeof(env);
 }
 
-void TypeChecker::check(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
-  if (!getType(node, env, lexer)) {
-    fprintf(stderr, "Type Error\n");
-    lexer.printSource(node->loc);
-    throw std::runtime_error("type error");
+Type *AST::Let::typeof(EnvPtr env) {
+  for (auto assignment : assignments) {
+    assert(assignment->typeof(env));
   }
+  return block->typeof(env);
+}
+
+Type *AST::Assignment::typeof(EnvPtr env) {
+  auto valueType = value->typeof(env);
+  if (left->type == AST::Type::Pattern) {
+    auto pattern = AST::asPattern(left);
+    auto patternType = env->get(pattern->constructorName);
+    if (!valueType->accepts(patternType, env)) {
+      throw TypeException(pattern->loc, "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), patternType->toString().c_str());
+    }
+  } else {
+    assert(left->type == AST::Type::Identifier);
+  }
+  return valueType;
+}
+
+Type *AST::Constructor::typeof(EnvPtr env) {
+  auto type = env->get(name);
+  auto ctorType = dynamic_cast<TypeConstructor *>(type);
+  assert(ctorType);
+  return typeCheckArguments(arguments, ctorType->type, env, loc);
 }
 
 }
