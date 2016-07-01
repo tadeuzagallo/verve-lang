@@ -123,6 +123,19 @@ Type *AST::String::typeof(EnvPtr env) {
 }
 
 Type *AST::BinaryOperation::typeof(EnvPtr env) {
+  auto intType = env->get("int");
+  AST::NodePtr failed = nullptr;
+  Verve::Type *failedType = nullptr;
+  if (!intType->accepts((failedType = lhs->typeof(env)), env)) {
+    failed = lhs;
+  } else if (!intType->accepts((failedType = rhs->typeof(env)), env)) {
+    failed = rhs;
+  }
+
+  if (failed != nullptr) {
+    throw TypeException(failed->loc, "Binary operations only accept `int`, but found `%s`", failedType->toString().c_str());
+  }
+
   return env->get("int");
 }
 

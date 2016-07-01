@@ -1,0 +1,3 @@
+Type Error: Binary operations only accept `int`, but found `list<char>`
+1: print("asd" + 1)
+         ^
