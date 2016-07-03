@@ -144,7 +144,7 @@ Type *AST::UnaryOperation::typeof(EnvPtr env) {
 }
 
 Type *AST::Number::typeof(EnvPtr env) {
-  return env->get("int");
+  return env->get(isFloat ? "float" : "int");
 }
 
 Type *AST::Identifier::typeof(EnvPtr env) {

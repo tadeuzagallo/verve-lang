@@ -257,6 +257,8 @@ namespace Verve {
       return unop;
     } else if (next(Token::NUMBER)) {
       return parseNumber();
+    } else if (next(Token::FLOAT)) {
+      return parseFloat();
     } else if (next(Token::STRING)) {
       return parseString();
     } else if (next(Token::LCID)) {
@@ -662,6 +664,13 @@ ident:
   AST::NumberPtr Parser::parseNumber() {
     auto number = AST::createNumber(token().loc);
     number->value = token(Token::NUMBER).number();
+    return number;
+  }
+
+  AST::NumberPtr Parser::parseFloat() {
+    auto number = AST::createNumber(token().loc);
+    number->value = token(Token::FLOAT).number();
+    number->isFloat = true;
     return number;
   }
 

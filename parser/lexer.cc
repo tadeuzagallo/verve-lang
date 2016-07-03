@@ -156,15 +156,23 @@ start:
 
       default:
         if (isnumber(c)) {
-          int number = 0;
+          double number = 0;
           do {
             number *= 10;
             number += c - '0';
           } while (isnumber(c = nextChar()));
 
+          if (c == '.') {
+            double divider = 1;
+            while (isnumber(c = nextChar())) {
+              divider *= 10;
+              number += (c - '0') / divider;
+            }
+            m_token = Token(Token::FLOAT, number);
+          } else {
+            m_token = Token(Token::NUMBER, number);
+          }
           m_pos--;
-
-          m_token = Token(Token::NUMBER, number);
         } else if (islower(c) || c == '_') {
           auto start = m_pos - 1;
           unsigned length = 0;

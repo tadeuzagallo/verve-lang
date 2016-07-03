@@ -144,8 +144,13 @@ namespace Verve {
 namespace AST {
 
 void Number::generateBytecode(Generator *gen) {
-  gen->emitOpcode(Opcode::push);
-  gen->write(value);
+  if (isFloat) {
+    gen->emitOpcode(Opcode::push);
+    gen->write(*(int64_t *)&value);
+  } else {
+    gen->emitOpcode(Opcode::push);
+    gen->write(value);
+  }
 }
 
 void Call::generateBytecode(Generator *gen) {

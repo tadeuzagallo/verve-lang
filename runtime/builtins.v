@@ -3,6 +3,7 @@ interface stringify<t> {
 }
 
 implementation stringify<int> { }
+implementation stringify<float> { }
 implementation stringify<string> { }
 implementation stringify<list<int>> { }
 implementation stringify<list<string>> { }

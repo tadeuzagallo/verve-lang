@@ -99,7 +99,8 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual ::Verve::Type *typeof(EnvPtr env);
 
-    int value;
+    double value;
+    bool isFloat;
   };
 
   struct Identifier : public Node {

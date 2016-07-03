@@ -87,7 +87,9 @@ namespace Verve {
     } else if (value.isInt()){
       printf("%d", value.asInt());
     } else {
-      throw std::runtime_error("Trying to print unsupported type");
+      auto v = value.encode();
+      printf("%lg", *(double *)&v);
+      //throw std::runtime_error("Trying to print unsupported type");
     }
   }
 

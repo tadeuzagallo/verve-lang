@@ -60,6 +60,7 @@ namespace Verve {
 
     AST::NodePtr parseIdentifier(std::string ns = "");
     AST::NumberPtr parseNumber();
+    AST::NumberPtr parseFloat();
     AST::StringPtr parseString();
     AST::ListPtr parseList();
     Type *parseType();

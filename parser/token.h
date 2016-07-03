@@ -24,6 +24,7 @@ namespace Verve {
           LCID,
           UCID,
           NUMBER,
+          FLOAT,
           STRING,
           BASIC
         )
@@ -31,7 +32,7 @@ namespace Verve {
       Token(Type t) :
         type(t) {}
 
-      Token(Type t, int num) :
+      Token(Type t, double num) :
         type(t)
       {
         value.number = num;
@@ -73,7 +74,7 @@ namespace Verve {
         return std::string(value.string);
       }
 
-      inline int number() {
+      inline double number() {
         return value.number;
       }
 
@@ -133,7 +134,7 @@ namespace Verve {
     private:
       union {
         const char *string;
-        int number;
+        double number;
       } value = {0};
 
       static std::unordered_map<int, int> s_precedenceTable;
