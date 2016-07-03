@@ -2,11 +2,25 @@ interface stringify<t> {
   virtual to_string (t) -> string
 }
 
-implementation stringify<int> { }
-implementation stringify<float> { }
-implementation stringify<string> { }
-implementation stringify<list<int>> { }
-implementation stringify<list<string>> { }
+implementation stringify<int> {
+  extern to_string (t) -> string
+}
+
+implementation stringify<float> {
+  extern to_string (t) -> string
+}
+
+implementation stringify<string> {
+  extern to_string (t) -> string
+}
+
+implementation stringify<list<int>> {
+  extern to_string (t) -> string
+}
+
+implementation stringify<list<string>> {
+  extern to_string (t) -> string
+}
 
 extern print (stringify) -> void
 

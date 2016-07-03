@@ -14,6 +14,7 @@ namespace Verve {
   struct Type;
   struct EnumType;
   struct TypeInterface;
+  struct TypeImplementation;
 
   typedef std::unordered_map<std::string, Type *> TypeMap;
 
@@ -59,6 +60,7 @@ namespace Verve {
       return str.str();
     }
 
+    std::string originalName;
     std::string name;
     std::vector<std::string> generics;
     std::vector<Type *> types;
@@ -68,11 +70,6 @@ namespace Verve {
       bool isVirtual: 1;
     };
     TypeInterface *interface;
-  };
-
-  struct TypeImplementation {
-    TypeInterface *interface;
-    Type *type;
   };
 
   struct TypeInterface : Type {
@@ -92,7 +89,23 @@ namespace Verve {
     std::string name;
     std::string genericTypeName;
     std::vector<TypeImplementation *> implementations;
-    std::unordered_map<std::string, TypeFunction *> functions;
+    std::vector<std::string> virtualFunctions;
+    std::vector<std::string> concreteFunctions;
+  };
+
+  struct TypeImplementation {
+    std::string toString() {
+      std::stringstream str;
+      str << interface->name
+          << "<"
+          << type->toString()
+          << ">";
+
+      return str.str();
+    }
+
+    TypeInterface *interface;
+    Type *type;
   };
 
   struct TypeConstructor : Type {

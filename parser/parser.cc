@@ -174,9 +174,11 @@ namespace Verve {
       if (skip("virtual")) {
         auto virtualFunction = parseVirtual(declScope);
         virtualFunction->interface = interface;
+        interface->virtualFunctions.push_back(virtualFunction->name);
       } else if (skip("fn")) {
         auto fn = parseFunction();
         block->nodes.push_back(fn);
+        interface->concreteFunctions.push_back(fn->name);
       } else {
         match('}');
         break;
@@ -189,6 +191,7 @@ namespace Verve {
   }
 
   AST::BlockPtr Parser::parseImplementation() {
+    auto implementationLoc = token().loc;
     auto implementation = new TypeImplementation();
     auto interfaceName = token(Token::LCID).string();
 
@@ -210,16 +213,42 @@ namespace Verve {
 
     match('{');
     auto block = AST::createBlock(token().loc);
+    auto virtualFunctions = interface->virtualFunctions;
     while(!skip('}')) {
+      std::string name;
+
       if (skip("extern")) {
-        parseExtern(declScope, implementationSuffix);
+        auto fn = parseExtern(declScope, implementationSuffix);
+        name = fn->originalName;
       } else if (skip("fn")) {
         auto fn = parseTypelessFunction(implementationSuffix, declScope);
         block->nodes.push_back(fn);
+        name = fn->originalName;
       } else {
         match('}');
         break;
       }
+      auto it = std::find(virtualFunctions.begin(), virtualFunctions.end(), name);
+      if (it != virtualFunctions.end()) {
+        virtualFunctions.erase(it);
+      } else if (std::find(interface->concreteFunctions.begin(), interface->concreteFunctions.end(), name) == interface->concreteFunctions.end()) {
+        fprintf(stderr, "Defining function `%s` inside implementation `%s`, but it's not part of the interface\n",
+            name.c_str(),
+            implementation->toString().c_str());
+        m_lexer.printSource(implementationLoc);
+        throw std::runtime_error("type error");
+      }
+    }
+
+    if (virtualFunctions.size() != 0) {
+      fprintf(stderr, "Implementation `%s` does not implement the following virtual functions:\n", implementation->toString().c_str());
+      auto index = 1;
+      for (auto &fn : virtualFunctions) {
+        fprintf(stderr, "%d) %s\n", index++, fn.c_str());
+      }
+      fputc('\n', stderr);
+      m_lexer.printSource(implementationLoc);
+      throw std::runtime_error("type error");
     }
 
     popTypeScope();
@@ -300,7 +329,8 @@ namespace Verve {
 
   TypeFunction *Parser::parsePrototype(std::string implementationSuffix) {
     auto fnType = new TypeFunction();
-    fnType->name = token(Token::LCID).string() + implementationSuffix;
+    fnType->originalName = token(Token::LCID).string();
+    fnType->name = fnType->originalName + implementationSuffix;
 
     parseGenerics(fnType->generics);
 
@@ -319,10 +349,11 @@ namespace Verve {
 
   AST::FunctionPtr Parser::parseTypelessFunction(std::string implementationName, std::shared_ptr<Environment> declScope) {
     auto fn = AST::createFunction(token().loc);
-    fn->name = token(Token::LCID).string();
+    fn->originalName = token(Token::LCID).string();
 
-    auto fnType = getType<TypeFunction *>(fn->name);
-    fn->name += implementationName;
+    auto fnType = getType<TypeFunction *>(fn->originalName);
+    assert(fnType);
+    fn->name = fn->originalName + implementationName;
     setType(fn->name, fnType, declScope);
 
     for (auto g : fnType->generics) {

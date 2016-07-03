@@ -145,6 +145,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual ::Verve::Type *typeof(EnvPtr env);
 
+    std::string originalName;
     std::string name;
     std::string ns;
     std::vector<FunctionParameterPtr> parameters;

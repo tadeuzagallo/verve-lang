@@ -1,0 +1,5 @@
+Implementation `foo<int>` does not implement the following virtual functions:
+1) f
+
+5: implementation foo<int> {
+                  ^

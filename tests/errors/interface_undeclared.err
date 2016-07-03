@@ -1,0 +1,3 @@
+Defining function `bar` inside implementation `foo<int>`, but it's not part of the interface
+4: implementation foo<int> {
+                  ^
