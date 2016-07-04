@@ -86,6 +86,11 @@ test: output_tests error_tests cpp_tests
 install: $(TARGET)
 	ln -fs $(PWD)/$(TARGET) /usr/local/bin
 
+install_vim_highlight: $(TARGET)
+	mkdir -p ~/.vim/ftdetect ~/.vim/syntax
+	ln -fs $(PWD)/vim/ftdetect/verve.vim ~/.vim/ftdetect
+	ln -fs $(PWD)/vim/syntax/verve.vim ~/.vim/syntax
+
 clean:
 	-rm -rf $(OBJECTS) $(TARGET) $(TARGET).dSYM $(wildcard tests/*.test_)
 
