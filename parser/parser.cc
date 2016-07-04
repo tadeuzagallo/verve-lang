@@ -6,6 +6,8 @@
 
 #include "utils/file.h"
 
+std::string ROOT_DIR = "";
+
 namespace Verve {
   Parser::Parser(Lexer &lexer, std::string dirname, std::string ns) :
     m_lexer(lexer), m_dirname(dirname), m_ns(ns)
@@ -29,9 +31,18 @@ namespace Verve {
     setType("string", string);
   }
 
+  static auto isPrelude = false;
   AST::ProgramPtr Parser::parse() {
     auto program = AST::createProgram(Loc{0, 0});
-    program->body = AST::createBlock(Loc{0, 0});
+
+    if (!isPrelude) {
+      isPrelude = true;
+      program->body = import("runtime/prelude", {}, "", ROOT_DIR);
+      isPrelude = false;
+    } else {
+      program->body = AST::createBlock(Loc{0, 0});
+    }
+
     m_blockStack.push_back(program->body);
     while(!next(Token::END)) {
       while (skip("import")) {
@@ -54,16 +65,13 @@ namespace Verve {
   }
 
   AST::NodePtr Parser::parseImport() {
-    bool importAll = false;
     std::vector<std::string> imports;
-    if (skip('*')) {
-      importAll = true;
-    } else {
+    if (!skip('*')) {
       match('{');
-      while (!next('}')) {
+      do {
         imports.push_back(token(Token::LCID).string());
         if (!skip(',')) break;
-      }
+      } while (!next('}'));
       match('}');
     }
 
@@ -76,9 +84,13 @@ namespace Verve {
       ns = token(Token::UCID).string();
     }
 
-    auto parser = parseFile(path, m_dirname, ns);
+    return import(path, imports, ns, m_dirname);
+  }
 
-    if (importAll) {
+  AST::BlockPtr Parser::import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname) {
+    auto parser = parseFile(path, dirname, ns);
+
+    if (imports.size() == 0) {
       for (auto it : parser.m_environment->types) {
         m_environment->types[namespaced(ns, it.first)] = it.second;
       }

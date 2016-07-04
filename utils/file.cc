@@ -23,7 +23,7 @@ Parser parseFile(std::string filename, std::string dirname, std::string ns) {
 
   fclose(source);
 
-  Lexer lexer(filename, input, 0);
+  Lexer lexer(filename, input);
   Parser parser(lexer, dirname, ns);
 
   parser.parse();

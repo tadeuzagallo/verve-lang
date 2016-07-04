@@ -7,6 +7,8 @@
 
 #pragma once
 
+extern "C" std::string ROOT_DIR;
+
 namespace Verve {
   class Lexer;
   class Token;
@@ -21,6 +23,8 @@ namespace Verve {
 
     AST::NodePtr parseImport();
     AST::NodePtr parseDecl();
+
+    AST::BlockPtr import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname);
 
     void parseTypeDecl();
     void parseTypeConstructor(unsigned tag, EnumType *owner);

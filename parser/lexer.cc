@@ -268,8 +268,7 @@ start:
   Pos Lexer::getSourcePosition(Loc loc) {
     Pos pos = {1, 1};
     m_pos = 0;
-    size_t i = loc.start >= m_offset ? m_offset : 0;
-    for (; i < loc.start; i++) {
+    for (size_t i = 0; i < loc.start; i++) {
       if (m_input[i] == '\n') {
         pos.line++;
         pos.column = 1;

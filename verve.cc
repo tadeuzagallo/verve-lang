@@ -10,6 +10,8 @@
 #include "runtime/vm.h"
 
 int main(int argc, char **argv) {
+  ROOT_DIR = dirname(argv[0]);
+
   char *first = argv[1];
   bool isDebug = strcmp(first, "-d") == 0;
   bool isCompile = strcmp(first, "-c") == 0;
@@ -24,27 +26,20 @@ int main(int argc, char **argv) {
 
   auto filename = isDebug || isCompile ? argv[2] : argv[1];
 
-  FILE *prelude = fopen("runtime/builtins.vrv", "r");
   FILE *source = fopen(filename, "r");
-  fseek(prelude, 0, SEEK_END);
   fseek(source, 0, SEEK_END);
-  size_t preludeSize = ftell(prelude);
   size_t sourceSize = ftell(source);
-  fseek(prelude, 0, SEEK_SET);
   fseek(source, 0, SEEK_SET);
 
-  char *input = (char *)malloc(preludeSize + sourceSize + 2);
-  fread(input, 1, preludeSize, prelude);
-  input[preludeSize] = '\n';
-  fread(input + preludeSize + 1, 1, sourceSize, source);
-  input[preludeSize + sourceSize + 1] = '\0';
+  char *input = (char *)malloc(sourceSize + 1);
+  fread(input, 1, sourceSize, source);
+  input[sourceSize] = '\0';
 
-  fclose(prelude);
   fclose(source);
 
-  Verve::Lexer lexer(filename, input, preludeSize + 1);
+  Verve::Lexer lexer(filename, input);
 
-  char *dir = dirname(filename);
+  auto dir = dirname(filename);
 
   Verve::Parser parser(lexer, dir);
 
