@@ -39,6 +39,7 @@ ERROR_TESTS = $(patsubst %.v,.build/%.test,$(wildcard tests/errors/*.v))
 
 error_test: $(ERROR_TESTS)
 
+tests/errors/%.test: .build/tests/errors/%.test
 .build/tests/errors/%.test: tests/errors/%.v tests/errors/%.err $(TARGET)
 	@mkdir -p $$(dirname $@)
 	@sh -c "trap '' 6; ./$(TARGET) $<" > /dev/null 2> $@_; \
@@ -56,6 +57,7 @@ CPP_TESTS = $(patsubst %.cc,.build/%.test,$(wildcard tests/cpp/*.cc))
 .PHONY: cpp_test .build/tests/cpp/%.test
 cpp_test: $(CPP_TESTS) $(OBJECTS) $(HEADERS)
 
+tests/cpp/%.test: .build/tests/cpp/%.test
 .build/tests/cpp/%.test: tests/cpp/%.cc $(OBJECTS) $(HEADERS)
 	@mkdir -p $$(dirname $@)
 	@$(CC) $(CFLAGS) $< $(filter-out %verve.cc.o,$(OBJECTS)) $(LIBS) -I ./ -o $@_
@@ -71,6 +73,7 @@ TESTS = $(patsubst %.v,.build/%.test,$(wildcard tests/*.v))
 test: $(TESTS) error_test cpp_test
 	@#
 
+tests/%.test: .build/tests/%.test
 .build/tests/%.test: tests/%.v tests/%.out $(TARGET)
 	@mkdir -p $$(dirname $@)
 	-@./$(TARGET) $< > $@_; \
