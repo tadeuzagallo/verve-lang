@@ -86,6 +86,9 @@ tests/%.test: .build/tests/%.test
 
 # CLEAN
 
+install: $(TARGET)
+	ln -fs $(PWD)/$(TARGET) /usr/local/bin
+
 clean:
 	-rm -rf $(OBJECTS) $(TARGET) $(TARGET).dSYM $(wildcard tests/*.test_)
 
