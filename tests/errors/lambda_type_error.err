@@ -1,3 +1,4 @@
 Type Error: Expected `int` but got `list<char>` on arg #1 for function `_`
+On file `tests/errors/lambda_type_error.vrv` at 1:28
 1: fn _(a: int) -> int { a } ("foo")
                               ^

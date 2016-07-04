@@ -287,6 +287,8 @@ start:
   void Lexer::printSource(Loc loc) {
     Pos pos = getSourcePosition(loc);
 
+    std::cerr << "On file `" << m_filename << "` at " << pos.line << ":" << pos.column << std::endl;
+
     int start = loc.start;
     int actualStart = start;
 

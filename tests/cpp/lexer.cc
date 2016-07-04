@@ -10,7 +10,7 @@ class LexerTest {
   public:
 
   static void testRewind() {
-    Lexer l("1 (", 4);
+    Lexer l("", "1 (", 4);
     l.token(Token::Type::NUMBER);
     l.match('(');
     l.rewind();
@@ -19,7 +19,7 @@ class LexerTest {
   }
 
   static void testRewindToSpecificLoc() {
-    Lexer l("1 (", 4);
+    Lexer l("", "1 (", 4);
     auto start = l.token().loc;
     l.token(Token::Type::NUMBER);
     l.match('(');

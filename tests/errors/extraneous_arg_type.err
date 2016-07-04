@@ -1,3 +1,4 @@
 Invalid token found: expected `:` to be `)`
+On file `tests/errors/extraneous_arg_type.vrv` at 2:10
 2:   print(a: string)
             ^

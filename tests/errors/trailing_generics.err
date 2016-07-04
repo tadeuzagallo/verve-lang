@@ -1,3 +1,4 @@
 Unexpected end of input
+On file `tests/errors/trailing_generics.vrv` at 1:6
 1: foo<t>
         ^

@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
   fclose(prelude);
   fclose(source);
 
-  Verve::Lexer lexer(input, preludeSize + 1);
+  Verve::Lexer lexer(filename, input, preludeSize + 1);
 
   char *dir = dirname(filename);
 

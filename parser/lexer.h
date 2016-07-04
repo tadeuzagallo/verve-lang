@@ -13,7 +13,8 @@ namespace Verve {
 
   class Lexer {
     public:
-      Lexer(const char *input, size_t offset) :
+      Lexer(std::string filename, const char *input, size_t offset) :
+        m_filename(filename),
         m_input(input),
         m_pos(0),
         m_offset(offset),
@@ -49,6 +50,7 @@ namespace Verve {
 
       static std::string basicTokenToString(int t);
 
+      std::string m_filename;
       const char *m_input;
       unsigned m_pos;
       size_t m_offset;
