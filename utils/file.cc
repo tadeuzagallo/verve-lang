@@ -10,7 +10,7 @@
 namespace Verve {
 
 Parser parseFile(std::string filename, std::string dirname, std::string ns) {
-  filename = dirname + "/" + filename + ".v";
+  filename = dirname + "/" + filename + ".vrv";
 
   FILE *source = fopen(filename.c_str(), "r");
   fseek(source, 0, SEEK_END);

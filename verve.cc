@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
   auto filename = isDebug || isCompile ? argv[2] : argv[1];
 
-  FILE *prelude = fopen("runtime/builtins.v", "r");
+  FILE *prelude = fopen("runtime/builtins.vrv", "r");
   FILE *source = fopen(filename, "r");
   fseek(prelude, 0, SEEK_END);
   fseek(source, 0, SEEK_END);

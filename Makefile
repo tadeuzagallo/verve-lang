@@ -33,14 +33,14 @@ $(TARGET): $(OBJECTS)
 
 # ERROR TESTS
 
-ERROR_TESTS = $(patsubst %.v,.build/%.test,$(wildcard tests/errors/*.v))
+ERROR_TESTS = $(patsubst %.vrv,.build/%.test,$(wildcard tests/errors/*.vrv))
 
 .PHONY: error_test .build/tests/errors/%.test
 
 error_test: $(ERROR_TESTS)
 
 tests/errors/%.test: .build/tests/errors/%.test
-.build/tests/errors/%.test: tests/errors/%.v tests/errors/%.err $(TARGET)
+.build/tests/errors/%.test: tests/errors/%.vrv tests/errors/%.err $(TARGET)
 	@mkdir -p $$(dirname $@)
 	@sh -c "trap '' 6; ./$(TARGET) $<" > /dev/null 2> $@_; \
 	if [[ $$? == 0 ]]; then \
@@ -66,7 +66,7 @@ tests/cpp/%.test: .build/tests/cpp/%.test
 
 # TESTS
 
-TESTS = $(patsubst %.v,.build/%.test,$(wildcard tests/*.v))
+TESTS = $(patsubst %.vrv,.build/%.test,$(wildcard tests/*.vrv))
 
 .PHONY: test .build/tests/%.test
 
@@ -74,7 +74,7 @@ test: $(TESTS) error_test cpp_test
 	@#
 
 tests/%.test: .build/tests/%.test
-.build/tests/%.test: tests/%.v tests/%.out $(TARGET)
+.build/tests/%.test: tests/%.vrv tests/%.out $(TARGET)
 	@mkdir -p $$(dirname $@)
 	-@./$(TARGET) $< > $@_; \
 	if [[ $$? != 0 ]]; then echo "$@: $(ERROR)"; else diff $@_ $(word 2, $^) && echo "$@: $(SUCCESS)" || echo "$@: $(FAILURE)"; fi

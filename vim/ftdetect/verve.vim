@@ -1,1 +1,1 @@
-au BufEnter,BufNewFile,BufRead *.v setlocal filetype=verve
+au BufEnter,BufNewFile,BufRead *.vrv setf verve
