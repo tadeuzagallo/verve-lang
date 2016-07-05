@@ -16,8 +16,15 @@
 
 #define DEFER(__macro) __macro EMPTY()
 
+#define MAP_1() EMPTY
+#define MAP_0() MAP
 #define MAP(...) MAP_(__VA_ARGS__)
 #define MAP_(__macro, __first, ...) __macro(__first) DEFER(CONCAT(MAP_, IS_EMPTY(__VA_ARGS__)))()(__macro, __VA_ARGS__)
+
+#define MAP_2_1() EMPTY
+#define MAP_2_0() MAP_2
+#define MAP_2(...) MAP_2_(__VA_ARGS__)
+#define MAP_2_(__macro, __first, __second, ...) __macro(__first, __second) DEFER(CONCAT(MAP_2_, IS_EMPTY(__VA_ARGS__)))()(__macro, __VA_ARGS__)
 
 #define IS_EMPTY(...) IS_EMPTY_(FIRST(__VA_ARGS__))
 #define IS_EMPTY_(...) IS_EMPTY__(__VA_ARGS__)
@@ -30,11 +37,7 @@
 #define FIRST(__first, ...) __first
 #define SECOND(_, __second, ...) __second
 
-#define MAP_1() EMPTY
-
-#define MAP_0() MAP
-
-#define APPEND_COMMA(__a) #__a,
+#define STR_WITH_COMMA(__a) #__a,
 
 #define EMPTY(...)
 
@@ -45,7 +48,7 @@
  \
   __unused static const char *typeName(__name t) { \
     return (const char *[]) { \
-      EVAL(MAP(APPEND_COMMA, __options)) \
+      EVAL(MAP(STR_WITH_COMMA, __options)) \
     }[(int)t]; \
   }
 

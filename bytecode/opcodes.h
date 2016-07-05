@@ -4,48 +4,57 @@
 
 #define WORD_SIZE 8
 
-#define OPCODE_ADDRESS(__op) (uintptr_t)op_##__op,
+#define OPCODE_ADDRESS(__op, _) (uintptr_t)op_##__op,
 
-#define EXTERN_OPCODE(opcode) \
+#define EXTERN_OPCODE(opcode, _) \
   extern "C" void op_##opcode ();
 
 #define OPCODES \
-      ret, \
-      bind, \
-      push, \
-      call, \
-      jz, \
-      jmp, \
-      create_closure, \
-      load_string, \
-      push_arg, \
-      lookup, \
-      exit, \
-      create_lex_scope, \
-      release_lex_scope, \
-      put_to_scope, \
-      alloc_obj, \
-      alloc_list, \
-      obj_store_at, \
-      obj_tag_test, \
-      obj_load, \
-      stack_alloc, \
-      stack_store, \
-      stack_load, \
-      stack_free
+      ret, 0, \
+      bind, 1, \
+      push, 1, \
+      call, 1, \
+      jz, 1, \
+      jmp, 1, \
+      create_closure, 2, \
+      load_string, 1, \
+      push_arg, 1, \
+      lookup, 2, \
+      exit, 0, \
+      create_lex_scope, 0, \
+      release_lex_scope, 0, \
+      put_to_scope, 1, \
+      alloc_obj, 2, \
+      alloc_list, 1, \
+      obj_store_at, 1, \
+      obj_tag_test, 1, \
+      obj_load, 1, \
+      stack_alloc, 1, \
+      stack_store, 1, \
+      stack_load, 1, \
+      stack_free, 1
 
-EVAL(MAP(EXTERN_OPCODE, OPCODES))
+EVAL(MAP_2(EXTERN_OPCODE, OPCODES))
+
+#define FIRST_WITH_COMMA(F, ...) F,
+#define SECOND_WITH_COMMA(_, S, ...) S,
 
 namespace Verve {
 
 class Opcode {
   public:
 
-  ENUM(Type, OPCODES);
+  EVAL(ENUM(Type, MAP_2(FIRST_WITH_COMMA, OPCODES)));
 
   static uintptr_t opcodeAddress(Opcode::Type t) {
     return (uintptr_t []) {
-      EVAL(MAP(OPCODE_ADDRESS, OPCODES))
+      EVAL(MAP_2(OPCODE_ADDRESS, OPCODES))
+    }[(int)t];
+  }
+
+  static unsigned size(Opcode::Type t) {
+    return (unsigned []) {
+      EVAL(MAP_2(SECOND_WITH_COMMA, OPCODES))
     }[(int)t];
   }
 };
