@@ -100,7 +100,7 @@ namespace AST {
     virtual ::Verve::Type *typeof(EnvPtr env);
 
     double value;
-    bool isFloat;
+    bool isFloat = false;
   };
 
   struct Identifier : public Node {
