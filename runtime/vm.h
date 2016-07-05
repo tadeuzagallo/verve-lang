@@ -16,23 +16,22 @@ namespace Verve {
 
   class VM {
     public:
-      VM(std::stringstream &bs):
+      VM(uint8_t *bytecode, size_t len, bool needsLinking = false):
+        m_scope(new Scope(32)),
         pc(0),
-        heapLimit(10240) {
-
-        std::string bc = bs.str();
-        length = bc.length();
-        m_bytecode = (uint8_t *)malloc(length);
-        memcpy(m_bytecode, bc.data(), length);
-
-        m_scope = new Scope(32);
+        length(len),
+        heapLimit(10240),
+        m_needsLinking(needsLinking),
+        m_bytecode(bytecode)
+      {
         registerBuiltins(*this);
       }
 
       void execute();
-      void inflate();
+      void linkBytecode();
       inline void loadStrings();
       inline void loadFunctions();
+      inline void loadText();
       void trackAllocation(void *, size_t);
       void collect();
 
@@ -57,6 +56,7 @@ namespace Verve {
       size_t heapLimit;
       std::vector<std::pair<size_t, void *>> blocks;
 
+      bool m_needsLinking;
       std::vector<String> m_stringTable;
       std::vector<Function> m_userFunctions;
 

@@ -78,38 +78,20 @@ uintptr_t allocate(VM *vm, unsigned size) {
 
   void VM::execute() {
     auto header = read<uint64_t>();
-
-    // section marker
     assert(header == Section::Header);
 
-    while (true) {
-      auto section = read<uint64_t>();
-
-      if (pc > length) {
-        return;
-      }
-
-      switch (section) {
-        case Section::Strings:
-          loadStrings();
-          break;
-        case Section::Functions:
-          loadFunctions();
-          break;
-        case Section::Text: {
-          auto lookupTableSize = read<uint64_t>();
-          void *lookupTable = calloc(lookupTableSize * 8, 1);
-          ::Verve::execute(m_bytecode + pc, &m_stringTable[0], this, m_bytecode, lookupTable);
-          return;
-        }
-        default:
-          std::cerr << "Unknown section: `0x0" << std::hex << section << "`\n";
-          throw;
-      }
-    }
+    loadStrings();
+    loadFunctions();
+    loadText();
   }
 
   inline void VM::loadStrings() {
+    auto header = read<uint64_t>();
+    if (header != Section::Strings) {
+      pc -= WORD_SIZE;
+      return;
+    }
+
     while (true) {
       auto header = read<uint64_t>();
 
@@ -126,6 +108,12 @@ uintptr_t allocate(VM *vm, unsigned size) {
   }
 
   inline void VM::loadFunctions() {
+    auto header = read<uint64_t>();
+    if (header != Section::Functions) {
+      pc -= WORD_SIZE;
+      return;
+    }
+
     auto initialHeader = read<uint64_t>();
     assert(initialHeader == Section::FunctionHeader);
 
@@ -140,6 +128,7 @@ uintptr_t allocate(VM *vm, unsigned size) {
       }
       m_userFunctions.push_back(Function(fnid, nargs, pc, std::move(args)));
 
+      linkBytecode();
       while (true) {
         auto opcode = read<uint64_t>();
         if (opcode == Section::Header) {
@@ -147,6 +136,34 @@ uintptr_t allocate(VM *vm, unsigned size) {
         } else if (opcode == Section::FunctionHeader) {
           break;
         }
+      }
+    }
+  }
+
+  inline void VM::loadText()  {
+    auto header = read<uint64_t>();
+    if (header != Section::Text) {
+      pc -= WORD_SIZE;
+      return;
+    }
+
+    auto lookupTableSize = read<uint64_t>();
+    void *lookupTable = calloc(lookupTableSize * WORD_SIZE, 1);
+    linkBytecode();
+    ::Verve::execute(m_bytecode + pc, &m_stringTable[0], this, m_bytecode, lookupTable);
+  }
+
+  void VM::linkBytecode() {
+    if (m_needsLinking) {
+      auto bytecode = (uint64_t *)m_bytecode;
+      for (auto i = pc; i < length; i += WORD_SIZE) {
+        auto value = bytecode[i / WORD_SIZE];
+        if (value == Section::Header || value == Section::FunctionHeader) {
+          return;
+        }
+        auto opcode = (Opcode::Type)value;
+        bytecode[i / WORD_SIZE] = Opcode::address(opcode);
+        i += Opcode::size(opcode) * WORD_SIZE;
       }
     }
   }
