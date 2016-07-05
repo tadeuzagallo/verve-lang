@@ -10,9 +10,9 @@
 namespace Verve {
 
   struct Generator {
-      Generator(AST::ProgramPtr ast, bool isDebug) :
+      Generator(AST::ProgramPtr ast, bool shouldLink) :
         m_ast(ast),
-        m_isDebug(isDebug) {}
+        m_shouldLink(shouldLink) {}
 
       std::stringstream &generate(void);
       void generateFunctionSource(AST::Function *fn);
@@ -34,7 +34,7 @@ namespace Verve {
       std::vector<std::string> m_strings;
       std::vector<AST::Function *> m_functions;
       std::unordered_map<std::string, unsigned> m_slots;
-      bool m_isDebug;
+      bool m_shouldLink;
 
       unsigned lookupID = 1;
       unsigned stackSlot = 0;

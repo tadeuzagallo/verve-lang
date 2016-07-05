@@ -6,8 +6,8 @@
 #include "disassembler.h"
 
 namespace Verve {
-  Disassembler::Disassembler(std::stringstream &&bytecode):
-    m_bytecode(std::move(bytecode))
+  Disassembler::Disassembler(std::stringstream &bytecode):
+    m_bytecode(bytecode)
   {
     auto size = m_bytecode.str().length();
     m_width = std::ceil(std::log10(size + 1)) + 1;

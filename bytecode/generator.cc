@@ -104,10 +104,10 @@ namespace Verve {
   }
 
   void Generator::emitOpcode(Opcode::Type opcode) {
-    if (m_isDebug) {
-      write(opcode);
+    if (m_shouldLink) {
+      write(Opcode::address(opcode));
     } else {
-      write(Opcode::opcodeAddress(opcode));
+      write(opcode);
     }
   }
 

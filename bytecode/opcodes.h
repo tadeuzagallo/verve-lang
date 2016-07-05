@@ -46,7 +46,7 @@ class Opcode {
 
   EVAL(ENUM(Type, MAP_2(FIRST_WITH_COMMA, OPCODES)));
 
-  static uintptr_t opcodeAddress(Opcode::Type t) {
+  static uintptr_t address(Opcode::Type t) {
     return (uintptr_t []) {
       EVAL(MAP_2(OPCODE_ADDRESS, OPCODES))
     }[(int)t];

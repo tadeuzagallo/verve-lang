@@ -8,7 +8,7 @@ namespace Verve {
 
 class Disassembler {
 public:
-  Disassembler(std::stringstream &&bytecode);
+  Disassembler(std::stringstream &bytecode);
   void dump();
 
 private:
@@ -33,7 +33,7 @@ private:
   void dumpFunctions();
   void dumpText();
 
-  std::stringstream m_bytecode;
+  std::stringstream &m_bytecode;
   std::vector<std::string> m_strings;
   std::vector<std::string> m_functions;
   size_t m_width;
