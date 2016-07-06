@@ -34,9 +34,9 @@ virtual ::= "virtual" prototype
 
 extern ::= "extern" prototype
 
-prototype ::= "fn" LCID generics "(" {type ","} ")" "::=" type
+prototype ::= LCID generics "(" {type ","} ")" "->" type
 
-function ::= "fn" LCID generics "(" function_params ")" "::=" type body
+function ::= "fn" LCID generics "(" function_params ")" "->" type body
 
 generics ::= e | "<" (LCID ",")+ ">"
 
@@ -70,7 +70,7 @@ type ::= id_type | function_type
 
 id_type ::= LCID (e | "<" (type ",")+ ">")
 
-function_type ::= "(" {type} ")" "::=" type
+function_type ::= "(" {type} ")" "->" type
 
 let ::= "let" let_decl body
 
@@ -80,7 +80,7 @@ let_lhs ::= LCID | UCID "(" {LCID ","} ")"
 
 match ::= "match" expr "{" case_list "}"
 
-case_list ::= let_lhs "::=" expr_or_body (e | case_list)
+case_list ::= let_lhs "=>" expr_or_body (e | case_list)
 
 LCID ::= [a-z_]+
 UCID ::= [A-Z][a-zA-Z]*
