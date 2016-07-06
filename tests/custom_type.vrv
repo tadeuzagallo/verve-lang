@@ -13,7 +13,7 @@ type list_<t> {
   Cons(t, list_<t>)
 }
 
-fn print_list(l: list_<stringify>) -> void {
+fn print_list(l: list_<printable>) -> void {
   match l {
     Nil() => {}
     Cons(x, rest) => {

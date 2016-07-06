@@ -1,28 +1,28 @@
-interface stringify<t> {
+interface printable<t> {
   virtual to_string (t) -> string
 }
 
-implementation stringify<int> {
+implementation printable<int> {
   extern to_string (t) -> string
 }
 
-implementation stringify<float> {
+implementation printable<float> {
   extern to_string (t) -> string
 }
 
-implementation stringify<string> {
+implementation printable<string> {
   extern to_string (t) -> string
 }
 
-implementation stringify<list<int>> {
+implementation printable<list<int>> {
   extern to_string (t) -> string
 }
 
-implementation stringify<list<string>> {
+implementation printable<list<string>> {
   extern to_string (t) -> string
 }
 
-extern print (stringify) -> void
+extern print (printable) -> void
 
 extern count (string) -> int
 extern substr (string, int) -> string

@@ -21,7 +21,7 @@ implementation monad<maybe> {
   }
 }
 
-fn print_maybe(maybe: maybe<stringify>) -> void {
+fn print_maybe(maybe: maybe<printable>) -> void {
   match maybe {
     Nothing() => print("Nothing")
     Just(x) => print(x)
