@@ -191,6 +191,9 @@ namespace Verve {
         auto fn = parseFunction();
         block->nodes.push_back(fn);
         interface->concreteFunctions.push_back(fn->name);
+        auto fnType = getType<TypeFunction *>(fn->name);
+        fnType->interface = interface;
+        setType(fn->name, fnType, declScope);
       } else {
         match('}');
         break;

@@ -59,7 +59,7 @@ static Type *simplifyType(Type *type, EnvPtr env) {
 }
 
 static void loadFnGenerics(TypeFunction *fnType, EnvPtr env) {
-  if (fnType->isVirtual) {
+  if (fnType->interface) {
     env->types[fnType->interface->genericTypeName] = fnType->interface;
   }
 
@@ -81,7 +81,9 @@ static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFuncti
     auto expected = simplifyType(fnType->types[i], env);
     auto actual = simplifyType(arg->typeof(env), env);
 
-    if (!expected->accepts(actual, env)) {
+    if (!actual) {
+      throw TypeError(arg->loc, "Can't find type information for function argument #%d", i + 1);
+    } else if (!expected->accepts(actual, env)) {
       throw TypeError(arg->loc, "Expected `%s` but got `%s` on arg #%d for function `%s`",
           expected->toString().c_str(),
           actual->toString().c_str(),
@@ -196,7 +198,7 @@ Type *AST::Call::typeof(EnvPtr env) {
 
   auto returnType = typeCheckArguments(arguments, fnType, env, loc);
 
-  if (fnType->isVirtual) {
+  if (fnType->interface) {
     auto ident = AST::asIdentifier(callee);
     auto name = ident->name + env->types[fnType->interface->genericTypeName]->toString();
     if (env->get(name)) {

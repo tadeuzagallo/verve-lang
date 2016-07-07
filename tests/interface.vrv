@@ -1,5 +1,9 @@
 interface show_<t> {
   virtual show(t) -> string
+
+  fn foo(s: t) -> string {
+    "FOO DEFAULT"
+  }
 }
 
 implementation show_<string> {
@@ -12,7 +16,14 @@ implementation show_<int> {
   fn show(n) {
     "SHOW INT"
   }
+
+  fn foo(s) {
+    "FOO INT"
+  }
 }
 
 print(show(""))
 print(show(0))
+
+print(foo(""))
+print(foo(0))

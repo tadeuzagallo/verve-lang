@@ -69,7 +69,7 @@ namespace Verve {
       bool isExternal: 1;
       bool isVirtual: 1;
     };
-    TypeInterface *interface;
+    TypeInterface *interface = nullptr;
   };
 
   struct TypeInterface : Type {
