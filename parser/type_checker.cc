@@ -154,7 +154,9 @@ Type *AST::Identifier::typeof(EnvPtr env) {
 Type *AST::Function::typeof(EnvPtr env) {
   auto type = env->get(name);
   auto fnType = dynamic_cast<TypeFunction *>(type);
-  assert(fnType);
+  if (!fnType) {
+    throw TypeException(this->loc, "Couldn't find type information for function `%s`", name.c_str());
+  }
 
   loadFnGenerics(fnType, env);
 
