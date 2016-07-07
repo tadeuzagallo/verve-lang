@@ -110,7 +110,7 @@ Type *TypeChecker::typeof(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
   try {
     auto type = node->typeof(env);
     if (!type) {
-      throw TypeError(node->loc, "Type Error");
+      throw TypeError(node->loc, "Unknown type for expression");
     }
     return type;
   } catch (TypeError &ex) {
