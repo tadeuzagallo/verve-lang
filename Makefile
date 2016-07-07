@@ -2,6 +2,9 @@ CC = clang++
 CFLAGS = -g -O0 -Wall -Wextra -std=c++14 -I .
 LIBS = 
 
+CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
+MAKEFLAGS += --jobs=$(CPUS)
+
 define source_glob
 $(shell find . -name $(1) -not -path './tests/*')
 endef
@@ -11,10 +14,9 @@ SOURCES = $(call source_glob, '*.cc') $(call source_glob, '*.S')
 OBJECTS = $(patsubst %,.build/%.o,$(SOURCES))
 TARGET = verve
 
-default:
-	@make -j $(shell sysctl -n hw.ncpu) $(TARGET)
+.PRECIOUS: default $(TARGET) $(OBJECTS)
 
-.PRECIOUS: $(TARGET) $(OBJECTS)
+default: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
