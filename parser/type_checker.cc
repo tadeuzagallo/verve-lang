@@ -263,7 +263,15 @@ Type *AST::Match::typeof(EnvPtr env) {
     if (!t) {
       t = type;
     } else {
-      assert(t->accepts(type, env) || type->accepts(t, env));
+      if (!t->accepts(type, env)) {
+        if (type->accepts(t, env)) {
+          t = type;
+        } else {
+          throw TypeError(kase->loc, "Match can't have mixed types on its cases: found a case with type `%s` when previous cases' inferred type was `%s`",
+              type->toString().c_str(),
+              t->toString().c_str());
+        }
+      }
     }
   }
   return t;

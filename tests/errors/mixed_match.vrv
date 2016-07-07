@@ -1,0 +1,5 @@
+type test { F() G() }
+match F() {
+  F() => 1
+  G() => "foo"
+}
