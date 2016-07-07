@@ -1,6 +1,6 @@
 # Verve
 
-Verve is an experimental, minimalistic, static, functional language with 0 dependencies.
+Verve is an experimental, minimalistic, static, functional language with zero dependencies.
 
 ## Installing
 
