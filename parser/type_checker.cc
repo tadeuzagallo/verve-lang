@@ -82,7 +82,7 @@ static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFuncti
     auto actual = simplifyType(arg->typeof(env), env);
 
     if (!actual) {
-      throw TypeError(arg->loc, "Can't find type information for function argument #%d", i + 1);
+      throw TypeError(arg->loc, "Can't find type information for call argument #%d", i + 1);
     } else if (!expected->accepts(actual, env)) {
       throw TypeError(arg->loc, "Expected `%s` but got `%s` on arg #%d for function `%s`",
           expected->toString().c_str(),

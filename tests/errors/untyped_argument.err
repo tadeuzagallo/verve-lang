@@ -1,0 +1,4 @@
+Type Error: Can't find type information for call argument #1
+On file `tests/errors/untyped_argument.vrv` at 3:5
+3: foo(bar)
+       ^
