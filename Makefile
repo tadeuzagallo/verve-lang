@@ -99,13 +99,13 @@ TEST_ERROR = (echo "$(TEST_NAME): ‼️" && $(COUNT_FAILURE))
 TEST_FAILURE = (echo "$(TEST_NAME): ❌" && $(COUNT_FAILURE))
 TEST_SUCCESS = echo "$(TEST_NAME): ✅"
 
-COUNT_TEST = @echo $$(($$(cat $(COUNT_TEST_FILE)) + 1)) > $(COUNT_TEST_FILE)
-COUNT_FAILURE = echo $$(($$(cat $(COUNT_FAILURE_FILE)) + 1)) > $(COUNT_FAILURE_FILE)
+COUNT_TEST = @$$(touch "$(COUNT_TEST_FILE)/$$(echo $@ | tr -s '/.' '_')")
+COUNT_FAILURE = @$$(touch "$(COUNT_FAILURE_FILE)/$$(echo $@ | tr -s '/.' '_')")
 
 TEST_RESULTS = @ \
 	if [[ ! -f $(TEST_LOCK_FILE) ]]; then \
-		total=$$(cat $(COUNT_TEST_FILE)); \
-		fail=$$(cat $(COUNT_FAILURE_FILE)); \
+		total=$$(ls $(COUNT_TEST_FILE) | wc -l | tr -d ' '); \
+		fail=$$(ls $(COUNT_FAILURE_FILE) | wc -l | tr -d ' '); \
 		if [[ $$fail != 0 ]]; then \
 			echo "❌  $$fail of $$total tests failed"; \
 			exit 1; \
@@ -115,11 +115,11 @@ TEST_RESULTS = @ \
 	fi
 
 lock_test_results:
-	touch $(TEST_LOCK_FILE)
+	@touch $(TEST_LOCK_FILE)
 
 test_setup:
-	echo 0 > $(COUNT_TEST_FILE)
-	echo 0 > $(COUNT_FAILURE_FILE)
+	@rm -rf $(COUNT_TEST_FILE) $(COUNT_FAILURE_FILE)
+	@mkdir -p $(COUNT_TEST_FILE) $(COUNT_FAILURE_FILE)
 
 # CLEAN
 
