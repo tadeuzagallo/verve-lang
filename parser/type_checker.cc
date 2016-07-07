@@ -5,9 +5,9 @@
 
 namespace Verve {
 
-class TypeException : public std::exception {
+class TypeError : public std::exception {
 public:
-  TypeException(Loc loc, const char *format, ...) :
+  TypeError(Loc loc, const char *format, ...) :
     m_loc(loc)
   {
     va_list args1;
@@ -21,7 +21,7 @@ public:
     va_end(args2);
   }
 
-  ~TypeException() {
+  ~TypeError() {
     free(m_msg);
   }
 
@@ -70,7 +70,7 @@ static void loadFnGenerics(TypeFunction *fnType, EnvPtr env) {
 
 static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFunction *fnType, EnvPtr env, Loc &loc) {
   if (arguments.size() != fnType->types.size()) {
-    throw TypeException(loc, "Wrong number of arguments for function call");
+    throw TypeError(loc, "Wrong number of arguments for function call");
   }
 
   loadFnGenerics(fnType, env);
@@ -82,7 +82,7 @@ static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFuncti
     auto actual = simplifyType(arg->typeof(env), env);
 
     if (!expected->accepts(actual, env)) {
-      throw TypeException(arg->loc, "Expected `%s` but got `%s` on arg #%d for function `%s`",
+      throw TypeError(arg->loc, "Expected `%s` but got `%s` on arg #%d for function `%s`",
           expected->toString().c_str(),
           actual->toString().c_str(),
           i + 1,
@@ -108,10 +108,10 @@ Type *TypeChecker::typeof(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
   try {
     auto type = node->typeof(env);
     if (!type) {
-      throw TypeException(node->loc, "Type Error");
+      throw TypeError(node->loc, "Type Error");
     }
     return type;
-  } catch (TypeException &ex) {
+  } catch (TypeError &ex) {
     fprintf(stderr, "Type Error: %s\n", ex.what());
     lexer.printSource(ex.loc());
     throw std::runtime_error("type error");
@@ -133,7 +133,7 @@ Type *AST::BinaryOperation::typeof(EnvPtr env) {
   }
 
   if (failed != nullptr) {
-    throw TypeException(failed->loc, "Binary operations only accept `int`, but found `%s`", failedType->toString().c_str());
+    throw TypeError(failed->loc, "Binary operations only accept `int`, but found `%s`", failedType->toString().c_str());
   }
 
   return env->get("int");
@@ -155,7 +155,7 @@ Type *AST::Function::typeof(EnvPtr env) {
   auto type = env->get(name);
   auto fnType = dynamic_cast<TypeFunction *>(type);
   if (!fnType) {
-    throw TypeException(this->loc, "Couldn't find type information for function `%s`", name.c_str());
+    throw TypeError(this->loc, "Couldn't find type information for function `%s`", name.c_str());
   }
 
   loadFnGenerics(fnType, env);
@@ -164,7 +164,7 @@ Type *AST::Function::typeof(EnvPtr env) {
   auto actual = simplifyType(body->typeof(env), env);
 
   if (!expected->accepts(actual, env)) {
-    throw TypeException(body->loc, "Invalid return type for function: expected `%s` but got `%s`", expected->toString().c_str(), actual->toString().c_str());
+    throw TypeError(body->loc, "Invalid return type for function: expected `%s` but got `%s`", expected->toString().c_str(), actual->toString().c_str());
   }
 
   auto t = new TypeFunction(*fnType);
@@ -191,7 +191,7 @@ Type *AST::Call::typeof(EnvPtr env) {
   TypeFunction *fnType;
 
   if(!(fnType = dynamic_cast<TypeFunction *>(calleeType))) {
-    throw TypeException(loc, "Can't find type information for function call");
+    throw TypeError(loc, "Can't find type information for function call");
   }
 
   auto returnType = typeCheckArguments(arguments, fnType, env, loc);
@@ -217,7 +217,7 @@ Type *AST::If::typeof(EnvPtr env) {
     } else if (elseType->accepts(iffType, env)) {
       return elseType;
     } else {
-      throw TypeException(loc, "`if` and `else` branches evaluate to different types");
+      throw TypeError(loc, "`if` and `else` branches evaluate to different types");
     }
   }
   return iffType;
@@ -273,7 +273,7 @@ Type *AST::Assignment::typeof(EnvPtr env) {
     auto pattern = AST::asPattern(left);
     auto patternType = env->get(pattern->constructorName);
     if (!valueType->accepts(patternType, env)) {
-      throw TypeException(pattern->loc, "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), patternType->toString().c_str());
+      throw TypeError(pattern->loc, "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), patternType->toString().c_str());
     }
   } else {
     assert(left->type == AST::Type::Identifier);
