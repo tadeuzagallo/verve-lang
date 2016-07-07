@@ -234,7 +234,15 @@ Type *AST::List::typeof(EnvPtr env) {
     if (!t) {
       t = type;
     } else {
-      assert(t->accepts(type, env));
+      if (!t->accepts(type, env)) {
+        if (type->accepts(t, env)) {
+          t = type;
+        } else {
+          throw TypeError(item->loc, "Lists can't have mixed types: found an element of type `%s` when elements' inferred type was `%s`",
+              type->toString().c_str(),
+              t->toString().c_str());
+        }
+      }
     }
   }
 
