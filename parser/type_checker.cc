@@ -305,7 +305,9 @@ Type *AST::Assignment::typeof(EnvPtr env) {
 Type *AST::Constructor::typeof(EnvPtr env) {
   auto type = env->get(name);
   auto ctorType = dynamic_cast<TypeConstructor *>(type);
-  assert(ctorType);
+  if (!ctorType) {
+    throw TypeError(loc, "Undefined constructor: `%s`", name.c_str());
+  }
   return typeCheckArguments(arguments, ctorType->type, env, loc);
 }
 

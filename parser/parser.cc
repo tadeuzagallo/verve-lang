@@ -527,7 +527,9 @@ namespace Verve {
     pattern->constructorName = token(Token::UCID).string();
 
     auto ctor = getType<TypeConstructor *>(pattern->constructorName);
-    pattern->tag = ctor->tag;
+    if (ctor) {
+      pattern->tag = ctor->tag;
+    }
 
     match('(');
     unsigned i = 0;
@@ -632,10 +634,11 @@ namespace Verve {
     ctor->name = ucid;
 
     auto ctorType = getType<TypeConstructor *>(ucid);
-    assert(ctorType);
 
-    ctor->tag = ctorType->tag;
-    ctor->size = ctorType->size;
+    if (ctorType) {
+      ctor->tag = ctorType->tag;
+      ctor->size = ctorType->size;
+    }
 
     match('(');
     while (!next(')')) {
