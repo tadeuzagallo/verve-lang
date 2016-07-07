@@ -123,7 +123,7 @@ test_setup:
 	@rm -rf $(COUNT_TEST_FILE) $(COUNT_FAILURE_FILE)
 	@mkdir -p $(COUNT_TEST_FILE) $(COUNT_FAILURE_FILE)
 
-# CLEAN
+# INSTALL
 
 install: $(TARGET)
 	ln -fs $(PWD)/$(TARGET) /usr/local/bin
@@ -133,7 +133,9 @@ install_vim_highlight: $(TARGET)
 	ln -fs $(PWD)/vim/ftdetect/verve.vim ~/.vim/ftdetect
 	ln -fs $(PWD)/vim/syntax/verve.vim ~/.vim/syntax
 
+# CLEAN
+
 clean:
-	-rm -rf $(OBJECTS) $(TARGET) $(TARGET).dSYM $(wildcard tests/*.test_)
+	-rm -rf $(TARGET) $(TARGET).dSYM .build
 
 .PHONY: clean
