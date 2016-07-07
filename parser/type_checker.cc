@@ -253,7 +253,10 @@ Type *AST::List::typeof(EnvPtr env) {
 }
 
 Type *AST::Match::typeof(EnvPtr env) {
-  assert(cases.size());
+  if (!cases.size()) {
+    throw TypeError(loc, "Cannot have `match` expression with no cases");
+  }
+
   ::Verve::Type *t = nullptr;
   for (auto kase : cases) {
     auto type = simplifyType(kase->typeof(env), env);
