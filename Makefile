@@ -117,6 +117,7 @@ TEST_RESULTS = @ \
 	fi
 
 lock_test_results:
+	@mkdir -p $$(dirname $(TEST_LOCK_FILE))
 	@touch $(TEST_LOCK_FILE)
 
 test_setup:
