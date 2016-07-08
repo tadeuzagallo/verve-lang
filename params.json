@@ -1,0 +1,6 @@
+{
+  "name": "Verve-lang",
+  "tagline": "An experimental, minimalistic, static, functional language with zero dependencies",
+  "body": "# Verve [![Build Status](https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master)](https://travis-ci.org/tadeuzagallo/verve-lang)\r\n\r\nVerve is an experimental, minimalistic, static, functional language with zero dependencies.\r\n\r\n## Installing\r\n\r\nTo install Verve, simply clone the repo and run\r\n```\r\nmake install\r\n```\r\n\r\nAfter that you should be able to run the command line `verve`, you can try it by running any of the tests, e.g.:\r\n```\r\nverve tests/math_parser.vrv\r\n```\r\n\r\n## Running the tests\r\n\r\nThe tests are broken into 3 categories:\r\n* `output_tests` - run a program and compare it's output against the expected output\r\n* `error_tests` - run a failing program and compare it's message against the expected\r\n* `cpp_tests` - C++ unit tests\r\n\r\nEach category of tests can be ran individually, with make, as in:\r\n```\r\nmake output_tests\r\n```\r\n\r\nOr all together with:\r\n```\r\nmake test\r\n```\r\n\r\n## Syntax highlight\r\nVim syntax highlight is available within the repo, you can install it by running:\r\n```\r\nmake install_vim_highlight\r\n```\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
