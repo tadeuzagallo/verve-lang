@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <fstream>
 #include <libgen.h>
+#include <mach-o/dyld.h>
 
 #include "parser/lexer.h"
 #include "parser/parser.h"
@@ -26,7 +27,12 @@ void printUsage() {
 }
 
 int main(int argc, char **argv) {
-  ROOT_DIR = dirname(argv[0]);
+  char buffer[PATH_MAX];
+  uint32_t bufferSize = PATH_MAX;
+  _NSGetExecutablePath(buffer, &bufferSize);
+  char buffer2[PATH_MAX];
+  realpath(buffer, buffer2);
+  ROOT_DIR = dirname(buffer2);
 
   char *first = argv[1];
   bool isDebug = first && strcmp(first, "-d") == 0;
