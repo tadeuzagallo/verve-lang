@@ -78,7 +78,7 @@ namespace Verve {
         return value.number;
       }
 
-      static auto &precedenceTable() {
+      static std::unordered_map<int, int> &precedenceTable() {
         if (s_precedenceTable.empty()) {
           s_precedenceTable = {
             // 0
