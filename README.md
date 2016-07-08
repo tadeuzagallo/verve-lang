@@ -1,4 +1,4 @@
-# Verve
+# Verve [![Build Status](https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master)](https://travis-ci.org/tadeuzagallo/verve-lang)
 
 Verve is an experimental, minimalistic, static, functional language with zero dependencies.
 
