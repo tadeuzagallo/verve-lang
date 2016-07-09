@@ -510,6 +510,7 @@ namespace Verve {
     this->match('{');
     while (!skip('}')) {
       pushScope();
+      m_scope->escapes = false;
 
       auto kase = AST::createCase(token().loc);
       kase->pattern = parsePattern();
