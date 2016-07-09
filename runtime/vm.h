@@ -20,6 +20,7 @@ namespace Verve {
         m_scope(new Scope(32)),
         pc(0),
         length(len),
+        heapSize(0),
         heapLimit(10240),
         m_needsLinking(needsLinking),
         m_bytecode(bytecode)
