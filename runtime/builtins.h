@@ -1,6 +1,6 @@
 #pragma once
 
-#define JS_FUNCTION(FN_NAME) \
+#define VERVE_FUNCTION(FN_NAME) \
   Value FN_NAME( \
       __attribute__((unused)) unsigned argc, \
       __attribute__((unused)) Value *argv, \
@@ -10,25 +10,25 @@ namespace Verve {
   class VM;
   struct Value;
 
-  JS_FUNCTION(print);
-  JS_FUNCTION(add);
-  JS_FUNCTION(sub);
-  JS_FUNCTION(mul);
-  JS_FUNCTION(div);
-  JS_FUNCTION(mod);
-  JS_FUNCTION(lt);
-  JS_FUNCTION(gt);
-  JS_FUNCTION(lte);
-  JS_FUNCTION(gte);
-  JS_FUNCTION(equals);
-  JS_FUNCTION(_and);
-  JS_FUNCTION(_or);
-  JS_FUNCTION(_not);
-  JS_FUNCTION(minus);
-  JS_FUNCTION(at);
-  JS_FUNCTION(substr);
-  JS_FUNCTION(count);
-  JS_FUNCTION(heapSize);
+  VERVE_FUNCTION(print);
+  VERVE_FUNCTION(add);
+  VERVE_FUNCTION(sub);
+  VERVE_FUNCTION(mul);
+  VERVE_FUNCTION(div);
+  VERVE_FUNCTION(mod);
+  VERVE_FUNCTION(lt);
+  VERVE_FUNCTION(gt);
+  VERVE_FUNCTION(lte);
+  VERVE_FUNCTION(gte);
+  VERVE_FUNCTION(equals);
+  VERVE_FUNCTION(_and);
+  VERVE_FUNCTION(_or);
+  VERVE_FUNCTION(_not);
+  VERVE_FUNCTION(minus);
+  VERVE_FUNCTION(at);
+  VERVE_FUNCTION(substr);
+  VERVE_FUNCTION(count);
+  VERVE_FUNCTION(heapSize);
 
   void registerBuiltins(VM &);
 

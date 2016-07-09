@@ -46,7 +46,7 @@ namespace Verve {
   Value IT; for (unsigned I = 0; (I < argc ? (IT = argv[I]) : 0), I < argc; I++)
 
 #define BASIC_MATH(NAME, OP) \
-  JS_FUNCTION(NAME) { \
+  VERVE_FUNCTION(NAME) { \
     assert(argc == 2); \
  \
     return Value(argv[0].asInt() OP argv[1].asInt()); \
@@ -65,12 +65,12 @@ namespace Verve {
   BASIC_MATH(_and, &&)
   BASIC_MATH(_or, ||)
 
-  JS_FUNCTION(_not) {
+  VERVE_FUNCTION(_not) {
     assert(argc == 1);
     return Value(!argv[0].asInt());
   }
 
-  JS_FUNCTION(minus) {
+  VERVE_FUNCTION(minus) {
     assert(argc == 1);
     return Value(-argv[0].asInt());
   }
@@ -93,7 +93,7 @@ namespace Verve {
     }
   }
 
-  JS_FUNCTION(print) {
+  VERVE_FUNCTION(print) {
     for (unsigned i = 0; i < argc; i++) {
       if (i) putchar(' ');
       printValue(argv[i]);
@@ -103,7 +103,7 @@ namespace Verve {
     return 0;
   }
 
-  JS_FUNCTION(at) {
+  VERVE_FUNCTION(at) {
     assert(argc == 2);
 
     Value arg = argv[0];
@@ -116,7 +116,7 @@ namespace Verve {
     return Value(0);
   }
 
-  JS_FUNCTION(substr) {
+  VERVE_FUNCTION(substr) {
     assert(argc == 2 || argc == 3);
 
     Value arg = argv[0];
@@ -143,7 +143,7 @@ namespace Verve {
     return 0;
   }
 
-  JS_FUNCTION(count) {
+  VERVE_FUNCTION(count) {
     assert(argc == 1);
 
     Value arg = argv[0];
@@ -156,7 +156,7 @@ namespace Verve {
     return 0;
   }
 
-  JS_FUNCTION(heapSize) {
+  VERVE_FUNCTION(heapSize) {
     assert(argc == 0);
 
     return Value((int)vm->heapSize);
