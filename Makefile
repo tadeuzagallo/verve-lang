@@ -102,7 +102,7 @@ TEST_FAILURE = (echo "$(TEST_NAME): ❌" && $(COUNT_FAILURE))
 TEST_SUCCESS = echo "$(TEST_NAME): ✅"
 
 COUNT_TEST = @$$(touch "$(COUNT_TEST_FILE)/$$(echo $@ | tr -s '/.' '_')")
-COUNT_FAILURE = @$$(touch "$(COUNT_FAILURE_FILE)/$$(echo $@ | tr -s '/.' '_')")
+COUNT_FAILURE = $$(touch "$(COUNT_FAILURE_FILE)/$$(echo $@ | tr -s '/.' '_')")
 
 TEST_RESULTS = @ \
 	if [[ ! -f $(TEST_LOCK_FILE) ]]; then \
