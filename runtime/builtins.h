@@ -21,6 +21,7 @@ namespace Verve {
   VERVE_FUNCTION(lte);
   VERVE_FUNCTION(gte);
   VERVE_FUNCTION(equals);
+  VERVE_FUNCTION(not_equal);
   VERVE_FUNCTION(_and);
   VERVE_FUNCTION(_or);
   VERVE_FUNCTION(_not);

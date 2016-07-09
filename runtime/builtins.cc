@@ -29,6 +29,7 @@ namespace Verve {
     REGISTER(<=, lte);
     REGISTER(>=, gte);
     REGISTER(==, equals);
+    REGISTER(!=, not_equal);
     REGISTER(&&, _and);
     REGISTER(||, _or);
 
@@ -62,6 +63,7 @@ namespace Verve {
   BASIC_MATH(lte, <=)
   BASIC_MATH(gte, >=)
   BASIC_MATH(equals, ==)
+  BASIC_MATH(not_equal, !=)
   BASIC_MATH(_and, &&)
   BASIC_MATH(_or, ||)
 
