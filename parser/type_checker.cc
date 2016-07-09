@@ -278,6 +278,9 @@ Type *AST::Match::typeof(EnvPtr env) {
 }
 
 Type *AST::Case::typeof(EnvPtr env) {
+  if (!env->get(pattern->constructorName)) {
+    throw TypeError(pattern->loc, "Unknown constructor `%s` on pattern match", pattern->constructorName.c_str());
+  }
   return body->typeof(env);
 }
 

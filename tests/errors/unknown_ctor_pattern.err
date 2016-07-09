@@ -1,0 +1,4 @@
+Type Error: Unknown constructor `Bar` on pattern match
+On file `tests/errors/unknown_ctor_pattern.vrv` at 2:3
+2:   Bar() => {}
+     ^

@@ -538,7 +538,9 @@ namespace Verve {
 
       auto ident = AST::asIdentifier(parseIdentifier());
       m_scope->set(ident->name, ident);
-      setType(ident->name, ctor->type->types[i++]);
+      if (ctor) {
+        setType(ident->name, ctor->type->types[i++]);
+      }
       pattern->values.push_back(ident);
       if (!skip(',')) break;
     }
