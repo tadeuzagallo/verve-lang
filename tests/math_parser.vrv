@@ -1,62 +1,67 @@
+type state {
+  State(int, string)
+}
+
 type result {
-  Result(int, string)
+  Consume(int, string)
+  Break()
 }
 
-fn _parse_factor(sum: int, expr: string) -> result {
-  if (!count(expr)) Result(sum, expr)
-  else let c = at(expr, 0) {
-    if (c >= '0' && c <= '9') {
-      _parse_factor(10 * sum + c - '0', substr(expr, 1))
-    } else Result(sum, expr)
-  }
-}
-
-fn parse_factor(e: string) -> result {
-  _parse_factor(0, e)
-}
-
-fn _eval_term(pair: result) -> result {
-  let Result(lhs, expr) = pair {
-    if (!count(expr)) pair
-    else let lookahead = at(expr, 0)
-          expr = substr(expr, 1) {
-      if (lookahead == '*' || lookahead == '/') {
-        let Result(rhs, expr) = parse_factor(expr) {
-          let res = if (lookahead == '*') lhs * rhs else lhs / rhs {
-            _eval_term(Result(res, expr))
-          }
+fn consume(state: state, f: (int, int, string) -> result) -> state {
+  let State(acc, expr) = state {
+    if !count(expr)
+      state
+    else
+      let lookahead = at(expr, 0)
+          rest = substr(expr, 1)
+          result = f(lookahead, acc, rest)
+      {
+        match result {
+          Consume(new_acc, rest) => consume(State(new_acc, rest), f)
+          Break() => state
         }
-      } else pair
-    }
+      }
   }
 }
 
-fn eval_term(expr: string) -> result {
-  _eval_term(parse_factor(expr))
+fn parse_factor(expr: string) -> state {
+  consume(State(0, expr), fn _(lookahead: int, sum: int, expr: string) -> result {
+    if lookahead >= '0' && lookahead <= '9'
+      Consume(10 * sum + lookahead - '0', expr)
+    else
+      Break()
+  })
 }
 
-fn _eval_expr(pair: result) -> result {
-  let Result(lhs, expr) = pair {
-    if (!count(expr)) pair
-    else let lookahead = at(expr, 0)
-             expr = substr(expr, 1) {
-      if (lookahead == '+' || lookahead == '-') {
-        let Result(rhs, expr) = eval_term(expr) {
-          let res = if (lookahead == '+') lhs + rhs else lhs - rhs {
-            _eval_expr(Result(res, expr))
-          }
-        }
-      } else pair
-    }
-  }
+
+fn eval_term(expr: string) -> state {
+  consume(parse_factor(expr), fn _(lookahead: int, lhs: int, expr: string) -> result {
+    if lookahead != '*' && lookahead != '/'
+      Break()
+    else
+      let State(rhs, rest) = parse_factor(expr)
+          result = if lookahead == '*' lhs * rhs else lhs / rhs
+      {
+        Consume(result, rest)
+      }
+  })
 }
 
-fn eval_expr(e: string) -> result {
-  _eval_expr(eval_term(e))
+fn eval_expr(expr: string) -> state {
+  consume(eval_term(expr), fn _(lookahead: int, lhs: int, expr: string) -> result {
+    if lookahead != '+' && lookahead != '-'
+      Break()
+    else
+      let State(rhs, rest) = eval_term(expr)
+          result = if lookahead == '+' lhs + rhs else lhs - rhs
+      {
+        Consume(result, rest)
+      }
+  })
 }
 
-fn eval(e: string) -> int {
-  let Result(res, _) = eval_expr(e) {
+fn eval(expr: string) -> int {
+  let State(res, _) = eval_expr(expr) {
     res
   }
 }
