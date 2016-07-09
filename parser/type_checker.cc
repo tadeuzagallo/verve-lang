@@ -284,7 +284,7 @@ Type *AST::Case::typeof(EnvPtr env) {
   return body->typeof(env);
 }
 
-Type *AST::Let::typeof(EnvPtr env) {
+Type *AST::Let::typeof(__unused EnvPtr _) {
   for (auto assignment : assignments) {
     assert(assignment->typeof(env));
   }

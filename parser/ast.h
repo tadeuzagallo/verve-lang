@@ -247,6 +247,7 @@ namespace AST {
 
     std::vector<AssignmentPtr> assignments;
     BlockPtr block;
+    EnvPtr env;
   };
 
   struct Constructor : public Node {

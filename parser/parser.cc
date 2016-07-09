@@ -460,6 +460,7 @@ namespace Verve {
     auto let = AST::createLet(token().loc);
 
     pushScope();
+    let->env = m_environment;
     m_scope->escapes = false;
 
     let->block = AST::createBlock(token().loc);
@@ -483,7 +484,8 @@ namespace Verve {
 
       if (isIdent) {
         auto ident = AST::asIdentifier(assignment->left);
-        setType(ident->name, TypeChecker::typeof(assignment->value, m_environment, m_lexer));
+        auto type = TypeChecker::typeof(assignment->value, m_environment, m_lexer);
+        setType(ident->name, type);
         m_scope->set(ident->name, ident);
       }
     }

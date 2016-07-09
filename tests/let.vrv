@@ -1,4 +1,7 @@
-let a = 1 {
+let
+  f = 1
+  a = f
+{
   print(a)
 }
 
