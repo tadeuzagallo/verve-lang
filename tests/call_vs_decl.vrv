@@ -16,7 +16,7 @@ extern make_thunk<t>(t) -> () -> t
  */
 interface foo<t> {
   // virtual function - required
-  virtual equals(t, t) -> bool
+  virtual equals(t, t) -> int
 
   // function with default implementation - can be overriden
   /*notEquals(a: T, b: T) -> Bool {*/

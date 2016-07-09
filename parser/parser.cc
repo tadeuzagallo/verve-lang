@@ -753,7 +753,14 @@ ident:
       type->returnType = parseType();
       return type;
     } else {
-      auto type = getType(token(Token::LCID).string());
+      auto tkn = std::move(token(Token::LCID));
+      auto type = getType(tkn.string());
+      if (!type) {
+        fprintf(stderr, "Unknown type: `%s`\n", tkn.string().c_str());
+        m_lexer.printSource(tkn.loc);
+        throw std::runtime_error("type error");
+      }
+
       if (!skip('<')) {
         return type;
       }
