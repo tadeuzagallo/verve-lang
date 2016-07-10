@@ -68,7 +68,7 @@ namespace AST {
       throw std::runtime_error("Trying to generate bytecode for virtual node");
     }
 
-    virtual ::Verve::Type *typeof(__unused EnvPtr env) {
+    virtual Type *typeof(__unused EnvPtr env) {
       throw std::runtime_error("Trying to get type for virtual node");
     }
   };
@@ -85,7 +85,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
@@ -96,7 +96,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     double value;
     bool isFloat = false;
@@ -106,7 +106,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     std::string name;
     std::string ns;
@@ -117,7 +117,7 @@ namespace AST {
     using Identifier::Identifier;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
   };
 
   struct FunctionParameter : public Identifier {
@@ -132,7 +132,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     NodePtr callee;
     std::vector<NodePtr> arguments;
@@ -142,7 +142,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     std::string originalName;
     std::string name;
@@ -157,7 +157,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     NodePtr condition;
     BlockPtr ifBody;
@@ -168,7 +168,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     unsigned op;
     NodePtr lhs;
@@ -179,7 +179,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     unsigned op;
     NodePtr operand;
@@ -189,7 +189,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     std::vector<NodePtr> items;
   };
@@ -212,7 +212,7 @@ namespace AST {
     virtual void generateBytecode(__unused Generator *gen) {
       throw std::runtime_error("Implemented inline");
     }
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     PatternPtr pattern;
     BlockPtr body;
@@ -222,7 +222,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     NodePtr value;
     std::vector<CasePtr> cases;
@@ -232,7 +232,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     NodePtr left;
     NodePtr value;
@@ -242,7 +242,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     std::vector<AssignmentPtr> assignments;
     BlockPtr block;
@@ -253,7 +253,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     std::string name;
     std::vector<NodePtr> arguments;
@@ -265,7 +265,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     TypeInterface *m_type;
     BlockPtr block;
@@ -275,7 +275,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
-    virtual ::Verve::Type *typeof(EnvPtr env);
+    virtual Type *typeof(EnvPtr env);
 
     TypeImplementation *m_type;
     BlockPtr block;

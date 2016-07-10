@@ -120,13 +120,16 @@ Type *TypeChecker::typeof(AST::NodePtr node, EnvPtr env, Lexer &lexer) {
   }
 }
 
-Type *AST::String::typeof(EnvPtr env) {
+// AST nodes typeof
+namespace AST {
+
+Type *String::typeof(EnvPtr env) {
   return env->get("string");
 }
 
-Type *AST::BinaryOperation::typeof(EnvPtr env) {
+Type *BinaryOperation::typeof(EnvPtr env) {
   auto intType = env->get("int");
-  AST::NodePtr failed = nullptr;
+  NodePtr failed = nullptr;
   Verve::Type *failedType = nullptr;
   if (!intType->accepts((failedType = lhs->typeof(env)), env)) {
     failed = lhs;
@@ -141,19 +144,19 @@ Type *AST::BinaryOperation::typeof(EnvPtr env) {
   return env->get("int");
 }
 
-Type *AST::UnaryOperation::typeof(EnvPtr env) {
+Type *UnaryOperation::typeof(EnvPtr env) {
   return env->get("int");
 }
 
-Type *AST::Number::typeof(EnvPtr env) {
+Type *Number::typeof(EnvPtr env) {
   return env->get(isFloat ? "float" : "int");
 }
 
-Type *AST::Identifier::typeof(EnvPtr env) {
+Type *Identifier::typeof(EnvPtr env) {
   return env->get(name);
 }
 
-Type *AST::Function::typeof(EnvPtr env) {
+Type *Function::typeof(EnvPtr env) {
   auto type = env->get(name);
   auto fnType = dynamic_cast<TypeFunction *>(type);
   if (!fnType) {
@@ -175,7 +178,7 @@ Type *AST::Function::typeof(EnvPtr env) {
   return t;
 }
 
-Type *AST::Block::typeof(EnvPtr env) {
+Type *Block::typeof(EnvPtr env) {
   if (nodes.empty()) {
     return env->get("void");
   } else {
@@ -188,7 +191,7 @@ Type *AST::Block::typeof(EnvPtr env) {
   }
 }
 
-Type *AST::Call::typeof(EnvPtr env) {
+Type *Call::typeof(EnvPtr env) {
   auto calleeType = callee->typeof(env);
   TypeFunction *fnType;
 
@@ -199,7 +202,7 @@ Type *AST::Call::typeof(EnvPtr env) {
   auto returnType = typeCheckArguments(arguments, fnType, env, loc);
 
   if (fnType->interface) {
-    auto ident = AST::asIdentifier(callee);
+    auto ident = asIdentifier(callee);
     auto name = ident->name + env->types[fnType->interface->genericTypeName]->toString();
     if (env->get(name)) {
       ident->name = name;
@@ -209,7 +212,7 @@ Type *AST::Call::typeof(EnvPtr env) {
   return simplifyType(returnType, env);
 }
 
-Type *AST::If::typeof(EnvPtr env) {
+Type *If::typeof(EnvPtr env) {
   auto iffType = ifBody->typeof(env);
   if (elseBody) {
     auto elseType = elseBody->typeof(env);
@@ -225,7 +228,7 @@ Type *AST::If::typeof(EnvPtr env) {
   return iffType;
 }
 
-Type *AST::List::typeof(EnvPtr env) {
+Type *List::typeof(EnvPtr env) {
   auto dataType = dynamic_cast<EnumType *>(env->get("list"));
   ::Verve::Type *t = nullptr;
   for (auto item : items) {
@@ -252,7 +255,7 @@ Type *AST::List::typeof(EnvPtr env) {
   return dti;
 }
 
-Type *AST::Match::typeof(EnvPtr env) {
+Type *Match::typeof(EnvPtr env) {
   if (!cases.size()) {
     throw TypeError(loc, "Cannot have `match` expression with no cases");
   }
@@ -277,34 +280,34 @@ Type *AST::Match::typeof(EnvPtr env) {
   return t;
 }
 
-Type *AST::Case::typeof(EnvPtr env) {
+Type *Case::typeof(EnvPtr env) {
   if (!env->get(pattern->constructorName)) {
     throw TypeError(pattern->loc, "Unknown constructor `%s` on pattern match", pattern->constructorName.c_str());
   }
   return body->typeof(env);
 }
 
-Type *AST::Let::typeof(__unused EnvPtr _) {
+Type *Let::typeof(__unused EnvPtr _) {
   for (auto assignment : assignments) {
     assert(assignment->typeof(env));
   }
   return block->typeof(env);
 }
 
-Type *AST::Assignment::typeof(EnvPtr env) {
+Type *Assignment::typeof(EnvPtr env) {
   auto valueType = value->typeof(env);
-  if (auto pattern = AST::asPattern(left)) {
+  if (auto pattern = asPattern(left)) {
     auto patternType = env->get(pattern->constructorName);
     if (!valueType->accepts(patternType, env)) {
       throw TypeError(pattern->loc, "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), patternType->toString().c_str());
     }
   } else {
-    assert(AST::asIdentifier(left));
+    assert(asIdentifier(left));
   }
   return valueType;
 }
 
-Type *AST::Constructor::typeof(EnvPtr env) {
+Type *Constructor::typeof(EnvPtr env) {
   auto type = env->get(name);
   auto ctorType = dynamic_cast<TypeConstructor *>(type);
   if (!ctorType) {
@@ -312,16 +315,17 @@ Type *AST::Constructor::typeof(EnvPtr env) {
   }
   return typeCheckArguments(arguments, ctorType->type, env, loc);
 }
-Type *AST::Interface::typeof(EnvPtr env) {
+Type *Interface::typeof(EnvPtr env) {
   env = env->create();
   env->types[m_type->genericTypeName] = m_type;
   return block->typeof(env);
 }
 
-Type *AST::Implementation::typeof(EnvPtr env) {
+Type *Implementation::typeof(EnvPtr env) {
   env = env->create();
   env->types[m_type->interface->genericTypeName] = m_type->type;
   return block->typeof(env);
+}
 }
 
 }
