@@ -293,14 +293,13 @@ Type *AST::Let::typeof(__unused EnvPtr _) {
 
 Type *AST::Assignment::typeof(EnvPtr env) {
   auto valueType = value->typeof(env);
-  if (left->type == AST::Type::Pattern) {
-    auto pattern = AST::asPattern(left);
+  if (auto pattern = AST::asPattern(left)) {
     auto patternType = env->get(pattern->constructorName);
     if (!valueType->accepts(patternType, env)) {
       throw TypeError(pattern->loc, "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), patternType->toString().c_str());
     }
   } else {
-    assert(left->type == AST::Type::Identifier);
+    assert(AST::asIdentifier(left));
   }
   return valueType;
 }

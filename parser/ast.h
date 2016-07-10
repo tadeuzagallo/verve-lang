@@ -20,14 +20,12 @@ static unsigned str_uid = 0;
 
 #define DECLARE_CONVERTER(__class) \
   __unused static __class##Ptr as##__class(NodePtr __n) { \
-    assert(__n->type == Type::__class); \
-    return std::static_pointer_cast<__class>(__n); \
+    return std::dynamic_pointer_cast<__class>(__n); \
   }
 
 #define DECLARE_CTOR(__class)  \
     static inline __class##Ptr create##__class(Loc loc) { \
        auto node = std::make_shared<__class>(loc); \
-      node->type = Type::__class; \
       node->loc = loc; \
       return node; \
     } \
@@ -59,11 +57,9 @@ namespace Verve {
   struct Generator;
 
 namespace AST {
-  ENUM_CLASS(Type, AST_TYPES)
   EVAL(MAP(DECLARE_TYPE, AST_TYPES))
 
   struct Node {
-    Type type;
     Loc loc;
 
     Node(Loc l): loc(l) {  }

@@ -345,8 +345,7 @@ static void handleCapture(AST::IdentifierPtr ident, unsigned stackSlot, Generato
 }
 
 void Assignment::generateBytecode(Generator *gen) {
-  if (left->type == AST::Type::Identifier) {
-    auto ident = AST::asIdentifier(left);
+  if (auto ident = AST::asIdentifier(left)) {
     auto slot = gen->stackSlot++;
     value->generateBytecode(gen);
     gen->m_slots[ident->name] = slot;
@@ -354,8 +353,7 @@ void Assignment::generateBytecode(Generator *gen) {
     gen->write(slot);
 
     handleCapture(ident, slot, gen);
-  } else if (left->type == AST::Type::Pattern) {
-    auto pattern = AST::asPattern(left);
+  } else if (auto pattern = AST::asPattern(left)) {
     value->generateBytecode(gen);
 
     gen->emitOpcode(Opcode::obj_tag_test);

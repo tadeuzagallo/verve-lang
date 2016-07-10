@@ -664,10 +664,8 @@ namespace Verve {
     auto call = AST::createCall(loc);
     call->callee = callee;
 
-    if (callee->type == AST::Type::Identifier) {
-      auto calleeID = AST::asIdentifier(callee);
-      auto fn = m_scope->get(calleeID->name);
-      if (fn && fn->type == AST::Type::Function) {
+    if (auto calleeID = AST::asIdentifier(callee)) {
+      if (auto fn = AST::asFunction(m_scope->get(calleeID->name))) {
         calleeID->ns = AST::asFunction(fn)->ns;
       }
     }
