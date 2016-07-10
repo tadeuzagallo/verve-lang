@@ -313,5 +313,16 @@ Type *AST::Constructor::typeof(EnvPtr env) {
   }
   return typeCheckArguments(arguments, ctorType->type, env, loc);
 }
+Type *AST::Interface::typeof(EnvPtr env) {
+  env = env->create();
+  env->types[m_type->genericTypeName] = m_type;
+  return block->typeof(env);
+}
+
+Type *AST::Implementation::typeof(EnvPtr env) {
+  env = env->create();
+  env->types[m_type->interface->genericTypeName] = m_type->type;
+  return block->typeof(env);
+}
 
 }

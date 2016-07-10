@@ -2,6 +2,7 @@
 
 #include "environment.h"
 #include "token.h"
+#include "type.h"
 
 #include <cassert>
 #include <memory>
@@ -50,7 +51,9 @@ static unsigned str_uid = 0;
       Pattern, \
       Let, \
       Constructor, \
-      Assignment
+      Assignment, \
+      Interface, \
+      Implementation \
 
 namespace Verve {
   struct Generator;
@@ -260,6 +263,26 @@ namespace AST {
     std::vector<NodePtr> arguments;
     unsigned tag;
     unsigned size;
+  };
+
+  struct Interface : public Node {
+    using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
+    virtual ::Verve::Type *typeof(EnvPtr env);
+
+    TypeInterface *m_type;
+    BlockPtr block;
+  };
+
+  struct Implementation : public Node {
+    using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
+    virtual ::Verve::Type *typeof(EnvPtr env);
+
+    TypeImplementation *m_type;
+    BlockPtr block;
   };
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))

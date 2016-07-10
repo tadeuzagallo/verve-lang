@@ -29,8 +29,8 @@ namespace Verve {
     void parseTypeDecl();
     void parseTypeConstructor(unsigned tag, EnumType *owner);
 
-    AST::BlockPtr parseInterface();
-    AST::BlockPtr parseImplementation();
+    AST::InterfacePtr parseInterface();
+    AST::ImplementationPtr parseImplementation();
 
     TypeFunction *parseVirtual(EnvPtr declScope = nullptr);
     TypeFunction *parseExtern(EnvPtr declScope = nullptr, std::string implementationSuffix = "");

@@ -165,34 +165,34 @@ namespace Verve {
     match(')');
   }
 
-  AST::BlockPtr Parser::parseInterface() {
-    auto interface = new TypeInterface();
-    interface->name = token(Token::LCID).string();
-    setType(interface->name, interface);
+  AST::InterfacePtr Parser::parseInterface() {
+    auto interface = AST::createInterface(token().loc);
+    interface->m_type = new TypeInterface();
+    interface->m_type->name = token(Token::LCID).string();
+    setType(interface->m_type->name, interface->m_type);
 
     auto declScope = m_environment;
     pushTypeScope();
 
     match('<');
-    interface->genericTypeName = token(Token::LCID).string();
+    interface->m_type->genericTypeName = token(Token::LCID).string();
+    setType(interface->m_type->genericTypeName, interface->m_type);
     match('>');
 
-    setType(interface->genericTypeName, new GenericType(interface->genericTypeName));
-
-    auto block = AST::createBlock(token().loc);
+    interface->block = AST::createBlock(token().loc);
 
     match('{');
     while (!skip('}')) {
       if (skip("virtual")) {
         auto virtualFunction = parseVirtual(declScope);
-        virtualFunction->interface = interface;
-        interface->virtualFunctions.push_back(virtualFunction->name);
+        virtualFunction->interface = interface->m_type;
+        interface->m_type->virtualFunctions.push_back(virtualFunction->name);
       } else if (skip("fn")) {
         auto fn = parseFunction();
-        block->nodes.push_back(fn);
-        interface->concreteFunctions.push_back(fn->name);
+        interface->block->nodes.push_back(fn);
+        interface->m_type->concreteFunctions.push_back(fn->name);
         auto fnType = getType<TypeFunction *>(fn->name);
-        fnType->interface = interface;
+        fnType->interface = interface->m_type;
         setType(fn->name, fnType, declScope);
       } else {
         match('}');
@@ -202,32 +202,33 @@ namespace Verve {
 
     popTypeScope();
 
-    return block;
+    return interface;
   }
 
-  AST::BlockPtr Parser::parseImplementation() {
+  AST::ImplementationPtr Parser::parseImplementation() {
     auto implementationLoc = token().loc;
-    auto implementation = new TypeImplementation();
+    auto implementation = AST::createImplementation(implementationLoc);
+    implementation->m_type = new TypeImplementation();
     auto interfaceName = token(Token::LCID).string();
 
     auto interface = getType<TypeInterface *>(interfaceName);
     assert(interface);
 
-    interface->implementations.push_back(implementation);
-    implementation->interface = interface;
+    interface->implementations.push_back(implementation->m_type);
+    implementation->m_type->interface = interface;
 
     auto declScope = m_environment;
     pushTypeScope();
 
     match('<');
-    implementation->type = parseType();
-    setType(interface->genericTypeName, implementation->type);
+    implementation->m_type->type = parseType();
+    setType(interface->genericTypeName, implementation->m_type->type);
     match('>');
 
-    auto implementationSuffix = implementation->type->toString();
+    auto implementationSuffix = implementation->m_type->type->toString();
 
     match('{');
-    auto block = AST::createBlock(token().loc);
+    implementation->block = AST::createBlock(token().loc);
     auto virtualFunctions = interface->virtualFunctions;
     while(!skip('}')) {
       std::string name;
@@ -237,7 +238,7 @@ namespace Verve {
         name = fn->originalName;
       } else if (skip("fn")) {
         auto fn = parseTypelessFunction(implementationSuffix, declScope);
-        block->nodes.push_back(fn);
+        implementation->block->nodes.push_back(fn);
         name = fn->originalName;
       } else {
         match('}');
@@ -249,14 +250,14 @@ namespace Verve {
       } else if (std::find(interface->concreteFunctions.begin(), interface->concreteFunctions.end(), name) == interface->concreteFunctions.end()) {
         fprintf(stderr, "Defining function `%s` inside implementation `%s`, but it's not part of the interface\n",
             name.c_str(),
-            implementation->toString().c_str());
+            implementation->m_type->toString().c_str());
         m_lexer.printSource(implementationLoc);
         throw std::runtime_error("type error");
       }
     }
 
     if (virtualFunctions.size() != 0) {
-      fprintf(stderr, "Implementation `%s` does not implement the following virtual functions:\n", implementation->toString().c_str());
+      fprintf(stderr, "Implementation `%s` does not implement the following virtual functions:\n", implementation->m_type->toString().c_str());
       auto index = 1;
       for (auto &fn : virtualFunctions) {
         fprintf(stderr, "%d) %s\n", index++, fn.c_str());
@@ -268,7 +269,7 @@ namespace Verve {
 
     popTypeScope();
 
-    return block;
+    return implementation;
   }
 
   AST::NodePtr Parser::parseExpr(int precedence) {

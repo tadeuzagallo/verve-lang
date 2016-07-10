@@ -403,5 +403,13 @@ void Function::generateBytecode(Generator *gen) {
   gen->m_functions.push_back(this);
 }
 
+void Interface::generateBytecode(Generator *gen) {
+  return block->generateBytecode(gen);
+}
+
+void Implementation::generateBytecode(Generator *gen) {
+  return block->generateBytecode(gen);
+}
+
 }
 }
