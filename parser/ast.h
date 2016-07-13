@@ -51,7 +51,14 @@ static unsigned str_uid = 0;
       Constructor, \
       Assignment, \
       Interface, \
-      Implementation \
+      Implementation, \
+      AbstractType, \
+      BasicType, \
+      FunctionType, \
+      DataType, \
+      EnumType, \
+      TypeConstructor, \
+      Prototype
 
 namespace Verve {
   struct Generator;
@@ -77,6 +84,7 @@ namespace AST {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
+    virtual Type *typeof(EnvPtr env);
 
     BlockPtr body;
   };
@@ -138,21 +146,6 @@ namespace AST {
     std::vector<NodePtr> arguments;
   };
 
-  struct Function : public Node {
-    using Node::Node;
-
-    virtual void generateBytecode(Generator *gen);
-    virtual Type *typeof(EnvPtr env);
-
-    std::string originalName;
-    std::string name;
-    std::string ns;
-    std::vector<FunctionParameterPtr> parameters;
-    BlockPtr body;
-    bool needsScope;
-    bool capturesScope;
-  };
-
   struct If : public Node {
     using Node::Node;
 
@@ -200,10 +193,12 @@ namespace AST {
     virtual void generateBytecode(__unused Generator *gen) {
       throw std::runtime_error("Implemented inline");
     }
+    virtual Type *typeof(EnvPtr env);
 
     unsigned tag;
     std::string constructorName;
     std::vector<IdentifierPtr> values;
+    NodePtr value;
   };
 
   struct Case : public Node {
@@ -267,7 +262,10 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
 
-    TypeInterface *m_type;
+    std::string name;
+    std::string genericTypeName;
+    std::vector<std::string> virtualFunctions;
+    std::vector<std::string> concreteFunctions;
     BlockPtr block;
   };
 
@@ -277,9 +275,88 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
 
-    TypeImplementation *m_type;
+    std::string interfaceName;
+    AbstractTypePtr type;
     BlockPtr block;
   };
+
+  struct AbstractType : public Node {
+    using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
+  };
+
+  struct BasicType : public AbstractType {
+    using AbstractType::AbstractType;
+
+    virtual Type *typeof(EnvPtr env);
+
+    std::string name;
+  };
+
+  struct FunctionType : public AbstractType {
+    using AbstractType::AbstractType;
+
+    virtual Type *typeof(EnvPtr env);
+
+    std::vector<std::string> generics;
+    std::vector<AbstractTypePtr> params;
+    AbstractTypePtr returnType;
+  };
+
+  struct DataType : public AbstractType {
+    using AbstractType::AbstractType;
+
+    virtual Type *typeof(EnvPtr env);
+
+    std::string name;
+    std::vector<AbstractTypePtr> params;
+  };
+
+  struct EnumType : public AbstractType {
+    using AbstractType::AbstractType;
+
+    virtual Type *typeof(EnvPtr env);
+
+    std::string name;
+    std::vector<std::string> generics;
+    std::vector<TypeConstructorPtr> constructors;
+  };
+
+  struct TypeConstructor : public AbstractType {
+    using AbstractType::AbstractType;
+
+    std::string name;
+    std::vector<AbstractTypePtr> types;
+  };
+
+  struct Prototype : public FunctionType {
+    using FunctionType::FunctionType;
+
+    virtual Type *typeof(EnvPtr env);
+
+    std::string name;
+    struct {
+      bool isExternal: 1;
+      bool isVirtual: 1;
+    };
+  };
+
+  struct Function : public Node {
+    using Node::Node;
+
+    virtual void generateBytecode(Generator *gen);
+    virtual Type *typeof(EnvPtr env);
+
+    PrototypePtr type = nullptr;
+    std::string name;
+    std::string ns;
+    std::vector<FunctionParameterPtr> parameters;
+    BlockPtr body;
+    bool needsScope;
+    bool capturesScope;
+  };
+
 
   EVAL(MAP(DECLARE_CONVERTER, AST_TYPES))
   EVAL(MAP(DECLARE_CTOR, AST_TYPES))

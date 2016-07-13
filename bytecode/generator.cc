@@ -402,11 +402,15 @@ void Function::generateBytecode(Generator *gen) {
 }
 
 void Interface::generateBytecode(Generator *gen) {
-  return block->generateBytecode(gen);
+  block->generateBytecode(gen);
 }
 
 void Implementation::generateBytecode(Generator *gen) {
-  return block->generateBytecode(gen);
+  block->generateBytecode(gen);
+}
+
+void AbstractType::generateBytecode(__unused Generator *gen) {
+  // Types never generate bytecode
 }
 
 }

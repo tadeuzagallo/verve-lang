@@ -3,7 +3,8 @@
 #include "environment.h"
 
 namespace Verve {
-  bool BasicType::accepts(Type *other, __unused EnvPtr env) {
+
+  bool BasicType::accepts(Type *other, EnvPtr env) {
     if (auto t = dynamic_cast<BasicType *>(other)) {
       return typeName == t->typeName;
     }
@@ -15,7 +16,7 @@ namespace Verve {
       if (t != this) {
         return t->accepts(other, env);
       } else {
-        env->types[typeName] = other;
+        env->set(typeName, other);
         return true;
       }
     }
@@ -67,7 +68,7 @@ namespace Verve {
 
     for (auto impl : implementations) {
       if (impl->type->accepts(other, env)) {
-        env->types[genericTypeName] = other;
+        env->set(genericTypeName, other);
         return true;
       }
     }
@@ -75,16 +76,13 @@ namespace Verve {
     return false;
   }
 
-  bool TypeConstructor::accepts(Type *other, EnvPtr env) {
-    if (owner) {
-      return owner->accepts(other, env);
-    }
+  bool TypeConstructor::accepts(__unused Type *other, __unused EnvPtr env) {
     return false;
   }
 
   bool EnumType::accepts(Type *other, __unused EnvPtr env) {
     if (auto ctor = dynamic_cast<TypeConstructor *>(other)) {
-      return ctor->type->returnType == this;
+      return ctor->returnType == this;
     }
     return other == this;
   }

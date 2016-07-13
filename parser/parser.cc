@@ -12,27 +12,11 @@ namespace Verve {
   Parser::Parser(Lexer &lexer, std::string dirname, std::string ns) :
     m_lexer(lexer), m_dirname(dirname), m_ns(ns)
   {
-    m_environment = std::make_shared<Environment>();
     m_scope = std::make_shared<ParseScope>();
-
-    setType("int", new BasicType("int"));
-    setType("char", new BasicType("char"));
-    setType("float", new BasicType("float"));
-    setType("void", new BasicType("void"));
-
-    auto list = new EnumType();
-    list->name = "list";
-    list->generics.push_back("T");
-    setType("list", list);
-
-    auto string = new DataTypeInstance();
-    string->dataType = list;
-    string->types.push_back(getType("char"));
-    setType("string", string);
   }
 
   static auto isPrelude = false;
-  AST::ProgramPtr Parser::parse() {
+  AST::ProgramPtr Parser::parse(bool typecheck) {
     auto program = AST::createProgram(Loc{0, 0});
 
     if (!isPrelude) {
@@ -53,13 +37,11 @@ namespace Verve {
       }
       auto node = parseDecl();
       if (node) {
-        pushTypeScope();
-        TypeChecker::typeof(node, m_environment, m_lexer);
-        popTypeScope();
         program->body->nodes.push_back(node);
       }
     }
     m_blockStack.pop_back();
+    if (typecheck) TypeChecker::check(program, m_lexer);
     m_ast = program;
     return program;
   }
@@ -90,16 +72,6 @@ namespace Verve {
   AST::BlockPtr Parser::import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname) {
     auto parser = parseFile(path, dirname, ns);
 
-    if (imports.size() == 0) {
-      for (auto it : parser.m_environment->types) {
-        m_environment->types[namespaced(ns, it.first)] = it.second;
-      }
-    } else {
-      for (auto import : imports) {
-        m_environment->types[import] = parser.m_environment->types[import];
-      }
-    }
-
     return parser.m_ast->body;
   }
 
@@ -110,164 +82,98 @@ namespace Verve {
       } else if (skip("implementation")) {
         return parseImplementation();
       } else if (skip("type")) {
-        parseTypeDecl();
-        return nullptr;
+        return parseTypeDecl();
       } else if (skip("extern")) {
-        parseExtern();
-        return nullptr;
+        return parseExtern();
       }
     }
 
     return parseExpr();
   }
 
-  void Parser::parseTypeDecl() {
-    auto type = new EnumType();
-    auto tag = 0u;
-
+  AST::EnumTypePtr Parser::parseTypeDecl() {
+    auto type = AST::createEnumType(token().loc);
     type->name = token(Token::LCID).string();
-
-    setType(type->name, type);
 
     parseGenerics(type->generics);
 
     match('{');
     while (!skip('}')) {
-      parseTypeConstructor(tag++, type);
+      type->constructors.push_back(parseTypeConstructor());
     }
+
+    return type;
   }
 
-  void Parser::parseTypeConstructor(unsigned tag, EnumType *owner) {
-    auto ctor = new TypeConstructor();
-    ctor->type = new TypeFunction();
-
-    ctor->type->name = token(Token::UCID).string();
-    ctor->type->returnType = owner;
-
-    if (ctor->type->name == owner->name) {
-      // keep track of the enclosing enum that is going to be shadowed in the type scope
-      ctor->owner = owner;
-    }
-
-    setType(ctor->type->name, ctor);
-
-    ctor->tag = tag;
+  AST::TypeConstructorPtr Parser::parseTypeConstructor() {
+    auto ctor = AST::createTypeConstructor(token().loc);
+    ctor->name = token(Token::UCID).string();
 
     match('(');
     while (!next(')')) {
-      ctor->size++;
-      ctor->type->types.push_back(parseType());
+      ctor->types.push_back(parseType());
 
       if (!skip(',')) {
         break;
       }
     }
     match(')');
+
+    return ctor;
   }
 
   AST::InterfacePtr Parser::parseInterface() {
     auto interface = AST::createInterface(token().loc);
-    interface->m_type = new TypeInterface();
-    interface->m_type->name = token(Token::LCID).string();
-    setType(interface->m_type->name, interface->m_type);
-
-    auto declScope = m_environment;
-    pushTypeScope();
+    interface->name = token(Token::LCID).string();
 
     match('<');
-    interface->m_type->genericTypeName = token(Token::LCID).string();
-    setType(interface->m_type->genericTypeName, interface->m_type);
+    interface->genericTypeName = token(Token::LCID).string();
     match('>');
 
     interface->block = AST::createBlock(token().loc);
-
     match('{');
     while (!skip('}')) {
       if (skip("virtual")) {
-        auto virtualFunction = parseVirtual(declScope);
-        virtualFunction->interface = interface->m_type;
-        interface->m_type->virtualFunctions.push_back(virtualFunction->name);
+        auto virtualFunction = parseVirtual();
+        interface->virtualFunctions.push_back(virtualFunction->name);
+        interface->block->nodes.push_back(virtualFunction);
       } else if (skip("fn")) {
         auto fn = parseFunction();
         interface->block->nodes.push_back(fn);
-        interface->m_type->concreteFunctions.push_back(fn->name);
-        auto fnType = getType<TypeFunction *>(fn->name);
-        fnType->interface = interface->m_type;
-        setType(fn->name, fnType, declScope);
+        interface->concreteFunctions.push_back(fn->name);
       } else {
         match('}');
         break;
       }
     }
-
-    popTypeScope();
 
     return interface;
   }
 
   AST::ImplementationPtr Parser::parseImplementation() {
-    auto implementationLoc = token().loc;
-    auto implementation = AST::createImplementation(implementationLoc);
-    implementation->m_type = new TypeImplementation();
-    auto interfaceName = token(Token::LCID).string();
-
-    auto interface = getType<TypeInterface *>(interfaceName);
-    assert(interface);
-
-    interface->implementations.push_back(implementation->m_type);
-    implementation->m_type->interface = interface;
-
-    auto declScope = m_environment;
-    pushTypeScope();
+    auto implementation = AST::createImplementation(token().loc);
+    implementation->interfaceName = token(Token::LCID).string();
 
     match('<');
-    implementation->m_type->type = parseType();
-    setType(interface->genericTypeName, implementation->m_type->type);
+    implementation->type = parseType();
     match('>');
 
-    auto implementationSuffix = implementation->m_type->type->toString();
-
-    match('{');
     implementation->block = AST::createBlock(token().loc);
-    auto virtualFunctions = interface->virtualFunctions;
+    match('{');
     while(!skip('}')) {
       std::string name;
 
       if (skip("extern")) {
-        auto fn = parseExtern(declScope, implementationSuffix);
-        name = fn->originalName;
-      } else if (skip("fn")) {
-        auto fn = parseTypelessFunction(implementationSuffix, declScope);
+        auto fn = parseExtern();
         implementation->block->nodes.push_back(fn);
-        name = fn->originalName;
+      } else if (skip("fn")) {
+        auto fn = parseTypelessFunction();
+        implementation->block->nodes.push_back(fn);
       } else {
         match('}');
         break;
       }
-      auto it = std::find(virtualFunctions.begin(), virtualFunctions.end(), name);
-      if (it != virtualFunctions.end()) {
-        virtualFunctions.erase(it);
-      } else if (std::find(interface->concreteFunctions.begin(), interface->concreteFunctions.end(), name) == interface->concreteFunctions.end()) {
-        fprintf(stderr, "Defining function `%s` inside implementation `%s`, but it's not part of the interface\n",
-            name.c_str(),
-            implementation->m_type->toString().c_str());
-        m_lexer.printSource(implementationLoc);
-        throw std::runtime_error("type error");
-      }
     }
-
-    if (virtualFunctions.size() != 0) {
-      fprintf(stderr, "Implementation `%s` does not implement the following virtual functions:\n", implementation->m_type->toString().c_str());
-      auto index = 1;
-      for (auto &fn : virtualFunctions) {
-        fprintf(stderr, "%d) %s\n", index++, fn.c_str());
-      }
-      fputc('\n', stderr);
-      m_lexer.printSource(implementationLoc);
-      throw std::runtime_error("type error");
-    }
-
-    popTypeScope();
 
     return implementation;
   }
@@ -327,54 +233,42 @@ namespace Verve {
     m_lexer.invalidToken();
   }
 
-  TypeFunction *Parser::parseVirtual(std::shared_ptr<Environment> declScope) {
+  AST::PrototypePtr Parser::parseVirtual() {
     auto prototype = parsePrototype();
     prototype->isVirtual = true;
-    setType(prototype->name, prototype, declScope);
 
     return prototype;
   }
 
-  TypeFunction *Parser::parseExtern(std::shared_ptr<Environment> scope, std::string implementationSuffix) {
-    auto prototype = parsePrototype(implementationSuffix);
+  AST::PrototypePtr Parser::parseExtern() {
+    auto prototype = parsePrototype();
     prototype->isExternal = true;
-    setType(prototype->name, prototype, scope);
 
     return prototype;
   }
 
-  TypeFunction *Parser::parsePrototype(std::string implementationSuffix) {
-    auto fnType = new TypeFunction();
-    fnType->originalName = token(Token::LCID).string();
-    fnType->name = fnType->originalName + implementationSuffix;
+  AST::PrototypePtr Parser::parsePrototype() {
+    auto prototype = AST::createPrototype(token().loc);
+    prototype->name = token(Token::LCID).string();
 
-    parseGenerics(fnType->generics);
+    parseGenerics(prototype->generics);
 
     match('(');
     while (!next(')')) {
-      fnType->types.push_back(parseType());
+      prototype->params.push_back(parseType());
       if (!skip(',')) break;
     }
     match(')');
 
     match(TUPLE_TOKEN('-', '>'));
-    fnType->returnType = parseType();
+    prototype->returnType = parseType();
 
-    return fnType;
+    return prototype;
   }
 
-  AST::FunctionPtr Parser::parseTypelessFunction(std::string implementationName, std::shared_ptr<Environment> declScope) {
+  AST::FunctionPtr Parser::parseTypelessFunction() {
     auto fn = AST::createFunction(token().loc);
-    fn->originalName = token(Token::LCID).string();
-
-    auto fnType = getType<TypeFunction *>(fn->originalName);
-    assert(fnType);
-    fn->name = fn->originalName + implementationName;
-    setType(fn->name, fnType, declScope);
-
-    for (auto g : fnType->generics) {
-      setType(g, new GenericType(g));
-    }
+    fn->name = token(Token::LCID).string();
 
     pushScope();
 
@@ -387,15 +281,11 @@ namespace Verve {
       fn->parameters.push_back(arg);
       m_scope->set(arg->name, arg);
 
-      auto type = fnType->types[arg->index];
-      setType(arg->name, type);
-
       if (!skip(',')) break;
     }
     match(')');
 
     fn->body = AST::createBlock(token().loc);
-    fn->body->env = m_environment;
     m_blockStack.push_back(fn->body);
     parseBody(fn->body);
     m_blockStack.pop_back();
@@ -412,25 +302,21 @@ namespace Verve {
     auto start = token().loc;
 
     auto fn = AST::createFunction(start);
-    auto fnType = new TypeFunction();
+    fn->type = AST::createPrototype(start);
+    fn->type->name =
     fn->name = token(Token::LCID).string();
-    fnType->name = fn->name;
     fn->ns = m_ns;
-
-    auto env = m_environment;
 
     pushScope();
 
-    parseGenerics(fnType->generics);
+    parseGenerics(fn->type->generics);
 
-    parseFunctionParams(fn->parameters, fnType->types);
+    parseFunctionParams(fn->parameters, fn->type->params);
 
     match(TUPLE_TOKEN('-', '>'));
-    setType(fnType->name, fnType, env);
-    fnType->returnType = parseType();
+    fn->type->returnType = parseType();
 
     fn->body = AST::createBlock(token().loc);
-    fn->body->env = m_environment;
     m_blockStack.push_back(fn->body);
     parseBody(fn->body);
     m_blockStack.pop_back();
@@ -461,11 +347,9 @@ namespace Verve {
     auto let = AST::createLet(token().loc);
 
     pushScope();
-    let->env = m_environment;
     m_scope->escapes = false;
 
     let->block = AST::createBlock(token().loc);
-    let->block->env = m_environment;
 
     while (!next('{')) {
       auto assignment = AST::createAssignment(token().loc);
@@ -485,9 +369,10 @@ namespace Verve {
 
       if (isIdent) {
         auto ident = AST::asIdentifier(assignment->left);
-        auto type = TypeChecker::typeof(assignment->value, m_environment, m_lexer);
-        setType(ident->name, type);
         m_scope->set(ident->name, ident);
+      } else {
+        auto pattern = AST::asPattern(assignment->left);
+        pattern->value = assignment->value;
       }
     }
 
@@ -515,9 +400,9 @@ namespace Verve {
 
       auto kase = AST::createCase(token().loc);
       kase->pattern = parsePattern();
+      kase->pattern->value = match->value;
       this->match(TUPLE_TOKEN('=', '>'));
       kase->body = parseExprOrBody();
-      kase->body->env = m_environment;
       match->cases.push_back(kase);
 
       popScope();
@@ -530,21 +415,12 @@ namespace Verve {
     auto pattern = AST::createPattern(token().loc);
     pattern->constructorName = token(Token::UCID).string();
 
-    auto ctor = getType<TypeConstructor *>(pattern->constructorName);
-    if (ctor) {
-      pattern->tag = ctor->tag;
-    }
-
     match('(');
-    unsigned i = 0;
     while (!next(')')) {
       m_blockStack.back()->stackSlots++;
 
       auto ident = AST::asIdentifier(parseIdentifier());
       m_scope->set(ident->name, ident);
-      if (ctor) {
-        setType(ident->name, ctor->type->types[i++]);
-      }
       pattern->values.push_back(ident);
       if (!skip(',')) break;
     }
@@ -577,7 +453,7 @@ namespace Verve {
 
   void Parser::parseFunctionParams(
       std::vector<AST::FunctionParameterPtr> &params,
-      std::vector<Type *> &types)
+      std::vector<AST::AbstractTypePtr> &types)
   {
     match('(');
 
@@ -593,15 +469,6 @@ namespace Verve {
 
       auto type = parseType();
       types.push_back(type);
-      setType(param->name, type);
-
-      if (auto dti = dynamic_cast<DataTypeInstance *>(type)) {
-        if (auto dt = dynamic_cast<EnumType *>(dti->dataType)) {
-          for (unsigned i = 0; i < dti->types.size(); i++) {
-            setType(dt->generics[i], dti->types[i]);
-          }
-        }
-      }
 
       if (!skip(',')) break;
     }
@@ -617,8 +484,6 @@ namespace Verve {
     do {
       auto name = token(Token::LCID).string();
       generics.push_back(name);
-
-      setType(name, new GenericType(std::move(name)));
     } while (skip(','));
 
     return match('>');
@@ -638,13 +503,6 @@ namespace Verve {
   AST::ConstructorPtr Parser::parseConstructor(std::string ucid) {
     auto ctor = AST::createConstructor(token().loc);
     ctor->name = ucid;
-
-    auto ctorType = getType<TypeConstructor *>(ucid);
-
-    if (ctorType) {
-      ctor->tag = ctorType->tag;
-      ctor->size = ctorType->size;
-    }
 
     match('(');
     while (!next(')')) {
@@ -706,9 +564,10 @@ namespace Verve {
         }
       }
     }
-    if (var) return var;
-ident:
 
+    if (var) return var;
+
+ident:
     auto identifier = AST::createIdentifier(loc);
     identifier->name = name;
     return identifier;
@@ -743,11 +602,11 @@ ident:
     return list;
   }
 
-  Type *Parser::parseType() {
+  AST::AbstractTypePtr Parser::parseType() {
     if (skip('(')) {
-      auto type = new TypeFunction();
+      auto type = AST::createFunctionType(token().loc);
       while (!next(')')) {
-        type->types.push_back(parseType());
+        type->params.push_back(parseType());
         if (!skip(',')) break;
       }
       match(')');
@@ -756,62 +615,33 @@ ident:
       return type;
     } else {
       auto tkn = std::move(token(Token::LCID));
-      auto type = getType(tkn.string());
-      if (!type) {
-        fprintf(stderr, "Unknown type: `%s`\n", tkn.string().c_str());
-        m_lexer.printSource(tkn.loc);
-        throw std::runtime_error("type error");
-      }
 
       if (!skip('<')) {
+        auto type = AST::createBasicType(tkn.loc);
+        type->name = tkn.string();
         return type;
       }
 
-      auto dti = new DataTypeInstance();
-      dti->dataType = type;
+      auto dti = AST::createDataType(tkn.loc);
+      dti->name = tkn.string();
       do {
-        dti->types.push_back(parseType());
+        dti->params.push_back(parseType());
         if (!next('>')) break;
       } while(!next('>'));
       match('>');
-      //assert(dti->types.size() == dti->dataType->generics.size());
+
       return dti;
     }
-  }
-
-  // Type helpers
-
-  void Parser::setType(std::string typeName, Type *type, std::shared_ptr<Environment> env) {
-    (env ?: m_environment)->types[typeName] = type;
-  }
-
-  template <typename T>
-  T Parser::getType(std::string typeName) {
-    return dynamic_cast<T>(m_environment->get(typeName));
-  }
-
-  void Parser::pushTypeScope() {
-    auto env = std::make_shared<Environment>();
-    env->parent = m_environment;
-    m_environment = env;
-  }
-
-  void Parser::popTypeScope() {
-    m_environment = m_environment->parent;
   }
 
   // Var helpers
 
   void Parser::pushScope() {
     m_scope = m_scope->create();
-
-    pushTypeScope();
   }
 
   void Parser::popScope() {
     m_scope = m_scope->restore();
-
-    popTypeScope();
   }
 
   // Lexer aliases

@@ -14,8 +14,8 @@ namespace Verve {
     Type *get(std::string typeName) {
       auto env = this;
       while (env) {
-        auto it = env->types.find(typeName);
-        if (it != env->types.end()) {
+        auto it = env->m_types.find(typeName);
+        if (it != env->m_types.end()) {
           return it->second;
         }
         env = env->parent.get();
@@ -29,7 +29,17 @@ namespace Verve {
       return env;
     }
 
-    std::unordered_map<std::string, Type *> types;
+    template<typename T>
+    void set(T &&name, Type *type) {
+      m_types[std::forward<T>(name)] = type;
+    }
+
+    const std::unordered_map<std::string, Type *> &types() const {
+      return m_types;
+    }
+
+  private:
+    std::unordered_map<std::string, Type *> m_types;
     EnvPtr parent;
   };
 }

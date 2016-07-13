@@ -60,10 +60,9 @@ namespace Verve {
       return str.str();
     }
 
-    std::string originalName;
     std::string name;
-    std::vector<std::string> generics;
     std::vector<Type *> types;
+    std::vector<std::string> generics;
     Type *returnType;
     struct {
       bool isExternal: 1;
@@ -108,21 +107,17 @@ namespace Verve {
     Type *type;
   };
 
-  struct TypeConstructor : Type {
+  struct TypeConstructor : TypeFunction {
     virtual bool accepts(Type *, EnvPtr) override;
 
     virtual std::string toString() override {
       std::stringstream str;
-      str << type->name
-          << type->toString();
-
+      str << name
+          << TypeFunction::toString();
       return str.str();
     }
 
-    TypeFunction *type;
-    EnumType *owner = nullptr;
     unsigned tag;
-    unsigned size = 0;
   };
 
   struct EnumType : Type {

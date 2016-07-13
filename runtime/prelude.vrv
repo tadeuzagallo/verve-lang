@@ -3,23 +3,23 @@ interface printable<t> {
 }
 
 implementation printable<int> {
-  extern to_string (t) -> string
+  extern to_string (int) -> string
 }
 
 implementation printable<float> {
-  extern to_string (t) -> string
+  extern to_string (float) -> string
 }
 
 implementation printable<string> {
-  extern to_string (t) -> string
+  extern to_string (string) -> string
 }
 
 implementation printable<list<int>> {
-  extern to_string (t) -> string
+  extern to_string (list<int>) -> string
 }
 
 implementation printable<list<string>> {
-  extern to_string (t) -> string
+  extern to_string (list<string>) -> string
 }
 
 extern print (printable) -> void
@@ -34,7 +34,7 @@ extern `*` (int, int) -> int
 extern `/` (int, int) -> int
 extern `%` (int, int) -> int
 
-// should be bool
+ // should be bool
 extern `&&` (int, int) -> int
 extern `||` (int, int) -> int
 

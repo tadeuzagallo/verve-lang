@@ -17,7 +17,7 @@ namespace Verve {
   public:
 
     Parser(Lexer &lexer, std::string dirname, std::string ns = "");
-    AST::ProgramPtr parse();
+    AST::ProgramPtr parse(bool typecheck = true);
 
   private:
 
@@ -26,17 +26,17 @@ namespace Verve {
 
     AST::BlockPtr import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname);
 
-    void parseTypeDecl();
-    void parseTypeConstructor(unsigned tag, EnumType *owner);
+    AST::EnumTypePtr parseTypeDecl();
+    AST::TypeConstructorPtr parseTypeConstructor();
 
     AST::InterfacePtr parseInterface();
     AST::ImplementationPtr parseImplementation();
 
-    TypeFunction *parseVirtual(EnvPtr declScope = nullptr);
-    TypeFunction *parseExtern(EnvPtr declScope = nullptr, std::string implementationSuffix = "");
-    TypeFunction *parsePrototype(std::string implementationSuffix = "");
+    AST::PrototypePtr parseVirtual();
+    AST::PrototypePtr parseExtern();
+    AST::PrototypePtr parsePrototype();
 
-    AST::FunctionPtr parseTypelessFunction(std::string implementationName, EnvPtr declScope = nullptr);
+    AST::FunctionPtr parseTypelessFunction();
     AST::FunctionPtr parseFunction();
 
     AST::IfPtr parseIf();
@@ -49,7 +49,7 @@ namespace Verve {
 
     void parseFunctionParams(
         std::vector<AST::FunctionParameterPtr> &params,
-        std::vector<Type *> &types);
+        std::vector<AST::AbstractTypePtr> &types);
 
     void parseGenerics(std::vector<std::string> &generics);
 
@@ -67,15 +67,7 @@ namespace Verve {
     AST::NumberPtr parseFloat();
     AST::StringPtr parseString();
     AST::ListPtr parseList();
-    Type *parseType();
-
-    // Type helpers
-
-    void setType(std::string typeName, Type *type, EnvPtr env = nullptr);
-    template<typename T = Type *> T getType(std::string typeName);
-
-    void pushTypeScope();
-    void popTypeScope();
+    AST::AbstractTypePtr parseType();
 
     // Var helpers
 
@@ -100,7 +92,6 @@ namespace Verve {
     // Properties
 
     Lexer &m_lexer;
-    EnvPtr m_environment;
     ParseScopePtr m_scope;
     std::vector<AST::BlockPtr> m_blockStack;
     std::string m_dirname;

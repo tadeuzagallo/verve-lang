@@ -1,4 +1,4 @@
-Defining function `bar` inside implementation `foo<int>`, but it's not part of the interface
+Type Error: Defining function `bar` inside implementation `foo<int>`, but it's not part of the interface
 On file `tests/errors/interface_undeclared.vrv` at 4:16
 4: implementation foo<int> {
                   ^
