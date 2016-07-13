@@ -87,6 +87,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
 
     BlockPtr body;
+    std::vector<ProgramPtr> imports;
   };
 
   struct Block : public Node {

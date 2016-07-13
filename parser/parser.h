@@ -21,10 +21,10 @@ namespace Verve {
 
   private:
 
-    AST::NodePtr parseImport();
+    AST::ProgramPtr parseImport();
     AST::NodePtr parseDecl();
 
-    AST::BlockPtr import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname);
+    AST::ProgramPtr import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname);
 
     AST::EnumTypePtr parseTypeDecl();
     AST::TypeConstructorPtr parseTypeConstructor();
@@ -96,6 +96,7 @@ namespace Verve {
     std::vector<AST::BlockPtr> m_blockStack;
     std::string m_dirname;
     AST::ProgramPtr m_ast;
+    EnvPtr m_env;
     std::string m_ns;
   };
 

@@ -6,6 +6,6 @@
 namespace Verve {
   class TypeChecker {
     public:
-      static void check(AST::ProgramPtr program, Lexer &lexer);
+      static void check(AST::ProgramPtr program, EnvPtr env, Lexer &lexer);
   };
 }

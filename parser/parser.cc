@@ -9,30 +9,52 @@
 std::string ROOT_DIR = "";
 
 namespace Verve {
+
+  static EnvPtr createEnv() {
+    auto env = std::make_shared<Environment>();
+
+    env->set("char", new BasicType("char"));
+    env->set("int", new BasicType("int"));
+    env->set("float", new BasicType("float"));
+    env->set("void", new BasicType("void"));
+
+    auto list = new EnumType();
+    list->name = "list";
+    list->generics.push_back("t");
+    env->set("list", list);
+
+    auto string = new DataTypeInstance();
+    string->dataType = list;
+    string->types.push_back(env->get("char"));
+    env->set("string", string);
+
+    return env;
+  }
+
   Parser::Parser(Lexer &lexer, std::string dirname, std::string ns) :
     m_lexer(lexer), m_dirname(dirname), m_ns(ns)
   {
     m_scope = std::make_shared<ParseScope>();
+    m_env = createEnv();
   }
 
   static auto isPrelude = false;
   AST::ProgramPtr Parser::parse(bool typecheck) {
     auto program = AST::createProgram(Loc{0, 0});
+    program->body = AST::createBlock(Loc{0, 0});
 
     if (!isPrelude) {
       isPrelude = true;
-      program->body = import("runtime/prelude", {}, "", ROOT_DIR);
+      program->imports.push_back(import("runtime/prelude", {}, "", ROOT_DIR));
       isPrelude = false;
-    } else {
-      program->body = AST::createBlock(Loc{0, 0});
     }
 
     m_blockStack.push_back(program->body);
     while(!next(Token::END)) {
       while (skip("import")) {
-        auto node = parseImport();
-        if (node) {
-          program->body->nodes.push_back(node);
+        auto import = parseImport();
+        if (import) {
+          program->imports.push_back(import);
         }
       }
       auto node = parseDecl();
@@ -41,12 +63,12 @@ namespace Verve {
       }
     }
     m_blockStack.pop_back();
-    if (typecheck) TypeChecker::check(program, m_lexer);
+    TypeChecker::check(program, m_env, m_lexer);
     m_ast = program;
     return program;
   }
 
-  AST::NodePtr Parser::parseImport() {
+  AST::ProgramPtr Parser::parseImport() {
     std::vector<std::string> imports;
     if (!skip('*')) {
       match('{');
@@ -69,10 +91,20 @@ namespace Verve {
     return import(path, imports, ns, m_dirname);
   }
 
-  AST::BlockPtr Parser::import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname) {
+  AST::ProgramPtr Parser::import(std::string path, std::vector<std::string>  imports, std::string ns, std::string dirname) {
     auto parser = parseFile(path, dirname, ns);
 
-    return parser.m_ast->body;
+   if (imports.size() == 0) {
+      for (auto it : parser.m_env->types()) {
+        m_env->set(namespaced(ns, it.first), it.second);
+      }
+    } else {
+      for (auto import : imports) {
+        m_env->set(namespaced(ns, import), parser.m_env->get(import));
+      }
+    }
+
+    return parser.m_ast;
   }
 
   AST::NodePtr Parser::parseDecl() {

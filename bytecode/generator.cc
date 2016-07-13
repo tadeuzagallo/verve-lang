@@ -219,6 +219,10 @@ void If::generateBytecode(Generator *gen) {
 }
 
 void Program::generateBytecode(Generator *gen) {
+  for (const auto &import : imports) {
+    import->generateBytecode(gen);
+  }
+
   body->generateBytecode(gen);
 }
 

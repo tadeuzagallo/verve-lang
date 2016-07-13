@@ -75,30 +75,8 @@ static Type *typeCheckArguments(std::vector<AST::NodePtr> &arguments, TypeFuncti
   return enumRetType(fnType, env);
 }
 
-static EnvPtr createEnv() {
-  auto env = std::make_shared<Environment>();
-
-  env->set("char", new BasicType("char"));
-  env->set("int", new BasicType("int"));
-  env->set("float", new BasicType("float"));
-  env->set("void", new BasicType("void"));
-
-  auto list = new EnumType();
-  list->name = "list";
-  list->generics.push_back("t");
-  env->set("list", list);
-
-  auto string = new DataTypeInstance();
-  string->dataType = list;
-  string->types.push_back(env->get("char"));
-  env->set("string", string);
-
-  return env;
-}
-
-void TypeChecker::check(AST::ProgramPtr program, Lexer &lexer) {
+void TypeChecker::check(AST::ProgramPtr program, EnvPtr env, Lexer &lexer) {
   try {
-    auto env = createEnv();
     auto type = program->typeof(env);
     if (!type) {
       throw TypeError(program->loc, "Unknown type for program");
