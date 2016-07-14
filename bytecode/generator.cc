@@ -188,11 +188,14 @@ void Identifier::generateBytecode(Generator *gen) {
   gen->emitOpcode(Opcode::lookup);
   auto name = namespaced(ns, this->name);
   gen->write(gen->uniqueString(name));
-  if (gen->capturesScope) {
-    gen->write(0);
-  } else {
-    gen->write(gen->lookupID++);
-  }
+  gen->write(0);
+
+  // temporarily disable lookup cache - logic is weak
+  //if (gen->capturesScope) {
+    //gen->write(0);
+  //} else {
+    //gen->write(gen->lookupID++);
+  //}
 }
 
 void String::generateBytecode(Generator *gen) {
