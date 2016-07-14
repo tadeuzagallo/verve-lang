@@ -1,3 +1,8 @@
+// list functions
+extern head <t>(list<t>) -> t
+extern tail <t>(list<t>) -> list<t>
+extern length <t>(list<t>) -> int
+
 interface printable<t> {
   virtual to_string (t) -> string
 }

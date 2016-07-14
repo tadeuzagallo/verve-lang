@@ -1,2 +1,5 @@
 print([1, 2, 3])
 print(["foo", "bar"])
+print(head([3, 2, 1]))
+print(tail([3, 2, 1]))
+print(length([3, 2, 1, 4, 7]))

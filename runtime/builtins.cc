@@ -19,6 +19,10 @@ namespace Verve {
 
     REGISTER(print, print);
 
+    REGISTER(head, head);
+    REGISTER(tail, tail);
+    REGISTER(length, length);
+
     REGISTER(+, builtin_add);
     REGISTER(-, builtin_sub);
     REGISTER(*, mul);
@@ -77,7 +81,6 @@ namespace Verve {
     return Value(-argv[0].asInt());
   }
 
-
   static void printValue(Value value) {
     if (value.isString()) {
       printf("%s", value.asString().str());
@@ -103,6 +106,36 @@ namespace Verve {
     putchar('\n');
 
     return 0;
+  }
+
+  VERVE_FUNCTION(head) {
+    assert(argc == 1);
+
+    auto lst = argv[0].asList();
+    if (lst->length  == 0) 
+      return Value{};
+    else
+      return lst->at(0);
+  }
+
+  VERVE_FUNCTION(tail) {
+    assert(argc == 1);
+
+    auto lst = argv[0].asList();
+    auto size = lst->length > 0 ? lst->length - 1 : 0;
+    auto ret = (uint64_t *)calloc(size + 1, 8);
+    ret[0] = size;
+    for (unsigned i = 1; i < lst->length; i++) {
+      ret[i] = lst->at(i).encode();
+    }
+    vm->trackAllocation(ret, (size + 1) * 8);
+    return (List *)ret;
+  }
+
+  VERVE_FUNCTION(length) {
+    assert(argc == 1);
+
+    return argv[0].asList()->length;
   }
 
   VERVE_FUNCTION(at) {

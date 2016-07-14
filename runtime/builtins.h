@@ -11,6 +11,11 @@ namespace Verve {
   struct Value;
 
   VERVE_FUNCTION(print);
+
+  VERVE_FUNCTION(head);
+  VERVE_FUNCTION(tail);
+  VERVE_FUNCTION(length);
+
   VERVE_FUNCTION(add);
   VERVE_FUNCTION(sub);
   VERVE_FUNCTION(mul);
