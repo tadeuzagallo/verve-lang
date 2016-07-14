@@ -1,5 +1,10 @@
+#define __unused __attribute__((unused))
+#define __used __attribute__((used))
+
 #define CONCAT(__a, __b) CONCAT_(__a, __b)
 #define CONCAT_(__a, __b) __a##__b
+
+#define SYMBOL(__name) CONCAT(__USER_LABEL_PREFIX__, __name)
 
 #define EVAL(...) EVAL1024(__VA_ARGS__)
 #define EVAL1024(...) EVAL512(EVAL512(__VA_ARGS__))

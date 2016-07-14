@@ -3,7 +3,14 @@
 #include <cstdio>
 #include <fstream>
 #include <libgen.h>
+
+#if __APPLE__
 #include <mach-o/dyld.h>
+#else
+#include <limits.h>
+#include <unistd.h>
+#include <sys/types.h>
+#endif
 
 #include "parser/lexer.h"
 #include "parser/parser.h"
@@ -25,6 +32,15 @@ void printUsage() {
   printf("  %-30s", "verve -b <input>");
   puts("Execute <input> as verve bytecode");
 }
+
+#if !__APPLE__
+static int _NSGetExecutablePath(char *output, uint32_t *bufferSize) {
+  char path[PATH_MAX];
+  pid_t pid = getpid();
+  sprintf(path, "/proc/%d/exe", pid);
+  return readlink(path, output, *bufferSize);
+}
+#endif
 
 int main(int argc, char **argv) {
   char buffer[PATH_MAX];

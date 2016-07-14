@@ -1,3 +1,5 @@
+#include "utils/macros.h"
+
 #define STRING_TAG    1 << 1
 #define LIST_TAG      1 << 2
 #define CLOSURE_TAG   1 << 4
@@ -9,49 +11,49 @@
 #define BCBASE r15
 #define LOOKUP rbx
 
-.macro READ
-.if $0 == 1
-  mov 0x8(%BYTECODE), $1
-.elseif $0 == 2
-  mov 0x10(%BYTECODE), $1
+.macro READ off, to
+.if \off == 1
+  mov 0x8(%BYTECODE), \to
+.elseif \off == 2
+  mov 0x10(%BYTECODE), \to
 .else
   hlt
 .endif
 .endmacro
 
-.macro SKIP
-.if $0 == 0
-  add $$0x8, %BYTECODE
-.elseif $0 == 1
-  add $$0x10, %BYTECODE
-.elseif $0 == 2
-  add $$0x18, %BYTECODE
+.macro SKIP count
+.if \count == 0
+  add $0x8, %BYTECODE
+.elseif \count == 1
+  add $0x10, %BYTECODE
+.elseif \count == 2
+  add $0x18, %BYTECODE
 .else
   hlt
 .endif
   jmp *(%BYTECODE)
 .endmacro
 
-.macro UNMASK
-  shl $$8, $0
-  shr $$8, $0
+.macro UNMASK reg
+  shl $8, \reg
+  shr $8, \reg
 .endmacro
 
-.macro CCALL
+.macro CCALL fn
   push %rbx
   mov %rsp, %rbx
   and $-0x10, %rsp
-  call $0
+  call \fn
   mov %rbx, %rsp
   pop %rbx
 .endmacro
 
-.macro GET_ARG
-  mov 0x20(%rbp, $0, 8), $1
+.macro GET_ARG off, to
+  mov 0x20(%rbp, \off, 8), \to
 .endmacro
 
-.globl _execute
-_execute:
+.globl SYMBOL(execute)
+SYMBOL(execute):
   push %rbp
   push %BYTECODE
   push %VM
@@ -65,8 +67,8 @@ _execute:
   mov %r8,  %LOOKUP
   jmp *(%BYTECODE)
 
-.globl _op_exit
-_op_exit:
+.globl SYMBOL(op_exit)
+SYMBOL(op_exit):
   mov %rbp, %rsp
   pop %LOOKUP
   pop %BCBASE
@@ -75,8 +77,8 @@ _op_exit:
   pop %rbp
   ret
 
-.globl _op_lookup
-_op_lookup:
+.globl SYMBOL(op_lookup)
+SYMBOL(op_lookup):
 _op_lookup_fast_path:
   READ 2, %rdi
   mov (%LOOKUP, %rdi, 8), %rsi // Cached address
@@ -85,21 +87,21 @@ _op_lookup_fast_path:
   push %rsi
   SKIP 2
 
-.globl _op_push
-_op_push:
+.globl SYMBOL(op_push)
+SYMBOL(op_push):
   READ 1, %rdi
   push %rdi
   SKIP 1
 
-.globl _op_push_arg
-_op_push_arg:
+.globl SYMBOL(op_push_arg)
+SYMBOL(op_push_arg):
   READ 1, %rdi
   GET_ARG %rdi, %rax
   push %rax
   SKIP 1
 
-.globl _op_jz
-_op_jz:
+.globl SYMBOL(op_jz)
+SYMBOL(op_jz):
   pop %rdi
   test %rdi, %rdi
   jz _jz
@@ -109,14 +111,14 @@ _jz:
   add %rdi, %BYTECODE
   jmp *(%BYTECODE)
 
-.globl _op_jmp
-_op_jmp:
+.globl SYMBOL(op_jmp)
+SYMBOL(op_jmp):
   READ 1, %rdi
   add %rdi, %BYTECODE
   jmp *(%BYTECODE)
 
-.globl _op_call
-_op_call:
+.globl SYMBOL(op_call)
+SYMBOL(op_call):
   // pop the callee from the stack
   pop %rcx
 
@@ -151,7 +153,7 @@ _op_call_closure:
   jnz _op_call_fast_closure
 
 _op_call_slow_closure:
-  CCALL _prepareClosure
+  CCALL SYMBOL(prepareClosure)
   lea (%BCBASE, %rax, 1), %BYTECODE
   jmp *(%BYTECODE)
 
@@ -161,8 +163,8 @@ _op_call_fast_closure:
   jmp *(%BYTECODE)
 
 
-.globl _op_load_string
-_op_load_string:
+.globl SYMBOL(op_load_string)
+SYMBOL(op_load_string):
   READ 1, %rdi
   mov STRINGS(%rip), %rsi
   mov (%rsi, %rdi, 8), %rdi
@@ -172,39 +174,39 @@ _op_load_string:
   push %rdi
   SKIP 1
 
-.globl _op_create_closure
-_op_create_closure:
+.globl SYMBOL(op_create_closure)
+SYMBOL(op_create_closure):
   mov %VM, %rdi
   READ 1, %rsi
   READ 2, %rdx
-  CCALL _createClosure
+  CCALL SYMBOL(createClosure)
   push %rax
   SKIP 2
 
-.globl _op_bind
-_op_bind:
+.globl SYMBOL(op_bind)
+SYMBOL(op_bind):
   mov %VM, %rdi
   READ 1, %rsi
   pop %rdx
   mov STRINGS(%rip), %rcx
   mov (%rcx, %rsi, 8), %rsi
-  CCALL _setScope
+  CCALL SYMBOL(setScope)
   SKIP 1
 
-.globl _op_create_lex_scope
-_op_create_lex_scope:
+.globl SYMBOL(op_create_lex_scope)
+SYMBOL(op_create_lex_scope):
   mov %VM, %rdi
-  CCALL _pushScope
+  CCALL SYMBOL(pushScope)
   SKIP 0
 
-.globl _op_release_lex_scope
-_op_release_lex_scope:
+.globl SYMBOL(op_release_lex_scope)
+SYMBOL(op_release_lex_scope):
   mov %VM, %rdi
-  CCALL _restoreScope
+  CCALL SYMBOL(restoreScope)
   SKIP 0
 
-.globl _op_put_to_scope
-_op_put_to_scope:
+.globl SYMBOL(op_put_to_scope)
+SYMBOL(op_put_to_scope):
   mov %VM, %rdi
   READ 1, %rsi
   pop %rdx
@@ -212,14 +214,14 @@ _op_put_to_scope:
   mov STRINGS(%rip), %rcx
   mov (%rcx, %rsi, 8), %rsi
 
-  CCALL _setScope
+  CCALL SYMBOL(setScope)
   SKIP 1
 
-.globl _op_alloc_obj
-_op_alloc_obj:
+.globl SYMBOL(op_alloc_obj)
+SYMBOL(op_alloc_obj):
   mov %VM, %rdi
   READ 1, %esi
-  CCALL _allocate
+  CCALL SYMBOL(allocate)
   READ 2, %esi // tag
   mov %esi, (%rax)
   READ 1, %esi // size
@@ -231,11 +233,11 @@ _op_alloc_obj:
   push %rax
   SKIP 2
 
-.globl _op_alloc_list
-_op_alloc_list:
+.globl SYMBOL(op_alloc_list)
+SYMBOL(op_alloc_list):
   mov %VM, %rdi
   READ 1, %rsi
-  CCALL _allocate
+  CCALL SYMBOL(allocate)
   READ 1, %rsi
   dec %rsi
   mov %rsi, (%rax)
@@ -245,8 +247,8 @@ _op_alloc_list:
   push %rax
   SKIP 1
 
-.globl _op_obj_store_at
-_op_obj_store_at:
+.globl SYMBOL(op_obj_store_at)
+SYMBOL(op_obj_store_at):
   pop %rdi // value
   pop %rdx // object
   mov %rdx, %rcx
@@ -256,20 +258,20 @@ _op_obj_store_at:
   push %rcx
   SKIP 1
 
-.globl _op_obj_tag_test
-_op_obj_tag_test:
+.globl SYMBOL(op_obj_tag_test)
+SYMBOL(op_obj_tag_test):
   pop %rdi // object
   UNMASK %rdi
   READ 1, %rsi // expected tag
   mov (%rdi), %edi // object's tag
   cmp %edi, %esi
   je _op_obj_tag_test_ok
-  call _tagTestFailed
+  CCALL SYMBOL(tagTestFailed)
 _op_obj_tag_test_ok:
   SKIP 1
 
-.globl _op_obj_load
-_op_obj_load:
+.globl SYMBOL(op_obj_load)
+SYMBOL(op_obj_load):
   pop %rdi // object
   UNMASK %rdi
   READ 1, %rsi // offset
@@ -277,30 +279,30 @@ _op_obj_load:
   push %rdi
   SKIP 1
 
-.globl _op_stack_alloc
-_op_stack_alloc:
+.globl SYMBOL(op_stack_alloc)
+SYMBOL(op_stack_alloc):
   push %SCOPE_VARS
   READ 1, %rdi
   sub %rdi, %rsp
   mov %rsp, %SCOPE_VARS
   SKIP 1
 
-.globl _op_stack_store
-_op_stack_store:
+.globl SYMBOL(op_stack_store)
+SYMBOL(op_stack_store):
   READ 1, %rdi // slot - offset on stack
   pop %rsi
   mov %rsi, (%SCOPE_VARS, %rdi, 8)
   SKIP 1
 
-.globl _op_stack_load
-_op_stack_load:
+.globl SYMBOL(op_stack_load)
+SYMBOL(op_stack_load):
   READ 1, %rdi // slot - offset on stack
   mov (%SCOPE_VARS, %rdi, 8), %rdi
   push %rdi
   SKIP 1
 
-.globl _op_stack_free
-_op_stack_free:
+.globl SYMBOL(op_stack_free)
+SYMBOL(op_stack_free):
   pop %rdx
   mov %SCOPE_VARS, %rsp
   READ 1, %rdi
@@ -309,8 +311,8 @@ _op_stack_free:
   push %rdx
   SKIP 1
 
-.globl _op_ret
-_op_ret:
+.globl SYMBOL(op_ret)
+SYMBOL(op_ret):
   pop %rax
   mov %rbp, %rsp
   pop %rbp
@@ -319,14 +321,14 @@ _op_ret:
   pop %BYTECODE
   lea (%rsp, %rdi, 8), %rsp
   push %rax
-restore_scope:
+_restore_scope:
   test $1, %rsi
-  jnz SKIP
+  jnz _skip
 
   mov %VM, %rdi // VM::m_scope : Scope
   // %rsi is the Closure *
-  CCALL _finishClosure
-SKIP:
+  CCALL SYMBOL(finishClosure)
+_skip:
   SKIP 1
 
 _op_lookup_slow_path:
@@ -364,7 +366,7 @@ _op_lookup_check_parent:
 
 _op_lookup_not_found:
   mov %rsi, %rdi
-  CCALL _symbolNotFound
+  CCALL SYMBOL(symbolNotFound)
 
 _op_lookup_found:
   mov 0x8(%rax, %rdi, 0x8), %rax  // Entry::value

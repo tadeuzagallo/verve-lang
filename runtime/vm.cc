@@ -186,7 +186,15 @@ uintptr_t allocate(VM *vm, unsigned size) {
     asm("movq %%rsp, %0" : "=r"(rsp));
 
     pthread_t self = pthread_self();
+#if __APPLE__
     void *stackBottom = pthread_get_stackaddr_np(self);
+#else
+    pthread_attr_t attr;
+    pthread_getattr_np(self, &attr);
+    void *stackBottom;
+    size_t stackSize;
+    pthread_attr_getstack(&attr, &stackBottom, &stackSize);
+#endif
     while (rsp != stackBottom) {
       GC::markValue(Value::decode((uintptr_t)*rsp), blocks);
       rsp++;

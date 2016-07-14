@@ -4,6 +4,8 @@
 
 #include "parser/parser.h"
 
+#include <algorithm>
+
 namespace Verve {
 
   std::stringstream &Generator::generate() {
@@ -325,7 +327,7 @@ void Match::generateBytecode(Generator *gen) {
   auto p = gen->m_output.tellp();
   for (unsigned i = 0; i < size - 1; i++) {
     gen->m_output.seekp(pos[i] );
-    unsigned off = p - pos[i];
+    unsigned off = (long)p - pos[i];
     gen->write(off + WORD_SIZE);
   }
   gen->m_output.seekp(p);

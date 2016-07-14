@@ -1,6 +1,6 @@
 CC = clang++
 CFLAGS = -g -O0 -Wall -Wextra -std=c++11 -I .
-LIBS = 
+LIBS =  -lpthread
 
 CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
 MAKEFLAGS += --jobs=$(CPUS)
@@ -27,7 +27,7 @@ $(TARGET): $(OBJECTS)
 
 .build/%.S.o: %.S $(HEADERS)
 	@mkdir -p $$(dirname $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -fintegrated-as $(CFLAGS) -c $< -o $@
 
 # ERROR TESTS
 

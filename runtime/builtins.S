@@ -1,29 +1,30 @@
-.macro get_arg
-  .if $0 == 0
-    mov 0x0(%rsi), $1
-  .elseif $0 == 1
-    mov 0x8(%rsi), $1
+#include "utils/macros.h"
+
+.macro get_arg offset, reg
+  .if \offset == 0
+    movl 0x0(%rsi), \reg
+  .elseif \offset == 1
+    movl 0x8(%rsi), \reg
   .endif
 .endmacro
 
-.macro basic_math
-.globl _builtin_$0
-_builtin_$0:
+.macro basic_math name, op
+.globl SYMBOL(builtin_\name)
+SYMBOL(builtin_\name):
   get_arg 0, %eax
   get_arg 1, %edi
-  $1 %edi, %eax
-  $2
+  \op %edi, %eax
   ret
 .endmacro
 
-basic_math sub, sub
-basic_math add, add
+basic_math sub, subl
+basic_math add, addl
 
-.globl _builtin_lt
-_builtin_lt:
+.globl SYMBOL(builtin_lt)
+SYMBOL(builtin_lt):
   get_arg 0, %eax
   get_arg 1, %edi
-  cmp %edi, %eax
+  cmpl %edi, %eax
   setl %al
   movzbl %al, %eax
   ret

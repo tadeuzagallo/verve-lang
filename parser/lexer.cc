@@ -3,10 +3,11 @@
 #include "token.h"
 
 #include <cassert>
+#include <cmath>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <math.h>
 
 #define CREATE_BASIC_TOKEN(__t, __char) \
   __t = Token(Token::BASIC); \
@@ -155,16 +156,16 @@ start:
       }
 
       default:
-        if (isnumber(c)) {
+        if (isdigit(c)) {
           double number = 0;
           do {
             number *= 10;
             number += c - '0';
-          } while (isnumber(c = nextChar()));
+          } while (isdigit(c = nextChar()));
 
           if (c == '.') {
             double divider = 1;
-            while (isnumber(c = nextChar())) {
+            while (isdigit(c = nextChar())) {
               divider *= 10;
               number += (c - '0') / divider;
             }
@@ -178,7 +179,7 @@ start:
           unsigned length = 0;
           do {
             length++;
-          } while (islower(c = nextChar()) || isnumber(c) || c == '_');
+          } while (islower(c = nextChar()) || isdigit(c) || c == '_');
 
           m_pos--;
 
@@ -190,7 +191,7 @@ start:
           unsigned length = 0;
           do {
             length++;
-          } while (isalpha(c = nextChar()) || isnumber(c) || c == '_');
+          } while (isalpha(c = nextChar()) || isdigit(c) || c == '_');
 
           m_pos--;
 

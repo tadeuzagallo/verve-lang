@@ -2,6 +2,7 @@
 #include "type_error.h"
 #include "environment.h"
 
+#include <algorithm>
 #include <cstdio>
 
 namespace Verve {
