@@ -40,7 +40,7 @@ namespace Verve {
 
   private:
     std::unordered_map<std::string, Type *> m_types;
-    EnvPtr parent;
+    EnvPtr parent = nullptr;
   };
 }
 
