@@ -73,7 +73,7 @@ class String {
     unsigned hash;
     const char *str;
   };
-  static const unsigned s_initialSize = 64;
+  static const unsigned s_initialSize = 128;
   static unsigned s_size;
   static Entry *s_strings;
 
