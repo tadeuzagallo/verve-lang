@@ -38,6 +38,8 @@ namespace Verve {
       return false;
     }
     for (unsigned i = 0; i < types.size(); i++) {
+      // if `other` has a null type, that means it's a data type that doesn't
+      // use the type variable, which means it can accept any type.
       if (t->types[i] && !types[i]->accepts(t->types[i], env) && !t->types[i]->accepts(types[i], env)) {
         return false;
       }

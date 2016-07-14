@@ -46,6 +46,13 @@ static Type *simplify(Type *type, EnvPtr env) {
     if (t && t != type && !dynamic_cast<GenericType *>(t)) {
       return simplify(t, env);
     }
+  } else if (auto fn = dynamic_cast<TypeFunction *>(type)) {
+    auto new_fn = new TypeFunction(*fn);
+    for (unsigned i = 0; i < fn->types.size(); i++) {
+      new_fn->types[i] = simplify(fn->types[i], env);
+    }
+    new_fn->returnType = simplify(fn->returnType, env);
+    return new_fn;
   }
   return type;
 }
@@ -206,7 +213,7 @@ Type *Match::typeof(EnvPtr env) {
   value->typeof(env);
   Type *t = nullptr;
   for (auto c : cases) {
-    auto cType = c->typeof(env);
+    auto cType = c->typeof(env->create());
     if (!t || typeEq(cType, t, env)) {
       t = cType;
       continue;

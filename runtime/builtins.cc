@@ -17,11 +17,16 @@ namespace Verve {
       vm.m_scope->set(#NAME, Value(FN##_)); \
     } while(0)
 
-    REGISTER(print, print);
+    REGISTER(print_string, print_string);
+    REGISTER(concat_string, concat_string);
 
     REGISTER(head, head);
     REGISTER(tail, tail);
     REGISTER(length, length);
+
+    // type conversion
+    REGISTER(int_to_string, int_to_string);
+    REGISTER(float_to_string, float_to_string);
 
     REGISTER(+, builtin_add);
     REGISTER(-, builtin_sub);
@@ -98,11 +103,10 @@ namespace Verve {
     }
   }
 
-  VERVE_FUNCTION(print) {
-    for (unsigned i = 0; i < argc; i++) {
-      if (i) putchar(' ');
-      printValue(argv[i]);
-    }
+  VERVE_FUNCTION(print_string) {
+    assert(argc == 1);
+
+    printf("%s", argv[0].asString().str());
     putchar('\n');
 
     return 0;
@@ -136,6 +140,44 @@ namespace Verve {
     assert(argc == 1);
 
     return argv[0].asList()->length;
+  }
+
+  VERVE_FUNCTION(int_to_string) {
+    assert(argc == 1);
+
+    auto number = argv[0].asInt();
+    auto size = snprintf(NULL, 0, "%d", number);
+    auto buffer = (char *)malloc(size + 1);
+    snprintf(buffer, size + 1, "%d", number);
+    vm->trackAllocation(buffer, size + 1);
+
+    return Value(buffer);
+  }
+
+  VERVE_FUNCTION(float_to_string) {
+    assert(argc == 1);
+
+    auto v = argv[0].encode();
+    auto number = *(double *)&v;
+    auto size = snprintf(NULL, 0, "%lg", number);
+    auto buffer = (char *)malloc(size + 1);
+    snprintf(buffer, size + 1, "%lg", number);
+    vm->trackAllocation(buffer, size + 1);
+
+    return Value(buffer);
+  }
+
+  VERVE_FUNCTION(concat_string) {
+    assert(argc == 2);
+
+    auto s1 = argv[0].asString().str();
+    auto s2 = argv[1].asString().str();
+    auto size = strlen(s1) + strlen(s2);
+    auto buffer = (char *)malloc(size + 1);
+    snprintf(buffer, size + 1, "%s%s", s1, s2);
+    vm->trackAllocation(buffer, size + 1);
+
+    return Value(buffer);
   }
 
   VERVE_FUNCTION(at) {

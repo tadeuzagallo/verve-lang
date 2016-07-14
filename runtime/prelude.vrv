@@ -3,31 +3,90 @@ extern head <t>(list<t>) -> t
 extern tail <t>(list<t>) -> list<t>
 extern length <t>(list<t>) -> int
 
+// type conversion
+extern int_to_string (int) -> string
+extern float_to_string (float) -> string
+
+// string helpers
+extern print_string (string) -> void // print primitive
+extern concat_string (string, string) -> string
+
+fn id<t>(a: t) -> t { a }
+
+fn list_to_string<t>(l: list<t>, f: (t) -> string) -> string {
+  fn stringify(prefix: string, l: list<t>) -> string {
+    if length(l) == 0
+      prefix
+    else
+      let h = head(l)
+          t_ = tail(l)
+      {
+        let prefix_ = concat_string(prefix, f(h)) {
+          stringify(if length(t_) concat_string(prefix_, ", ") else prefix_, t_)
+        }
+      }
+  }
+
+  concat_string(stringify("[", l), "]")
+}
+
+
 interface printable<t> {
   virtual to_string (t) -> string
+  virtual print (t) -> void
 }
 
 implementation printable<int> {
-  extern to_string (int) -> string
+  fn to_string(arg) {
+    int_to_string(arg)
+  }
+
+  fn print(arg) {
+    print_string(to_string(arg))
+  }
 }
 
 implementation printable<float> {
-  extern to_string (float) -> string
+  fn to_string(flt) {
+    float_to_string(flt)
+  }
+
+  fn print(flt) {
+    print_string(to_string(flt))
+  }
 }
 
 implementation printable<string> {
-  extern to_string (string) -> string
+  fn to_string(arg) {
+    arg
+  }
+
+  fn print(arg) {
+    print_string(to_string(arg))
+  }
 }
 
 implementation printable<list<int>> {
-  extern to_string (list<int>) -> string
+  fn to_string(lst) {
+    list_to_string(lst, int_to_string)
+  }
+  fn print(arg) {
+    print_string(to_string(arg))
+  }
 }
+
+fn id_string(x: string) -> string { x }
 
 implementation printable<list<string>> {
-  extern to_string (list<string>) -> string
-}
+  fn to_string(lst) {
+    // TODO: `id` should work here
+    list_to_string(lst, id_string)
+  }
 
-extern print (printable) -> void
+  fn print(arg) {
+    print_string(to_string(arg))
+  }
+}
 
 extern count (string) -> int
 extern substr (string, int) -> string

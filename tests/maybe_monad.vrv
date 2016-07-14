@@ -13,8 +13,8 @@ implementation monad<maybe> {
     Just(x)
   }
 
-  fn bind(maybe, f) {
-    match maybe {
+  fn bind(mb, f) {
+    match mb {
       Nothing() => Nothing()
       Just(x) => f(x)
     }

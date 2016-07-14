@@ -10,11 +10,16 @@ namespace Verve {
   class VM;
   struct Value;
 
-  VERVE_FUNCTION(print);
+  VERVE_FUNCTION(print_string);
+  VERVE_FUNCTION(concat_string);
 
   VERVE_FUNCTION(head);
   VERVE_FUNCTION(tail);
   VERVE_FUNCTION(length);
+
+  // type conversion
+  VERVE_FUNCTION(int_to_string);
+  VERVE_FUNCTION(float_to_string);
 
   VERVE_FUNCTION(add);
   VERVE_FUNCTION(sub);
