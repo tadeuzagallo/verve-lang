@@ -1,58 +1,76 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Verve-lang by tadeuzagallo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Architects+Daughter' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print">
 
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/github-light.css">
-    <script src="javascripts/scale.fix.js"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+
+    <title>Verve-lang by tadeuzagallo</title>
   </head>
+
   <body>
-    <div class="wrapper">
-      <header>
-        <h1 class="header">Verve-lang</h1>
-        <p class="header">An experimental, minimalistic, static, functional language with zero dependencies</p>
+    <header>
+      <div class="inner">
+        <h1>Verve-lang</h1>
+        <h2>An experimental, minimalistic, static, functional language with zero dependencies</h2>
+        <a href="https://github.com/tadeuzagallo/verve-lang" class="button"><small>View project on</small> GitHub</a>
+      </div>
+    </header>
 
-        <ul>
-          <li class="download"><a class="buttons" href="https://github.com/tadeuzagallo/verve-lang/zipball/master">Download ZIP</a></li>
-          <li class="download"><a class="buttons" href="https://github.com/tadeuzagallo/verve-lang/tarball/master">Download TAR</a></li>
-          <li><a class="buttons github" href="https://github.com/tadeuzagallo/verve-lang">View On GitHub</a></li>
-        </ul>
-
-        <p class="header">This project is maintained by <a class="header name" href="https://github.com/tadeuzagallo">tadeuzagallo</a></p>
-
-
-      </header>
-      <section>
-        <h1>
+    <div id="content-wrapper">
+      <div class="inner clearfix">
+        <section id="main-content">
+          <h1>
 <a id="verve-" class="anchor" href="#verve-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Verve <a href="https://travis-ci.org/tadeuzagallo/verve-lang"><img src="https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master" alt="Build Status"></a>
 </h1>
 
-<p>Verve is an experimental, minimalistic, static, functional language with zero dependencies.</p>
+<p><code>Verve</code> is an experimental, minimalistic, static, functional language with zero dependencies.</p>
 
 <h2>
-<a id="installing" class="anchor" href="#installing" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installing</h2>
+<a id="getting-start" class="anchor" href="#getting-start" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Getting Start</h2>
 
-<p>To install Verve, simply clone the repo and run</p>
+<p>macOS and Ubuntu are currently supported</p>
 
-<pre><code>make install
+<h3>
+<a id="macos" class="anchor" href="#macos" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>macOS</h3>
+
+<p>For macOS, all you need is Xcode (available from the App Store)</p>
+
+<h3>
+<a id="ubuntu" class="anchor" href="#ubuntu" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Ubuntu</h3>
+
+<p>For Ubuntu, you need <code>make</code> and <code>clang</code>, which you can install using</p>
+
+<pre><code>$ sudo apt-get install make clang
+</code></pre>
+
+<h3>
+<a id="installing-verve" class="anchor" href="#installing-verve" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installing Verve</h3>
+
+<p>To install Verve, simply clone the repo and build it, as follows</p>
+
+<pre><code>$ git clone https://github.com/tadeuzagallo/verve-lang
+$ cd verve-lang
+$ make install
 </code></pre>
 
 <p>After that you should be able to run the command line <code>verve</code>, you can try it by running any of the tests, e.g.:</p>
 
-<pre><code>verve tests/math_parser.vrv
+<pre><code>$ verve tests/math_parser.vrv
 </code></pre>
 
 <h2>
 <a id="running-the-tests" class="anchor" href="#running-the-tests" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Running the tests</h2>
 
-<p>The tests are broken into 3 categories:</p>
+<p>The tests are split in 3 categories:</p>
 
 <ul>
 <li>
@@ -63,14 +81,14 @@
 <code>cpp_tests</code> - C++ unit tests</li>
 </ul>
 
-<p>Each category of tests can be ran individually, with make, as in:</p>
+<p>Each category of tests can be ran individually, with <code>make</code>, as in:</p>
 
-<pre><code>make output_tests
+<pre><code>$ make output_tests
 </code></pre>
 
 <p>Or all together with:</p>
 
-<pre><code>make test
+<pre><code>$ make test
 </code></pre>
 
 <h2>
@@ -78,14 +96,27 @@
 
 <p>Vim syntax highlight is available within the repo, you can install it by running:</p>
 
-<pre><code>make install_vim_highlight
+<pre><code>$ make install_vim_highlight
 </code></pre>
-      </section>
-      <footer>
-        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
-      </footer>
+        </section>
+
+        <aside id="sidebar">
+          <a href="https://github.com/tadeuzagallo/verve-lang/zipball/master" class="button">
+            <small>Download</small>
+            .zip file
+          </a>
+          <a href="https://github.com/tadeuzagallo/verve-lang/tarball/master" class="button">
+            <small>Download</small>
+            .tar.gz file
+          </a>
+
+          <p class="repo-owner"><a href="https://github.com/tadeuzagallo/verve-lang"></a> is maintained by <a href="https://github.com/tadeuzagallo">tadeuzagallo</a>.</p>
+
+          <p>This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the Architect theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.</p>
+        </aside>
+      </div>
     </div>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-		
+
+  
   </body>
 </html>
