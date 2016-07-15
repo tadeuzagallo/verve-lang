@@ -2,7 +2,7 @@
 
 `Verve` is an experimental, minimalistic, static, functional language with zero dependencies.
 
-## Getting Start
+## Getting Started
 
 macOS and Ubuntu are currently supported
 
