@@ -95,10 +95,8 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  auto dir = dirname(filename);
-
   Verve::Lexer lexer(filename, input);
-  Verve::Parser parser(lexer, dir);
+  Verve::Parser parser(lexer, dirname(filename));
   std::shared_ptr<Verve::AST::Program> ast = parser.parse();
 
   Verve::Generator generator(ast, !isDebug && !isCompile);

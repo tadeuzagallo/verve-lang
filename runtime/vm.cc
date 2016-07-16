@@ -194,6 +194,7 @@ uintptr_t allocate(VM *vm, unsigned size) {
     void *stackBottom;
     size_t stackSize;
     pthread_attr_getstack(&attr, &stackBottom, &stackSize);
+    stackBottom = (char *)stackBottom + stackSize;
 #endif
     while (rsp != stackBottom) {
       GC::markValue(Value::decode((uintptr_t)*rsp), blocks);

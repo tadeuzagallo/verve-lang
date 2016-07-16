@@ -1,8 +1,9 @@
 CC = clang++
 CFLAGS = -g -O0 -Wall -Wextra -std=c++11 -I .
 LIBS =  -lpthread
+SHELL = /bin/bash
 
-CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
+CPUS ?= $(shell if [[ `which nproc` ]]; then nproc --all; else sysctl -n hw.ncpu; fi || echo 1)
 MAKEFLAGS += --jobs=$(CPUS)
 
 define source_glob
@@ -47,6 +48,11 @@ error_tests: $(ERROR_TESTS)
 		diff \
 			-I "libc++abi.dylib: terminating" \
 			-I "Abort trap: 6" \
+			-I "terminate called after throwing an instance of 'std::runtime_error'" \
+			-I "  what():  .* error" \
+			-I "Aborted" \
+			-I "terminate called without an active exception" \
+			-I "Aborted" \
 			$@_ $(word 2, $^) && $(TEST_SUCCESS) || $(TEST_FAILURE); \
 	fi
 
