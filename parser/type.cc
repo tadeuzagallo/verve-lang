@@ -4,7 +4,7 @@
 
 namespace Verve {
 
-  bool BasicType::accepts(Type *other, EnvPtr env) {
+  bool BasicType::accepts(Type *other, __unused EnvPtr _) {
     if (auto t = dynamic_cast<BasicType *>(other)) {
       return typeName == t->typeName;
     }

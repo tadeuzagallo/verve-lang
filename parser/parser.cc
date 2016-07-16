@@ -39,7 +39,7 @@ namespace Verve {
   }
 
   static auto isPrelude = false;
-  AST::ProgramPtr Parser::parse(bool typecheck) {
+  AST::ProgramPtr Parser::parse() {
     auto program = AST::createProgram(Loc{0, 0});
     program->body = AST::createBlock(Loc{0, 0});
 

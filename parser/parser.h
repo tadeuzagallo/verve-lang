@@ -17,7 +17,7 @@ namespace Verve {
   public:
 
     Parser(Lexer &lexer, std::string dirname, std::string ns = "");
-    AST::ProgramPtr parse(bool typecheck = true);
+    AST::ProgramPtr parse();
 
   private:
 

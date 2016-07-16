@@ -185,7 +185,7 @@ Type *Match::typeof(EnvPtr env) {
     throw TypeError(loc, "Cannot have `match` expression with no cases");
   }
 
-  auto valueType = value->typeof(env);
+  value->typeof(env);
   Type *t = nullptr;
   for (auto c : cases) {
     auto cType = c->typeof(env);
@@ -322,7 +322,7 @@ Type *Interface::typeof(EnvPtr env) {
 
   new_env = new_env->create();
   s_interface = interface;
-  auto t = block->typeof(new_env);
+  block->typeof(new_env);
   s_interface = nullptr;
 
   for (auto &it : new_env->types()) {
