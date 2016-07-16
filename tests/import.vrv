@@ -1,10 +1,10 @@
-fn mul(a: int, b: int) -> int {
-  0
-}
-
 import { square } from "./import_helper_1"
 import * from "./import_helper_2"
 import * from "./import_helper_3" as Helper
+
+fn mul(a: int, b: int) -> int {
+  0
+}
 
 print(square(2))
 print(add(40, 2))

@@ -50,13 +50,13 @@ namespace Verve {
     }
 
     m_blockStack.push_back(program->body);
-    while(!next(Token::END)) {
-      while (skip("import")) {
-        auto import = parseImport();
-        if (import) {
-          program->imports.push_back(import);
-        }
+    while (skip("import")) {
+      auto import = parseImport();
+      if (import) {
+        program->imports.push_back(import);
       }
+    }
+    while(!next(Token::END)) {
       auto node = parseDecl();
       if (node) {
         program->body->nodes.push_back(node);
