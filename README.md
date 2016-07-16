@@ -1,10 +1,10 @@
-# Verve [![Build Status](https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master)](https://travis-ci.org/tadeuzagallo/verve-lang)
+# ![logo](https://cloud.githubusercontent.com/assets/764414/16891384/c68f22dc-4af0-11e6-9be2-242ce7d73ff8.png) Verve [![Build Status](https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master)](https://travis-ci.org/tadeuzagallo/verve-lang)
 
 `Verve` is an experimental, minimalistic, static, functional language with zero dependencies.
 
 ## Getting Started
 
-macOS and Ubuntu are currently supported
+Right now, Verve runs macOS and Ubuntu
 
 ### macOS
 
@@ -27,7 +27,7 @@ $ cd verve-lang
 $ make install
 ```
 
-After that you should be able to run the command line `verve`, you can try it by running any of the tests, e.g.:
+After that you should be able to use the command line `verve`. You can try it by running any of the tests, e.g.:
 ```
 $ verve tests/math_parser.vrv
 ```
