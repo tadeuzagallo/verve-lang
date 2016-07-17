@@ -1,4 +1,4 @@
-CC ?= clang++
+CC = clang++
 CFLAGS = -g -O0 -Wall -Wextra -std=c++11 -I .
 LIBS =  -lpthread
 SHELL = /bin/bash
