@@ -421,9 +421,12 @@ Type *Call::typeof(EnvPtr env) {
   auto t = typeCheckArguments(arguments, fnType, env, loc);
   if (fnType->interface) {
     auto ident = asIdentifier(this->callee);
-    auto name = ident->name + "$" + env->get(fnType->interface->genericTypeName).type->toString();
-    if (env->get(name).type) {
-      ident->name = name;
+    auto t = env->get(fnType->interface->genericTypeName).type;
+    if (t) {
+      auto name = ident->name + "$" + t->toString();
+      if (env->get(name).type) {
+        ident->name = name;
+      }
     }
   }
   return t;
