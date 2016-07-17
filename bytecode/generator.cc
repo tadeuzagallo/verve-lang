@@ -88,7 +88,7 @@ namespace Verve {
 
     m_slots.clear();
     stackSlot = 0;
-    capturesScope = fn->capturesScope;
+    capturesScope = fn->body->env->capturesScope;
     fn->body->generateBytecode(this);
 
     if (fn->needsScope) {
@@ -170,6 +170,12 @@ void Call::generateBytecode(Generator *gen) {
 
 
 void Identifier::generateBytecode(Generator *gen) {
+  if (isFunctionParameter) {
+    gen->emitOpcode(Opcode::push_arg);
+    gen->write(index);
+    return;
+  }
+
   if (!isCaptured) {
     auto it = gen->m_slots.find(name);
     if (it != gen->m_slots.end()) {
@@ -353,35 +359,40 @@ static void handleCapture(AST::IdentifierPtr ident, unsigned stackSlot, Generato
 }
 
 void Assignment::generateBytecode(Generator *gen) {
-  if (auto ident = AST::asIdentifier(left)) {
-    auto slot = gen->stackSlot++;
-    value->generateBytecode(gen);
-    gen->m_slots[ident->name] = slot;
-    gen->emitOpcode(Opcode::stack_store);
-    gen->write(slot);
-
-    handleCapture(ident, slot, gen);
-  } else if (auto pattern = AST::asPattern(left)) {
-    value->generateBytecode(gen);
-
-    gen->emitOpcode(Opcode::obj_tag_test);
-    gen->write(pattern->tag);
-
-    for (unsigned i = 0; i < pattern->values.size(); i++) {
-      value->generateBytecode(gen);
-      gen->emitOpcode(Opcode::obj_load);
-      gen->write(i);
-
+  switch (kind) {
+    case Assignment::Identifier: {
       auto slot = gen->stackSlot++;
-      auto ident = pattern->values[i];
-      gen->m_slots[ident->name] = slot;
+      value->generateBytecode(gen);
+      gen->m_slots[left.ident->name] = slot;
       gen->emitOpcode(Opcode::stack_store);
       gen->write(slot);
 
-      handleCapture(ident, slot, gen);
+      handleCapture(left.ident, slot, gen);
+      break;
     }
-  } else {
-    assert(false);
+    case Assignment::Pattern: {
+      value->generateBytecode(gen);
+
+      gen->emitOpcode(Opcode::obj_tag_test);
+      gen->write(left.pattern->tag);
+
+      for (unsigned i = 0; i < left.pattern->values.size(); i++) {
+        value->generateBytecode(gen);
+        gen->emitOpcode(Opcode::obj_load);
+        gen->write(i);
+
+        auto slot = gen->stackSlot++;
+        auto ident = left.pattern->values[i];
+        gen->m_slots[ident->name] = slot;
+        gen->emitOpcode(Opcode::stack_store);
+        gen->write(slot);
+
+        handleCapture(ident, slot, gen);
+      }
+      break;
+    }
+    default:
+      assert(false);
   }
 }
 
@@ -400,7 +411,7 @@ void Constructor::generateBytecode(Generator *gen) {
 void Function::generateBytecode(Generator *gen) {
   gen->emitOpcode(Opcode::create_closure);
   gen->write(gen->m_functions.size());
-  gen->write(capturesScope);
+  gen->write(body->env->capturesScope);
   if (name != "_") {
     gen->emitOpcode(Opcode::bind);
     auto name = namespaced(ns, this->name);
@@ -410,11 +421,15 @@ void Function::generateBytecode(Generator *gen) {
 }
 
 void Interface::generateBytecode(Generator *gen) {
-  block->generateBytecode(gen);
+  for (const auto &fn : functions) {
+    fn->generateBytecode(gen);
+  }
 }
 
 void Implementation::generateBytecode(Generator *gen) {
-  block->generateBytecode(gen);
+  for (const auto &fn : functions) {
+    fn->generateBytecode(gen);
+  }
 }
 
 void AbstractType::generateBytecode(__unused Generator *gen) {

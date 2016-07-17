@@ -7,40 +7,67 @@
 namespace Verve {
   struct Environment;
   struct Type;
+  namespace AST {
+    struct NodeInterface;
+  }
 
-  typedef std::shared_ptr<Environment> EnvPtr;
+  using EnvPtr = std::shared_ptr<Environment>;
 
   struct Environment : public std::enable_shared_from_this<Environment> {
-    Type *get(std::string typeName) {
-      auto env = this;
-      while (env) {
-        auto it = env->m_types.find(typeName);
-        if (it != env->m_types.end()) {
-          return it->second;
-        }
-        env = env->parent.get();
-      }
-      return nullptr;
-    }
-
     EnvPtr create() {
       auto env = std::make_shared<Environment>();
-      env->parent = shared_from_this();
+      env->m_parent = shared_from_this();
       return env;
     }
 
-    template<typename T>
-    void set(T &&name, Type *type) {
-      m_types[std::forward<T>(name)] = type;
+    struct Entry {
+      Type *type = nullptr;
+      AST::NodeInterface *node = nullptr;
+    };
+
+    Entry &get(std::string name) {
+      auto env = this;
+      while (env) {
+        auto it = env->m_entries.find(name);
+        if (it != env->m_entries.end()) {
+          return it->second;
+        }
+        env = env->m_parent.get();
+      }
+      static Entry dummy;
+      dummy.type = nullptr;
+      dummy.node = nullptr;
+      return dummy;
     }
 
-    const std::unordered_map<std::string, Type *> &types() const {
-      return m_types;
+    EnvPtr envFor(std::string &name) {
+      auto env = this->shared_from_this();
+      do {
+        auto it = env->m_entries.find(name);
+        if (it != env->m_entries.end()) {
+          return env;
+        }
+      } while ((env = env->parent()) != nullptr);
+      return nullptr;
     }
 
+    Entry &create(std::string name) {
+      return m_entries[name];
+    }
+
+    const std::unordered_map<std::string, Entry> &entries() const {
+      return m_entries;
+    }
+
+    const EnvPtr parent() const {
+      return m_parent;
+    }
+
+    bool isRequired = false;
+    bool capturesScope = false;
+    bool escapes = false;
   private:
-    std::unordered_map<std::string, Type *> m_types;
-    EnvPtr parent = nullptr;
+    std::unordered_map<std::string, Entry> m_entries;
+    EnvPtr m_parent = nullptr;
   };
 }
-

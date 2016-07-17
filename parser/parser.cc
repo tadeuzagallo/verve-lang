@@ -6,6 +6,8 @@
 
 #include "utils/file.h"
 
+#include <iostream>
+
 std::string ROOT_DIR = "";
 
 namespace Verve {
@@ -13,20 +15,20 @@ namespace Verve {
   static EnvPtr createEnv() {
     auto env = std::make_shared<Environment>();
 
-    env->set("char", new BasicType("char"));
-    env->set("int", new BasicType("int"));
-    env->set("float", new BasicType("float"));
-    env->set("void", new BasicType("void"));
+    env->create("char").type = new BasicType("char");
+    env->create("int").type = new BasicType("int");
+    env->create("float").type = new BasicType("float");
+    env->create("void").type = new BasicType("void");
 
     auto list = new EnumType();
     list->name = "list";
     list->generics.push_back("t");
-    env->set("list", list);
+    env->create("list").type = list;
 
     auto string = new DataTypeInstance();
     string->dataType = list;
-    string->types.push_back(env->get("char"));
-    env->set("string", string);
+    string->types.push_back(env->get("char").type);
+    env->create("string").type = string;
 
     return env;
   }
@@ -34,7 +36,6 @@ namespace Verve {
   Parser::Parser(Lexer &lexer, std::string dirname, std::string ns) :
     m_lexer(lexer), m_dirname(dirname), m_ns(ns)
   {
-    m_scope = std::make_shared<ParseScope>();
     m_env = createEnv();
   }
 
@@ -63,6 +64,7 @@ namespace Verve {
       }
     }
     m_blockStack.pop_back();
+    program->naming(m_env);
     TypeChecker::check(program, m_env, m_lexer);
     m_ast = program;
     return program;
@@ -95,12 +97,12 @@ namespace Verve {
     auto parser = parseFile(path, dirname, ns);
 
    if (imports.size() == 0) {
-      for (auto it : parser.m_env->types()) {
-        m_env->set(namespaced(ns, it.first), it.second);
+      for (auto it : parser.m_env->entries()) {
+        m_env->create(namespaced(ns, it.first)).type = it.second.type;
       }
     } else {
       for (auto import : imports) {
-        m_env->set(namespaced(ns, import), parser.m_env->get(import));
+        m_env->create(namespaced(ns, import)).type = parser.m_env->get(import).type;
       }
     }
 
@@ -162,16 +164,15 @@ namespace Verve {
     interface->genericTypeName = token(Token::LCID).string();
     match('>');
 
-    interface->block = AST::createBlock(token().loc);
     match('{');
     while (!skip('}')) {
       if (skip("virtual")) {
         auto virtualFunction = parseVirtual();
+        interface->functions.push_back(virtualFunction);
         interface->virtualFunctions.push_back(virtualFunction->name);
-        interface->block->nodes.push_back(virtualFunction);
       } else if (skip("fn")) {
         auto fn = parseFunction();
-        interface->block->nodes.push_back(fn);
+        interface->functions.push_back(fn);
         interface->concreteFunctions.push_back(fn->name);
       } else {
         match('}');
@@ -190,17 +191,16 @@ namespace Verve {
     implementation->type = parseType();
     match('>');
 
-    implementation->block = AST::createBlock(token().loc);
     match('{');
     while(!skip('}')) {
       std::string name;
 
       if (skip("extern")) {
         auto fn = parseExtern();
-        implementation->block->nodes.push_back(fn);
+        implementation->functions.push_back(fn);
       } else if (skip("fn")) {
         auto fn = parseTypelessFunction();
-        implementation->block->nodes.push_back(fn);
+        implementation->functions.push_back(fn);
       } else {
         match('}');
         break;
@@ -302,8 +302,6 @@ namespace Verve {
     auto fn = AST::createFunction(token().loc);
     fn->name = token(Token::LCID).string();
 
-    pushScope();
-
     match('(');
     unsigned i = 0;
     while (!next(')')) {
@@ -311,7 +309,6 @@ namespace Verve {
       arg->name = token(Token::LCID).string();
       arg->index = i++;
       fn->parameters.push_back(arg);
-      m_scope->set(arg->name, arg);
 
       if (!skip(',')) break;
     }
@@ -321,11 +318,6 @@ namespace Verve {
     m_blockStack.push_back(fn->body);
     parseBody(fn->body);
     m_blockStack.pop_back();
-
-    fn->needsScope = m_scope->isRequired;
-    fn->capturesScope = m_scope->capturesScope;
-
-    popScope();
 
     return fn;
   }
@@ -339,8 +331,6 @@ namespace Verve {
     fn->name = token(Token::LCID).string();
     fn->ns = m_ns;
 
-    pushScope();
-
     parseGenerics(fn->type->generics);
 
     parseFunctionParams(fn->parameters, fn->type->params);
@@ -352,11 +342,6 @@ namespace Verve {
     m_blockStack.push_back(fn->body);
     parseBody(fn->body);
     m_blockStack.pop_back();
-
-    fn->needsScope = m_scope->isRequired;
-    fn->capturesScope = m_scope->capturesScope;
-
-    popScope();
 
     return fn;
   }
@@ -378,45 +363,26 @@ namespace Verve {
   AST::LetPtr Parser::parseLet() {
     auto let = AST::createLet(token().loc);
 
-    pushScope();
-    m_scope->escapes = false;
-
     let->block = AST::createBlock(token().loc);
 
     while (!next('{')) {
       auto assignment = AST::createAssignment(token().loc);
 
-      bool isIdent = false;
       if (next(Token::LCID)) {
         m_blockStack.back()->stackSlots++;
-        assignment->left = parseIdentifier();
-        isIdent = true;
+        assignment->left.ident = parseIdentifier();
+        assignment->kind = AST::Assignment::Identifier;
       } else {
-        assignment->left = parsePattern();
+        assignment->left.pattern = parsePattern();
+        assignment->kind = AST::Assignment::Pattern;
       }
 
       match('=');
       assignment->value = parseExpr();
       let->assignments.push_back(assignment);
-
-      if (isIdent) {
-        auto ident = AST::asIdentifier(assignment->left);
-        m_scope->set(ident->name, ident);
-      } else {
-        auto pattern = AST::asPattern(assignment->left);
-        pattern->value = assignment->value;
-      }
     }
 
     parseBody(let->block);
-
-    if (m_scope->isRequired) {
-      m_scope->parent()->isRequired = true;
-    }
-    if (m_scope->capturesScope) {
-      m_scope->parent()->capturesScope = true;
-    }
-    popScope();
 
     return let;
   }
@@ -427,17 +393,12 @@ namespace Verve {
 
     this->match('{');
     while (!skip('}')) {
-      pushScope();
-      m_scope->escapes = false;
-
       auto kase = AST::createCase(token().loc);
       kase->pattern = parsePattern();
       kase->pattern->value = match->value;
       this->match(TUPLE_TOKEN('=', '>'));
       kase->body = parseExprOrBody();
       match->cases.push_back(kase);
-
-      popScope();
     }
 
     return match;
@@ -452,7 +413,6 @@ namespace Verve {
       m_blockStack.back()->stackSlots++;
 
       auto ident = AST::asIdentifier(parseIdentifier());
-      m_scope->set(ident->name, ident);
       pattern->values.push_back(ident);
       if (!skip(',')) break;
     }
@@ -495,7 +455,6 @@ namespace Verve {
       param->name = token(Token::LCID).string();
       param->index = i++;
       params.push_back(param);
-      m_scope->set(param->name, param);
 
       match(':');
 
@@ -554,12 +513,6 @@ namespace Verve {
     auto call = AST::createCall(loc);
     call->callee = callee;
 
-    if (auto calleeID = AST::asIdentifier(callee)) {
-      if (auto fn = AST::asFunction(m_scope->get(calleeID->name))) {
-        calleeID->ns = AST::asFunction(fn)->ns;
-      }
-    }
-
     while (!next(')')) {
       call->arguments.push_back(parseExpr());
       if (!skip(',')) break;
@@ -571,37 +524,9 @@ namespace Verve {
 
   // Base nodes
 
-  AST::NodePtr Parser::parseIdentifier(std::string ns) {
-    auto loc = token().loc;
-    auto name = namespaced(ns, token(Token::LCID).string());
-    auto var = m_scope->get(name);
-    if (auto ident = dynamic_cast<AST::Identifier *>(var.get())) {
-      ParseScopePtr scope;
-      if ((scope = m_scope->scopeFor(name)) != m_scope) {
-        bool shouldCapture = false;
-        auto s = m_scope;
-        while (s != scope) {
-          if (s->escapes) {
-            shouldCapture = true;
-            break;
-          }
-          s = s->parent();
-        }
-
-        if (shouldCapture) {
-          ident->isCaptured = true;
-          scope->isRequired = true;
-          m_scope->capturesScope = true;
-          goto ident;
-        }
-      }
-    }
-
-    if (var) return var;
-
-ident:
-    auto identifier = AST::createIdentifier(loc);
-    identifier->name = name;
+  AST::IdentifierPtr Parser::parseIdentifier(std::string ns) {
+    auto identifier = AST::createIdentifier(token().loc);
+    identifier->name = namespaced(ns, token(Token::LCID).string());
     return identifier;
   }
 
@@ -664,16 +589,6 @@ ident:
 
       return dti;
     }
-  }
-
-  // Var helpers
-
-  void Parser::pushScope() {
-    m_scope = m_scope->create();
-  }
-
-  void Parser::popScope() {
-    m_scope = m_scope->restore();
   }
 
   // Lexer aliases

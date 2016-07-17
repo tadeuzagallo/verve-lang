@@ -9,13 +9,13 @@ namespace Verve {
 
 static void loadGenerics(std::vector<std::string> &generics, EnvPtr env) {
   for (auto g : generics) {
-    env->set(g, new GenericType(g));
+    env->create(g).type = new GenericType(g);
   }
 }
 
 static Type *simplify(Type *type, EnvPtr env) {
   if (auto gt = dynamic_cast<GenericType *>(type)) {
-    auto t = env->get(gt->typeName);
+    auto t = env->get(gt->typeName).type;
     if (t && t != type) {
       return simplify(t, env);
     }
@@ -27,7 +27,7 @@ static Type *simplify(Type *type, EnvPtr env) {
     }
     return new_dti;
   } else if (auto interface = dynamic_cast<TypeInterface *>(type)) {
-    auto t = env->get(interface->genericTypeName);
+    auto t = env->get(interface->genericTypeName).type;
     if (t && t != type && !dynamic_cast<GenericType *>(t)) {
       return simplify(t, env);
     }
@@ -45,7 +45,7 @@ static Type *enumRetType(TypeFunction *fnType, EnvPtr env) {
       auto returnType = new DataTypeInstance();
       returnType->dataType = et;
       for (auto t : et->generics) {
-        returnType->types.push_back(env->get(t));
+        returnType->types.push_back(env->get(t).type);
       }
       return returnType;
     }
@@ -99,17 +99,17 @@ Type *Program::typeof(EnvPtr env) {
 
 // base types
 Type *String::typeof(EnvPtr env) {
-  return env->get("string");
+  return env->get("string").type;
 }
 
 Type *Number::typeof(EnvPtr env) {
-  return isFloat ? env->get("float") : env->get("int");
+  return isFloat ? env->get("float").type : env->get("int").type;
 }
 
 // basic constructs
 
 Type *Identifier::typeof(EnvPtr env) {
-  if (auto t = env->get(name)) {
+  if (auto t = env->get(name).type) {
     return t;
   }
   throw TypeError(loc, "Unknown identifier: `%s`", name.c_str());
@@ -129,39 +129,42 @@ Type *List::typeof(EnvPtr env) {
   }
 
   auto dti = new DataTypeInstance();
-  dti->dataType = env->get("list");
+  dti->dataType = env->get("list").type;
   dti->types.push_back(t);
   return dti;
 }
 
 Type *Block::typeof(EnvPtr env) {
-  auto t = env->get("void");
+  auto t = env->get("void").type;
   for (auto n : nodes) {
-    t = n->typeof(env);
+    t = n->typeof(this->env);
   }
   return t;
 }
 
 // scoped expressions
 
-Type *Let::typeof(EnvPtr env) {
+Type *Let::typeof(__unused EnvPtr _) {
   for (auto a : assignments) {
-    a->typeof(env);
+    a->typeof(block->env);
   }
 
-  return block->typeof(env);
+  return block->typeof(block->env);
 }
 
 Type *Assignment::typeof(__unused EnvPtr env) {
   auto t = value->typeof(env);
-  if (AST::asPattern(left)) {
-    // constructor will already put variables on scope
-    left->typeof(env);
-  } else if (auto ident = AST::asIdentifier(left)) {
-    env->set(ident->name, t);
-  } else {
-    // TODO: proper error for invalid lhs in assignment
-    assert(false);
+  switch (kind) {
+    case Assignment::Pattern:
+      // constructor will already put variables on scope
+      left.pattern->typeof(env);
+      break;
+    case Assignment::Identifier:
+      env->create(left.ident->name).type = t;
+      break;
+    default:
+      // TODO: proper error for invalid lhs in assignment
+      assert(false);
   }
   return t;
 }
@@ -200,13 +203,13 @@ Type *Match::typeof(EnvPtr env) {
   return t;
 }
 
-Type *Case::typeof(EnvPtr env) {
-  pattern->typeof(env);
-  return body->typeof(env);
+Type *Case::typeof(__unused EnvPtr _) {
+  pattern->typeof(body->env);
+  return body->typeof(body->env);
 }
 
 Type *Pattern::typeof(EnvPtr env) {
-  auto t = dynamic_cast<Verve::TypeConstructor *>(env->get(constructorName));
+  auto t = dynamic_cast<Verve::TypeConstructor *>(env->get(constructorName).type);
   if (!t) {
     throw TypeError(loc, "Unknown constructor `%s` on pattern match", constructorName.c_str());
   }
@@ -218,7 +221,7 @@ Type *Pattern::typeof(EnvPtr env) {
   auto new_env = env->create();
   if (auto vt = dynamic_cast<Verve::DataTypeInstance *>(valueType)) {
     for (unsigned i = 0; i < t->generics.size(); i++) {
-      new_env->set(t->generics[i], vt->types[i]);
+      new_env->create(t->generics[i]).type = vt->types[i];
     }
   }
   
@@ -229,7 +232,7 @@ Type *Pattern::typeof(EnvPtr env) {
 
   tag = t->tag;
   for (unsigned i = 0; i < values.size(); i++) {
-    env->set(values[i]->name, simplify(t->types[i], new_env));
+    env->create(values[i]->name).type =  simplify(t->types[i], new_env);
   }
 
   return t;
@@ -237,11 +240,11 @@ Type *Pattern::typeof(EnvPtr env) {
 
 Type *UnaryOperation::typeof(EnvPtr env) {
   // TODO: type check value's type
-  return env->get("int");
+  return env->get("int").type;
 }
 
 Type *BinaryOperation::typeof(EnvPtr env) {
-  auto intType = env->get("int");
+  auto intType = env->get("int").type;
   NodePtr failed = nullptr;
   Type *failedType = nullptr;
   if (!typeEq(intType, (failedType = lhs->typeof(env)), env))
@@ -258,14 +261,14 @@ Type *BinaryOperation::typeof(EnvPtr env) {
 // type nodes
 
 Type *BasicType::typeof(EnvPtr env) {
-  if (auto t = env->get(name)) {
+  if (auto t = env->get(name).type) {
     return t;
   }
   throw TypeError(loc, "Unknown type: `%s`", name.c_str());
 }
 
 Type *DataType::typeof(EnvPtr env) {
-  auto dataType = env->get(name);
+  auto dataType = env->get(name).type;
   if (!dataType) {
     throw TypeError(loc, "Unknown type");
   }
@@ -293,7 +296,7 @@ Type *EnumType::typeof(EnvPtr env) {
   auto t = new Verve::EnumType();
   t->name = name;
   t->generics = generics;
-  env->set(name, t);
+  env->create(name).type = t;
 
   auto new_env = env->create();
   loadGenerics(generics, new_env);
@@ -302,7 +305,7 @@ Type *EnumType::typeof(EnvPtr env) {
   for (auto c : constructors) {
     auto ctor = typeConstructor(c, t, tag++, new_env);
     t->constructors.push_back(ctor);
-    env->set(c->name, ctor);
+    env->create(c->name).type = ctor;
   }
   return t;
 }
@@ -315,26 +318,22 @@ Type *Interface::typeof(EnvPtr env) {
   interface->virtualFunctions = virtualFunctions;
   interface->concreteFunctions = concreteFunctions;
 
-  env->set(name, interface);
+  env->create(name).type = interface;
 
-  auto new_env = env->create();
-  new_env->set(genericTypeName, interface);
+  this->env->create(genericTypeName).type = interface;
 
-  new_env = new_env->create();
   s_interface = interface;
-  block->typeof(new_env);
+  for (const auto &fn : functions) {
+    env->get(fn->getName()).type = fn->typeof(this->env);
+  }
   s_interface = nullptr;
 
-  for (auto &it : new_env->types()) {
-    env->set(it.first, it.second);
-  }
-
-  return env->get("void");
+  return interface;
 }
 
 static std::string s_implementationName = "";
 Type *Implementation::typeof(EnvPtr env) {
-  auto interface = dynamic_cast<TypeInterface *>(env->get(interfaceName));
+  auto interface = dynamic_cast<TypeInterface *>(env->get(interfaceName).type);
 
   // TODO: proper error message
   assert(interface);
@@ -346,26 +345,21 @@ Type *Implementation::typeof(EnvPtr env) {
   interface->implementations.push_back(t);
 
   // isolate generic type
-  auto new_env = env->create();
-  new_env->set(interface->genericTypeName, t->type);
+  this->env->create(interface->genericTypeName).type = t->type;
 
   // isolate implementation's content
-  new_env = new_env->create();
   auto virtualFunctions = interface->virtualFunctions;
   s_implementationName = "$" + t->type->toString();
-  for (auto &n : block->nodes) {
-    std::string name;
-    if (auto f = asFunction(n)) name = f->name;
-    else if (auto p = asPrototype(n)) name = p->name;
-
-    auto it = std::find(virtualFunctions.begin(), virtualFunctions.end(), name);
+  for (auto &fn : functions) {
+    auto it = std::find(virtualFunctions.begin(), virtualFunctions.end(), fn->getName());
     if (it != virtualFunctions.end()) {
       virtualFunctions.erase(it);
-    } else if (std::find(interface->concreteFunctions.begin(), interface->concreteFunctions.end(), name) == interface->concreteFunctions.end()) {
-      throw TypeError(loc, "Defining function `%s` inside implementation `%s`, but it's not part of the interface", name.c_str(), t->toString().c_str());
+    } else if (std::find(interface->concreteFunctions.begin(), interface->concreteFunctions.end(), fn->getName()) == interface->concreteFunctions.end()) {
+      throw TypeError(loc, "Defining function `%s` inside implementation `%s`, but it's not part of the interface", fn->getName().c_str(), t->toString().c_str());
     }
 
-    n->typeof(new_env);
+    auto t = fn->typeof(this->env);
+    env->create(fn->getName()).type = t;
   }
   s_implementationName = "";
 
@@ -379,17 +373,12 @@ Type *Implementation::typeof(EnvPtr env) {
     throw TypeError(loc, "Implementation `%s` does not implement the following virtual functions:\n%s", t->toString().c_str(), str.c_str());
   }
 
-  // export implementation's methods
-  for (auto &it : new_env->types()) {
-    env->set(it.first, it.second);
-  }
-
-  return env->get("void");
+  return env->get("void").type;
 }
 
 Type *Constructor::typeof(EnvPtr env) {
-  auto type = env->get(name);
-  env = env->create();
+  auto type = env->get(name).type;
+  env = env->create(); // isolate generic resolution
   if (auto ctorType = dynamic_cast<Verve::TypeConstructor *>(type)) {
     tag = ctorType->tag;
     size = ctorType->types.size() + 1;
@@ -417,7 +406,7 @@ Type *Prototype::typeof(EnvPtr env) {
   auto t = dynamic_cast<TypeFunction *>(FunctionType::typeof(env));
   name += s_implementationName;
   t->name = name;
-  env->set(name, t);
+  env->create(name).type = t;
   return t;
 }
 
@@ -432,8 +421,8 @@ Type *Call::typeof(EnvPtr env) {
   auto t = typeCheckArguments(arguments, fnType, env, loc);
   if (fnType->interface) {
     auto ident = asIdentifier(this->callee);
-    auto name = ident->name + "$" + env->get(fnType->interface->genericTypeName)->toString();
-    if (env->get(name)) {
+    auto name = ident->name + "$" + env->get(fnType->interface->genericTypeName).type->toString();
+    if (env->get(name).type) {
       ident->name = name;
     }
   }
@@ -441,16 +430,15 @@ Type *Call::typeof(EnvPtr env) {
 }
 
 Type *Function::typeof(EnvPtr env) {
-  auto new_env = env->create();
   Type *t;
   if (type) {
     name += s_implementationName;
-    t = type->typeof(new_env);
-    env->set(name, t);
+    t = type->typeof(this->body->env);
+    env->create(name).type = t;
   } else {
-    t = env->get(name);
+    t = env->get(name).type;
     name += s_implementationName;
-    env->set(name, t);
+    env->create(name).type = t;
   }
 
   auto fnType = dynamic_cast<TypeFunction *>(t);
@@ -462,11 +450,11 @@ Type *Function::typeof(EnvPtr env) {
   // isolate function params
   for (unsigned i = 0; i < parameters.size(); i++) {
     auto t = fnType->types[i];
-    new_env->set(parameters[i]->name, t);
+    this->body->env->create(parameters[i]->name).type = t;
   }
 
-  auto bodyType = body->typeof(new_env);
-  if (!typeEq(fnType->returnType, bodyType, new_env)) {
+  auto bodyType = body->typeof(this->body->env);
+  if (!typeEq(fnType->returnType, bodyType, this->body->env)) {
     throw TypeError(body->loc, "Invalid return type for function: expected `%s` but got `%s`", fnType->returnType->toString().c_str(), bodyType->toString().c_str());
   }
 

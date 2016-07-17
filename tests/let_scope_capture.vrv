@@ -1,15 +1,15 @@
 type foo { Foo(int) }
 
-fn bar(foo: foo) -> () -> void {
+fn bar(f: foo) -> () -> void {
   fn _() -> void {
-    let Foo(x) = foo {
+    let Foo(x) = f {
       print(x)
     }
   }
 }
 
-fn baz(foo: foo) -> () -> void {
-  let Foo(x) = foo {
+fn baz(f: foo) -> () -> void {
+  let Foo(x) = f {
     fn _() -> void {
       print(x)
     }

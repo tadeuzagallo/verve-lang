@@ -12,11 +12,11 @@ namespace Verve {
   }
 
   bool GenericType::accepts(Type *other, EnvPtr env) {
-    if (auto t = env->get(typeName)) {
+    if (auto t = env->get(typeName).type) {
       if (t != this) {
         return t->accepts(other, env);
       } else {
-        env->set(typeName, other);
+        env->create(typeName).type = other;
         return true;
       }
     }
@@ -68,7 +68,7 @@ namespace Verve {
 
     for (auto impl : implementations) {
       if (impl->type->accepts(other, env)) {
-        env->set(genericTypeName, other);
+        env->create(genericTypeName).type = other;
         return true;
       }
     }

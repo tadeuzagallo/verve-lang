@@ -17,7 +17,7 @@
   typedef std::shared_ptr<__class> __class##Ptr;
 
 #define DECLARE_CONVERTER(__class) \
-  __unused static __class##Ptr as##__class(NodePtr __n) { \
+  __unused static __class##Ptr as##__class(std::shared_ptr<NodeInterface> __n) { \
     return std::dynamic_pointer_cast<__class>(__n); \
   }
 
@@ -64,7 +64,18 @@ namespace Verve {
 namespace AST {
   EVAL(MAP(DECLARE_TYPE, AST_TYPES))
 
-  struct Node {
+  struct NodeInterface {
+    virtual void generateBytecode(Generator *gen) = 0;
+    virtual Type *typeof(__unused EnvPtr env) = 0;
+    virtual void naming(__unused EnvPtr env) = 0;
+  };
+
+  struct FunctionInterface : virtual public NodeInterface {
+    virtual std::string &getName() = 0;
+  };
+
+
+  struct Node : virtual public NodeInterface {
     Loc loc;
 
     Node(Loc l): loc(l) {  }
@@ -76,6 +87,8 @@ namespace AST {
     virtual Type *typeof(__unused EnvPtr env) {
       throw std::runtime_error("Trying to get type for virtual node");
     }
+
+    virtual void naming(__unused EnvPtr env) {}
   };
 
   struct Program : public Node {
@@ -83,6 +96,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     BlockPtr body;
     std::vector<ProgramPtr> imports;
@@ -93,6 +107,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
@@ -114,10 +129,13 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::string name;
     std::string ns;
     bool isCaptured;
+    bool isFunctionParameter = false;
+    unsigned index;
   };
 
   struct String : public Identifier {
@@ -125,14 +143,16 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(__unused EnvPtr env) {
+      // override Identifier::naming and do nothing
+    }
   };
 
   struct FunctionParameter : public Identifier {
     using Identifier::Identifier;
 
     virtual void generateBytecode(Generator *gen);
-
-    unsigned index;
+    virtual void naming(EnvPtr env);
   };
 
   struct Call : public Node {
@@ -140,6 +160,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     NodePtr callee;
     std::vector<NodePtr> arguments;
@@ -150,10 +171,11 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     NodePtr condition;
     BlockPtr ifBody;
-    BlockPtr elseBody;
+    BlockPtr elseBody = nullptr;
   };
 
   struct BinaryOperation : public Node {
@@ -161,6 +183,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     unsigned op;
     NodePtr lhs;
@@ -172,6 +195,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     unsigned op;
     NodePtr operand;
@@ -182,6 +206,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::vector<NodePtr> items;
   };
@@ -193,6 +218,7 @@ namespace AST {
       throw std::runtime_error("Implemented inline");
     }
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     unsigned tag;
     std::string constructorName;
@@ -207,6 +233,7 @@ namespace AST {
       throw std::runtime_error("Implemented inline");
     }
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     PatternPtr pattern;
     BlockPtr body;
@@ -217,6 +244,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     NodePtr value;
     std::vector<CasePtr> cases;
@@ -227,8 +255,24 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
-    NodePtr left;
+    enum {
+      Pattern,
+      Identifier,
+    } kind;
+
+    union Left {
+      Left() {}
+
+      PatternPtr pattern;
+      IdentifierPtr ident;
+
+      ~Left() {
+        pattern = nullptr;
+        ident = nullptr;
+      }
+    } left;
     NodePtr value;
   };
 
@@ -237,10 +281,10 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::vector<AssignmentPtr> assignments;
     BlockPtr block;
-    EnvPtr env;
   };
 
   struct Constructor : public Node {
@@ -248,6 +292,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::string name;
     std::vector<NodePtr> arguments;
@@ -260,12 +305,14 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::string name;
     std::string genericTypeName;
     std::vector<std::string> virtualFunctions;
     std::vector<std::string> concreteFunctions;
-    BlockPtr block;
+    std::vector<std::shared_ptr<FunctionInterface>> functions;
+    EnvPtr env;
   };
 
   struct Implementation : public Node {
@@ -273,10 +320,12 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
 
     std::string interfaceName;
     AbstractTypePtr type;
-    BlockPtr block;
+    std::vector<std::shared_ptr<FunctionInterface>> functions;
+    EnvPtr env;
   };
 
   struct AbstractType : public Node {
@@ -329,10 +378,16 @@ namespace AST {
     std::vector<AbstractTypePtr> types;
   };
 
-  struct Prototype : public FunctionType {
+  struct Prototype : public FunctionType, public FunctionInterface {
     using FunctionType::FunctionType;
 
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
+    virtual void generateBytecode(__unused Generator *gen) {}
+
+    virtual std::string &getName() {
+      return name;
+    }
 
     std::string name;
     struct {
@@ -341,15 +396,20 @@ namespace AST {
     };
   };
 
-  struct Function : public Node {
+  struct Function : public Node, public FunctionInterface {
     using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void naming(EnvPtr env);
+
+    virtual std::string &getName() {
+      return name;
+    }
 
     PrototypePtr type = nullptr;
-    std::string name;
     std::string ns;
+    std::string name;
     std::vector<FunctionParameterPtr> parameters;
     BlockPtr body;
     bool needsScope;

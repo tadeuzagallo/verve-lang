@@ -7,10 +7,10 @@ type result {
   Break()
 }
 
-fn consume(state: state, f: (int, int, string) -> result) -> state {
-  let State(acc, expr) = state {
+fn consume(st: state, f: (int, int, string) -> result) -> state {
+  let State(acc, expr) = st {
     if !count(expr)
-      state
+      st
     else
       let lookahead = at(expr, 0)
           rest = substr(expr, 1)
@@ -18,7 +18,7 @@ fn consume(state: state, f: (int, int, string) -> result) -> state {
       {
         match result {
           Consume(new_acc, rest) => consume(State(new_acc, rest), f)
-          Break() => state
+          Break() => st
         }
       }
   }

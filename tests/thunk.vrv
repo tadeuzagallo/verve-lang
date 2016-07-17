@@ -5,3 +5,4 @@ fn adder(a: int) -> (int) -> int {
 }
 
 print(adder(1)(2))
+print(adder(2)(2))

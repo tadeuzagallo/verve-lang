@@ -2,7 +2,6 @@
 
 #include "ast.h"
 #include "environment.h"
-#include "scope.h"
 #include "type.h"
 
 #pragma once
@@ -62,17 +61,12 @@ namespace Verve {
 
     // Base nodes
 
-    AST::NodePtr parseIdentifier(std::string ns = "");
+    AST::IdentifierPtr parseIdentifier(std::string ns = "");
     AST::NumberPtr parseNumber();
     AST::NumberPtr parseFloat();
     AST::StringPtr parseString();
     AST::ListPtr parseList();
     AST::AbstractTypePtr parseType();
-
-    // Var helpers
-
-    void pushScope();
-    void popScope();
 
     // Lexer aliases
 
@@ -92,11 +86,10 @@ namespace Verve {
     // Properties
 
     Lexer &m_lexer;
-    ParseScopePtr m_scope;
+    EnvPtr m_env;
     std::vector<AST::BlockPtr> m_blockStack;
     std::string m_dirname;
     AST::ProgramPtr m_ast;
-    EnvPtr m_env;
     std::string m_ns;
   };
 

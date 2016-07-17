@@ -1,6 +1,5 @@
 #include <cassert>
 #include <cmath>
-#include <iostream>
 #include <iomanip>
 
 #include "disassembler.h"
