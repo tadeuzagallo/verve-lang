@@ -5,8 +5,8 @@ general:
 
 dependencies:
   pre:
-    - sudo apt-get update; sudo apt-get install make clang
+    - sudo apt-get update; sudo apt-get install make g++
 
 test:
   override:
-    - make test
+    - CC=g++ make test
