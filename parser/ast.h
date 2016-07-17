@@ -12,8 +12,6 @@
 
 #pragma once
 
-static unsigned str_uid = 0;
-
 #define DECLARE_TYPE(__class) \
   struct __class; \
   typedef std::shared_ptr<__class> __class##Ptr;

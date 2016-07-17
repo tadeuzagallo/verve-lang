@@ -19,7 +19,7 @@
 .else
   hlt
 .endif
-.endmacro
+.endm
 
 .macro SKIP count
 .if \count == 0
@@ -32,12 +32,12 @@
   hlt
 .endif
   jmp *(%BYTECODE)
-.endmacro
+.endm
 
 .macro UNMASK reg
   shl $8, \reg
   shr $8, \reg
-.endmacro
+.endm
 
 .macro CCALL fn
   push %rbx
@@ -46,11 +46,11 @@
   call \fn
   mov %rbx, %rsp
   pop %rbx
-.endmacro
+.endm
 
 .macro GET_ARG off, to
   mov 0x20(%rbp, \off, 8), \to
-.endmacro
+.endm
 
 .globl SYMBOL(execute)
 SYMBOL(execute):

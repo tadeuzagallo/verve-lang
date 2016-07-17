@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdarg>
 #include <cstring>
 #include <iomanip>
 #include <iostream>

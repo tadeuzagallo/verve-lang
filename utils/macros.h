@@ -1,5 +1,6 @@
 #define __unused __attribute__((unused))
 #define __used __attribute__((used))
+#define _Noreturn __attribute__((noreturn))
 
 #define CONCAT(__a, __b) CONCAT_(__a, __b)
 #define CONCAT_(__a, __b) __a##__b

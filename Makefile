@@ -1,4 +1,4 @@
-CC = clang++
+CC ?= clang++
 CFLAGS = -g -O0 -Wall -Wextra -std=c++11 -I .
 LIBS =  -lpthread
 SHELL = /bin/bash
@@ -28,7 +28,7 @@ $(TARGET): $(OBJECTS)
 
 .build/%.S.o: %.S $(HEADERS)
 	@mkdir -p $$(dirname $@)
-	$(CC) -fintegrated-as $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # ERROR TESTS
 
