@@ -12,7 +12,8 @@ namespace Verve {
     m_ast->generateBytecode(this);
 
     auto text = m_output.str();
-    m_output = std::stringstream();
+    m_output.str(std::string());
+    m_output.clear();
 
     if (m_functions.size()) {
       for (unsigned i = 0; i < m_functions.size(); i++) {
@@ -22,7 +23,8 @@ namespace Verve {
     }
 
     auto functions = m_output.str();
-    m_output = std::stringstream();
+    m_output.str(std::string());
+    m_output.clear();
 
     if (m_strings.size()) {
       write(Section::Header);
