@@ -346,7 +346,7 @@ Type *Interface::typeof(EnvPtr env) {
 
   s_interface = interface;
   for (const auto &fn : functions) {
-    env->get(fn->getName()).type = fn->typeof(this->env);
+    env->create(fn->getName()).type = fn->typeof(this->env);
   }
   s_interface = nullptr;
 

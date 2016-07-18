@@ -25,7 +25,7 @@ namespace Verve {
       AST::NodeInterface *node = nullptr;
     };
 
-    Entry &get(std::string name) {
+    const Entry &get(std::string name) {
       auto env = this;
       while (env) {
         auto it = env->m_entries.find(name);
