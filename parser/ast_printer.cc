@@ -1,4 +1,4 @@
-#include "print_ast.h"
+#include "ast_printer.h"
 
 #include <cassert>
 #include <cstdarg>
