@@ -66,6 +66,8 @@ namespace Verve {
     bool isRequired = false;
     bool capturesScope = false;
     bool escapes = false;
+
+    static std::unordered_map<std::string, std::string> reverseGenericMapping;
   private:
     std::unordered_map<std::string, Entry> m_entries;
     EnvPtr m_parent = nullptr;

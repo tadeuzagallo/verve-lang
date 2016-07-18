@@ -10,13 +10,10 @@
 
 namespace Verve {
 
-  struct Environment;
   struct Type;
   struct EnumType;
   struct TypeInterface;
   struct TypeImplementation;
-
-  typedef std::unordered_map<std::string, Type *> TypeMap;
 
   struct Type {
     virtual bool accepts(Type *, EnvPtr) = 0;
@@ -41,6 +38,10 @@ namespace Verve {
       BasicType(std::move(str)) {}
 
     virtual bool accepts(Type *, EnvPtr) override;
+
+    virtual std::string toString() override {
+      return Environment::reverseGenericMapping[typeName];
+    }
   };
 
   struct TypeFunction : Type {
@@ -79,7 +80,7 @@ namespace Verve {
       str << "interface "
           << name
           << "<"
-          << genericTypeName
+          << Environment::reverseGenericMapping[genericTypeName]
           << ">";
 
       return str.str();

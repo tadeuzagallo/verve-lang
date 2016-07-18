@@ -7,18 +7,23 @@
 
 namespace Verve {
 
-static std::string &uniqueName(std::string *name, EnvPtr env) {
-  std::string &n = *name;
-  while (env->get(n).type) {
-    n += "'";
+static std::string uniqueName(const std::string &name, EnvPtr env) {
+  static int id = 0;
+  auto newName = "T" + std::to_string(id++);
+  env->create(name).type = new GenericType(newName);
+  Environment::reverseGenericMapping[newName] = name;
+  return newName;
+}
+
+static std::string generic(const std::string &name, EnvPtr env) {
+  if (auto generic = dynamic_cast<GenericType *>(env->get(name).type)) {
+    return generic->typeName;
   }
-  *name = n;
-  return *name;
+  return name;
 }
 
 static void loadGenerics(std::vector<std::string> &generics, EnvPtr env) {
   for (auto &g : generics) {
-    g = uniqueName(&g, env);
     env->create(g).type = new GenericType(g);
   }
 }
@@ -271,14 +276,14 @@ Type *BinaryOperation::typeof(EnvPtr env) {
 // type nodes
 
 Type *BasicType::typeof(EnvPtr env) {
-  if (auto t = env->get(name).type) {
+  if (auto t = env->get(generic(name, env)).type) {
     return t;
   }
   throw TypeError(loc, "Unknown type: `%s`", name.c_str());
 }
 
 Type *DataType::typeof(EnvPtr env) {
-  auto dataType = env->get(name).type;
+  auto dataType = env->get(generic(name, env)).type;
   if (!dataType) {
     throw TypeError(loc, "Unknown type");
   }
@@ -295,9 +300,12 @@ static Verve::TypeConstructor *typeConstructor(TypeConstructorPtr ctor, Verve::E
   t->name = ctor->name;
   t->tag = tag;
   t->returnType = enumType;
-  t->generics = enumType->generics;
   for (auto type : ctor->types) {
-    t->types.push_back(type->typeof(env));
+    auto tt = type->typeof(env);
+    t->types.push_back(tt);
+    if (auto gt = dynamic_cast<GenericType *>(tt)) {
+      t->generics.push_back(gt->typeName);
+    }
   }
   return t;
 }
@@ -309,7 +317,11 @@ Type *EnumType::typeof(EnvPtr env) {
   env->create(name).type = t;
 
   auto new_env = env->create();
-  loadGenerics(generics, new_env);
+
+  for (auto &g : t->generics) {
+    g = uniqueName(g, new_env);
+  }
+  loadGenerics(t->generics, new_env);
 
   auto tag = 0u;
   for (auto c : constructors) {
@@ -324,13 +336,13 @@ TypeInterface *s_interface = nullptr;
 Type *Interface::typeof(EnvPtr env) {
   auto interface = new TypeInterface();
   interface->name = name;
-  interface->genericTypeName = genericTypeName;
+  interface->genericTypeName = uniqueName(genericTypeName, this->env);
   interface->virtualFunctions = virtualFunctions;
   interface->concreteFunctions = concreteFunctions;
 
   env->create(name).type = interface;
 
-  this->env->create(uniqueName(&genericTypeName, this->env)).type = interface;
+  this->env->create(interface->genericTypeName).type = interface;
 
   s_interface = interface;
   for (const auto &fn : functions) {
@@ -400,15 +412,23 @@ Type *Constructor::typeof(EnvPtr env) {
 
 // function related types
 Type *FunctionType::typeof(EnvPtr env) {
-  loadGenerics(generics, env);
-
   auto t = new TypeFunction();
+  t->generics = generics;
+
+  // isolate generics in a new env
+  auto newEnv = env->create();
+
+  for (auto &g : t->generics) {
+    g = uniqueName(g, newEnv);
+  }
+
+  loadGenerics(t->generics, newEnv);
+
   for (auto p : params) {
-    t->types.push_back(p->typeof(env));
+    t->types.push_back(p->typeof(newEnv));
   }
   t->interface = s_interface;
-  t->generics = generics;
-  t->returnType = returnType->typeof(env);
+  t->returnType = returnType->typeof(newEnv);
   return t;
 }
 
