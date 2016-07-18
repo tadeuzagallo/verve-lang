@@ -1,0 +1,9 @@
+// test nested types with same type variable name don't interfere on each other
+type u { T() }
+interface f<t> {
+  fn g<t>(x: t) -> t {
+    print("asd")
+    x
+  }
+}
+g(T())

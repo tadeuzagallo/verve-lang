@@ -7,8 +7,18 @@
 
 namespace Verve {
 
+static std::string &uniqueName(std::string *name, EnvPtr env) {
+  std::string &n = *name;
+  while (env->get(n).type) {
+    n += "'";
+  }
+  *name = n;
+  return *name;
+}
+
 static void loadGenerics(std::vector<std::string> &generics, EnvPtr env) {
-  for (auto g : generics) {
+  for (auto &g : generics) {
+    g = uniqueName(&g, env);
     env->create(g).type = new GenericType(g);
   }
 }
@@ -320,7 +330,7 @@ Type *Interface::typeof(EnvPtr env) {
 
   env->create(name).type = interface;
 
-  this->env->create(genericTypeName).type = interface;
+  this->env->create(uniqueName(&genericTypeName, this->env)).type = interface;
 
   s_interface = interface;
   for (const auto &fn : functions) {
