@@ -138,14 +138,13 @@ namespace AST {
     unsigned index;
   };
 
-  struct String : public Identifier {
-    using Identifier::Identifier;
+  struct String : public Node {
+    using Node::Node;
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void naming(__unused EnvPtr env) {
-      // override Identifier::naming and do nothing
-    }
+
+    std::string value;
   };
 
   struct FunctionParameter : public Identifier {

@@ -197,7 +197,7 @@ void Identifier::generateBytecode(Generator *gen) {
 
 void String::generateBytecode(Generator *gen) {
   gen->emitOpcode(Opcode::load_string);
-  gen->write(gen->uniqueString(name));
+  gen->write(gen->uniqueString(value));
 }
 
 void List::generateBytecode(Generator *gen) {

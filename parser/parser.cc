@@ -545,7 +545,7 @@ namespace Verve {
 
   AST::StringPtr Parser::parseString() {
     auto str = AST::createString(token().loc);
-    str->name = token(Token::STRING).string();
+    str->value = token(Token::STRING).string();
     return str;
   }
 
