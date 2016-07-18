@@ -366,10 +366,8 @@ Type *Implementation::typeof(EnvPtr env) {
 
   interface->implementations.push_back(t);
 
-  // isolate generic type
   this->env->create(interface->genericTypeName).type = t->type;
 
-  // isolate implementation's content
   auto virtualFunctions = interface->virtualFunctions;
   s_implementationName = "$" + t->type->toString();
   for (auto &fn : functions) {
