@@ -92,7 +92,9 @@ namespace AST {
 
     virtual void naming(__unused EnvPtr env) {}
 
-    virtual void printAST(__unused ASTPrinter &_, __unused unsigned depth) {}
+    virtual void printAST(__unused ASTPrinter &_, __unused unsigned depth) {
+      throw std::runtime_error("Trying to print virtual node");
+    }
   };
 
   struct Program : public Node {
