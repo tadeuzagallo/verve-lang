@@ -346,7 +346,7 @@ Type *Interface::typeof(EnvPtr env) {
 
   s_interface = interface;
   for (const auto &fn : functions) {
-    env->create(fn->getName()).type = fn->typeof(this->env);
+    env->create(fn->getName()).type = fn->typeof(this->env->create());
   }
   s_interface = nullptr;
 
@@ -413,20 +413,17 @@ Type *FunctionType::typeof(EnvPtr env) {
   auto t = new TypeFunction();
   t->generics = generics;
 
-  // isolate generics in a new env
-  auto newEnv = env->create();
-
   for (auto &g : t->generics) {
-    g = uniqueName(g, newEnv);
+    g = uniqueName(g, env);
   }
 
-  loadGenerics(t->generics, newEnv);
+  loadGenerics(t->generics, env);
 
   for (auto p : params) {
-    t->types.push_back(p->typeof(newEnv));
+    t->types.push_back(p->typeof(env));
   }
   t->interface = s_interface;
-  t->returnType = returnType->typeof(newEnv);
+  t->returnType = returnType->typeof(env);
   return t;
 }
 

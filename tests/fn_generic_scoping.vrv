@@ -1,0 +1,3 @@
+fn f<t>(a: t) -> (t) -> void {
+  fn _(b: t) -> void {  }
+}
