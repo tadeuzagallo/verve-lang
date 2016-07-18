@@ -60,14 +60,16 @@
 
 namespace Verve {
   struct Generator;
+  struct ASTPrinter;
 
 namespace AST {
   EVAL(MAP(DECLARE_TYPE, AST_TYPES))
 
   struct NodeInterface {
     virtual void generateBytecode(Generator *gen) = 0;
-    virtual Type *typeof(__unused EnvPtr env) = 0;
-    virtual void naming(__unused EnvPtr env) = 0;
+    virtual Type *typeof(EnvPtr env) = 0;
+    virtual void naming(EnvPtr env) = 0;
+    virtual void printAST(ASTPrinter &printer, unsigned depth) = 0;
   };
 
   struct FunctionInterface : virtual public NodeInterface {
@@ -89,6 +91,8 @@ namespace AST {
     }
 
     virtual void naming(__unused EnvPtr env) {}
+
+    virtual void printAST(__unused ASTPrinter &_, __unused unsigned depth) {}
   };
 
   struct Program : public Node {
@@ -97,6 +101,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     BlockPtr body;
     std::vector<ProgramPtr> imports;
@@ -108,6 +113,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
@@ -119,6 +125,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     double value;
     bool isFloat = false;
@@ -130,6 +137,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
     std::string ns;
@@ -143,6 +151,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string value;
   };
@@ -152,6 +161,7 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
   };
 
   struct Call : public Node {
@@ -160,6 +170,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     NodePtr callee;
     std::vector<NodePtr> arguments;
@@ -171,6 +182,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     NodePtr condition;
     BlockPtr ifBody;
@@ -183,6 +195,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     unsigned op;
     NodePtr lhs;
@@ -195,6 +208,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     unsigned op;
     NodePtr operand;
@@ -206,6 +220,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::vector<NodePtr> items;
   };
@@ -218,6 +233,7 @@ namespace AST {
     }
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     unsigned tag;
     std::string constructorName;
@@ -233,6 +249,7 @@ namespace AST {
     }
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     PatternPtr pattern;
     BlockPtr body;
@@ -244,6 +261,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     NodePtr value;
     std::vector<CasePtr> cases;
@@ -255,6 +273,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     enum {
       Pattern,
@@ -281,6 +300,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::vector<AssignmentPtr> assignments;
     BlockPtr block;
@@ -292,6 +312,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
     std::vector<NodePtr> arguments;
@@ -305,6 +326,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
     std::string genericTypeName;
@@ -320,6 +342,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string interfaceName;
     AbstractTypePtr type;
@@ -337,6 +360,7 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
   };
@@ -345,6 +369,7 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::vector<std::string> generics;
     std::vector<AbstractTypePtr> params;
@@ -355,6 +380,7 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
     std::vector<AbstractTypePtr> params;
@@ -364,6 +390,7 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
     std::vector<std::string> generics;
@@ -372,6 +399,8 @@ namespace AST {
 
   struct TypeConstructor : public AbstractType {
     using AbstractType::AbstractType;
+
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     std::string name;
     std::vector<AbstractTypePtr> types;
@@ -383,6 +412,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void generateBytecode(__unused Generator *gen) {}
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     virtual std::string &getName() {
       return name;
@@ -401,6 +431,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
 
     virtual std::string &getName() {
       return name;

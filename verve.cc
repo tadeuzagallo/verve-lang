@@ -14,6 +14,7 @@
 
 #include "parser/lexer.h"
 #include "parser/parser.h"
+#include "parser/print_ast.h"
 #include "bytecode/generator.h"
 #include "bytecode/disassembler.h"
 #include "runtime/vm.h"
@@ -31,6 +32,9 @@ void printUsage() {
 
   printf("  %-30s", "verve -b <input>");
   puts("Execute <input> as verve bytecode");
+
+  printf("  %-30s", "verve --print-ast <input>");
+  puts("Print the Abstract Syntax Tree for <input>");
 }
 
 #if !__APPLE__
@@ -54,20 +58,21 @@ int main(int argc, char **argv) {
   bool isDebug = first && strcmp(first, "-d") == 0;
   bool isCompile = first && strcmp(first, "-c") == 0;
   bool isBytecode = first && strcmp(first, "-b") == 0;
+  bool isAST = first && strcmp(first, "--print-ast") == 0;
   bool isHelp = first && (strcmp(first, "-h") == 0 || strcmp(first, "--help") == 0);
 
   if (
       (isCompile && argc != 4) ||
-      ((isDebug || isBytecode) && argc != 3) ||
+      ((isDebug || isBytecode || isAST) && argc != 3) ||
       isHelp ||
-      (!isHelp && !isDebug && !isCompile && !isBytecode && argc != 2)
+      (!isHelp && !isDebug && !isCompile && !isBytecode && !isAST && argc != 2)
      )
   {
     printUsage();
     return EXIT_FAILURE;
   }
 
-  auto filename = isDebug || isCompile || isBytecode ? argv[2] : argv[1];
+  auto filename = isDebug || isCompile || isBytecode || isAST ? argv[2] : argv[1];
 
   FILE *source = fopen(filename, "r");
 
@@ -97,7 +102,12 @@ int main(int argc, char **argv) {
 
   Verve::Lexer lexer(filename, input);
   Verve::Parser parser(lexer, dirname(filename));
-  std::shared_ptr<Verve::AST::Program> ast = parser.parse();
+  Verve::AST::ProgramPtr ast = parser.parse();
+
+  if (isAST) {
+    Verve::ASTPrinter::dump(ast);
+    return EXIT_SUCCESS;
+  }
 
   Verve::Generator generator(ast, !isDebug && !isCompile);
   auto &bytecode = generator.generate();
