@@ -1,6 +1,8 @@
 #include <cstdarg>
 #include <cstdio>
 
+#pragma once
+
 namespace Verve {
 
 class TypeError : public std::exception {

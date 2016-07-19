@@ -25,7 +25,7 @@ namespace Verve {
       AST::NodeInterface *node = nullptr;
     };
 
-    const Entry &get(std::string name) {
+    const Entry &get(std::string name) const {
       auto env = this;
       while (env) {
         auto it = env->m_entries.find(name);
@@ -40,7 +40,7 @@ namespace Verve {
       return dummy;
     }
 
-    EnvPtr envFor(std::string &name) {
+    EnvPtr envFor(const std::string &name) {
       auto env = this->shared_from_this();
       do {
         auto it = env->m_entries.find(name);
