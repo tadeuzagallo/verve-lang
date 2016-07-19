@@ -1,6 +1,7 @@
 #include "type.h"
 
 #include "environment.h"
+#include "type_helpers.h"
 
 namespace Verve {
 
@@ -14,7 +15,7 @@ namespace Verve {
   bool GenericType::accepts(Type *other, EnvPtr env) {
     if (auto t = env->get(typeName).type) {
       if (t != this) {
-        return t->accepts(other, env);
+        return typeEq(t, other, env);
       } else {
         env->create(typeName).type = other;
         return true;
@@ -31,7 +32,7 @@ namespace Verve {
     if (!(t = dynamic_cast<DataTypeInstance *>(other))) {
       return false;
     }
-    if (!dataType->accepts(t->dataType, env)) {
+    if (!typeEq(dataType, t->dataType, env)) {
       return false;
     }
     if (types.size() != t->types.size()) {
@@ -40,7 +41,7 @@ namespace Verve {
     for (unsigned i = 0; i < types.size(); i++) {
       // if `other` has a null type, that means it's a data type that doesn't
       // use the type variable, which means it can accept any type.
-      if (t->types[i] && !types[i]->accepts(t->types[i], env) && !t->types[i]->accepts(types[i], env)) {
+      if (t->types[i] && !typeEq(types[i], t->types[i], env) && !typeEq(t->types[i], types[i], env)) {
         return false;
       }
     }
@@ -53,11 +54,11 @@ namespace Verve {
       return false;
     }
     for (unsigned i = 0; i < types.size(); i++) {
-      if (!types[i]->accepts(t->types[i], env)) {
+      if (!typeEq(types[i], t->types[i], env)) {
         return false;
       }
     }
-    if (!returnType->accepts(t->returnType, env)) {
+    if (!typeEq(returnType, t->returnType, env)) {
       return false;
     }
     return true;
@@ -69,7 +70,7 @@ namespace Verve {
     }
 
     for (auto impl : implementations) {
-      if (impl->type->accepts(other, env)) {
+      if (typeEq(impl->type, other, env)) {
         env->create(genericTypeName).type = other;
         return true;
       }
