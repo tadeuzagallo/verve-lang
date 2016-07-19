@@ -53,8 +53,10 @@ namespace Verve {
     if (!(t = dynamic_cast<TypeFunction *>(other))) {
       return false;
     }
+    env = env->create();
+    loadGenerics(t->generics, env);
     for (unsigned i = 0; i < types.size(); i++) {
-      if (!typeEq(types[i], t->types[i], env)) {
+      if (!typeEq(t->types[i], types[i], env)) {
         return false;
       }
     }

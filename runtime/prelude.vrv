@@ -75,12 +75,9 @@ implementation printable<list<int>> {
   }
 }
 
-fn id_string(x: string) -> string { x }
-
 implementation printable<list<string>> {
   fn to_string(lst) {
-    // TODO: `id` should work here
-    list_to_string(lst, id_string)
+    list_to_string(lst, id)
   }
 
   fn print(arg) {
