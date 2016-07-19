@@ -17,7 +17,7 @@ namespace Verve {
       if (t != this) {
         return typeEq(t, other, env);
       } else {
-        env->create(typeName).type = other;
+        env->get(typeName).type = other;
         return true;
       }
     }
