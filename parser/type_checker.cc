@@ -361,6 +361,10 @@ Type *Call::typeof(EnvPtr env) {
     throw TypeError(loc, "Can't find type information for function call");
   }
 
+  if (fnType->interface && !env->get(fnType->interface->genericTypeName).type) {
+    env->create(fnType->interface->genericTypeName).type = fnType->interface;
+  }
+
   auto t = typeCheckArguments(arguments, fnType, env, loc);
   if (fnType->interface) {
     auto ident = asIdentifier(this->callee);

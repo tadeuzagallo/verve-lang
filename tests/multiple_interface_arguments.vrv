@@ -1,0 +1,10 @@
+/**
+ * Test that the resolution of one argument don't affect
+ * the other
+ *
+ * TODO: this test doesn't have any output because calling
+ * method on arguments of interface types is not yet sypported
+ **/
+fn f(x: printable, y: printable) -> void { }
+
+f(1, "")

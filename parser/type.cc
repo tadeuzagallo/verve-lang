@@ -73,7 +73,7 @@ namespace Verve {
 
     for (auto impl : implementations) {
       if (typeEq(impl->type, other, env)) {
-        env->create(genericTypeName).type = other;
+        env->get(genericTypeName).type = other;
         return true;
       }
     }
