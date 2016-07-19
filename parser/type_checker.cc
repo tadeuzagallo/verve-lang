@@ -365,11 +365,12 @@ Type *Call::typeof(EnvPtr env) {
   if (fnType->interface) {
     auto ident = asIdentifier(this->callee);
     auto t = env->get(fnType->interface->genericTypeName).type;
-    if (t) {
-      auto name = ident->name + "$" + t->toString();
-      if (env->get(name).type) {
-        ident->name = name;
-      }
+    if (!t) {
+      throw TypeError(loc, "Cannot resolve which interface implementation should be used");
+    }
+    auto name = ident->name + "$" + t->toString();
+    if (env->get(name).type) {
+      ident->name = name;
     }
   }
   return t;
