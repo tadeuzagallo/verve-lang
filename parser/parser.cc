@@ -19,6 +19,7 @@ namespace Verve {
     env->create("int").type = new BasicType("int");
     env->create("float").type = new BasicType("float");
     env->create("void").type = new BasicType("void");
+    env->create("bool").type = new BasicType("bool");
 
     auto list = new EnumType();
     list->name = "list";

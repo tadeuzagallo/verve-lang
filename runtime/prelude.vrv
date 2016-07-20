@@ -96,19 +96,19 @@ extern `/` (int, int) -> int
 extern `%` (int, int) -> int
 
  // should be bool
-extern `&&` (int, int) -> int
-extern `||` (int, int) -> int
+extern `&&` (bool, bool) -> bool
+extern `||` (bool, bool) -> bool
 
-extern `<` (int, int) -> int
-extern `>` (int, int) -> int
+extern `<` (int, int) -> bool
+extern `>` (int, int) -> bool
 
-extern `<=` (int, int) -> int
-extern `>=` (int, int) -> int
+extern `<=` (int, int) -> bool
+extern `>=` (int, int) -> bool
 
-extern `==` (int, int) -> int
-extern `!=` (int, int) -> int
+extern `==` (int, int) -> bool
+extern `!=` (int, int) -> bool
 
-extern `unary_!` (int) -> int
+extern `unary_!` (bool) -> bool
 extern `unary_-` (int) -> int
 
 extern `__heap-size__` () -> int
