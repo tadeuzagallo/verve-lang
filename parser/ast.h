@@ -283,7 +283,8 @@ namespace AST {
     } kind;
 
     union Left {
-      Left() {}
+      Left() :
+        pattern(nullptr) {}
 
       PatternPtr pattern;
       IdentifierPtr ident;
