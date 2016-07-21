@@ -84,9 +84,9 @@ Type *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeF
     auto actual = arg->typeof(env);
 
     if (!actual) {
-      throw TypeError(arg->loc, "Can't find type information for call argument #%d", i + 1);
+      throw TypeError(arg->loc(), "Can't find type information for call argument #%d", i + 1);
     } else if (!typeEq(expected, actual, env->create())) {
-      throw TypeError(arg->loc, "Expected `%s` but got `%s` on arg #%d for function `%s`", expected->toString().c_str(), actual->toString().c_str(), i + 1, fnType->name.c_str());
+      throw TypeError(arg->loc(), "Expected `%s` but got `%s` on arg #%d for function `%s`", expected->toString().c_str(), actual->toString().c_str(), i + 1, fnType->name.c_str());
     }
   }
 

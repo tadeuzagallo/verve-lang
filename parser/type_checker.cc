@@ -13,7 +13,7 @@ void TypeChecker::check(AST::ProgramPtr program, EnvPtr env, Lexer &lexer) {
   try {
     auto type = program->typeof(env);
     if (!type) {
-      throw TypeError(program->loc, "Unknown type for program");
+      throw TypeError(program->loc(), "Unknown type for program");
     }
   } catch (TypeError &ex) {
     fprintf(stderr, "Type Error: %s\n", ex.what());
@@ -45,7 +45,7 @@ Type *Identifier::typeof(EnvPtr env) {
   if (auto t = env->get(name).type) {
     return t;
   }
-  throw TypeError(loc, "Unknown identifier: `%s`", name.c_str());
+  throw TypeError(loc(), "Unknown identifier: `%s`", name.c_str());
 }
 
 Type *List::typeof(EnvPtr env) {
@@ -58,7 +58,7 @@ Type *List::typeof(EnvPtr env) {
     }
     if (typeEq(t, iType, env))
       continue;
-    throw TypeError(i->loc, "Lists can't have mixed types: found an element of type `%s` when elements' inferred type was `%s`", iType->toString().c_str(), t->toString().c_str());
+    throw TypeError(i->loc(), "Lists can't have mixed types: found an element of type `%s` when elements' inferred type was `%s`", iType->toString().c_str(), t->toString().c_str());
   }
 
   auto dti = new DataTypeInstance();
@@ -113,12 +113,12 @@ Type *If::typeof(EnvPtr env) {
   if (typeEq(elseType, ifType, env))
     return elseType;
   // TODO: print inferred type for each branch
-  throw TypeError(loc, "`if` and `else` branches evaluate to different types");
+  throw TypeError(loc(), "`if` and `else` branches evaluate to different types");
 }
 
 Type *Match::typeof(EnvPtr env) {
   if (cases.size() == 0) {
-    throw TypeError(loc, "Cannot have `match` expression with no cases");
+    throw TypeError(loc(), "Cannot have `match` expression with no cases");
   }
 
   value->typeof(env);
@@ -131,7 +131,7 @@ Type *Match::typeof(EnvPtr env) {
     }
     if (typeEq(t, cType, env))
       t = cType;
-    throw TypeError(c->loc, "Match can't have mixed types on its cases: found a case with type `%s` when previous cases' inferred type was `%s`", cType->toString().c_str(), t->toString().c_str());
+    throw TypeError(c->loc(), "Match can't have mixed types on its cases: found a case with type `%s` when previous cases' inferred type was `%s`", cType->toString().c_str(), t->toString().c_str());
   }
   return t;
 }
@@ -144,7 +144,7 @@ Type *Case::typeof(__unused EnvPtr _) {
 Type *Pattern::typeof(EnvPtr env) {
   auto t = dynamic_cast<Verve::TypeConstructor *>(env->get(constructorName).type);
   if (!t) {
-    throw TypeError(loc, "Unknown constructor `%s` on pattern match", constructorName.c_str());
+    throw TypeError(loc(), "Unknown constructor `%s` on pattern match", constructorName.c_str());
   }
 
   // TODO: proper error message
@@ -160,7 +160,7 @@ Type *Pattern::typeof(EnvPtr env) {
   
   auto rt = enumRetType(t, new_env);
   if (!typeEq(valueType, rt, new_env)) {
-    throw TypeError(loc, "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), t->toString().c_str());
+    throw TypeError(loc(), "Trying to pattern match value of type `%s` with constructor `%s`", valueType->toString().c_str(), t->toString().c_str());
   }
 
   tag = t->tag;
@@ -188,7 +188,7 @@ Type *BinaryOperation::typeof(EnvPtr env) {
   if (!failed)
     return intType;
 
-  throw TypeError(failed->loc, "Binary operations only accept `int`, but found `%s`", failedType->toString().c_str());
+  throw TypeError(failed->loc(), "Binary operations only accept `int`, but found `%s`", failedType->toString().c_str());
 }
 
 // type nodes
@@ -197,13 +197,13 @@ Type *BasicType::typeof(EnvPtr env) {
   if (auto t = env->get(generic(name, env)).type) {
     return t;
   }
-  throw TypeError(loc, "Unknown type: `%s`", name.c_str());
+  throw TypeError(loc(), "Unknown type: `%s`", name.c_str());
 }
 
 Type *DataType::typeof(EnvPtr env) {
   auto dataType = env->get(generic(name, env)).type;
   if (!dataType) {
-    throw TypeError(loc, "Unknown type");
+    throw TypeError(loc(), "Unknown type");
   }
   auto t = new DataTypeInstance();
   t->dataType = dataType;
@@ -293,7 +293,7 @@ Type *Implementation::typeof(EnvPtr env) {
     if (it != virtualFunctions.end()) {
       virtualFunctions.erase(it);
     } else if (std::find(interface->concreteFunctions.begin(), interface->concreteFunctions.end(), fn->getName()) == interface->concreteFunctions.end()) {
-      throw TypeError(loc, "Defining function `%s` inside implementation `%s`, but it's not part of the interface", fn->getName().c_str(), t->toString().c_str());
+      throw TypeError(loc(), "Defining function `%s` inside implementation `%s`, but it's not part of the interface", fn->getName().c_str(), t->toString().c_str());
     }
 
     auto t = fn->typeof(this->env);
@@ -308,7 +308,7 @@ Type *Implementation::typeof(EnvPtr env) {
       s << index++ << ") " << fn << std::endl;
     }
     auto str = s.str();
-    throw TypeError(loc, "Implementation `%s` does not implement the following virtual functions:\n%s", t->toString().c_str(), str.c_str());
+    throw TypeError(loc(), "Implementation `%s` does not implement the following virtual functions:\n%s", t->toString().c_str(), str.c_str());
   }
 
   return env->get("void").type;
@@ -321,9 +321,9 @@ Type *Constructor::typeof(EnvPtr env) {
     tag = ctorType->tag;
     size = ctorType->types.size() + 1;
     ctorType->name = name;
-    return typeCheckArguments(arguments, ctorType, env, loc);
+    return typeCheckArguments(arguments, ctorType, env, loc());
   }
-  throw TypeError(loc, "Undefined constructor: `%s`", name.c_str());
+  throw TypeError(loc(), "Undefined constructor: `%s`", name.c_str());
 }
 
 // function related types
@@ -358,19 +358,19 @@ Type *Call::typeof(EnvPtr env) {
   auto calleeType = callee->typeof(env);
   auto fnType = dynamic_cast<TypeFunction *>(calleeType);
   if (!fnType) {
-    throw TypeError(loc, "Can't find type information for function call");
+    throw TypeError(loc(), "Can't find type information for function call");
   }
 
   if (fnType->interface && !env->get(fnType->interface->genericTypeName).type) {
     env->create(fnType->interface->genericTypeName).type = fnType->interface;
   }
 
-  auto t = typeCheckArguments(arguments, fnType, env, loc);
+  auto t = typeCheckArguments(arguments, fnType, env, loc());
   if (fnType->interface) {
     auto ident = asIdentifier(this->callee);
     auto t = env->get(fnType->interface->genericTypeName).type;
     if (!t) {
-      throw TypeError(loc, "Cannot resolve which interface implementation should be used");
+      throw TypeError(loc(), "Cannot resolve which interface implementation should be used");
     }
     auto name = ident->name + "$" + t->toString();
     if (env->get(name).type) {
@@ -406,7 +406,7 @@ Type *Function::typeof(EnvPtr env) {
 
   auto bodyType = body->typeof(this->body->env);
   if (!typeEq(fnType->returnType, bodyType, this->body->env)) {
-    throw TypeError(body->loc, "Invalid return type for function: expected `%s` but got `%s`", fnType->returnType->toString().c_str(), bodyType->toString().c_str());
+    throw TypeError(body->loc(), "Invalid return type for function: expected `%s` but got `%s`", fnType->returnType->toString().c_str(), bodyType->toString().c_str());
   }
 
   return t;

@@ -14,22 +14,21 @@
 
 #define DECLARE_TYPE(__class) \
   struct __class; \
-  typedef std::shared_ptr<__class> __class##Ptr;
+  using  __class##Ptr = std::shared_ptr<__class>;
 
 #define DECLARE_CONVERTER(__class) \
-  __unused static __class##Ptr as##__class(std::shared_ptr<NodeInterface> __n) { \
+  __unused static __class##Ptr as##__class(NodePtr __n) { \
     return std::dynamic_pointer_cast<__class>(__n); \
   }
 
 #define DECLARE_CTOR(__class)  \
     static inline __class##Ptr create##__class(Loc loc) { \
        auto node = std::make_shared<__class>(loc); \
-      node->loc = loc; \
+      node->m_loc = loc; \
       return node; \
     } \
 
 #define AST_TYPES \
-      Node, \
       Program, \
       Block, \
       Call, \
@@ -65,11 +64,14 @@ namespace Verve {
 namespace AST {
   EVAL(MAP(DECLARE_TYPE, AST_TYPES))
 
+  using NodePtr = std::shared_ptr<NodeInterface>;
+
   struct NodeInterface {
     virtual void generateBytecode(Generator *gen) = 0;
     virtual Type *typeof(EnvPtr env) = 0;
     virtual void naming(EnvPtr env) = 0;
     virtual void printAST(ASTPrinter &printer, unsigned depth) = 0;
+    virtual const Loc &loc() const = 0;
   };
 
   struct FunctionInterface : virtual public NodeInterface {
@@ -78,9 +80,11 @@ namespace AST {
 
 
   struct Node : virtual public NodeInterface {
-    Loc loc;
+    Node(Loc l): m_loc(l) {  }
 
-    Node(Loc l): loc(l) {  }
+    virtual const Loc &loc() const {
+      return m_loc;
+    }
 
     virtual void generateBytecode(__unused Generator *gen) {
       throw std::runtime_error("Trying to generate bytecode for virtual node");
@@ -95,6 +99,8 @@ namespace AST {
     virtual void printAST(__unused ASTPrinter &_, __unused unsigned depth) {
       throw std::runtime_error("Trying to print virtual node");
     }
+
+    Loc m_loc;
   };
 
   struct Program : public Node {
