@@ -1,0 +1,39 @@
+/**
+ * Test that functions that take interfaces as parameters
+ * properly generate the necessary implementations to match
+ * the types it's called with
+ **/
+
+fn f(x: printable) -> string {
+  to_string(x)
+}
+
+print_string(f(1))
+print_string(f("foo"))
+
+type a { A() }
+type b { B() }
+
+interface dummy<t> {
+  virtual print_dummy(t) -> void
+}
+
+implementation dummy<a> {
+  fn print_dummy(_) {
+    print("A")
+  }
+}
+
+implementation dummy<b> {
+  fn print_dummy(_) {
+    print("B")
+  }
+}
+
+fn print2(x: printable, y: dummy) -> void {
+  print_string(to_string(x))
+  print_dummy(y)
+}
+
+print2(1, A())
+print2("foo", B())

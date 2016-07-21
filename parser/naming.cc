@@ -151,7 +151,7 @@ void Prototype::naming(EnvPtr env) {
 
 void Function::naming(EnvPtr env) {
   if (type) {
-    type->naming(env);
+    env->create(name).node = this;
   }
   env = env->create();
   env->escapes = true;

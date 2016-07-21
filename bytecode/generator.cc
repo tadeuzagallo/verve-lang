@@ -412,6 +412,13 @@ void Constructor::generateBytecode(Generator *gen) {
 }
 
 void Function::generateBytecode(Generator *gen) {
+  if (dynamic_cast<TypeFunction *>(body->env->get(name).type)->usesInterface) {
+    for (const auto &it : instances) {
+      it.second->generateBytecode(gen);
+    }
+    return;
+  }
+
   gen->emitOpcode(Opcode::create_closure);
   gen->write(gen->m_functions.size());
   gen->write(body->env->capturesScope);

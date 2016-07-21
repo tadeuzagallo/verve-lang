@@ -203,7 +203,8 @@ Type *BasicType::typeof(EnvPtr env) {
 Type *DataType::typeof(EnvPtr env) {
   auto dataType = env->get(generic(name, env)).type;
   if (!dataType) {
-    throw TypeError(loc(), "Unknown type");
+    // TODO: this should be a BasicType instead of a strings
+    throw TypeError(loc(), "Unknown type: `%s`", name.c_str());
   }
   auto t = new DataTypeInstance();
   t->dataType = dataType;
@@ -338,8 +339,14 @@ Type *FunctionType::typeof(EnvPtr env) {
   loadGenerics(t->generics, env);
 
   for (auto p : params) {
-    t->types.push_back(p->typeof(env));
+    auto tt = p->typeof(env);
+    t->types.push_back(tt);
+
+    if (dynamic_cast<TypeInterface *>(tt) && tt != s_interface) {
+      t->usesInterface = true;
+    }
   }
+
   t->interface = s_interface;
   t->returnType = returnType->typeof(env);
   return t;
@@ -366,6 +373,7 @@ Type *Call::typeof(EnvPtr env) {
   }
 
   auto t = typeCheckArguments(arguments, fnType, env, loc());
+
   if (fnType->interface) {
     auto ident = asIdentifier(this->callee);
     auto t = env->get(fnType->interface->genericTypeName).type;
@@ -377,6 +385,34 @@ Type *Call::typeof(EnvPtr env) {
       ident->name = name;
     }
   }
+
+  if (fnType->usesInterface) {
+    // TODO: support anonymous lambdas
+    if (auto ident = asIdentifier(callee)) {
+      std::string name = "";
+      auto original = dynamic_cast<Function *>(env->get(ident->name).node);
+
+      auto newType = new TypeFunction(*fnType);
+      newType->usesInterface = false;
+
+      for (auto i = 0u; i < arguments.size(); i++) {
+        const auto &tt = arguments[i]->typeof(original->body->env);
+        newType->types[i] = tt;
+        name += "$" + tt->toString();
+      }
+      ident->name += name;
+
+      auto fn = asFunction(original->copy());
+      fn->name += name;
+      fn->type = nullptr;
+
+      fn->body->env->create(fn->name).type = newType;
+      fn->typeof(fn->body->env);
+
+      original->instances[name] = fn;
+    }
+  }
+
   return t;
 }
 
@@ -384,10 +420,10 @@ Type *Function::typeof(EnvPtr env) {
   Type *t;
   if (type) {
     name += s_implementationName;
-    t = type->typeof(this->body->env);
+    t = type->typeof(body->env);
     env->create(name).type = t;
   } else {
-    t = env->get(name).type;
+    t = body->env->get(name).type;
     name += s_implementationName;
     env->create(name).type = t;
   }

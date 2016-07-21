@@ -486,6 +486,7 @@ namespace AST {
     BlockPtr body;
     bool needsScope;
     bool capturesScope;
+    std::unordered_map<std::string, FunctionPtr> instances;
   };
 
 
