@@ -21,6 +21,14 @@ namespace Verve {
     virtual ~Type() {}
   };
 
+  static std::string typeToString(Type *t) {
+    if (t) {
+      return t->toString();
+    } else {
+      return "null";
+    }
+  }
+
   struct BasicType : Type {
     BasicType(std::string &&n) : typeName(std::move(n)) {}
 
@@ -55,9 +63,9 @@ namespace Verve {
           str << ", ";
         }
 
-        str << types[i]->toString();
+        str << typeToString(types[i]);
       }
-      str << ") -> " << returnType->toString();
+      str << ") -> " << typeToString(returnType);
       return str.str();
     }
 
@@ -99,7 +107,7 @@ namespace Verve {
       std::stringstream str;
       str << interface->name
           << "<"
-          << type->toString()
+          << typeToString(type)
           << ">";
 
       return str.str();
@@ -142,7 +150,7 @@ namespace Verve {
 
     virtual std::string toString() override {
       std::stringstream str;
-      str << dataType->toString();
+      str << typeToString(dataType);
       str << "<";
       bool first = true;
       for (auto type : types) {
@@ -150,7 +158,7 @@ namespace Verve {
           str << ", ";
         }
         first = false;
-        str << type->toString();
+        str << typeToString(type);
       }
       str << ">";
       return str.str();
