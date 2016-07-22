@@ -322,7 +322,7 @@ Type *Constructor::typeof(EnvPtr env) {
     tag = ctorType->tag;
     size = ctorType->types.size() + 1;
     ctorType->name = name;
-    return typeCheckArguments(arguments, ctorType, env, loc());
+    return typeCheckArguments(arguments, ctorType, env, loc())->returnType;
   }
   throw TypeError(loc(), "Undefined constructor: `%s`", name.c_str());
 }
@@ -392,14 +392,14 @@ Type *Call::typeof(EnvPtr env) {
       std::string name = "";
       auto original = dynamic_cast<Function *>(env->get(ident->name).node);
 
-      auto newType = new TypeFunction(*fnType);
+      auto newType = new TypeFunction(*t);
+      newType->returnType = fnType->returnType;
       newType->usesInterface = false;
 
-      for (auto i = 0u; i < arguments.size(); i++) {
-        const auto &tt = arguments[i]->typeof(original->body->env);
-        newType->types[i] = tt;
+      for (const auto &tt : newType->types) {
         name += "$" + tt->toString();
       }
+
       ident->name += name;
 
       auto fn = asFunction(original->copy());
@@ -413,7 +413,7 @@ Type *Call::typeof(EnvPtr env) {
     }
   }
 
-  return t;
+  return t->returnType;
 }
 
 Type *Function::typeof(EnvPtr env) {

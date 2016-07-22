@@ -70,10 +70,12 @@ Type *enumRetType(const TypeFunction *fnType, EnvPtr env) {
   return simplify(fnType->returnType, env);
 }
 
-Type *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeFunction *fnType, EnvPtr env, const Loc &loc) {
+TypeFunction *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeFunction *fnType, EnvPtr env, const Loc &loc) {
   if (arguments.size() != fnType->types.size()) {
     throw TypeError(loc, "Wrong number of arguments for function call");
   }
+
+  auto t = new TypeFunction();
 
   loadGenerics(fnType->generics, env);
 
@@ -82,6 +84,7 @@ Type *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeF
 
     auto expected = fnType->types[i];
     auto actual = arg->typeof(env);
+    t->types.push_back(actual);
 
     if (!actual) {
       throw TypeError(arg->loc(), "Can't find type information for call argument #%d", i + 1);
@@ -90,7 +93,9 @@ Type *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeF
     }
   }
 
-  return enumRetType(fnType, env);
+  t->returnType = enumRetType(fnType, env);
+
+  return t;
 }
 
 bool usesInterface(Type *t, EnvPtr env) {

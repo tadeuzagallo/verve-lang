@@ -11,6 +11,6 @@ void loadGenerics(const std::vector<std::string> &generics, EnvPtr env);
 Type *simplify(Type *type, EnvPtr env);
 bool typeEq(Type *expected, Type *actual, EnvPtr env);
 Type *enumRetType(const TypeFunction *fnType, EnvPtr env);
-Type *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeFunction *fnType, EnvPtr env, const Loc &loc);
+TypeFunction *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeFunction *fnType, EnvPtr env, const Loc &loc);
 bool usesInterface(Type *t, EnvPtr env);
 }
