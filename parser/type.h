@@ -113,7 +113,7 @@ namespace Verve {
       return str.str();
     }
 
-    TypeInterface *interface;
+    TypeInterface *interface = nullptr;
     Type *type;
   };
 

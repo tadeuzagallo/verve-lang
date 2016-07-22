@@ -141,6 +141,7 @@ void Interface::naming(EnvPtr env) {
 void Implementation::naming(EnvPtr env) {
   this->env = env->create();
   for (const auto &fn : functions) {
+    env->create(fn->getName()).node = fn.get();
     fn->naming(this->env);
   }
 }

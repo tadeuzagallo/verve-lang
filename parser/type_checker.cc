@@ -152,7 +152,7 @@ Type *Pattern::typeof(EnvPtr env) {
 
   auto valueType = value->typeof(env);
   auto new_env = env->create();
-  if (auto vt = dynamic_cast<Verve::DataTypeInstance *>(valueType)) {
+  if (auto vt = dynamic_cast<DataTypeInstance *>(valueType)) {
     for (unsigned i = 0; i < t->generics.size(); i++) {
       new_env->create(t->generics[i]).type = vt->types[i];
     }
@@ -165,7 +165,7 @@ Type *Pattern::typeof(EnvPtr env) {
 
   tag = t->tag;
   for (unsigned i = 0; i < values.size(); i++) {
-    env->create(values[i]->name).type =  simplify(t->types[i], new_env);
+    env->get(values[i]->name).type = simplify(t->types[i], new_env);
   }
 
   return t;
@@ -299,6 +299,7 @@ Type *Implementation::typeof(EnvPtr env) {
 
     auto t = fn->typeof(this->env);
     env->create(fn->getName()).type = t;
+    env->create(fn->getName()).node = fn.get();
   }
   s_implementationName = "";
 
@@ -356,7 +357,7 @@ Type *Prototype::typeof(EnvPtr env) {
   auto t = dynamic_cast<TypeFunction *>(FunctionType::typeof(env));
   name += s_implementationName;
   t->name = name;
-  env->create(name).type = t;
+  env->get(name).type = t;
   return t;
 }
 
@@ -391,6 +392,7 @@ Type *Call::typeof(EnvPtr env) {
     if (auto ident = asIdentifier(callee)) {
       std::string name = "";
       auto original = dynamic_cast<Function *>(env->get(ident->name).node);
+      assert(original);
 
       auto newType = new TypeFunction(*t);
       newType->returnType = fnType->returnType;
@@ -402,14 +404,26 @@ Type *Call::typeof(EnvPtr env) {
 
       ident->name += name;
 
-      auto fn = asFunction(original->copy());
-      fn->name += name;
-      fn->type = nullptr;
+      if (!original->instances[name]) {
+        // clone AST and re-run the naming phase
+        auto fn = asFunction(original->copy());
+        fn->naming(env);
 
-      fn->body->env->create(fn->name).type = newType;
-      fn->typeof(fn->body->env);
+        // cache and append types used to instantiate to the name
+        original->instances[name] = fn;
+        fn->name += name;
 
-      original->instances[name] = fn;
+        // export the original function in the new context
+        fn->body->env->create(original->name).type = fnType;
+        fn->body->env->create(original->name).node = original;
+
+        // explicitly export the specialised type and erase the original one
+        fn->type = nullptr;
+        fn->body->env->create(fn->name).type = newType;
+
+        // finally recompute the types for the whole specialised function body
+        fn->typeof(fn->body->env);
+      }
     }
   }
 
@@ -421,11 +435,13 @@ Type *Function::typeof(EnvPtr env) {
   if (type) {
     name += s_implementationName;
     t = type->typeof(body->env);
-    env->create(name).type = t;
+    env->get(name).type = t;
   } else {
     t = body->env->get(name).type;
-    name += s_implementationName;
-    env->create(name).type = t;
+    if (!s_implementationName.empty()) {
+      name += s_implementationName;
+      env->get(name).type = t;
+    }
   }
 
   auto fnType = dynamic_cast<TypeFunction *>(t);
@@ -434,14 +450,18 @@ Type *Function::typeof(EnvPtr env) {
   assert(fnType);
   assert(fnType->types.size() == parameters.size());
 
+  if (fnType->usesInterface) {
+    return fnType;
+  }
+
   // isolate function params
   for (unsigned i = 0; i < parameters.size(); i++) {
     auto t = fnType->types[i];
-    this->body->env->create(parameters[i]->name).type = t;
+    body->env->create(parameters[i]->name).type = t;
   }
 
-  auto bodyType = body->typeof(this->body->env);
-  if (!typeEq(fnType->returnType, bodyType, this->body->env)) {
+  auto bodyType = body->typeof(body->env);
+  if (!typeEq(fnType->returnType, bodyType, body->env)) {
     throw TypeError(body->loc(), "Invalid return type for function: expected `%s` but got `%s`", fnType->returnType->toString().c_str(), bodyType->toString().c_str());
   }
 

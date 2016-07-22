@@ -78,6 +78,10 @@ namespace Verve {
       }
     }
 
+    if (dynamic_cast<GenericType *>(other)) {
+      return true;
+    }
+
     return false;
   }
 
