@@ -93,4 +93,30 @@ Type *typeCheckArguments(const std::vector<AST::NodePtr> &arguments, const TypeF
   return enumRetType(fnType, env);
 }
 
+bool usesInterface(Type *t, EnvPtr env) {
+  if (auto bt = dynamic_cast<BasicType *>(t)) {
+    auto tt = env->get(bt->typeName).type;
+    return tt != bt && usesInterface(tt, env);
+  } else if (auto tf = dynamic_cast<TypeFunction *>(t)) {
+    for (const auto &tt : tf->types) {
+      if (usesInterface(tt, env)) {
+        return true;
+      }
+    }
+    return usesInterface(tf->returnType, env);
+  } else if (dynamic_cast<TypeInterface *>(t)) {
+    return true;
+  } else if (auto dt = dynamic_cast<DataTypeInstance *>(t)) {
+    for (const auto &tt : dt->types) {
+      if (usesInterface(tt, env)) {
+        return true;
+      }
+    }
+    return usesInterface(dt->dataType, env);
+  }
+
+  return false;
+}
+
+
 }

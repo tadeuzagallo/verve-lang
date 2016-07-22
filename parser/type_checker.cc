@@ -342,8 +342,8 @@ Type *FunctionType::typeof(EnvPtr env) {
     auto tt = p->typeof(env);
     t->types.push_back(tt);
 
-    if (dynamic_cast<TypeInterface *>(tt) && tt != s_interface) {
-      t->usesInterface = true;
+    if (!t->usesInterface && tt != s_interface) {
+      t->usesInterface = usesInterface(tt, env);
     }
   }
 
