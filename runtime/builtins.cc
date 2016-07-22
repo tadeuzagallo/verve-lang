@@ -86,23 +86,6 @@ namespace Verve {
     return Value(-argv[0].asInt());
   }
 
-  static void printValue(Value value) {
-    if (value.isString()) {
-      printf("%s", value.asString().str());
-    } else if (value.isList()) {
-      for (unsigned i = 0; i < value.asList()->length; i++) {
-        if (i) putchar(' ');
-        printValue(value.asList()->at(i));
-      }
-    } else if (value.isInt()){
-      printf("%d", value.asInt());
-    } else {
-      auto v = value.encode();
-      printf("%lg", *(double *)&v);
-      //throw std::runtime_error("Trying to print unsupported type");
-    }
-  }
-
   VERVE_FUNCTION(print_string) {
     assert(argc == 1);
 
