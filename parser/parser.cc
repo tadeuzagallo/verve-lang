@@ -99,11 +99,11 @@ namespace Verve {
 
    if (imports.size() == 0) {
       for (auto it : parser.m_env->entries()) {
-        m_env->create(namespaced(ns, it.first)).type = it.second.type;
+        m_env->create(namespaced(ns, it.first)) = it.second;
       }
     } else {
       for (auto import : imports) {
-        m_env->create(namespaced(ns, import)).type = parser.m_env->get(import).type;
+        m_env->create(namespaced(ns, import)) = parser.m_env->get(import);
       }
     }
 

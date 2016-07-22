@@ -297,7 +297,7 @@ Type *Implementation::typeof(EnvPtr env) {
       throw TypeError(loc(), "Defining function `%s` inside implementation `%s`, but it's not part of the interface", fn->getName().c_str(), t->toString().c_str());
     }
 
-    auto t = fn->typeof(this->env);
+    auto t = fn->typeof(this->env->create());
     env->create(fn->getName()).type = t;
     env->create(fn->getName()).node = fn.get();
   }
@@ -407,7 +407,7 @@ Type *Call::typeof(EnvPtr env) {
       if (!original->instances[name]) {
         // clone AST and re-run the naming phase
         auto fn = asFunction(original->copy());
-        fn->naming(env);
+        fn->naming(env->create());
 
         // cache and append types used to instantiate to the name
         original->instances[name] = fn;
@@ -422,7 +422,12 @@ Type *Call::typeof(EnvPtr env) {
         fn->body->env->create(fn->name).type = newType;
 
         // finally recompute the types for the whole specialised function body
+        // NOTE: The function would already have the implementation name so we
+        // clear it before re-computing the function type and restore afterwards
+        auto impl = s_implementationName;
+        s_implementationName = "";
         fn->typeof(fn->body->env);
+        s_implementationName = impl;
       }
     }
   }

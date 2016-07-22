@@ -33,16 +33,11 @@ fn list_to_string<t>(l: list<t>, f: (t) -> string) -> string {
 
 interface printable<t> {
   virtual to_string (t) -> string
-  virtual print (t) -> void
 }
 
 implementation printable<int> {
   fn to_string(arg) {
     int_to_string(arg)
-  }
-
-  fn print(arg) {
-    print_string(to_string(arg))
   }
 }
 
@@ -50,19 +45,11 @@ implementation printable<float> {
   fn to_string(flt) {
     float_to_string(flt)
   }
-
-  fn print(flt) {
-    print_string(to_string(flt))
-  }
 }
 
 implementation printable<string> {
   fn to_string(arg) {
     arg
-  }
-
-  fn print(arg) {
-    print_string(to_string(arg))
   }
 }
 
@@ -70,19 +57,16 @@ implementation printable<list<int>> {
   fn to_string(lst) {
     list_to_string(lst, int_to_string)
   }
-  fn print(arg) {
-    print_string(to_string(arg))
-  }
 }
 
 implementation printable<list<string>> {
   fn to_string(lst) {
     list_to_string(lst, id)
   }
+}
 
-  fn print(arg) {
-    print_string(to_string(arg))
-  }
+fn print(arg: printable) -> void {
+  print_string(to_string(arg))
 }
 
 extern count (string) -> int
