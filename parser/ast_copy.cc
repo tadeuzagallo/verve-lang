@@ -16,9 +16,6 @@ NodePtr Block::copy() const {
   for (auto &node : block->nodes) {
     node = node->copy();
   }
-  if (block->env) {
-    block->env = block->env->create();
-  }
   return block;
 }
 
@@ -134,7 +131,6 @@ NodePtr Implementation::copy() const {
   for (auto &fn : implementation->functions) {
     fn = std::dynamic_pointer_cast<FunctionInterface>(fn->copy());
   }
-  implementation->env = implementation->env->create();
   return implementation;
 }
 
