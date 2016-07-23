@@ -388,47 +388,52 @@ Type *Call::typeof(EnvPtr env) {
   }
 
   if (fnType->usesInterface) {
-    // TODO: support anonymous lambdas
+    Function *original = nullptr;
+    std::string name = "";
+    auto newType = new TypeFunction(*t);
+    newType->returnType = fnType->returnType;
+    newType->usesInterface = false;
+
+    for (const auto &tt : newType->types) {
+      name += "$" + tt->toString();
+    }
+
     if (auto ident = asIdentifier(callee)) {
-      std::string name = "";
-      auto original = dynamic_cast<Function *>(env->get(ident->name).node);
+      original = dynamic_cast<Function *>(env->get(ident->name).node);
       assert(original);
-
-      auto newType = new TypeFunction(*t);
-      newType->returnType = fnType->returnType;
-      newType->usesInterface = false;
-
-      for (const auto &tt : newType->types) {
-        name += "$" + tt->toString();
-      }
-
       ident->name += name;
+    } else if (auto fn = asFunction(callee)) {
+      original = fn.get();
+    } else {
+      assert(false);
+    }
 
-      if (!original->instances[name]) {
-        // clone AST and re-run the naming phase
-        auto fn = asFunction(original->copy());
-        fn->naming(env->create());
+    if (!original->instances[name]) {
+      // clone AST and re-run the naming phase
+      auto fn = asFunction(original->copy());
+      fn->naming(env->create());
 
-        // cache and append types used to instantiate to the name
-        original->instances[name] = fn;
+      // cache and append types used to instantiate to the name
+      original->instances[name] = fn;
+      if (fn->name != "_") {
         fn->name += name;
-
-        // export the original function in the new context
-        fn->body->env->create(original->name).type = fnType;
-        fn->body->env->create(original->name).node = original;
-
-        // explicitly export the specialised type and erase the original one
-        fn->type = nullptr;
-        fn->body->env->create(fn->name).type = newType;
-
-        // finally recompute the types for the whole specialised function body
-        // NOTE: The function would already have the implementation name so we
-        // clear it before re-computing the function type and restore afterwards
-        auto impl = s_implementationName;
-        s_implementationName = "";
-        fn->typeof(fn->body->env);
-        s_implementationName = impl;
       }
+
+      // export the original function in the new context
+      fn->body->env->create(original->name).type = fnType;
+      fn->body->env->create(original->name).node = original;
+
+      // explicitly export the specialised type and erase the original one
+      fn->type = nullptr;
+      fn->body->env->create(fn->name).type = newType;
+
+      // finally recompute the types for the whole specialised function body
+      // NOTE: The function would already have the implementation name so we
+      // clear it before re-computing the function type and restore afterwards
+      auto impl = s_implementationName;
+      s_implementationName = "";
+      fn->typeof(fn->body->env);
+      s_implementationName = impl;
     }
   }
 

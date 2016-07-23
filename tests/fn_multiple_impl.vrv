@@ -37,3 +37,7 @@ fn print2(x: printable, y: dummy) -> void {
 
 print2(1, A())
 print2("foo", B())
+
+fn _(a: printable) -> void {
+  print(a)
+}("foo")
