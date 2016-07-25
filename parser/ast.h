@@ -28,8 +28,8 @@
       return node; \
     } \
 
-#define COPY_AST(__type) \
-  NodePtr copy() const { \
+#define CLONE_AST(__type) \
+  NodePtr clone() const { \
     return std::make_shared<__type>(*this); \
   }
 
@@ -77,7 +77,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env) = 0;
     virtual void naming(EnvPtr env) = 0;
     virtual void printAST(ASTPrinter &printer, unsigned depth) = 0;
-    virtual NodePtr copy() const = 0;
+    virtual NodePtr clone() const = 0;
     virtual const Loc &loc() const = 0;
   };
 
@@ -105,7 +105,7 @@ namespace AST {
     virtual void printAST(__unused ASTPrinter &_, __unused unsigned depth) {
       throw std::runtime_error("Trying to print virtual node");
     }
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     Loc m_loc;
   };
@@ -117,7 +117,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     BlockPtr body;
     std::vector<ProgramPtr> imports;
@@ -130,7 +130,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
@@ -143,7 +143,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    COPY_AST(Number)
+    CLONE_AST(Number)
 
     double value;
     bool isFloat = false;
@@ -156,7 +156,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    COPY_AST(Identifier)
+    CLONE_AST(Identifier)
 
     std::string name;
     std::string ns;
@@ -171,7 +171,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    COPY_AST(String)
+    CLONE_AST(String)
 
     std::string value;
   };
@@ -182,7 +182,7 @@ namespace AST {
     virtual void generateBytecode(Generator *gen);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    COPY_AST(FunctionParameter)
+    CLONE_AST(FunctionParameter)
   };
 
   struct Call : public Node {
@@ -192,7 +192,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     NodePtr callee;
     std::vector<NodePtr> arguments;
@@ -205,7 +205,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     NodePtr condition;
     BlockPtr ifBody;
@@ -219,7 +219,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     unsigned op;
     NodePtr lhs;
@@ -233,7 +233,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     unsigned op;
     NodePtr operand;
@@ -246,7 +246,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::vector<NodePtr> items;
   };
@@ -260,7 +260,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     unsigned tag;
     std::string constructorName;
@@ -277,7 +277,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     PatternPtr pattern;
     BlockPtr body;
@@ -290,7 +290,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     NodePtr value;
     std::vector<CasePtr> cases;
@@ -303,7 +303,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     enum {
       Pattern,
@@ -332,7 +332,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::vector<AssignmentPtr> assignments;
     BlockPtr block;
@@ -345,7 +345,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::string name;
     std::vector<NodePtr> arguments;
@@ -360,7 +360,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::string name;
     std::string genericTypeName;
@@ -377,7 +377,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::string interfaceName;
     AbstractTypePtr type;
@@ -396,7 +396,7 @@ namespace AST {
 
     virtual Type *typeof(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    COPY_AST(BasicType)
+    CLONE_AST(BasicType)
 
     std::string name;
   };
@@ -406,7 +406,7 @@ namespace AST {
 
     virtual Type *typeof(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::vector<std::string> generics;
     std::vector<AbstractTypePtr> params;
@@ -418,7 +418,7 @@ namespace AST {
 
     virtual Type *typeof(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::string name;
     std::vector<AbstractTypePtr> params;
@@ -429,7 +429,7 @@ namespace AST {
 
     virtual Type *typeof(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::string name;
     std::vector<std::string> generics;
@@ -440,7 +440,7 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     std::string name;
     std::vector<AbstractTypePtr> types;
@@ -453,7 +453,7 @@ namespace AST {
     virtual void naming(EnvPtr env);
     virtual void generateBytecode(__unused Generator *gen) {}
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     virtual std::string &getName() {
       return name;
@@ -473,7 +473,7 @@ namespace AST {
     virtual Type *typeof(EnvPtr env);
     virtual void naming(EnvPtr env);
     virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr copy() const;
+    virtual NodePtr clone() const;
 
     virtual std::string &getName() {
       return name;

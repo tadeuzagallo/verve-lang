@@ -4,15 +4,15 @@
 
 namespace Verve {
 
-class ASTCopyTest {
+class ASTCloneTest {
   public:
 
-  static void testBasicCopy() {
+  static void testBasicClone() {
     auto number = AST::createNumber({0, 0});
     number->value = 1.5;
     number->isFloat = true;
 
-    auto cp = asNumber(number->copy());
+    auto cp = asNumber(number->clone());
     cp->value = 1;
     cp->isFloat = false;
 
@@ -20,7 +20,7 @@ class ASTCopyTest {
     assert(number->isFloat == true);
   }
 
-  static void testDeepCopy() {
+  static void testDeepClone() {
     auto number = AST::createNumber({0, 0});
     number->value = 1.5;
     number->isFloat = true;
@@ -28,7 +28,7 @@ class ASTCopyTest {
     auto block = AST::createBlock({0, 0});
     block->nodes.push_back(number);
 
-    auto cp = asBlock(block->copy());
+    auto cp = asBlock(block->clone());
 
     number->value = 1;
 
@@ -36,8 +36,8 @@ class ASTCopyTest {
   }
 
   static void test() {
-    testBasicCopy();
-    testDeepCopy();
+    testBasicClone();
+    testDeepClone();
   }
 
 };
@@ -45,6 +45,6 @@ class ASTCopyTest {
 }
 
 int main() {
-  Verve::ASTCopyTest::test();
+  Verve::ASTCloneTest::test();
   return 0;
 }
