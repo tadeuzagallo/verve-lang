@@ -92,6 +92,19 @@ namespace Verve {
     write(1) << "FUNCTIONS:";
     m_padding = "  ";
 
+    auto pos = m_bytecode.tellg();
+    while (true) {
+      auto header = read();
+      if (header == Section::Header) {
+        break;
+      }
+      if (header == Section::FunctionHeader) {
+        auto fnID = read();
+        m_functions.push_back(m_strings[fnID]);
+      }
+    }
+    m_bytecode.seekg(pos);
+
     while (true) {
       auto header = read();
       if (header == Section::Header) {
