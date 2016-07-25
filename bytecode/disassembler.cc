@@ -12,7 +12,7 @@ namespace Verve {
     m_width = std::ceil(std::log10(size + 1)) + 1;
   }
 
-  Disassembler::HelperStream Disassembler::write(int offset) {
+  Disassembler::HelperStream Disassembler::write(double offset) {
     std::cout
       << "["
       << std::setfill(' ')
@@ -89,7 +89,7 @@ namespace Verve {
     }
 
     m_padding = "";
-    write(1) << "FUNCTIONS:";
+    write(2) << "FUNCTIONS:";
     m_padding = "  ";
 
     auto pos = m_bytecode.tellg();
@@ -149,7 +149,7 @@ namespace Verve {
     }
 
     m_padding = "";
-    write(1) << "TEXT:";
+    write(2) << "TEXT:";
     m_padding = "  ";
 
     // skip size of lookup table
@@ -167,7 +167,7 @@ namespace Verve {
     switch (opcode) {
       case Opcode::push: {
         auto value = read();
-        write(1)
+        write(2)
           << "push 0x"
           << std::setbase(16)
           << value
@@ -176,99 +176,99 @@ namespace Verve {
       }
       case Opcode::call: {
         auto argc = read();
-        write(1) << "call (" << argc << ")";
+        write(2) << "call (" << argc << ")";
         break;
       }
       case Opcode::load_string: {
         auto stringID = read();
-        write(1) << "load_string $" << m_strings[stringID];
+        write(2) << "load_string $" << m_strings[stringID];
         break;
       }
       case Opcode::lookup: {
         auto symbol = read();
         auto cacheSlot = read();
-        write(2) << "lookup $" << symbol << "(" << m_strings[symbol] << ") [cacheSlot=" << cacheSlot << "]";
+        write(3) << "lookup $" << symbol << "(" << m_strings[symbol] << ") [cacheSlot=" << cacheSlot << "]";
         break;
       }
       case Opcode::create_closure: {
         auto fnID = read();
         auto capturesScope = read() ? "true" : "false";
-        write(2) << "create_closure " << m_functions[fnID] << " [capturesScope=" << capturesScope << "]";
+        write(3) << "create_closure " << m_functions[fnID] << " [capturesScope=" << capturesScope << "]";
         break;
       }
       case Opcode::jmp: {
         auto target = read();
-        write(1) << "jmp [" << calculateJmpTarget(target) << "]";
+        write(2) << "jmp [" << calculateJmpTarget(target) << "]";
         break;
       }
       case Opcode::jz: {
         auto target = read();
-        write(1) << "jz [" << calculateJmpTarget(target) << "]";
+        write(2) << "jz [" << calculateJmpTarget(target) << "]";
         break;
       }
       case Opcode::push_arg: {
         auto argID = read();
-        write(1) << "push_arg $" << argID;
+        write(2) << "push_arg $" << argID;
         break;
       }
       case Opcode::put_to_scope: {
         auto argID = read();
-        write(1) << "put_to_scope $" << m_strings[argID];
+        write(2) << "put_to_scope $" << m_strings[argID];
         break;
       }
       case Opcode::bind: {
         auto stringID = read();
-        write(1) << "bind $" << m_strings[stringID];
+        write(2) << "bind $" << m_strings[stringID];
         break;
       }
       case Opcode::alloc_obj: {
         auto size = read();
         auto tag = read();
-        write(2) << "alloc_obj (size=" << size << ", tag=" << tag << ")";
+        write(3) << "alloc_obj (size=" << size << ", tag=" << tag << ")";
         break;
       }
       case Opcode::alloc_list: {
         auto size = read();
-        write(1) << "alloc_list (size=" << size << ")";
+        write(2) << "alloc_list (size=" << size << ")";
         break;
       }
       case Opcode::obj_store_at: {
         auto index = read();
-        write(1) << "obj_store_at #" << index;
+        write(2) << "obj_store_at #" << index;
         break;
       }
       case Opcode::obj_tag_test: {
         auto tag = read();
-        write(1) << "obj_tag_test #" << tag;
+        write(2) << "obj_tag_test #" << tag;
         break;
       }
       case Opcode::obj_load: {
         auto offset = read();
-        write(1) << "obj_load #" << offset;
+        write(2) << "obj_load #" << offset;
         break;
       }
       case Opcode::stack_alloc: {
         auto size = read();
-        write(1) << "stack_alloc #" << size;
+        write(2) << "stack_alloc #" << size;
         break;
       }
       case Opcode::stack_store: {
         auto slot = read();
-        write(1) << "stack_store #" << slot;
+        write(2) << "stack_store #" << slot;
         break;
       }
       case Opcode::stack_load: {
         auto slot = read();
-        write(1) << "stack_load #" << slot;
+        write(2) << "stack_load #" << slot;
         break;
       }
       case Opcode::stack_free: {
         auto size = read();
-        write(1) << "stack_free #" << size;
+        write(2) << "stack_free #" << size;
         break;
       }
       default:
-        write() << Opcode::typeName(static_cast<Opcode::Type>(opcode));
+        write(1) << Opcode::typeName(static_cast<Opcode::Type>(opcode));
     }
   }
 }

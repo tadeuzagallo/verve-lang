@@ -25,7 +25,7 @@ private:
     }
   };
 
-  HelperStream write(int offset = 0);
+  HelperStream write(double offset);
   int64_t read();
   std::string readStr();
   int calculateJmpTarget(int target);
