@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include "lexer.h"
+#include "naming.h"
 #include "token.h"
 #include "type_checker.h"
 
@@ -65,7 +66,9 @@ namespace Verve {
       }
     }
     m_blockStack.pop_back();
-    program->naming(m_env);
+
+    AST::Naming naming(m_env);
+    program->visit(&naming);
     TypeChecker::check(program, m_env, m_lexer);
     m_ast = program;
     return program;

@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "environment.h"
+#include "naming.h"
 #include "type_error.h"
 #include "type_helpers.h"
 
@@ -411,7 +412,8 @@ Type *Call::typeof(EnvPtr env) {
     if (!original->instances[name]) {
       // clone AST and re-run the naming phase
       auto fn = asFunction(original->clone());
-      fn->naming(env->create());
+      AST::Naming naming(env->create());
+      fn->visit(&naming);
 
       // cache and append types used to instantiate to the name
       original->instances[name] = fn;

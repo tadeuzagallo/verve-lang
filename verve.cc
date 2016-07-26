@@ -15,6 +15,7 @@
 #include "parser/lexer.h"
 #include "parser/parser.h"
 #include "parser/ast_printer.h"
+#include "parser/ast_visitor.h"
 #include "bytecode/generator.h"
 #include "bytecode/disassembler.h"
 #include "runtime/vm.h"
