@@ -6,61 +6,66 @@
 #include <iostream>
 
 #define BEGIN_NODE(__name) \
-void __name::printAST(ASTPrinter &printer, unsigned depth) { \
-  printer.print(depth, #__name " {\n");
+void Printer::visit##__name(__name *node) { \
+  depth++; \
+  print(depth, #__name " {\n");
 
 #define END_NODE() \
-  printer.print(depth, "}\n"); \
+  print(depth, "}\n"); \
+  depth--; \
 }
 
 #define PRINT_CUSTOM(__name, __value) \
-  printer.print(depth + 1, #__name ": %s\n", __value);
+  print(depth + 1, #__name ": %s\n", __value);
 
 #define PRINT_CUSTOM_NODE(__label, __name) \
-  printer.print(depth + 1, #__label ": "); \
-  printer.inlineNext = true; \
-  if (__name) { \
-    __name->printAST(printer, depth + 1); \
+  print(depth + 1, #__label ": "); \
+  inlineNext = true; \
+  if (node->__name) { \
+    node->__name->visit(this); \
   } else { \
-    printer.print(depth + 1, "null\n"); \
+    print(depth + 1, "null\n"); \
   }
 
 #define PRINT_NODE(__name) \
   PRINT_CUSTOM_NODE(__name, __name)
 
 #define PRINT_STRING(__name) \
-  printer.print(depth + 1, #__name ": \"%s\",\n", __name.c_str());
+  print(depth + 1, #__name ": \"%s\",\n", node->__name.c_str());
 
 #define PRINT_ARRAY(__name) \
-  printer.print(depth + 1, #__name ": [\n"); \
-  for (const auto &__n : __name) { \
-    __n->printAST(printer, depth + 2); \
+  print(depth + 1, #__name ": [\n"); \
+  depth++; \
+  for (const auto &__n : node->__name) { \
+    __n->visit(this); \
   } \
-  printer.print(depth + 1, "]\n");
+  depth--; \
+  print(depth + 1, "]\n");
 
 #define PRINT_SUPERCLASS(__name) \
-  __name::printAST(printer, depth + 1);
+  visit##__name(node);
 
 // TODO: This is just wrong. There shouldn't be any arrays of strings in the first place.
 #define PRINT_STRING_ARRAY(__name) \
-  printer.print(depth + 1, #__name ": [\n"); \
-  for (const auto &__n : __name) { \
-    printer.print(depth + 2, "\"%s\"\n", __n.c_str()); \
+  print(depth + 1, #__name ": [\n"); \
+  for (const auto &__n : node->__name) { \
+    print(depth + 2, "\"%s\"\n", __n.c_str()); \
   } \
-  printer.print(depth + 1, "]\n");
-
-namespace Verve {
+  print(depth + 1, "]\n");
 
 static const char *stringify(bool t) {
   return t ? "true" : "false";
 }
 
-void ASTPrinter::dump(AST::ProgramPtr ast) {
-  ASTPrinter printer;
-  ast->printAST(printer, 0);
+namespace Verve {
+namespace AST {
+
+void Printer::dump(AST::NodePtr ast) {
+  Printer printer;
+  ast->visit(&printer);
 }
 
-void ASTPrinter::print(unsigned depth, const char *format, ...) {
+void Printer::print(unsigned depth, const char *format, ...) {
   auto marginSize = depth * indentation;
   char margin[marginSize + 1];
   if (inlineNext) {
@@ -80,8 +85,6 @@ void ASTPrinter::print(unsigned depth, const char *format, ...) {
   va_end(args);
 }
 
-namespace AST {
-
 BEGIN_NODE(Program)
   PRINT_SUPERCLASS(Block)
 END_NODE()
@@ -91,8 +94,8 @@ BEGIN_NODE(Block)
 END_NODE()
 
 BEGIN_NODE(Number)
-  PRINT_CUSTOM(value, std::to_string(value).c_str())
-  PRINT_CUSTOM(isFloat, stringify(isFloat))
+  PRINT_CUSTOM(value, std::to_string(node->value).c_str())
+  PRINT_CUSTOM(isFloat, stringify(node->isFloat))
 END_NODE()
 
 BEGIN_NODE(Identifier)
@@ -106,7 +109,7 @@ END_NODE()
 
 BEGIN_NODE(FunctionParameter)
   PRINT_STRING(name)
-  PRINT_CUSTOM(index, std::to_string(index).c_str())
+  PRINT_CUSTOM(index, std::to_string(node->index).c_str())
 END_NODE()
 
 BEGIN_NODE(Call)
@@ -121,13 +124,13 @@ BEGIN_NODE(If)
 END_NODE()
 
 BEGIN_NODE(BinaryOperation)
-  PRINT_CUSTOM(op, reinterpret_cast<char *>(&op))
+  PRINT_CUSTOM(op, reinterpret_cast<char *>(&node->op))
   PRINT_NODE(lhs)
   PRINT_NODE(rhs)
 END_NODE()
 
 BEGIN_NODE(UnaryOperation)
-  PRINT_CUSTOM(op, reinterpret_cast<char *>(&op))
+  PRINT_CUSTOM(op, reinterpret_cast<char *>(&node->op))
   PRINT_NODE(operand)
 END_NODE()
 
@@ -151,7 +154,7 @@ BEGIN_NODE(Match)
 END_NODE()
 
 BEGIN_NODE(Assignment)
-  switch (kind) {
+  switch (node->kind) {
     case Assignment::Pattern:
       PRINT_CUSTOM_NODE(left, left.pattern);
       break;
@@ -214,8 +217,8 @@ END_NODE()
 
 BEGIN_NODE(Prototype)
   PRINT_STRING(name)
-  PRINT_CUSTOM(isExternal, stringify(isExternal))
-  PRINT_CUSTOM(isVirtual, stringify(isVirtual))
+  PRINT_CUSTOM(isExternal, stringify(node->isExternal))
+  PRINT_CUSTOM(isVirtual, stringify(node->isVirtual))
   PRINT_SUPERCLASS(FunctionType)
 END_NODE()
 
@@ -225,8 +228,8 @@ BEGIN_NODE(Function)
   PRINT_NODE(type)
   PRINT_ARRAY(parameters)
   PRINT_NODE(body)
-  PRINT_CUSTOM(needsScope, stringify(needsScope))
-  PRINT_CUSTOM(capturesScope, stringify(capturesScope))
+  PRINT_CUSTOM(needsScope, stringify(node->needsScope))
+  PRINT_CUSTOM(capturesScope, stringify(node->capturesScope))
 END_NODE()
 
 }

@@ -65,7 +65,6 @@
 
 namespace Verve {
   struct Generator;
-  struct ASTPrinter;
 
 namespace AST {
   class Visitor;
@@ -77,7 +76,6 @@ namespace AST {
   struct NodeInterface {
     virtual void generateBytecode(Generator *gen) = 0;
     virtual Type *typeof(EnvPtr env) = 0;
-    virtual void printAST(ASTPrinter &printer, unsigned depth) = 0;
     virtual NodePtr clone() const = 0;
     virtual const Loc &loc() const = 0;
     virtual void visit(Visitor *) = 0;
@@ -102,9 +100,6 @@ namespace AST {
       throw std::runtime_error("Trying to get type for virtual node");
     }
 
-    virtual void printAST(__unused ASTPrinter &_, __unused unsigned depth) {
-      throw std::runtime_error("Trying to print virtual node");
-    }
     virtual void visit(__unused Visitor *_) {
       throw std::runtime_error("Trying to visit virtual node");
     }
@@ -118,7 +113,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -131,7 +125,6 @@ namespace AST {
     using Block::Block;
 
     virtual void generateBytecode(Generator *gen);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -143,7 +136,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual void visit(Visitor *);
     CLONE_AST(Number)
 
@@ -156,7 +148,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual void visit(Visitor *);
     CLONE_AST(Identifier)
 
@@ -172,7 +163,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual void visit(Visitor *);
     CLONE_AST(String)
 
@@ -183,7 +173,6 @@ namespace AST {
     using Identifier::Identifier;
 
     virtual void generateBytecode(Generator *gen);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual void visit(Visitor *);
     CLONE_AST(FunctionParameter)
   };
@@ -193,7 +182,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -206,7 +194,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -220,7 +207,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -234,7 +220,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -247,7 +232,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -261,7 +245,6 @@ namespace AST {
       throw std::runtime_error("Implemented inline");
     }
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -278,7 +261,6 @@ namespace AST {
       throw std::runtime_error("Implemented inline");
     }
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -291,7 +273,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -304,7 +285,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -333,7 +313,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -346,7 +325,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -361,7 +339,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -378,7 +355,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -398,7 +374,6 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual void visit(Visitor *);
     CLONE_AST(BasicType)
 
@@ -409,7 +384,6 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -422,7 +396,6 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -434,7 +407,6 @@ namespace AST {
     using AbstractType::AbstractType;
 
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -446,7 +418,6 @@ namespace AST {
   struct TypeConstructor : public AbstractType {
     using AbstractType::AbstractType;
 
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -459,7 +430,6 @@ namespace AST {
 
     virtual Type *typeof(EnvPtr env);
     virtual void generateBytecode(__unused Generator *gen) {}
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -479,7 +449,6 @@ namespace AST {
 
     virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 

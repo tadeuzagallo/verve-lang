@@ -1,5 +1,7 @@
 #include "ast.h"
 
+#pragma once
+
 namespace Verve {
 namespace AST {
 

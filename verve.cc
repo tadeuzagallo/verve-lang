@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
   Verve::AST::ProgramPtr ast = parser.parse();
 
   if (isAST) {
-    Verve::ASTPrinter::dump(ast);
+    Verve::AST::Printer::dump(ast);
     return EXIT_SUCCESS;
   }
 
