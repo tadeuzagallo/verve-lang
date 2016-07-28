@@ -1,4 +1,4 @@
-#include "ast_visitor.h"
+#include "ast/visitor.h"
 
 #include "environment.h"
 

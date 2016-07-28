@@ -1,4 +1,4 @@
-#include "parser/ast.h"
+#include "ast/nodes.h"
 
 #include <cassert>
 

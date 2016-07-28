@@ -2,7 +2,7 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "parser/ast.h"
+#include "ast/nodes.h"
 #include "opcodes.h"
 
 #pragma once

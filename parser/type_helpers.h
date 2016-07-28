@@ -1,5 +1,6 @@
+#include "ast/nodes.h"
+
 #include "type.h"
-#include "ast.h"
 #include "type_error.h"
 
 #pragma once

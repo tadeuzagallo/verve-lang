@@ -1,6 +1,7 @@
 #include <memory>
 
-#include "ast.h"
+#include "ast/nodes.h"
+
 #include "environment.h"
 #include "type.h"
 

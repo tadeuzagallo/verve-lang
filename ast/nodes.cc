@@ -1,6 +1,6 @@
-#include "ast.h"
+#include "nodes.h"
 
-#include "ast_visitor.h"
+#include "visitor.h"
 
 namespace Verve {
 namespace AST {

@@ -1,8 +1,8 @@
 #include "utils/macros.h"
 
-#include "environment.h"
-#include "token.h"
-#include "type.h"
+#include "parser/environment.h"
+#include "parser/token.h"
+#include "parser/type.h"
 
 #include <cassert>
 #include <memory>
