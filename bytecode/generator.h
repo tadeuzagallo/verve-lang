@@ -3,42 +3,55 @@
 #include <unordered_map>
 
 #include "ast/nodes.h"
+#include "ast/visitor.h"
 #include "opcodes.h"
 
 #pragma once
 
 namespace Verve {
 
-  struct Generator {
-      Generator(AST::ProgramPtr ast, bool shouldLink) :
-        m_ast(ast),
-        m_shouldLink(shouldLink) {}
+class Generator : public AST::Visitor {
+public:
+  static std::stringstream generate(AST::NodePtr, bool shouldLink);
 
-      std::stringstream &generate(void);
-      void generateFunctionSource(AST::Function *fn);
+  void emitOpcode(Opcode::Type);
+  void emitJmp(Opcode::Type, AST::BlockPtr &);
+  void emitJmp(Opcode::Type, AST::BlockPtr &, bool);
+  void write(int64_t);
+  void write(const std::string &);
+  unsigned uniqueString(std::string &);
 
-      static void disassemble(std::stringstream &);
+private:
+  Generator(bool shouldLink) :
+    m_shouldLink(shouldLink) {}
 
-      void emitOpcode(Opcode::Type);
-      void emitJmp(Opcode::Type, AST::BlockPtr &);
-      void emitJmp(Opcode::Type, AST::BlockPtr &, bool);
-      void write(int64_t);
-      void write(const std::string &);
+  void generateFunctionSource(AST::Function *fn);
 
-      unsigned uniqueString(std::string &);
+  /** Visitors **/
+  virtual void visitNumber(AST::Number *);
+  virtual void visitCall(AST::Call *);
+  virtual void visitIdentifier(AST::Identifier *);
+  virtual void visitString(AST::String *);
+  virtual void visitList(AST::List *);
+  virtual void visitIf(AST::If *);
+  virtual void visitProgram(AST::Program *);
+  virtual void visitBlock(AST::Block *);
+  virtual void visitBinaryOperation(AST::BinaryOperation *);
+  virtual void visitUnaryOperation(AST::UnaryOperation *);
+  virtual void visitMatch(AST::Match *);
+  virtual void visitAssignment(AST::Assignment *);
+  virtual void visitConstructor(AST::Constructor *);
+  virtual void visitFunction(AST::Function *);
 
-      static void printOpcode(std::stringstream &, Opcode::Type);
+  std::stringstream m_output;
+  std::vector<std::string> m_strings;
+  std::vector<AST::Function *> m_functions;
+  std::unordered_map<std::string, unsigned> m_slots;
+  bool m_shouldLink;
 
-      AST::ProgramPtr  m_ast;
-      std::stringstream m_output;
-      std::vector<std::string> m_strings;
-      std::vector<AST::Function *> m_functions;
-      std::unordered_map<std::string, unsigned> m_slots;
-      bool m_shouldLink;
-
-      unsigned lookupID = 1;
-      unsigned stackSlot = 0;
-      bool capturesScope = true;
-  };
+  unsigned lookupID = 1;
+  unsigned stackSlot = 0;
+  bool capturesScope = true;
+};
 
 }

@@ -64,8 +64,6 @@
       Prototype
 
 namespace Verve {
-  struct Generator;
-
 namespace AST {
   class Visitor;
 
@@ -74,7 +72,6 @@ namespace AST {
   using NodePtr = std::shared_ptr<NodeInterface>;
 
   struct NodeInterface {
-    virtual void generateBytecode(Generator *gen) = 0;
     virtual Type *typeof(EnvPtr env) = 0;
     virtual NodePtr clone() const = 0;
     virtual const Loc &loc() const = 0;
@@ -92,10 +89,6 @@ namespace AST {
       return m_loc;
     }
 
-    virtual void generateBytecode(__unused Generator *gen) {
-      throw std::runtime_error("Trying to generate bytecode for virtual node");
-    }
-
     virtual Type *typeof(__unused EnvPtr env) {
       throw std::runtime_error("Trying to get type for virtual node");
     }
@@ -111,7 +104,6 @@ namespace AST {
   struct Block : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -124,7 +116,6 @@ namespace AST {
   struct Program : public Block {
     using Block::Block;
 
-    virtual void generateBytecode(Generator *gen);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -134,7 +125,6 @@ namespace AST {
   struct Number : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void visit(Visitor *);
     CLONE_AST(Number)
@@ -146,7 +136,6 @@ namespace AST {
   struct Identifier : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void visit(Visitor *);
     CLONE_AST(Identifier)
@@ -161,7 +150,6 @@ namespace AST {
   struct String : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual void visit(Visitor *);
     CLONE_AST(String)
@@ -172,7 +160,6 @@ namespace AST {
   struct FunctionParameter : public Identifier {
     using Identifier::Identifier;
 
-    virtual void generateBytecode(Generator *gen);
     virtual void visit(Visitor *);
     CLONE_AST(FunctionParameter)
   };
@@ -180,7 +167,6 @@ namespace AST {
   struct Call : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -192,7 +178,6 @@ namespace AST {
   struct If : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -205,7 +190,6 @@ namespace AST {
   struct BinaryOperation : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -218,7 +202,6 @@ namespace AST {
   struct UnaryOperation : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -230,7 +213,6 @@ namespace AST {
   struct List : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -241,9 +223,6 @@ namespace AST {
   struct Pattern : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(__unused Generator *gen) {
-      throw std::runtime_error("Implemented inline");
-    }
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -257,9 +236,6 @@ namespace AST {
   struct Case : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(__unused Generator *gen) {
-      throw std::runtime_error("Implemented inline");
-    }
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -271,7 +247,6 @@ namespace AST {
   struct Match : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -283,7 +258,6 @@ namespace AST {
   struct Assignment : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -311,7 +285,6 @@ namespace AST {
   struct Let : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -323,7 +296,6 @@ namespace AST {
   struct Constructor : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -337,7 +309,6 @@ namespace AST {
   struct Interface : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -353,7 +324,6 @@ namespace AST {
   struct Implementation : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
@@ -367,7 +337,6 @@ namespace AST {
   struct AbstractType : public Node {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
   };
 
   struct BasicType : public AbstractType {
@@ -429,7 +398,6 @@ namespace AST {
     using FunctionType::FunctionType;
 
     virtual Type *typeof(EnvPtr env);
-    virtual void generateBytecode(__unused Generator *gen) {}
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);
 
@@ -447,7 +415,6 @@ namespace AST {
   struct Function : public Node, public FunctionInterface {
     using Node::Node;
 
-    virtual void generateBytecode(Generator *gen);
     virtual Type *typeof(EnvPtr env);
     virtual NodePtr clone() const;
     virtual void visit(Visitor *);

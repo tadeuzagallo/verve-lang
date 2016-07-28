@@ -109,8 +109,7 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
   }
 
-  Verve::Generator generator(ast, !isDebug && !isCompile);
-  auto &bytecode = generator.generate();
+  auto bytecode = Verve::Generator::generate(ast, !isDebug && !isCompile);
 
   if (isDebug) {
     Verve::Disassembler disassembler(bytecode);

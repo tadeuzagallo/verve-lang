@@ -8,316 +8,312 @@
 
 namespace Verve {
 
-  std::stringstream &Generator::generate() {
-    m_ast->generateBytecode(this);
+std::stringstream Generator::generate(AST::NodePtr node, bool shouldLink) {
+  Generator gen{shouldLink};
+  node->visit(&gen);
 
-    auto text = m_output.str();
-    m_output.str(std::string());
-    m_output.clear();
+  auto text = gen.m_output.str();
+  gen.m_output.str(std::string());
+  gen.m_output.clear();
 
-    if (m_functions.size()) {
-      for (unsigned i = 0; i < m_functions.size(); i++) {
-        write(Section::FunctionHeader);
-        generateFunctionSource(m_functions[i]);
-      }
-    }
-
-    auto functions = m_output.str();
-    m_output.str(std::string());
-    m_output.clear();
-
-    if (m_strings.size()) {
-      write(Section::Header);
-      write(Section::Strings);
-
-      for (auto string : m_strings) {
-        write(string);
-      }
-    }
-
-    unsigned index = m_output.tellp();
-    while (index++ % WORD_SIZE) {
-      m_output.put(1);
-    }
-
-    if (functions.length()) {
-      write(Section::Header);
-      write(Section::Functions);
-      m_output << functions;
-    }
-
-    write(Section::Header);
-    write(Section::Text);
-    write(lookupID);
-    m_output << text;
-
-    emitOpcode(Opcode::exit);
-    m_output.seekg(0);
-
-    return m_output;
-  }
-
-  void Generator::generateFunctionSource(AST::Function *fn) {
-    std::string fnName = fn->name;
-    if (fnName == "_") {
-      static unsigned id = 0;
-      fnName = "_" + std::to_string(id++);
-    }
-    write(uniqueString(fnName));
-    write(fn->parameters.size());
-
-    std::vector<unsigned> captured;
-    for (unsigned i = 0; i < fn->parameters.size(); i++) {
-      write(uniqueString(fn->parameters[i]->name));
-
-      if (fn->parameters[i]->isCaptured) {
-        captured.push_back(i);
-      }
-    }
-
-    if (fn->needsScope) {
-      emitOpcode(Opcode::create_lex_scope);
-    }
-
-    for (auto i : captured) {
-      emitOpcode(Opcode::push_arg);
-      write(i);
-      emitOpcode(Opcode::put_to_scope);
-      write(uniqueString(fn->parameters[i]->name));
-    }
-
-    m_slots.clear();
-    stackSlot = 0;
-    capturesScope = fn->body->env->capturesScope;
-    fn->body->generateBytecode(this);
-
-    if (fn->needsScope) {
-      emitOpcode(Opcode::release_lex_scope);
-    }
-
-    emitOpcode(Opcode::ret);
-  }
-
-  void Generator::write(int64_t data) {
-    m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
-  }
-
-  void Generator::write(const std::string &data) {
-    m_output << data;
-    m_output.put(0);
-  }
-
-  void Generator::emitOpcode(Opcode::Type opcode) {
-    if (m_shouldLink) {
-      write(Opcode::address(opcode));
-    } else {
-      write(opcode);
+  if (gen.m_functions.size()) {
+    for (unsigned i = 0; i < gen.m_functions.size(); i++) {
+      gen.write(Section::FunctionHeader);
+      gen.generateFunctionSource(gen.m_functions[i]);
     }
   }
 
-  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body)  {
-    emitJmp(jmpType, body, false);
-  }
+  auto functions = gen.m_output.str();
+  gen.m_output.str(std::string());
+  gen.m_output.clear();
 
-  void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body, bool skipNextJump)  {
-    emitOpcode(jmpType);
-    unsigned beforePos = m_output.tellp();
-    write(0); // placeholder
+  if (gen.m_strings.size()) {
+    gen.write(Section::Header);
+    gen.write(Section::Strings);
 
-    body->generateBytecode(this);
-
-    unsigned afterPos = m_output.tellp();
-    m_output.seekp(beforePos);
-    write((afterPos - beforePos)
-        + (skipNextJump ? (3 * WORD_SIZE) : WORD_SIZE) // special case for if with else
-    );
-    m_output.seekp(afterPos);
-  }
-
-  unsigned Generator::uniqueString(std::string &str) {
-    auto it = std::find(m_strings.begin(), m_strings.end(), str);
-    if (it != m_strings.end()) {
-      return it - m_strings.begin();
-    } else {
-      unsigned id = m_strings.size();
-      m_strings.push_back(str);
-      return id;
+    for (const auto &str : gen.m_strings) {
+      gen.write(str);
     }
   }
 
-namespace AST {
+  unsigned index = gen.m_output.tellp();
+  while (index++ % WORD_SIZE) {
+    gen.m_output.put(1);
+  }
 
-void Number::generateBytecode(Generator *gen) {
-  if (isFloat) {
-    gen->emitOpcode(Opcode::push);
-    gen->write(*(int64_t *)&value);
+  if (functions.length()) {
+    gen.write(Section::Header);
+    gen.write(Section::Functions);
+    gen.m_output << functions;
+  }
+
+  gen.write(Section::Header);
+  gen.write(Section::Text);
+  gen.write(gen.lookupID);
+  gen.m_output << text;
+
+  gen.emitOpcode(Opcode::exit);
+  gen.m_output.seekg(0);
+
+  return std::move(gen.m_output);
+}
+
+void Generator::generateFunctionSource(AST::Function *fn) {
+  std::string fnName = fn->name;
+  if (fnName == "_") {
+    static unsigned id = 0;
+    fnName = "_" + std::to_string(id++);
+  }
+  write(uniqueString(fnName));
+  write(fn->parameters.size());
+
+  std::vector<unsigned> captured;
+  for (unsigned i = 0; i < fn->parameters.size(); i++) {
+    write(uniqueString(fn->parameters[i]->name));
+
+    if (fn->parameters[i]->isCaptured) {
+      captured.push_back(i);
+    }
+  }
+
+  if (fn->needsScope) {
+    emitOpcode(Opcode::create_lex_scope);
+  }
+
+  for (auto i : captured) {
+    emitOpcode(Opcode::push_arg);
+    write(i);
+    emitOpcode(Opcode::put_to_scope);
+    write(uniqueString(fn->parameters[i]->name));
+  }
+
+  m_slots.clear();
+  stackSlot = 0;
+  capturesScope = fn->body->env->capturesScope;
+  fn->body->visit(this);
+
+  if (fn->needsScope) {
+    emitOpcode(Opcode::release_lex_scope);
+  }
+
+  emitOpcode(Opcode::ret);
+}
+
+void Generator::write(int64_t data) {
+  m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
+}
+
+void Generator::write(const std::string &data) {
+  m_output << data;
+  m_output.put(0);
+}
+
+void Generator::emitOpcode(Opcode::Type opcode) {
+  if (m_shouldLink) {
+    write(Opcode::address(opcode));
   } else {
-    gen->emitOpcode(Opcode::push);
-    gen->write(value);
+    write(opcode);
   }
 }
 
-void Call::generateBytecode(Generator *gen) {
-  for (unsigned i = arguments.size(); i > 0;) {
-    arguments[--i]->generateBytecode(gen);
+void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body)  {
+  emitJmp(jmpType, body, false);
+}
+
+void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body, bool skipNextJump)  {
+  emitOpcode(jmpType);
+  unsigned beforePos = m_output.tellp();
+  write(0); // placeholder
+
+  body->visit(this);
+
+  unsigned afterPos = m_output.tellp();
+  m_output.seekp(beforePos);
+  write((afterPos - beforePos)
+      + (skipNextJump ? (3 * WORD_SIZE) : WORD_SIZE) // special case for if with else
+  );
+  m_output.seekp(afterPos);
+}
+
+unsigned Generator::uniqueString(std::string &str) {
+  auto it = std::find(m_strings.begin(), m_strings.end(), str);
+  if (it != m_strings.end()) {
+    return it - m_strings.begin();
+  } else {
+    unsigned id = m_strings.size();
+    m_strings.push_back(str);
+    return id;
+  }
+}
+
+/** Visitors **/
+
+void Generator::visitNumber(AST::Number *number) {
+  if (number->isFloat) {
+    emitOpcode(Opcode::push);
+    write(*(int64_t *)&number->value);
+  } else {
+    emitOpcode(Opcode::push);
+    write(number->value);
+  }
+}
+
+void Generator::visitCall(AST::Call *call) {
+  for (unsigned i = call->arguments.size(); i > 0;) {
+    call->arguments[--i]->visit(this);
   }
 
-  callee->generateBytecode(gen);
+  call->callee->visit(this);
 
-  gen->emitOpcode(Opcode::call);
-  gen->write(arguments.size());
+  emitOpcode(Opcode::call);
+  write(call->arguments.size());
 }
 
 
-void Identifier::generateBytecode(Generator *gen) {
-  if (isFunctionParameter) {
-    gen->emitOpcode(Opcode::push_arg);
-    gen->write(index);
+void Generator::visitIdentifier(AST::Identifier *ident) {
+  if (ident->isFunctionParameter) {
+    emitOpcode(Opcode::push_arg);
+    write(ident->index);
     return;
   }
 
-  if (!isCaptured) {
-    auto it = gen->m_slots.find(name);
-    if (it != gen->m_slots.end()) {
-      gen->emitOpcode(Opcode::stack_load);
-      gen->write(it->second);
+  if (!ident->isCaptured) {
+    auto it = m_slots.find(ident->name);
+    if (it != m_slots.end()) {
+      emitOpcode(Opcode::stack_load);
+      write(it->second);
       return;
     }
   }
 
-  gen->emitOpcode(Opcode::lookup);
-  auto name = namespaced(ns, this->name);
-  gen->write(gen->uniqueString(name));
-  gen->write(0);
+  emitOpcode(Opcode::lookup);
+  auto name = namespaced(ident->ns, ident->name);
+  write(uniqueString(name));
 
   // temporarily disable lookup cache - logic is weak
-  //if (gen->capturesScope) {
-    //gen->write(0);
+  write(0);
+  //if (capturesScope) {
+    //write(0);
   //} else {
-    //gen->write(gen->lookupID++);
+    //write(lookupID++);
   //}
 }
 
-void String::generateBytecode(Generator *gen) {
-  gen->emitOpcode(Opcode::load_string);
-  gen->write(gen->uniqueString(value));
+void Generator::visitString(AST::String *str) {
+  emitOpcode(Opcode::load_string);
+  write(uniqueString(str->value));
 }
 
-void List::generateBytecode(Generator *gen) {
-  gen->emitOpcode(Opcode::alloc_list);
-  gen->write(items.size() + 1);
+void Generator::visitList(AST::List *lst) {
+  emitOpcode(Opcode::alloc_list);
+  write(lst->items.size() + 1);
 
   unsigned index = 1;
-  for (auto item : items) {
-    item->generateBytecode(gen);
-    gen->emitOpcode(Opcode::obj_store_at);
-    gen->write(index++);
+  for (const auto &item : lst->items) {
+    item->visit(this);
+    emitOpcode(Opcode::obj_store_at);
+    write(index++);
   }
 }
 
-void FunctionParameter::generateBytecode(Generator *gen) {
-  gen->emitOpcode(Opcode::push_arg);
-  gen->write(index);
-}
+void Generator::visitIf(AST::If *iff) {
+  iff->condition->visit(this);
 
-void If::generateBytecode(Generator *gen) {
-  condition->generateBytecode(gen);
-
-  bool hasElse = elseBody != nullptr && elseBody->nodes.size() > 0;
-  gen->emitJmp(Opcode::jz, ifBody, hasElse);
+  bool hasElse = iff->elseBody != nullptr && iff->elseBody->nodes.size() > 0;
+  emitJmp(Opcode::jz, iff->ifBody, hasElse);
 
   if (hasElse) {
-    gen->emitJmp(Opcode::jmp, elseBody);
+    emitJmp(Opcode::jmp, iff->elseBody);
   }
 }
 
-void Program::generateBytecode(Generator *gen) {
-  for (const auto &import : imports) {
-    import->generateBytecode(gen);
+void Generator::visitProgram(AST::Program *program) {
+  for (const auto &import : program->imports) {
+    import->visit(this);
   }
 
-  Block::generateBytecode(gen);
+  visitBlock(program);
 }
 
-void Block::generateBytecode(Generator *gen) {
-  if (stackSlots > 0) {
-    gen->emitOpcode(Opcode::stack_alloc);
-    gen->write(stackSlots * WORD_SIZE);
+void Generator::visitBlock(AST::Block *block) {
+  if (block->stackSlots > 0) {
+    emitOpcode(Opcode::stack_alloc);
+    write(block->stackSlots * WORD_SIZE);
   }
 
-  for (auto node : nodes) {
-    node->generateBytecode(gen);
+  for (const auto &node : block->nodes) {
+    node->visit(this);
   }
 
-  if (stackSlots > 0) {
-    gen->emitOpcode(Opcode::stack_free);
-    gen->write(stackSlots * WORD_SIZE);
+  if (block->stackSlots > 0) {
+    emitOpcode(Opcode::stack_free);
+    write(block->stackSlots * WORD_SIZE);
   }
 }
 
-void BinaryOperation::generateBytecode(Generator *gen) {
-  rhs->generateBytecode(gen);
-  lhs->generateBytecode(gen);
+void Generator::visitBinaryOperation(AST::BinaryOperation *binop) {
+  binop->rhs->visit(this);
+  binop->lhs->visit(this);
 
-  auto opstr = std::string(reinterpret_cast<char *>(&op));
+  auto opstr = std::string(reinterpret_cast<char *>(&binop->op));
 
-  gen->emitOpcode(Opcode::lookup);
-  gen->write(gen->uniqueString(opstr));
-  gen->write(gen->lookupID++);
+  emitOpcode(Opcode::lookup);
+  write(uniqueString(opstr));
+  write(lookupID++);
 
-  gen->emitOpcode(Opcode::call);
-  gen->write(2);
+  emitOpcode(Opcode::call);
+  write(2);
 }
 
-void UnaryOperation::generateBytecode(Generator *gen) {
-  operand->generateBytecode(gen);
+void Generator::visitUnaryOperation(AST::UnaryOperation *unop) {
+  unop->operand->visit(this);
 
-  auto opstr = "unary_" + std::string(reinterpret_cast<char *>(&op));
+  auto opstr = "unary_" + std::string(reinterpret_cast<char *>(&unop->op));
 
-  gen->emitOpcode(Opcode::lookup);
-  gen->write(gen->uniqueString(opstr));
-  gen->write(gen->lookupID++);
+  emitOpcode(Opcode::lookup);
+  write(uniqueString(opstr));
+  write(lookupID++);
 
-  gen->emitOpcode(Opcode::call);
-  gen->write(1);
+  emitOpcode(Opcode::call);
+  write(1);
 }
 
-void Match::generateBytecode(Generator *gen) {
-  auto size = cases.size();
+void Generator::visitMatch(AST::Match *match) {
+  const auto size = match->cases.size();
   long long pos[size - 1];
   for (unsigned i = 0; i < size; i++) {
-    auto kase = cases[i];
+    const auto &kase = match->cases[i];
 
-    value->generateBytecode(gen);
+    match->value->visit(this);
 
-    gen->emitOpcode(Opcode::obj_load);
-    gen->write(-1);
+    emitOpcode(Opcode::obj_load);
+    write(-1);
 
-    gen->emitOpcode(Opcode::push);
-    gen->write(kase->pattern->tag);
+    emitOpcode(Opcode::push);
+    write(kase->pattern->tag);
 
     std::string fnName = std::string("==");
-    gen->emitOpcode(Opcode::lookup);
-    gen->write(gen->uniqueString(fnName));
-    gen->write(gen->lookupID++);
-    gen->emitOpcode(Opcode::call);
-    gen->write(2);
+    emitOpcode(Opcode::lookup);
+    write(uniqueString(fnName));
+    write(lookupID++);
+    emitOpcode(Opcode::call);
+    write(2);
 
-    gen->emitOpcode(Opcode::jz);
-    auto offset = gen->m_output.tellp();
-    gen->write(0);
+    emitOpcode(Opcode::jz);
+    auto offset = m_output.tellp();
+    write(0);
     for (unsigned j = 0; j < kase->pattern->values.size(); j++) {
-      auto slot = gen->stackSlot++;
-      gen->m_slots[kase->pattern->values[j]->name] = slot;
-      value->generateBytecode(gen);
-      gen->emitOpcode(Opcode::obj_load);
-      gen->write(j);
-      gen->emitOpcode(Opcode::stack_store);
-      gen->write(slot);
+      auto slot = stackSlot++;
+      m_slots[kase->pattern->values[j]->name] = slot;
+      match->value->visit(this);
+      emitOpcode(Opcode::obj_load);
+      write(j);
+      emitOpcode(Opcode::stack_store);
+      write(slot);
     }
-    kase->body->generateBytecode(gen);
-    auto end = gen->m_output.tellp();
-    gen->m_output.seekp(offset);
+    kase->body->visit(this);
+    auto end = m_output.tellp();
+    m_output.seekp(offset);
 
     unsigned extra = WORD_SIZE;
     auto jmp = i < size - 1;
@@ -325,31 +321,23 @@ void Match::generateBytecode(Generator *gen) {
       extra += 2 * WORD_SIZE;
     }
 
-    gen->write((unsigned)(end - offset) + extra);
-    gen->m_output.seekp(end);
+    write((unsigned)(end - offset) + extra);
+    m_output.seekp(end);
 
     if (jmp) {
-      gen->emitOpcode(Opcode::jmp);
-      pos[i] = gen->m_output.tellp();
-      gen->write(0);
+      emitOpcode(Opcode::jmp);
+      pos[i] = m_output.tellp();
+      write(0);
     }
   }
 
-  auto p = gen->m_output.tellp();
+  auto p = m_output.tellp();
   for (unsigned i = 0; i < size - 1; i++) {
-    gen->m_output.seekp(pos[i] );
+    m_output.seekp(pos[i] );
     unsigned off = (long)p - pos[i];
-    gen->write(off + WORD_SIZE);
+    write(off + WORD_SIZE);
   }
-  gen->m_output.seekp(p);
-}
-
-void Let::generateBytecode(Generator *gen) {
-  for (auto assignment : assignments) {
-    assignment->generateBytecode(gen);
-  }
-
-  block->generateBytecode(gen);
+  m_output.seekp(p);
 }
 
 static void handleCapture(AST::IdentifierPtr ident, unsigned stackSlot, Generator *gen) {
@@ -361,90 +349,68 @@ static void handleCapture(AST::IdentifierPtr ident, unsigned stackSlot, Generato
   }
 }
 
-void Assignment::generateBytecode(Generator *gen) {
-  switch (kind) {
-    case Assignment::Identifier: {
-      auto slot = gen->stackSlot++;
-      value->generateBytecode(gen);
-      gen->m_slots[left.ident->name] = slot;
-      gen->emitOpcode(Opcode::stack_store);
-      gen->write(slot);
+void Generator::visitAssignment(AST::Assignment *assignment) {
+  if (assignment->kind == AST::Assignment::Identifier) {
+    auto slot = stackSlot++;
+    assignment->value->visit(this);
+    m_slots[assignment->left.ident->name] = slot;
+    emitOpcode(Opcode::stack_store);
+    write(slot);
 
-      handleCapture(left.ident, slot, gen);
-      break;
+    handleCapture(assignment->left.ident, slot, this);
+  } else if (assignment->kind == AST::Assignment::Pattern) {
+    assignment->value->visit(this);
+
+    emitOpcode(Opcode::obj_tag_test);
+    write(assignment->left.pattern->tag);
+
+    for (unsigned i = 0; i < assignment->left.pattern->values.size(); i++) {
+      assignment->value->visit(this);
+      emitOpcode(Opcode::obj_load);
+      write(i);
+
+      auto slot = stackSlot++;
+      auto ident = assignment->left.pattern->values[i];
+      m_slots[ident->name] = slot;
+      emitOpcode(Opcode::stack_store);
+      write(slot);
+
+      handleCapture(ident, slot, this);
     }
-    case Assignment::Pattern: {
-      value->generateBytecode(gen);
-
-      gen->emitOpcode(Opcode::obj_tag_test);
-      gen->write(left.pattern->tag);
-
-      for (unsigned i = 0; i < left.pattern->values.size(); i++) {
-        value->generateBytecode(gen);
-        gen->emitOpcode(Opcode::obj_load);
-        gen->write(i);
-
-        auto slot = gen->stackSlot++;
-        auto ident = left.pattern->values[i];
-        gen->m_slots[ident->name] = slot;
-        gen->emitOpcode(Opcode::stack_store);
-        gen->write(slot);
-
-        handleCapture(ident, slot, gen);
-      }
-      break;
-    }
-    default:
-      assert(false);
+  } else {
+    assert(false);
   }
 }
 
-void Constructor::generateBytecode(Generator *gen) {
-  gen->emitOpcode(Opcode::alloc_obj);
-  gen->write(size + 1); // args + tag
-  gen->write(tag); // tag
+void Generator::visitConstructor(AST::Constructor *ctor) {
+  emitOpcode(Opcode::alloc_obj);
+  write(ctor->size + 1); // args + tag
+  write(ctor->tag); // tag
 
-  for (unsigned i = 0; i < arguments.size(); i++) {
-    arguments[i]->generateBytecode(gen);
-    gen->emitOpcode(Opcode::obj_store_at);
-    gen->write(i + 1); // skip tag
+  for (unsigned i = 0; i < ctor->arguments.size(); i++) {
+    ctor->arguments[i]->visit(this);
+    emitOpcode(Opcode::obj_store_at);
+    write(i + 1); // skip tag
   }
 }
 
-void Function::generateBytecode(Generator *gen) {
-  if (dynamic_cast<TypeFunction *>(body->env->get(name).type)->usesInterface) {
-    for (const auto &it : instances) {
-      it.second->generateBytecode(gen);
+void Generator::visitFunction(AST::Function *fn) {
+  if (dynamic_cast<TypeFunction *>(fn->body->env->get(fn->name).type)->usesInterface) {
+    for (const auto &it : fn->instances) {
+      it.second->visit(this);
     }
     return;
   }
 
-  gen->emitOpcode(Opcode::create_closure);
-  gen->write(gen->m_functions.size());
-  gen->write(body->env->capturesScope);
-  if (name != "_") {
-    gen->emitOpcode(Opcode::bind);
-    auto name = namespaced(ns, this->name);
-    gen->write(gen->uniqueString(name));
+  emitOpcode(Opcode::create_closure);
+  write(m_functions.size());
+  write(fn->body->env->capturesScope);
+  if (fn->name != "_") {
+    emitOpcode(Opcode::bind);
+    auto name = namespaced(fn->ns, fn->name);
+    write(uniqueString(name));
   }
-  gen->m_functions.push_back(this);
+  m_functions.push_back(fn);
 }
 
-void Interface::generateBytecode(Generator *gen) {
-  for (const auto &fn : functions) {
-    fn->generateBytecode(gen);
-  }
-}
-
-void Implementation::generateBytecode(Generator *gen) {
-  for (const auto &fn : functions) {
-    fn->generateBytecode(gen);
-  }
-}
-
-void AbstractType::generateBytecode(__unused Generator *gen) {
-  // Types never generate bytecode
-}
-
-}
 }
