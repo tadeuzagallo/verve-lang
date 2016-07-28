@@ -83,7 +83,7 @@ void ASTPrinter::print(unsigned depth, const char *format, ...) {
 namespace AST {
 
 BEGIN_NODE(Program)
-  PRINT_NODE(body)
+  PRINT_SUPERCLASS(Block)
 END_NODE()
 
 BEGIN_NODE(Block) 

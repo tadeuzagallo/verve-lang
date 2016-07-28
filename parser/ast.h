@@ -113,19 +113,6 @@ namespace AST {
     Loc m_loc;
   };
 
-  struct Program : public Node {
-    using Node::Node;
-
-    virtual void generateBytecode(Generator *gen);
-    virtual Type *typeof(EnvPtr env);
-    virtual void printAST(ASTPrinter &printer, unsigned depth);
-    virtual NodePtr clone() const;
-    virtual void visit(Visitor *);
-
-    BlockPtr body;
-    std::vector<ProgramPtr> imports;
-  };
-
   struct Block : public Node {
     using Node::Node;
 
@@ -138,6 +125,17 @@ namespace AST {
     std::vector<NodePtr> nodes;
     unsigned stackSlots = 0;
     EnvPtr env;
+  };
+
+  struct Program : public Block {
+    using Block::Block;
+
+    virtual void generateBytecode(Generator *gen);
+    virtual void printAST(ASTPrinter &printer, unsigned depth);
+    virtual NodePtr clone() const;
+    virtual void visit(Visitor *);
+
+    std::vector<ProgramPtr> imports;
   };
 
   struct Number : public Node {

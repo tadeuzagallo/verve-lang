@@ -26,11 +26,6 @@ void TypeChecker::check(AST::ProgramPtr program, EnvPtr env, Lexer &lexer) {
 // AST nodes typeof
 namespace AST {
 
-// program
-Type *Program::typeof(EnvPtr env) {
-  return body->typeof(env);
-}
-
 // base types
 Type *String::typeof(EnvPtr env) {
   return env->get("string").type;

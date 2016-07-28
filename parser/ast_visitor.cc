@@ -4,7 +4,7 @@ namespace Verve {
 namespace AST {
 
 void Visitor::visitProgram(Program *program) {
-  program->body->visit(this);
+  visitBlock(program);
 }
 
 void Visitor::visitBlock(Block *block) {

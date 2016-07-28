@@ -44,7 +44,6 @@ namespace Verve {
   static auto isPrelude = false;
   AST::ProgramPtr Parser::parse() {
     auto program = AST::createProgram(Loc{0, 0});
-    program->body = AST::createBlock(Loc{0, 0});
 
     if (!isPrelude) {
       isPrelude = true;
@@ -52,7 +51,7 @@ namespace Verve {
       isPrelude = false;
     }
 
-    m_blockStack.push_back(program->body);
+    m_blockStack.push_back(program);
     while (skip("import")) {
       auto import = parseImport();
       if (import) {
@@ -62,7 +61,7 @@ namespace Verve {
     while(!next(Token::END)) {
       auto node = parseDecl();
       if (node) {
-        program->body->nodes.push_back(node);
+        program->nodes.push_back(node);
       }
     }
     m_blockStack.pop_back();

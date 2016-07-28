@@ -236,7 +236,7 @@ void Program::generateBytecode(Generator *gen) {
     import->generateBytecode(gen);
   }
 
-  body->generateBytecode(gen);
+  Block::generateBytecode(gen);
 }
 
 void Block::generateBytecode(Generator *gen) {
