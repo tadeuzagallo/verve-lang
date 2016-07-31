@@ -103,7 +103,7 @@ p_string =
   String <$> string_literal
 
 p_if = (try $ string "if") *>
-  (If <$> (parens p_expr <|> p_expr)
+  (If <$> p_expr
       <*> p_block_or_expr
       <*> optionMaybe ((try $ string "else") *> p_block_or_expr))
 
