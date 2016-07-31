@@ -35,11 +35,11 @@ p_implementation =
                  <*> angles p_type
                  <*> braces (many1 (p_extern <|> p_typeless_function))
 
-p_extern_function =
-  (try $ string "extern") *> p_prototype
+p_extern_function = (try $ string "extern") *>
+  (Extern <$> p_prototype)
 
-p_virtual_function =
-  (try $ string "virtual") *> p_prototype
+p_virtual_function = (try $ string "virtual") *>
+  (Virtual <$> p_prototype)
 
 p_typeless_function =
   (try $ string "fn") *>

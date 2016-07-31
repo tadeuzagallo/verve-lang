@@ -26,4 +26,6 @@ data AST = Program [AST] [AST]
          | Match { value :: AST, cases :: [AST] }
          | Case { pattern :: AST, block :: AST }
          | Pattern { ctor :: String, bindings :: [String] }
+         | Extern AST
+         | Virtual AST
          deriving (Show, Eq)
