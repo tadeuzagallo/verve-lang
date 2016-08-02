@@ -2,13 +2,15 @@ module Lexer where
 
 import AST
 
+import Control.Monad (mplus)
 import Text.Parsec.Expr
 import Text.Parsec.Language (javaStyle)
 import qualified Text.Parsec.Token as Token
 import qualified Text.Parsec as Parsec
 
-
-lexer = Token.makeTokenParser javaStyle
+lexer = Token.makeTokenParser javaStyle {
+  Token.identStart = Parsec.letter `mplus` Parsec.char '_'
+}
 
 identifier = Token.identifier lexer
 reserved = Token.reserved lexer
