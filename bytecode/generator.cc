@@ -8,13 +8,13 @@
 
 namespace Verve {
 
-std::stringstream Generator::generate(AST::NodePtr node, bool shouldLink) {
-  Generator gen{shouldLink};
+void Generator::generate(AST::NodePtr node, bool shouldLink, std::stringstream *bytecode) {
+  Generator gen{shouldLink, bytecode};
   node->visit(&gen);
 
-  auto text = gen.m_output.str();
-  gen.m_output.str(std::string());
-  gen.m_output.clear();
+  auto text = gen.m_output->str();
+  gen.m_output->str(std::string());
+  gen.m_output->clear();
 
   if (gen.m_functions.size()) {
     for (unsigned i = 0; i < gen.m_functions.size(); i++) {
@@ -23,9 +23,9 @@ std::stringstream Generator::generate(AST::NodePtr node, bool shouldLink) {
     }
   }
 
-  auto functions = gen.m_output.str();
-  gen.m_output.str(std::string());
-  gen.m_output.clear();
+  auto functions = gen.m_output->str();
+  gen.m_output->str(std::string());
+  gen.m_output->clear();
 
   if (gen.m_strings.size()) {
     gen.write(Section::Header);
@@ -36,26 +36,24 @@ std::stringstream Generator::generate(AST::NodePtr node, bool shouldLink) {
     }
   }
 
-  unsigned index = gen.m_output.tellp();
+  unsigned index = gen.m_output->tellp();
   while (index++ % WORD_SIZE) {
-    gen.m_output.put(1);
+    gen.m_output->put(1);
   }
 
   if (functions.length()) {
     gen.write(Section::Header);
     gen.write(Section::Functions);
-    gen.m_output << functions;
+    *gen.m_output << functions;
   }
 
   gen.write(Section::Header);
   gen.write(Section::Text);
   gen.write(gen.lookupID);
-  gen.m_output << text;
+  *gen.m_output << text;
 
   gen.emitOpcode(Opcode::exit);
-  gen.m_output.seekg(0);
-
-  return std::move(gen.m_output);
+  gen.m_output->seekg(0);
 }
 
 void Generator::generateFunctionSource(AST::Function *fn) {
@@ -100,12 +98,12 @@ void Generator::generateFunctionSource(AST::Function *fn) {
 }
 
 void Generator::write(int64_t data) {
-  m_output.write(reinterpret_cast<char *>(&data), sizeof(data));
+  m_output->write(reinterpret_cast<char *>(&data), sizeof(data));
 }
 
 void Generator::write(const std::string &data) {
-  m_output << data;
-  m_output.put(0);
+  *m_output << data;
+  m_output->put(0);
 }
 
 void Generator::emitOpcode(Opcode::Type opcode) {
@@ -122,17 +120,17 @@ void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body)  {
 
 void Generator::emitJmp(Opcode::Type jmpType, AST::BlockPtr &body, bool skipNextJump)  {
   emitOpcode(jmpType);
-  unsigned beforePos = m_output.tellp();
+  unsigned beforePos = m_output->tellp();
   write(0); // placeholder
 
   body->visit(this);
 
-  unsigned afterPos = m_output.tellp();
-  m_output.seekp(beforePos);
+  unsigned afterPos = m_output->tellp();
+  m_output->seekp(beforePos);
   write((afterPos - beforePos)
       + (skipNextJump ? (3 * WORD_SIZE) : WORD_SIZE) // special case for if with else
   );
-  m_output.seekp(afterPos);
+  m_output->seekp(afterPos);
 }
 
 unsigned Generator::uniqueString(std::string &str) {
@@ -300,7 +298,7 @@ void Generator::visitMatch(AST::Match *match) {
     write(2);
 
     emitOpcode(Opcode::jz);
-    auto offset = m_output.tellp();
+    auto offset = m_output->tellp();
     write(0);
     for (unsigned j = 0; j < kase->pattern->values.size(); j++) {
       auto slot = stackSlot++;
@@ -312,8 +310,8 @@ void Generator::visitMatch(AST::Match *match) {
       write(slot);
     }
     kase->body->visit(this);
-    auto end = m_output.tellp();
-    m_output.seekp(offset);
+    auto end = m_output->tellp();
+    m_output->seekp(offset);
 
     unsigned extra = WORD_SIZE;
     auto jmp = i < size - 1;
@@ -322,22 +320,22 @@ void Generator::visitMatch(AST::Match *match) {
     }
 
     write((unsigned)(end - offset) + extra);
-    m_output.seekp(end);
+    m_output->seekp(end);
 
     if (jmp) {
       emitOpcode(Opcode::jmp);
-      pos[i] = m_output.tellp();
+      pos[i] = m_output->tellp();
       write(0);
     }
   }
 
-  auto p = m_output.tellp();
+  auto p = m_output->tellp();
   for (unsigned i = 0; i < size - 1; i++) {
-    m_output.seekp(pos[i] );
+    m_output->seekp(pos[i] );
     unsigned off = (long)p - pos[i];
     write(off + WORD_SIZE);
   }
-  m_output.seekp(p);
+  m_output->seekp(p);
 }
 
 static void handleCapture(AST::IdentifierPtr ident, unsigned stackSlot, Generator *gen) {

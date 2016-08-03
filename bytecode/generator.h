@@ -12,7 +12,7 @@ namespace Verve {
 
 class Generator : public AST::Visitor {
 public:
-  static std::stringstream generate(AST::NodePtr, bool shouldLink);
+  static void generate(AST::NodePtr, bool shouldLink, std::stringstream *bytecode);
 
   void emitOpcode(Opcode::Type);
   void emitJmp(Opcode::Type, AST::BlockPtr &);
@@ -22,8 +22,9 @@ public:
   unsigned uniqueString(std::string &);
 
 private:
-  Generator(bool shouldLink) :
-    m_shouldLink(shouldLink) {}
+  Generator(bool shouldLink, std::stringstream *output) :
+    m_shouldLink(shouldLink),
+    m_output(output) {}
 
   void generateFunctionSource(AST::Function *fn);
 
@@ -43,11 +44,11 @@ private:
   virtual void visitConstructor(AST::Constructor *);
   virtual void visitFunction(AST::Function *);
 
-  std::stringstream m_output;
+  bool m_shouldLink;
+  std::stringstream *m_output;
   std::vector<std::string> m_strings;
   std::vector<AST::Function *> m_functions;
   std::unordered_map<std::string, unsigned> m_slots;
-  bool m_shouldLink;
 
   unsigned lookupID = 1;
   unsigned stackSlot = 0;
