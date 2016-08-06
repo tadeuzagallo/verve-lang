@@ -1,6 +1,7 @@
 module Verve where
 
 import Parser
+import Generator
 
 main =
   do c <- getContents
@@ -8,4 +9,4 @@ main =
        Left e -> do
          putStrLn "Error parsing input:"
          print e
-       Right r -> print r
+       Right r -> print (generate r)

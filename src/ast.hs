@@ -6,8 +6,9 @@ data AST = Program [AST] [AST]
          | Number (Either Integer Double)
          | String String
          | Identifier String
-         | BinaryOp String AST AST
+         | List [AST]
          | UnaryOp String AST
+         | BinaryOp String AST AST
          | If { condition :: AST, consequent :: AST , alternate :: Maybe AST }
          | Function { name :: String, params :: [AST], ret_type :: Maybe AST, body :: AST }
          | Call AST [AST]
@@ -19,7 +20,6 @@ data AST = Program [AST] [AST]
          | DataType String [AST]
          | BasicType String
          | Prototype String [String] AST
-         | List [AST]
          | Let [AST] AST
          | Assignment AST AST
          | FunctionParameter String (Maybe AST)
