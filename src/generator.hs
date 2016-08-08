@@ -1,5 +1,3 @@
-{-# OPTIONS -Wall #-}
-
 module Generator where
 
 import AST
@@ -7,18 +5,24 @@ import Opcode
 
 import Data.Bits (shiftL, (.|.))
 
-generate :: AST -> [Integer]
-generate program = generate_node [] program
+data Bytecode = Bytecode {
+  text :: [Integer],
+  strings :: [String],
+  functions :: [AST]
+} deriving (Show)
 
-emit_opcode :: Opcode -> [Integer] -> [Integer]
+generate :: AST -> Bytecode
+generate program = generate_node (Bytecode [] [] []) program
+
+emit_opcode :: Opcode -> Bytecode -> Bytecode
 emit_opcode op bytecode =
-  bytecode ++ [toInteger $ fromEnum op]
+  Bytecode ((text bytecode) ++ [toInteger $ fromEnum op]) (strings bytecode) (functions bytecode)
 
-write :: Integer -> [Integer] -> [Integer]
+write :: Integer -> Bytecode -> Bytecode
 write value bytecode =
-  bytecode ++ [value]
+  Bytecode ((text bytecode) ++ [value]) (strings bytecode) (functions bytecode)
 
-unique_string :: String -> [Integer] -> ([Integer], Integer)
+unique_string :: String -> Bytecode -> (Bytecode, Integer)
 unique_string str bytecode =
   (bytecode, toInteger 0)
 
@@ -27,7 +31,7 @@ decode_double double =
   let (significand, exponent) = decodeFloat double
    in (shiftL (toInteger exponent) 53) .|. significand
 
-generate_node :: [Integer] -> AST -> [Integer]
+generate_node :: Bytecode -> AST -> Bytecode
 
 generate_node bytecode (Program imports body) =
   let bc = foldl (\bytecode -> \node -> generate_node bytecode node) bytecode imports
