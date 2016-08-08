@@ -2,8 +2,12 @@ module Generator where
 
 import AST
 import Opcode
+import Section
 
-import Data.Bits (shiftL, (.|.))
+import Data.Bits (shiftL, shiftR, (.|.), (.&.))
+import Data.ByteString (hPut, pack)
+import Data.Word (Word8)
+import System.IO (Handle, hPrint)
 
 data Bytecode = Bytecode {
   text :: [Integer],
@@ -11,8 +15,38 @@ data Bytecode = Bytecode {
   functions :: [AST]
 } deriving (Show)
 
-generate :: AST -> Bytecode
-generate program = generate_node (Bytecode [] [] []) program
+write_int :: Handle -> Integer -> IO ()
+write_int handle int =
+  hPut handle byte_string
+    where byte_string = pack ([fromInteger (shiftR int  0) :: Word8,
+                               fromInteger (shiftR int  8) :: Word8,
+                               fromInteger (shiftR int 16) :: Word8,
+                               fromInteger (shiftR int 24) :: Word8,
+                               fromInteger (shiftR int 32) :: Word8,
+                               fromInteger (shiftR int 40) :: Word8,
+                               fromInteger (shiftR int 48) :: Word8,
+                               fromInteger (shiftR int 56) :: Word8 ])
+
+write_section :: Handle -> Section -> IO ()
+write_section handle section =
+  write_int handle header >>
+    write_int handle (toInteger $ fromEnum section)
+
+write_data :: Handle -> [Integer] -> IO ()
+write_data handle [] = return ()
+write_data handle ints =
+  write_int handle (head ints) >> write_data handle (tail ints)
+
+write_bytecode :: Handle -> Bytecode -> IO ()
+write_bytecode handle bytecode =
+  write_section handle Text  >>
+    write_int handle 1  >> {- Dummy lookup side table size -}
+      write_data handle (text bytecode)
+
+generate :: AST -> Handle -> IO ()
+generate program handle =
+  let bytecode = generate_node (Bytecode [] [] []) program
+   in write_bytecode handle bytecode
 
 emit_opcode :: Opcode -> Bytecode -> Bytecode
 emit_opcode op bytecode =
@@ -35,7 +69,8 @@ generate_node :: Bytecode -> AST -> Bytecode
 
 generate_node bytecode (Program imports body) =
   let bc = foldl (\bytecode -> \node -> generate_node bytecode node) bytecode imports
-   in foldl generate_node bc body
+   in let bc1 = foldl generate_node bc body
+       in emit_opcode Op_exit bc1
 
 generate_node bytecode (Import pattern path alias) =
   bytecode
