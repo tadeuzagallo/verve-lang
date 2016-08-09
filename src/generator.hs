@@ -7,7 +7,7 @@ import Section
 import Data.Bits (shiftL, shiftR, (.|.), (.&.))
 import Data.ByteString (hPut, pack)
 import Data.Word (Word8)
-import System.IO (Handle, hPrint)
+import System.IO (Handle, hPutStr, hPutChar)
 
 data Bytecode = Bytecode {
   text :: [Integer],
@@ -37,11 +37,18 @@ write_data handle [] = return ()
 write_data handle ints =
   write_int handle (head ints) >> write_data handle (tail ints)
 
+write_strings :: Handle -> [String] -> IO [()]
+write_strings handle strings =
+  sequence $ map (\s -> hPutStr handle s >> hPutChar handle '\0') strings
+
 write_bytecode :: Handle -> Bytecode -> IO ()
 write_bytecode handle bytecode =
-  write_section handle Text  >>
-    write_int handle 1  >> {- Dummy lookup side table size -}
-      write_data handle (text bytecode)
+  write_section handle Strings  >>
+    write_strings handle (strings bytecode) >>
+      hPut handle (pack (map (\f -> 1 :: Word8) [1..((8 - (sum (map (((+) 1) . length) (strings bytecode))) `mod` 8))])) >>
+      write_section handle Text  >>
+        write_int handle 1  >> {- Dummy lookup side table size -}
+        write_data handle (text bytecode)
 
 generate :: AST -> Handle -> IO ()
 generate program handle =
@@ -58,7 +65,9 @@ write value bytecode =
 
 unique_string :: String -> Bytecode -> (Bytecode, Integer)
 unique_string str bytecode =
-  (bytecode, toInteger 0)
+  let id = toInteger $ length (strings bytecode)
+   in let bc = Bytecode (text bytecode) ((strings bytecode) ++ [str]) (functions bytecode)
+       in (bc, id)
 
 decode_double :: Double -> Integer
 decode_double double =
@@ -92,7 +101,8 @@ generate_node bytecode (String str) =
 generate_node bytecode (Identifier name) =
   let bc = emit_opcode Op_lookup bytecode
    in let (bc1, string_id) = unique_string name bc
-       in write string_id bc1
+       in let bc2 = write string_id bc1
+           in write 0 bc2
 
 generate_node bytecode (List items) =
   let bc = emit_opcode Op_alloc_list bytecode
@@ -101,3 +111,9 @@ generate_node bytecode (List items) =
       where generate_item bytecode item = let bc = generate_node bytecode item
                                            in let bc1 = emit_opcode Op_obj_store_at bc
                                                in write 1 bc1
+
+generate_node bytecode (Call callee args) =
+  let bc = foldl generate_node bytecode args
+   in let bc1 = generate_node bc callee
+       in let bc2 = emit_opcode Op_call bc1
+           in write (toInteger $ length args) bc2
