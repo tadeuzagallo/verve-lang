@@ -1,5 +1,6 @@
 module Verve where
 
+import BytecodeWriter
 import Parser
 import Generator
 
@@ -13,5 +14,6 @@ main = do
     Left e -> do
       putStrLn "Error parsing input:"
       print e
-    Right r ->
-      withBinaryFile (args !! 0) WriteMode (generate r)
+    Right ast ->
+      let bytecode = generate ast
+       in withBinaryFile (args !! 0) WriteMode (write_bytecode bytecode)
