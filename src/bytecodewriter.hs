@@ -1,6 +1,5 @@
 module BytecodeWriter (write_bytecode) where
 
-import AST
 import Bytecode
 import Section
 
@@ -38,8 +37,15 @@ write_padding handle strings =
       padding = map (\_ -> 1 :: Word8) [1..padding_size]
    in hPut handle (pack padding)
 
-write_functions :: Handle -> [AST] -> IO ()
-write_functions _ _ = return ()
+write_functions :: Handle -> [[Integer]] -> IO [()]
+write_functions handle functions =
+  write_section handle Functions >>
+  (sequence $ map (write_function handle) functions)
+
+write_function :: Handle -> [Integer] -> IO ()
+write_function handle fn =
+  write_int handle function_header >>
+  write_text_data handle fn
 
 write_text :: Handle -> [Integer] -> IO ()
 write_text handle [] = return ()
