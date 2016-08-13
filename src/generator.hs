@@ -5,6 +5,7 @@ import Bytecode
 import Opcode
 
 import Data.Bits (shiftL, (.|.))
+import Data.List (elemIndex)
 
 generate :: AST -> Bytecode
 generate program =
@@ -20,9 +21,11 @@ write value bytecode =
 
 unique_string :: String -> Bytecode -> (Bytecode, Integer)
 unique_string str bytecode =
-  let id = toInteger $ length (strings bytecode)
-   in let bc = Bytecode (text bytecode) ((strings bytecode) ++ [str]) (functions bytecode)
-       in (bc, id)
+  case elemIndex str (strings bytecode) of
+    Just index -> (bytecode, toInteger index)
+    Nothing -> let id = toInteger $ length (strings bytecode)
+                in let bc = Bytecode (text bytecode) ((strings bytecode) ++ [str]) (functions bytecode)
+                    in (bc, id)
 
 decode_double :: Double -> Integer
 decode_double double =
