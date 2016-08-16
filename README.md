@@ -1,4 +1,4 @@
-# ![logo](https://cloud.githubusercontent.com/assets/764414/17680867/c66a1830-6318-11e6-9257-7de563789433.png) Verve [![Build Status](https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master)](https://travis-ci.org/tadeuzagallo/verve-lang) [![CircleCI](https://circleci.com/gh/tadeuzagallo/verve-lang.svg?style=svg)](https://circleci.com/gh/tadeuzagallo/verve-lang)
+# ![logo](https://cloud.githubusercontent.com/assets/764414/17697349/c3d9a78a-638a-11e6-8fe0-678617879d56.png) Verve [![Build Status](https://travis-ci.org/tadeuzagallo/verve-lang.svg?branch=master)](https://travis-ci.org/tadeuzagallo/verve-lang) [![CircleCI](https://circleci.com/gh/tadeuzagallo/verve-lang.svg?style=svg)](https://circleci.com/gh/tadeuzagallo/verve-lang)
 
 `Verve` is an experimental, minimalistic, static, functional language with zero dependencies.
 
