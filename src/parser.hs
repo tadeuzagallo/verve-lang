@@ -44,7 +44,7 @@ p_virtual_function = (try $ string "virtual") *>
 p_typeless_function =
   (try $ string "fn") *>
     (Function <$> identifier
-              <*> parens (list (FunctionParameter <$> identifier <*> (return Nothing)))
+              <*> parens (list (FunctionParameter <$> identifier <*> (return 0) <*> (return Nothing)))
               <*> (return Nothing)
               <*> p_block)
 
@@ -146,6 +146,7 @@ p_function = (try $ string "fn") *>
 p_params =
   parens . list $
     FunctionParameter <$> identifier
+                      <*> (return 0)
                       <*> (char ':' *> liftM Just p_type)
 
 p_ret_type = (string "->") *> p_type

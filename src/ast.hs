@@ -22,7 +22,7 @@ data AST = Program [AST] [AST]
          | Prototype String [String] AST
          | Let [AST] AST
          | Assignment AST AST
-         | FunctionParameter String (Maybe AST)
+         | FunctionParameter String Int (Maybe AST)
          | Match { value :: AST, cases :: [AST] }
          | Case { pattern :: AST, block :: AST }
          | Pattern { ctor :: String, bindings :: [String] }

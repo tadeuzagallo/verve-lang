@@ -70,15 +70,19 @@ generate_node bytecode (List items) =
                                            in let bc1 = emit_opcode Op_obj_store_at bc
                                                in write 1 bc1
 
+generate_node bytecode (FunctionParameter _ index _) =
+  let bc = emit_opcode Op_push_arg bytecode
+   in write (toInteger index) bc
+
 generate_node bytecode (Call callee args) =
-  let bc = foldl generate_node bytecode args
+  let bc = foldl generate_node bytecode (reverse args)
    in let bc1 = generate_node bc callee
        in let bc2 = emit_opcode Op_call bc1
            in write (toInteger $ length args) bc2
 
 generate_node bytecode (Function name params ret_type body) =
   let bc = emit_opcode Op_create_closure bytecode
-   in let bc1 = write (toInteger $ length params) bc
+   in let bc1 = write (toInteger . length $ functions bytecode) bc
        in let bc2 = write 0 bc1 {- capturesScope -}
            in let bc3 = (case name of
                           "_" -> bc2
@@ -99,6 +103,6 @@ generate_function_source bytecode (Function name params ret_type body) =
                        in let bc6 = emit_opcode Op_ret bc5
                            in Bytecode (text bytecode) (strings bc6) ((functions bytecode) ++ (functions bc6) ++ [text bc6])
 
-param_name bc (FunctionParameter name _) =
+param_name bc (FunctionParameter name _ _) =
   let (bc1, string_id) = unique_string name bc
    in write string_id bc1
