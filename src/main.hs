@@ -11,15 +11,14 @@ import System.IO (withBinaryFile, IOMode(WriteMode))
 
 main = do
   args <- getArgs
-  c <- getContents
+  c <- readFile (args !! 0)
   case parseString c of
     Left e -> do
       putStr "Error parsing input:"
       print e
     Right ast ->
       let nast = naming ast
-       in case  type_check nast of
+       in case type_check nast of
             Left e -> putStr "TypeError: " >> putStrLn e
             Right _ -> let bytecode = generate nast
-                        in withBinaryFile (args !! 0) WriteMode (write_bytecode bytecode)
-
+                        in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)
