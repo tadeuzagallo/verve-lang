@@ -4,6 +4,7 @@ import BytecodeWriter
 import Parser
 import Generator
 import Naming
+import TypeChecker
 
 import System.Environment (getArgs)
 import System.IO (withBinaryFile, IOMode(WriteMode))
@@ -13,9 +14,12 @@ main = do
   c <- getContents
   case parseString c of
     Left e -> do
-      putStrLn "Error parsing input:"
+      putStr "Error parsing input:"
       print e
     Right ast ->
       let nast = naming ast
-          bytecode = generate nast
-       in withBinaryFile (args !! 0) WriteMode (write_bytecode bytecode)
+       in case  type_check nast of
+            Left e -> putStr "TypeError: " >> putStrLn e
+            Right _ -> let bytecode = generate nast
+                        in withBinaryFile (args !! 0) WriteMode (write_bytecode bytecode)
+
