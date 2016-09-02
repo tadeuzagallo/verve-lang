@@ -16,16 +16,19 @@ type_check =  typeof Map.empty
 bind :: (Either Error Type, Context) -> AST -> (Either Error Type, Context)
 bind (ty, ctx) ast =
   case typeof ctx ast of
-    Left e -> (Left e, ctx)
+    Left e -> (ty >> Left e, ctx)
     Right t ->
       case ast of
         Function name _ _ _ ->
-          (Right t, Map.insert name t ctx)
-        a -> (Right t, ctx)
+          (ty >> Right t, Map.insert name t ctx)
+        _ -> (ty >> Right t, ctx)
 
 typeof :: Context -> AST -> (Either Error Type)
 typeof ctx (Program _ body) =
   fst $ foldl bind (Right TyVoid, ctx) body
+
+typeof ctx (Block nodes) =
+  fst $ foldl bind (Right TyVoid, ctx) nodes
 
 typeof _ (Number (Left _)) = Right TyInt
 typeof _ (Number (Right _)) = Right TyFloat
