@@ -21,6 +21,8 @@ bind (ty, ctx) ast =
       case ast of
         Function name _ _ _ ->
           (Right t, Map.insert name t ctx)
+        Extern (Prototype name _) ->
+          (Right t, Map.insert name t ctx)
         _ -> (Right t, ctx)
 
 typeof :: Context -> AST -> (Either Error Type)
@@ -32,6 +34,7 @@ typeof ctx (Block nodes) =
 
 typeof _ (Number (Left _)) = Right TyInt
 typeof _ (Number (Right _)) = Right TyFloat
+typeof _ (String _) = Right TyString
 typeof ctx (Identifier name) =
   case Map.lookup name ctx of
     Nothing -> Left (printf "Unknown identifier: `%s`\nContext: `%s`" name (show ctx))
@@ -43,19 +46,25 @@ typeof ctx (BasicType t) =
     "int" -> Right TyInt
     "float" -> Right TyFloat
     "void" -> Right TyVoid
+    {- TODO: Declare types on prelude -}
     "bool" -> Right TyBool
+    "string" -> Right TyString
     _ -> (case Map.lookup t ctx of
            Nothing -> Left (printf "Unknown type: `%s`" t)
            Just t -> Right t)
 
 typeof ctx (Function name params (Just ret_type) body) =
   typeof ctx body >>
-  case sequence $ (typeof ctx <$> params) of
-    Left e -> Left e
-    Right params' ->
-      (case typeof ctx ret_type of
-         Left e -> Left e
-         Right ret_type' -> Right (TyFunction params' ret_type'))
+  function_type ctx params ret_type
+
+typeof ctx (FunctionType generics params ret_type) =
+  function_type ctx params ret_type
+
+typeof ctx (Extern prototype) =
+  typeof ctx prototype
+
+typeof ctx (Prototype name fn_type) =
+  typeof ctx fn_type
 
 typeof ctx (Call callee args) =
   (typeof ctx callee) >>= \(TyFunction params ret_type) ->
@@ -78,4 +87,14 @@ tyeqv ctx t1 t2 =
     (TyFloat, TyFloat) -> Right ()
     (TyVoid, TyVoid) -> Right ()
     (TyBool, TyBool) -> Right ()
+    (TyString, TyString) -> Right ()
     (_, _) -> Left "Invalid type for argument"
+
+function_type :: Context -> [AST] -> AST -> Either Error Type
+function_type ctx params ret_type =
+  case sequence $ (typeof ctx <$> params) of
+    Left e -> Left e
+    Right params' ->
+      (case typeof ctx ret_type of
+         Left e -> Left e
+         Right ret_type' -> Right (TyFunction params' ret_type'))

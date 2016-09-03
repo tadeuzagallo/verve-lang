@@ -35,7 +35,7 @@ p_implementation =
                  <*> angles p_type
                  <*> braces (many1 (p_extern <|> p_typeless_function))
 
-p_extern_function = (try $ string "extern") *>
+p_extern = (try $ string "extern") *>
   (Extern <$> p_prototype)
 
 p_virtual_function = (try $ string "virtual") *>
@@ -53,7 +53,7 @@ p_type_decl =
            <*> p_generics
            <*> (braces $ many1 p_type_ctor)
 
-p_generics = (angles $ list1 identifier)
+p_generics = optionMaybe . angles $ list1 identifier
 
 p_type_ctor =
   TypeContructor <$> identifier
@@ -64,7 +64,8 @@ p_type = p_function_type
      <|> p_basic_type
 
 p_function_type =
-  FunctionType <$> (parens $ list p_type)
+  FunctionType <$> return Nothing
+               <*> (parens $ list p_type)
                <*> ((string "->") *> p_type)
 
 p_data_type =
@@ -74,11 +75,8 @@ p_data_type =
 p_basic_type =
   BasicType <$> identifier
 
-p_extern = (try $ string "extern") *> p_prototype
-
 p_prototype =
   Prototype <$> identifier
-            <*> p_generics
             <*> p_function_type
 
 -- TODO: operators

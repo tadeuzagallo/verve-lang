@@ -5,6 +5,7 @@ data Type = TyChar
           | TyFloat
           | TyVoid
           | TyBool
+          | TyString
           | TyGeneric String
           | TyInterface String
           | TyImplementation Type Type

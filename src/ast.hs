@@ -14,12 +14,12 @@ data AST = Program [AST] [AST]
          | Call AST [AST]
          | Interface String String [AST]
          | Implementation String AST [AST]
-         | EnumType String [String] [AST]
+         | EnumType String (Maybe [String]) [AST]
          | TypeContructor String [AST]
-         | FunctionType [AST] AST
+         | FunctionType (Maybe [String]) [AST] AST
          | DataType String [AST]
          | BasicType String
-         | Prototype String [String] AST
+         | Prototype String AST
          | Let [AST] AST
          | Assignment AST AST
          | FunctionParameter String Int (Maybe AST)

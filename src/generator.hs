@@ -92,6 +92,8 @@ generate_node bytecode (Function name params ret_type body) =
                                  in write string_id bc4)
                in generate_function_source bc3 (Function name params ret_type body)
 
+generate_node bytecode (Extern _) = bytecode
+
 generate_function_source :: Bytecode -> AST -> Bytecode
 generate_function_source bytecode (Function name params ret_type body) =
   let bc = (Bytecode [] (strings bytecode) [])
