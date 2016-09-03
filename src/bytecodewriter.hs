@@ -20,6 +20,7 @@ write_section handle section =
     write_int handle (toInteger $ fromEnum section)
 
 write_strings :: Handle -> [String] -> IO ()
+write_strings _ [] = return ()
 write_strings handle strings =
   write_section handle Strings  >>
   (sequence $ map (write_null_terminated_string handle) strings) >>
@@ -38,6 +39,7 @@ write_padding handle strings =
    in hPut handle (pack padding)
 
 write_functions :: Handle -> [[Integer]] -> IO [()]
+write_functions _ [] = return []
 write_functions handle functions =
   write_section handle Functions >>
   (sequence $ map (write_function handle) functions)
@@ -48,7 +50,7 @@ write_function handle fn =
   write_text_data handle fn
 
 write_text :: Handle -> [Integer] -> IO ()
-write_text handle [] = return ()
+write_text _ [] = return ()
 write_text handle ints =
   write_section handle Text  >>
   write_int handle 1  >> {- Dummy lookup side table size -}
