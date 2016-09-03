@@ -17,11 +17,13 @@ TARGET = verve
 CPP_TARGET = verve_cpp
 HASKELL_TARGET = verve_hs
 
-.PRECIOUS: default $(TARGET) $(OBJECTS)
+.PHONY: $(TARGET) default
+.PRECIOUS: $(OBJECTS)
 
 default: $(TARGET)
 
 $(TARGET): $(HASKELL_TARGET) $(CPP_TARGET)
+	-@#
 
 $(HASKELL_TARGET): $(call source_glob 'src/*.hs')
 	make -C src
