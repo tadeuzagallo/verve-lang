@@ -26,7 +26,7 @@ string_literal = whiteSpace *> (Token.stringLiteral lexer) <* whiteSpace
 list = (`Parsec.sepEndBy` (char ','))
 list1 = (`Parsec.sepEndBy1` (char ','))
 
-whiteSpace = Parsec.many Parsec.space
+whiteSpace = Token.whiteSpace lexer
 string a = whiteSpace *> (Parsec.string a) <* whiteSpace
 char a = whiteSpace *> (Parsec.char a) <* whiteSpace
 
