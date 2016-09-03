@@ -15,13 +15,13 @@ type_check =  typeof Map.empty
 
 bind :: (Either Error Type, Context) -> AST -> (Either Error Type, Context)
 bind (ty, ctx) ast =
-  case typeof ctx ast of
-    Left e -> (ty >> Left e, ctx)
+  case (ty >> typeof ctx ast) of
+    Left e -> (Left e, ctx)
     Right t ->
       case ast of
         Function name _ _ _ ->
-          (ty >> Right t, Map.insert name t ctx)
-        _ -> (ty >> Right t, ctx)
+          (Right t, Map.insert name t ctx)
+        _ -> (Right t, ctx)
 
 typeof :: Context -> AST -> (Either Error Type)
 typeof ctx (Program _ body) =
@@ -49,6 +49,7 @@ typeof ctx (BasicType t) =
            Just t -> Right t)
 
 typeof ctx (Function name params (Just ret_type) body) =
+  typeof ctx body >>
   case sequence $ (typeof ctx <$> params) of
     Left e -> Left e
     Right params' ->
