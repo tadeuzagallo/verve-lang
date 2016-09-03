@@ -1,5 +1,8 @@
 *.o
+*.hi
 *.dSYM
-verve
+verve_hs
+verve_cpp
 **/*.test_
 .build
+*.bc

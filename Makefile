@@ -14,12 +14,19 @@ HEADERS = $(call source_glob, '*.h')
 SOURCES = $(call source_glob, '*.cc') $(call source_glob, '*.S')
 OBJECTS = $(patsubst %,.build/%.o,$(SOURCES))
 TARGET = verve
+CPP_TARGET = verve_cpp
+HASKELL_TARGET = verve_hs
 
 .PRECIOUS: default $(TARGET) $(OBJECTS)
 
 default: $(TARGET)
 
-$(TARGET): $(OBJECTS)
+$(TARGET): $(HASKELL_TARGET) $(CPP_TARGET)
+
+$(HASKELL_TARGET): $(call source_glob 'src/*.hs')
+	make -C src
+
+$(CPP_TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
 
 .build/%.cc.o: %.cc $(HEADERS)

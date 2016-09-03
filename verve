@@ -1,0 +1,5 @@
+#!/bin/bash
+
+TMP=$1.bc
+
+./verve_hs $1 $TMP && ./verve_cpp -b $TMP
