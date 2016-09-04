@@ -18,10 +18,10 @@ naming' ctx ast =
     UnaryOp op operand -> UnaryOp op (naming' ctx operand)
     BinaryOp op lhs rhs -> BinaryOp op (naming' ctx lhs) (naming' ctx rhs)
     If cond conseq alt -> If (naming' ctx cond) (naming' ctx conseq) (naming' ctx <$> alt)
-    Function name params ret_type body ->
+    Function name generics params ret_type body ->
       let params' = foldl (\ params p -> let (FunctionParameter name _ t) = p in params ++ [FunctionParameter name (length params) t]) [] params
        in let ctx' = foldl (\ c n -> let (FunctionParameter name _ _) = n in Map.insert name n c) ctx params'
-           in Function name params' ret_type (naming' ctx' body)
+           in Function name generics params' ret_type (naming' ctx' body)
     Identifier name ->
       case Map.lookup name ctx of 
         Nothing -> ast

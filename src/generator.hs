@@ -80,7 +80,7 @@ generate_node bytecode (Call callee args) =
        in let bc2 = emit_opcode Op_call bc1
            in write (toInteger $ length args) bc2
 
-generate_node bytecode (Function name params ret_type body) =
+generate_node bytecode (Function name generics params ret_type body) =
   let bc = emit_opcode Op_create_closure bytecode
    in let bc1 = write (toInteger . length $ functions bytecode) bc
        in let bc2 = write 0 bc1 {- capturesScope -}
@@ -90,12 +90,12 @@ generate_node bytecode (Function name params ret_type body) =
                             let bc3 = emit_opcode Op_bind bc2
                              in let (bc4, string_id) = unique_string name bc3
                                  in write string_id bc4)
-               in generate_function_source bc3 (Function name params ret_type body)
+                              in generate_function_source bc3 (Function name generics params ret_type body)
 
 generate_node bytecode (Extern _) = bytecode
 
 generate_function_source :: Bytecode -> AST -> Bytecode
-generate_function_source bytecode (Function name params ret_type body) =
+generate_function_source bytecode (Function name generics params ret_type body) =
   let bc = (Bytecode [] (strings bytecode) [])
    in let (bc1, string_id) = unique_string name bc
        in let bc2 = write string_id bc1

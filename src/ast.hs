@@ -10,7 +10,7 @@ data AST = Program [AST] [AST]
          | UnaryOp String AST
          | BinaryOp String AST AST
          | If { condition :: AST, consequent :: AST , alternate :: Maybe AST }
-         | Function { name :: String, params :: [AST], ret_type :: Maybe AST, body :: AST }
+         | Function { name :: String, generics :: Maybe [String], params :: [AST], ret_type :: Maybe AST, body :: AST }
          | Call AST [AST]
          | Interface String String [AST]
          | Implementation String AST [AST]

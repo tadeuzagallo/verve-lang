@@ -19,7 +19,7 @@ bind (ty, ctx) ast =
     Left e -> (Left e, ctx)
     Right t ->
       case ast of
-        Function name _ _ _ ->
+        Function { name=name } ->
           (Right t, Map.insert name t ctx)
         Extern (Prototype name _) ->
           (Right t, Map.insert name t ctx)
@@ -53,7 +53,7 @@ typeof ctx (BasicType t) =
            Nothing -> Left (printf "Unknown type: `%s`" t)
            Just t -> Right t)
 
-typeof ctx (Function name params (Just ret_type) body) =
+typeof ctx (Function name generics params (Just ret_type) body) =
   typeof ctx body >>
   function_type ctx params ret_type
 
