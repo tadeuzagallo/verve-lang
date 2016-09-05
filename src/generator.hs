@@ -1,6 +1,6 @@
 module Generator (generate) where
 
-import AST
+import AST hiding (functions)
 import Bytecode
 import Opcode
 
