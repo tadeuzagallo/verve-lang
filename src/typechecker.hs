@@ -76,6 +76,8 @@ typeof ctx (Call callee args) =
 typeof ctx (FunctionParameter _ _ (Just t)) =
   typeof ctx t
 
+typeof ctx BinaryOp {} = Right TyInt
+
 typeof ctx t =
   Left ("Unhandled node: " ++ (show t))
 

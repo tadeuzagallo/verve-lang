@@ -104,6 +104,17 @@ generate_node fn@Function { name=name } = do
 
 generate_node (Extern _) = return ()
 
+generate_node BinaryOp { op=op, lhs=lhs, rhs=rhs } = do
+  generate_node lhs
+  generate_node rhs
+
+  emit_opcode Op_lookup
+  unique_string op
+  write 0 -- lookup cache disabled for now
+
+  emit_opcode Op_call
+  write 2 -- always 2 arguments
+
 generate_function_source :: AST -> State Bytecode ()
 generate_function_source Function { name=name, params=params, body=body } = do
   bc <- get
