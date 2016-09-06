@@ -35,7 +35,10 @@ unique_string str = do
   case elemIndex str (strings bc) of
     Just index -> write $ toInteger index
     Nothing -> let id = toInteger $ length (strings bc)
-                in do { put bc { strings = (strings bc) ++ [str] }; write id }
+                in do {
+                      put bc { strings = (strings bc) ++ [str] };
+                      write id
+                      }
 
 
 decode_double :: Double -> Integer
@@ -44,12 +47,12 @@ decode_double double =
    in (shiftL (toInteger exponent) 53) .|. significand
 
 generate_node :: AST -> State Bytecode ()
-generate_node (Program imports body) = do
+generate_node Program { imports=imports, expressions=body } = do
   mapM_ generate_node imports
   mapM_ generate_node body
   emit_opcode Op_exit
 
-generate_node (Import _ _ _) = return ()
+generate_node Import {} = return ()
 
 generate_node (Block nodes) =
   mapM_ generate_node nodes
@@ -73,19 +76,23 @@ generate_node (List items) = do
   emit_opcode Op_alloc_list
   write (toInteger ((length items) + 1))
   mapM_ generate_item items
-    where generate_item item = generate_node item >> emit_opcode Op_obj_store_at >> write 1
+    where generate_item item = do {
+          generate_node item;
+          emit_opcode Op_obj_store_at;
+          write 1
+                                  }
 
-generate_node (FunctionParameter _ index _) = do
+generate_node FunctionParameter { index=index } = do
   emit_opcode Op_push_arg
   write (toInteger index)
 
-generate_node (Call callee args) = do
+generate_node Call { callee=callee, arguments=args } = do
   mapM_ generate_node (reverse args)
   generate_node callee
   emit_opcode Op_call
   write (toInteger $ length args)
 
-generate_node (Function name generics params ret_type body) = do
+generate_node fn@Function { name=name } = do
   bc <- get
   emit_opcode Op_create_closure
   write (toInteger . length $ functions bc)
@@ -93,12 +100,12 @@ generate_node (Function name generics params ret_type body) = do
   (case name of
      "_" -> return ()
      _   -> emit_opcode Op_bind >> unique_string name)
-  generate_function_source (Function name generics params ret_type body)
+  generate_function_source fn
 
 generate_node (Extern _) = return ()
 
 generate_function_source :: AST -> State Bytecode ()
-generate_function_source (Function name generics params ret_type body) = do
+generate_function_source Function { name=name, params=params, body=body } = do
   bc <- get
   put initialState { strings = strings bc }
   unique_string name
@@ -109,9 +116,9 @@ generate_function_source (Function name generics params ret_type body) = do
   bc2 <- get
   put $ bc {
     strings = strings bc2,
-    functions = ((functions bc) ++ (functions bc2) ++ [text bc2])
+    functions = (functions bc) ++ (functions bc2) ++ [text bc2]
            }
 
 param_name :: AST -> State Bytecode ()
-param_name (FunctionParameter name _ _) =
+param_name FunctionParameter { name=name } =
   unique_string name
