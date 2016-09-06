@@ -44,46 +44,46 @@ decode_double double =
    in (shiftL (toInteger exponent) 53) .|. significand
 
 generate_node :: AST -> State Bytecode ()
-generate_node (Program imports body) =
+generate_node (Program imports body) = do
   mapM_ generate_node imports
-  >> mapM_ generate_node body
-  >> emit_opcode Op_exit
+  mapM_ generate_node body
+  emit_opcode Op_exit
 
 generate_node (Import _ _ _) = return ()
 
 generate_node (Block nodes) =
   mapM_ generate_node nodes
 
-generate_node (Number a) =
+generate_node (Number a) = do
   emit_opcode Op_push
-  >> (case a of
-        Left a -> write (toInteger a)
-        Right a -> write (decode_double a))
+  (case a of
+     Left a -> write (toInteger a)
+     Right a -> write (decode_double a))
 
-generate_node (String str) =
+generate_node (String str) = do
   emit_opcode Op_load_string
-  >> unique_string str
+  unique_string str
 
-generate_node (Identifier name) =
+generate_node (Identifier name) = do
   emit_opcode Op_lookup
-  >> unique_string name
-  >> write 0 -- lookup cache id - empty for now
+  unique_string name
+  write 0 -- lookup cache id - empty for now
 
-generate_node (List items) =
+generate_node (List items) = do
   emit_opcode Op_alloc_list
-  >> write (toInteger ((length items) + 1))
-  >> mapM_ generate_item items
+  write (toInteger ((length items) + 1))
+  mapM_ generate_item items
     where generate_item item = generate_node item >> emit_opcode Op_obj_store_at >> write 1
 
-generate_node (FunctionParameter _ index _) =
+generate_node (FunctionParameter _ index _) = do
   emit_opcode Op_push_arg
-  >> write (toInteger index)
+  write (toInteger index)
 
-generate_node (Call callee args) =
+generate_node (Call callee args) = do
   mapM_ generate_node (reverse args)
-  >> generate_node callee
-  >> emit_opcode Op_call
-  >> write (toInteger $ length args)
+  generate_node callee
+  emit_opcode Op_call
+  write (toInteger $ length args)
 
 generate_node (Function name generics params ret_type body) = do
   bc <- get
