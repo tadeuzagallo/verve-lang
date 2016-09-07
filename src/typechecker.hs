@@ -25,12 +25,12 @@ bind ast = do
   case ast of
     Function { name=name } ->
       put (Map.insert name t ctx) >> return t
-    Extern (Prototype name _) ->
+    Extern Prototype { name=name } ->
       put (Map.insert name t ctx) >> return t
     _ -> return t
 
 typeof :: AST -> TypeCheckerState
-typeof (Program _ body) =
+typeof Program { expressions=body } =
   foldlM (\_ ast -> bind ast) TyVoid body
 
 typeof (Block nodes) =
@@ -59,18 +59,18 @@ typeof (BasicType t) = do
            Nothing -> throwError (printf "Unknown type: `%s`" t)
            Just t -> return t)
 
-typeof (Function name generics params (Just ret_type) body) = do
+typeof Function { params=params, ret_type=(Just ret_type), body=body } = do
   typeof body
   function_type params ret_type
 
-typeof (FunctionType generics params ret_type) =
+typeof FunctionType { parameters=params, return_type=ret_type } =
   function_type params ret_type
 
 typeof (Extern prototype) = typeof prototype
 
-typeof (Prototype name fn_type) = typeof fn_type
+typeof Prototype { prototype=fn_type } = typeof fn_type
 
-typeof (Call callee args) = do
+typeof Call { callee=callee, arguments=args } = do
   (TyFunction params ret_type) <- typeof callee
   if length params /= length args then
                                   throwError "Wrong number of arguments for function call"
@@ -81,7 +81,7 @@ typeof (Call callee args) = do
                                      return ret_type
                                      }
 
-typeof (FunctionParameter _ _ (Just t)) = typeof t
+typeof FunctionParameter { type'=(Just t) } = typeof t
 
 typeof BinaryOp { lhs=lhs, rhs=rhs } = do
   lhs' <- typeof lhs
