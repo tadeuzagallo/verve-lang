@@ -3,100 +3,106 @@ module TypeChecker (type_check) where
 import AST
 import Type
 
+import Control.Monad.Except (ExceptT, runExceptT, throwError)
+import Control.Monad.Identity (Identity, runIdentity)
+import Control.Monad.State (StateT, evalStateT, get, gets, put)
 import qualified Data.Map as Map
-import Text.Printf (printf)
 import Data.Foldable (foldlM)
+import Text.Printf (printf)
 
 type Context = (Map.Map String Type)
 type Error = String
+type TypeCheckerState = StateT Context (ExceptT String Identity) Type
 
-type_check :: AST -> (Either String Type)
-type_check =  typeof Map.empty
+type_check :: AST -> Either String Type
+type_check node = runIdentity $ runExceptT (evalStateT (typeof node) Map.empty)
 
-bind :: (Either Error Type, Context) -> AST -> (Either Error Type, Context)
-bind (ty, ctx) ast =
-  case (ty >> typeof ctx ast) of
-    Left e -> (Left e, ctx)
-    Right t ->
-      case ast of
-        Function { name=name } ->
-          (Right t, Map.insert name t ctx)
-        Extern (Prototype name _) ->
-          (Right t, Map.insert name t ctx)
-        _ -> (Right t, ctx)
+bind :: AST -> TypeCheckerState
+bind ast = do
+  ctx <- get
+  t <- typeof ast
+  case ast of
+    Function { name=name } ->
+      put (Map.insert name t ctx) >> return t
+    Extern (Prototype name _) ->
+      put (Map.insert name t ctx) >> return t
+    _ -> return t
 
-typeof :: Context -> AST -> (Either Error Type)
-typeof ctx (Program _ body) =
-  fst $ foldl bind (Right TyVoid, ctx) body
+typeof :: AST -> TypeCheckerState
+typeof (Program _ body) =
+  foldlM (\_ ast -> bind ast) TyVoid body
 
-typeof ctx (Block nodes) =
-  fst $ foldl bind (Right TyVoid, ctx) nodes
+typeof (Block nodes) =
+  foldlM (\_ ast -> bind ast) TyVoid nodes
 
-typeof _ (Number (Left _)) = Right TyInt
-typeof _ (Number (Right _)) = Right TyFloat
-typeof _ (String _) = Right TyString
-typeof ctx (Identifier name) =
-  case Map.lookup name ctx of
-    Nothing -> Left (printf "Unknown identifier: `%s`\nContext: `%s`" name (show ctx))
-    Just t -> Right t
+typeof (Number (Left _)) = return TyInt
+typeof (Number (Right _)) = return TyFloat
+typeof (String _) = return TyString
+typeof (Identifier name) = do
+  value <- gets (Map.lookup name)
+  case value of
+    Nothing -> throwError (printf "Unknown identifier: `%s`" name)
+    Just t -> return t
 
-typeof ctx (BasicType t) =
+typeof (BasicType t) = do
+  value <- gets (Map.lookup t)
   case t of
-    "char" -> Right TyChar
-    "int" -> Right TyInt
-    "float" -> Right TyFloat
-    "void" -> Right TyVoid
+    "char" -> return TyChar
+    "int" -> return TyInt
+    "float" -> return TyFloat
+    "void" -> return TyVoid
     {- TODO: Declare types on prelude -}
-    "bool" -> Right TyBool
-    "string" -> Right TyString
-    _ -> (case Map.lookup t ctx of
-           Nothing -> Left (printf "Unknown type: `%s`" t)
-           Just t -> Right t)
+    "bool" -> return TyBool
+    "string" -> return TyString
+    _ -> (case value of
+           Nothing -> throwError (printf "Unknown type: `%s`" t)
+           Just t -> return t)
 
-typeof ctx (Function name generics params (Just ret_type) body) =
-  typeof ctx body >>
-  function_type ctx params ret_type
+typeof (Function name generics params (Just ret_type) body) = do
+  typeof body
+  function_type params ret_type
 
-typeof ctx (FunctionType generics params ret_type) =
-  function_type ctx params ret_type
+typeof (FunctionType generics params ret_type) =
+  function_type params ret_type
 
-typeof ctx (Extern prototype) =
-  typeof ctx prototype
+typeof (Extern prototype) = typeof prototype
 
-typeof ctx (Prototype name fn_type) =
-  typeof ctx fn_type
+typeof (Prototype name fn_type) = typeof fn_type
 
-typeof ctx (Call callee args) =
-  (typeof ctx callee) >>= \(TyFunction params ret_type) ->
-    if length params /= length args then
-                                    Left "Wrong number of arguments for function call"
-                                    else
-                                    (sequence $ typeof ctx <$> args) >>= \ty_args -> foldl (\a (t1, t2) -> (tyeqv ctx t1 t2) >> a) (Right ret_type) (zip params ty_args)
+typeof (Call callee args) = do
+  (TyFunction params ret_type) <- typeof callee
+  if length params /= length args then
+                                  throwError "Wrong number of arguments for function call"
+                                  else
+                                  do {
+                                     args' <- mapM typeof args;
+                                     mapM_ (uncurry tyeqv) (zip args' params);
+                                     return ret_type
+                                     }
 
-typeof ctx (FunctionParameter _ _ (Just t)) =
-  typeof ctx t
+typeof (FunctionParameter _ _ (Just t)) = typeof t
 
-typeof ctx BinaryOp {} = Right TyInt
+typeof BinaryOp { lhs=lhs, rhs=rhs } = do
+  lhs' <- typeof lhs
+  rhs' <- typeof rhs
+  case (lhs', rhs') of
+    (TyInt, TyInt) -> return TyInt
+    (TyFloat, TyFloat) -> return TyFloat
+    (_, _) -> throwError "Binary operations can only happen on two integers or two floats"
 
-typeof ctx t =
-  Left ("Unhandled node: " ++ (show t))
+typeof t = throwError ("Unhandled node: " ++ (show t))
 
-tyeqv :: Context -> Type -> Type -> Either Error ()
-tyeqv ctx t1 t2 =
+tyeqv :: Type -> Type -> StateT Context (ExceptT String Identity) ()
+tyeqv t1 t2 =
   case (t1, t2) of
-    (TyChar, TyChar) -> Right ()
-    (TyInt, TyInt) -> Right ()
-    (TyFloat, TyFloat) -> Right ()
-    (TyVoid, TyVoid) -> Right ()
-    (TyBool, TyBool) -> Right ()
-    (TyString, TyString) -> Right ()
-    (_, _) -> Left "Invalid type for argument"
+    (TyChar, TyChar) -> return ()
+    (TyInt, TyInt) -> return ()
+    (TyFloat, TyFloat) -> return ()
+    (TyVoid, TyVoid) -> return ()
+    (TyBool, TyBool) -> return ()
+    (TyString, TyString) -> return ()
+    (_, _) -> throwError "Invalid type for argument"
 
-function_type :: Context -> [AST] -> AST -> Either Error Type
-function_type ctx params ret_type =
-  case sequence $ (typeof ctx <$> params) of
-    Left e -> Left e
-    Right params' ->
-      (case typeof ctx ret_type of
-         Left e -> Left e
-         Right ret_type' -> Right (TyFunction params' ret_type'))
+function_type :: [AST] -> AST -> TypeCheckerState
+function_type params ret_type =
+  TyFunction <$> (mapM typeof params) <*> (typeof ret_type)
