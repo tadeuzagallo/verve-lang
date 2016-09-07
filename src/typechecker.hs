@@ -62,7 +62,9 @@ typeof (BasicType t) = do
       where throw = throwError (printf "Unknown type: `%s`" t)
 
 typeof Function { params=params, ret_type=(Just ret_type), body=body } = do
-  typeof body
+  ty_body <- typeof body
+  ty_ret <- typeof ret_type
+  tyeqv ty_body ty_ret
   function_type params ret_type
 
 typeof FunctionType { parameters=params, return_type=ret_type } =
