@@ -3,6 +3,7 @@ module TypeChecker (type_check) where
 import AST
 import Type
 
+import Control.Monad (when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity, runIdentity)
 import Control.Monad.State (State, evalState, get, gets, put)
@@ -23,27 +24,29 @@ bind ast = do
   ctx <- get
   t <- typeof ast
   case ast of
-    Function { name=name } ->
-      put (Map.insert name t ctx) >> return t
-    Extern Prototype { name=name } ->
-      put (Map.insert name t ctx) >> return t
+    Function { name=name } -> do
+      put (Map.insert name t ctx)
+      return t
+    Extern Prototype { name=name } -> do
+      put (Map.insert name t ctx)
+      return t
     _ -> return t
 
 typeof :: AST -> TypeCheckerState
 typeof Program { expressions=body } =
-  foldlM (\_ ast -> bind ast) TyVoid body
+  foldlM (flip $ const . bind) TyVoid body
 
 typeof (Block nodes) =
-  foldlM (\_ ast -> bind ast) TyVoid nodes
+  foldlM (flip $ const . bind) TyVoid nodes
 
 typeof (Number (Left _)) = return TyInt
 typeof (Number (Right _)) = return TyFloat
 typeof (String _) = return TyString
+
 typeof (Identifier name) = do
   value <- gets (Map.lookup name)
-  case value of
-    Nothing -> throwError (printf "Unknown identifier: `%s`" name)
-    Just t -> return t
+  maybe throw return value
+    where throw = throwError $ printf "Unknown identifier: `%s`" name
 
 typeof (BasicType t) = do
   value <- gets (Map.lookup t)
@@ -55,9 +58,8 @@ typeof (BasicType t) = do
     {- TODO: Declare types on prelude -}
     "bool" -> return TyBool
     "string" -> return TyString
-    _ -> (case value of
-           Nothing -> throwError (printf "Unknown type: `%s`" t)
-           Just t -> return t)
+    _ -> maybe throw return value
+      where throw = throwError (printf "Unknown type: `%s`" t)
 
 typeof Function { params=params, ret_type=(Just ret_type), body=body } = do
   typeof body
@@ -72,14 +74,10 @@ typeof Prototype { prototype=fn_type } = typeof fn_type
 
 typeof Call { callee=callee, arguments=args } = do
   (TyFunction params ret_type) <- typeof callee
-  if length params /= length args then
-                                  throwError "Wrong number of arguments for function call"
-                                  else
-                                  do {
-                                     args' <- mapM typeof args;
-                                     mapM_ (uncurry tyeqv) (zip args' params);
-                                     return ret_type
-                                     }
+  when (length params /= length args) (throwError "Wrong number of arguments for function call")
+  args' <- mapM typeof args
+  mapM_ (uncurry tyeqv) (zip args' params)
+  return ret_type
 
 typeof FunctionParameter { type'=(Just t) } = typeof t
 
