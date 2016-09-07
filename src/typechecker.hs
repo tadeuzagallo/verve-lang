@@ -5,17 +5,18 @@ import Type
 
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.State (StateT, evalStateT, get, gets, put)
+import Control.Monad.State (State, evalState, get, gets, put)
 import qualified Data.Map as Map
 import Data.Foldable (foldlM)
 import Text.Printf (printf)
 
 type Context = (Map.Map String Type)
 type Error = String
-type TypeCheckerState = StateT Context (ExceptT String Identity) Type
+type TypeCheckerMonad = ExceptT Error (State Context)
+type TypeCheckerState = TypeCheckerMonad Type
 
 type_check :: AST -> Either String Type
-type_check node = runIdentity $ runExceptT (evalStateT (typeof node) Map.empty)
+type_check node = evalState (runExceptT $ typeof node) Map.empty
 
 bind :: AST -> TypeCheckerState
 bind ast = do
@@ -92,7 +93,7 @@ typeof BinaryOp { lhs=lhs, rhs=rhs } = do
 
 typeof t = throwError ("Unhandled node: " ++ (show t))
 
-tyeqv :: Type -> Type -> StateT Context (ExceptT String Identity) ()
+tyeqv :: Type -> Type -> (TypeCheckerMonad ())
 tyeqv t1 t2 =
   case (t1, t2) of
     (TyChar, TyChar) -> return ()
