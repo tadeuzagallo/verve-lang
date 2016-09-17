@@ -7,9 +7,10 @@ data Type = TyChar
           | TyBool
           | TyString
           | TyGeneric String
+          | TyEmptyGeneric String
           | TyInterface String
           | TyImplementation Type Type
           | TyEnum [Type]
           | TyFunction [Type] Type
           | TyInstance Type [Type]
-          deriving (Show)
+          deriving (Show, Eq)
