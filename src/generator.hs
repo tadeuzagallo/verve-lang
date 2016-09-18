@@ -115,6 +115,8 @@ generate_node BinaryOp { op=op, lhs=lhs, rhs=rhs } = do
   emit_opcode Op_call
   write 2 -- always 2 arguments
 
+generate_node node = error ("Unhandled node: " ++ (show node))
+
 generate_function_source :: AST -> State Bytecode ()
 generate_function_source Function { name=name, params=params, body=body } = do
   bc <- get
