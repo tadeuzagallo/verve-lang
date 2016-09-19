@@ -72,6 +72,12 @@ typeof Function { params=params, variables=variables, ret_type=(Just ret_type), 
   put ctx
   return t
 
+{-typeless function-}
+typeof Function {name=name} = do
+  t <- gets $ Map.lookup name
+  when (isNothing t) (throwError "Typeless function without prior declaration")
+  return (fromJust t)
+
 typeof FunctionType { parameters=params, return_type=ret_type } =
   function_type params ret_type
 
@@ -82,10 +88,21 @@ typeof Prototype { prototype=fn_type } = typeof fn_type
 
 typeof Call { callee=callee, arguments=args } = do
   ctx <- get
-  (TyFunction params ret_type) <- typeof callee
+  callee_type <- typeof callee
+  let (params, ret_type) = case callee_type of
+                             (TyFunction params ret_type) -> (params, ret_type)
+                             (TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)
   when (length params /= length args) (throwError "Wrong number of arguments for function call")
   args' <- mapM typeof args
   mapM_ (uncurry tyeqv) (zip args' params)
+  case callee_type of
+    (TyAbstractFunction _ interface_name) -> do
+      (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
+      t <- gets $ Map.lookup var
+      when (isNothing t) (throwError "Undecidable abstract function call")
+      when (not $ (fromJust t) `elem` impls) (throwError $ printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls))
+      return ()
+    _ -> return ()
   put ctx
   return ret_type
 
@@ -102,18 +119,28 @@ typeof BinaryOp { lhs=lhs, rhs=rhs } = do
 typeof Interface { name=name, variable=var, functions=fns } = do
   var' <- uniquify var
   fns' <- mapM typeof fns
-  modify $ Map.insert name (TyInterface name var' fns')
+  let interface = (TyInterface name var' fns' [])
+  modify $ Map.insert name interface
   modify $ Map.insert var' (TyGeneric var')
   ctx <- get
   mapM (\(fn, t)->
-    let name = case fn of (Virtual (Prototype {name=name})) -> name
-     in modify $ Map.insert name t
+    let fn_name = case fn of (Virtual (Prototype {name=name})) -> name
+     in modify $ Map.insert fn_name (TyAbstractFunction t name)
      ) (zip fns fns')
   return TyVoid
 
-typeof Implementation { name=name } = do
-  interface' <- gets $ Map.lookup name
-  let interface = fromJust interface'
+typeof Implementation { name=name, impl_type=t', functions=fns } = do
+  ctx <- get
+  interface <- gets $ Map.lookup name
+  when (isNothing interface) (throwError "Interface for implementation not found")
+
+  t <- typeof t'
+  modify $ Map.insert (ty_variable $ fromJust interface) t
+  mapM_ typeof fns
+
+  let i = fromJust interface
+  put $ Map.adjust (\i -> i { ty_implementations=t:(ty_implementations i) }) name ctx
+  ctx' <- get
   return TyVoid
 
 typeof t = throwError ("Unhandled node: " ++ (show t))
