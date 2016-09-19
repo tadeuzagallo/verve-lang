@@ -151,13 +151,6 @@ tyeqv t1 t2 = do
   t2' <- simplify t2
   ctx <- get
   case (t1', t2') of
-    (TyChar, TyChar) -> return ()
-    (TyInt, TyInt) -> return ()
-    (TyFloat, TyFloat) -> return ()
-    (TyVoid, TyVoid) -> return ()
-    (TyBool, TyBool) -> return ()
-    (TyString, TyString) -> return ()
-    (TyGeneric a, TyGeneric b) | a == b -> return ()
     (t, TyEmptyGeneric a) -> do
       put $ Map.insert a t ctx
       return ()
@@ -170,7 +163,11 @@ tyeqv t1 t2 = do
     (TyGeneric a, t) | fromJust (Map.lookup a ctx) /= t1 -> do
       let a' = fromJust (Map.lookup a ctx)
        in tyeqv a' t
-    (_, _) -> throwError $ printf "Invalid type: expected `%s` but received `%s`" (show t1) (show t2)
+    (_, _) ->
+      if t1' == t2' then
+                    return ()
+                    else
+                    throwError $ printf "Invalid type: expected `%s` but received `%s`" (show t1) (show t2)
 
 simplify :: Type -> TypeCheckerState
 simplify generic@(TyGeneric name) = do
