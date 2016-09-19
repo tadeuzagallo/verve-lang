@@ -7,7 +7,7 @@ data AST = Program { imports :: [AST], expressions:: [AST] }
          | If { condition :: AST, consequent :: AST , alternate :: Maybe AST }
          | Function { name :: String, variables :: Maybe [String], params :: [AST], ret_type :: Maybe AST, body :: AST }
          | Call { callee :: AST, arguments ::  [AST] }
-         | Interface { name :: String, generic :: String,  functions :: [AST] }
+         | Interface { name :: String, variable :: String,  functions :: [AST] }
          | Implementation { name :: String, impl_type :: AST, functions :: [AST] }
          | EnumType { name :: String, variables :: (Maybe [String]), constructors :: [AST] }
          | TypeContructor { name :: String, arguments :: [AST] }

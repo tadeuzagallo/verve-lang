@@ -103,6 +103,8 @@ generate_node fn@Function { name=name } = do
   generate_function_source fn
 
 generate_node (Extern _) = return ()
+generate_node Interface {} = return ()
+generate_node Implementation {} = return ()
 
 generate_node BinaryOp { op=op, lhs=lhs, rhs=rhs } = do
   generate_node lhs

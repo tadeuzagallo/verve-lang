@@ -6,7 +6,7 @@ import Type
 import Control.Monad (when)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.State (State, evalState, get, gets, put)
+import Control.Monad.State (State, evalState, get, gets, put, modify)
 import qualified Data.Map as Map
 import Data.Foldable (foldlM)
 import Data.Maybe (isNothing, fromJust)
@@ -76,6 +76,7 @@ typeof FunctionType { parameters=params, return_type=ret_type } =
   function_type params ret_type
 
 typeof (Extern prototype) = typeof prototype
+typeof (Virtual prototype) = typeof prototype
 
 typeof Prototype { prototype=fn_type } = typeof fn_type
 
@@ -97,6 +98,23 @@ typeof BinaryOp { lhs=lhs, rhs=rhs } = do
     (TyInt, TyInt) -> return TyInt
     (TyFloat, TyFloat) -> return TyFloat
     (_, _) -> throwError "Binary operations can only happen on two integers or two floats"
+
+typeof Interface { name=name, variable=var, functions=fns } = do
+  var' <- uniquify var
+  fns' <- mapM typeof fns
+  modify $ Map.insert name (TyInterface name var' fns')
+  modify $ Map.insert var' (TyGeneric var')
+  ctx <- get
+  mapM (\(fn, t)->
+    let name = case fn of (Virtual (Prototype {name=name})) -> name
+     in modify $ Map.insert name t
+     ) (zip fns fns')
+  return TyVoid
+
+typeof Implementation { name=name } = do
+  interface' <- gets $ Map.lookup name
+  let interface = fromJust interface'
+  return TyVoid
 
 typeof t = throwError ("Unhandled node: " ++ (show t))
 
@@ -154,8 +172,13 @@ load_type_variables (Just vars) = do
                                    }
 
 uniquify :: String -> (TypeCheckerMonad String)
-uniquify var = do
+uniquify var = uniquify' var var
+
+uniquify' :: String -> String -> (TypeCheckerMonad String)
+uniquify' orig var = do
   t <- gets $ Map.lookup var
   case t of
-    Nothing -> return var
-    Just t -> uniquify (var ++ "'")
+    Nothing -> do
+      modify $ Map.insert orig (TyGeneric var)
+      return var
+    Just t -> uniquify' orig (var ++ "'")
