@@ -94,7 +94,7 @@ typeof Call { callee=callee, arguments=args } = do
                              (TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)
   when (length params /= length args) (throwError "Wrong number of arguments for function call")
   args' <- mapM typeof args
-  mapM_ (uncurry tyeqv) (zip args' params)
+  mapM_ (uncurry tyeqv) (zip params args')
   case callee_type of
     (TyAbstractFunction _ interface_name) -> do
       (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
@@ -164,10 +164,9 @@ tyeqv t1 t2 = do
       let a' = fromJust (Map.lookup a ctx)
        in tyeqv a' t
     (_, _) ->
-      if t1' == t2' then
-                    return ()
-                    else
-                    throwError $ printf "Invalid type: expected `%s` but received `%s`" (show t1) (show t2)
+      if t1' == t2'
+      then return ()
+      else throwError $ printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2')
 
 simplify :: Type -> TypeCheckerState
 simplify generic@(TyGeneric name) = do
