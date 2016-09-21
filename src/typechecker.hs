@@ -13,11 +13,11 @@ import Data.Maybe (isNothing, fromJust)
 import Text.Printf (printf)
 
 type Context = (Map.Map String Type)
-type Error = String
+type Error = (SourcePos, String)
 type TypeCheckerMonad = ExceptT Error (State Context)
 type TypeCheckerState = TypeCheckerMonad Type
 
-type_check :: AST -> Either String Type
+type_check :: AST -> Either (SourcePos, String) Type
 type_check node = evalState (runExceptT $ typeof node) Map.empty
 
 bind :: AST -> TypeCheckerState
@@ -46,12 +46,12 @@ typeof Number { num_value=(Left  _) } = return TyInt
 typeof Number { num_value=(Right _) } = return TyFloat
 typeof String {} = return TyString
 
-typeof Identifier { name=name } = do
+typeof Identifier { pos=pos, name=name } = do
   value <- gets (Map.lookup name)
   maybe throw return value
-    where throw = throwError $ printf "Unknown identifier: `%s`" name
+    where throw = throwError (pos, printf "Unknown identifier: `%s`" name)
 
-typeof BasicType { type_name=t } = do
+typeof BasicType { pos=pos, type_name=t } = do
   value <- gets (Map.lookup t)
   case t of
     "char" -> return TyChar
@@ -62,22 +62,22 @@ typeof BasicType { type_name=t } = do
     "bool" -> return TyBool
     "string" -> return TyString
     _ -> maybe throw return value
-      where throw = throwError (printf "Unknown type: `%s`" t)
+      where throw = throwError (pos, printf "Unknown type: `%s`" t)
 
-typeof Function { params=params, variables=variables, ret_type=(Just ret_type), body=body } = do
+typeof Function { pos=pos, params=params, variables=variables, ret_type=(Just ret_type), body=body } = do
   ctx <- get
   load_type_variables variables
   ty_body <- typeof body
   ty_ret <- typeof ret_type
-  tyeqv ty_body ty_ret
+  tyeqv pos ty_body ty_ret
   t <- function_type params ret_type
   put ctx
   return t
 
 {-typeless function-}
-typeof Function {name=name} = do
+typeof Function { pos=pos, name=name } = do
   t <- gets $ Map.lookup name
-  when (isNothing t) (throwError "Typeless function without prior declaration")
+  when (isNothing t) (throwError (pos, "Typeless function without prior declaration"))
   return (fromJust t)
 
 typeof FunctionType { parameters=params, return_type=ret_type } =
@@ -88,21 +88,21 @@ typeof Virtual { prototype=prototype } = typeof prototype
 
 typeof Prototype { prototype=fn_type } = typeof fn_type
 
-typeof Call { callee=callee, arguments=args } = do
+typeof Call { pos=pos, callee=callee, arguments=args } = do
   ctx <- get
   callee_type <- typeof callee
   let (params, ret_type) = case callee_type of
                              (TyFunction params ret_type) -> (params, ret_type)
                              (TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)
-  when (length params /= length args) (throwError "Wrong number of arguments for function call")
+  when (length params /= length args) (throwError (pos, "Wrong number of arguments for function call"))
   args' <- mapM typeof args
-  mapM_ (uncurry tyeqv) (zip params args')
+  mapM_ (uncurry (tyeqv pos)) (zip params args')
   case callee_type of
     (TyAbstractFunction _ interface_name) -> do
       (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
       t <- gets $ Map.lookup var
-      when (isNothing t) (throwError "Undecidable abstract function call")
-      when (not $ (fromJust t) `elem` impls) (throwError $ printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls))
+      when (isNothing t) (throwError (pos, "Undecidable abstract function call"))
+      when (not $ (fromJust t) `elem` impls) (throwError (pos, printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))
       return ()
     _ -> return ()
   put ctx
@@ -110,13 +110,13 @@ typeof Call { callee=callee, arguments=args } = do
 
 typeof FunctionParameter { type'=(Just t) } = typeof t
 
-typeof BinaryOp { lhs=lhs, rhs=rhs } = do
+typeof BinaryOp { pos=pos, lhs=lhs, rhs=rhs } = do
   lhs' <- typeof lhs
   rhs' <- typeof rhs
   case (lhs', rhs') of
     (TyInt, TyInt) -> return TyInt
     (TyFloat, TyFloat) -> return TyFloat
-    (_, _) -> throwError "Binary operations can only happen on two integers or two floats"
+    (_, _) -> throwError (pos, "Binary operations can only happen on two integers or two floats")
 
 typeof Interface { name=name, variable=var, functions=fns } = do
   var' <- uniquify var
@@ -131,10 +131,10 @@ typeof Interface { name=name, variable=var, functions=fns } = do
      ) (zip fns fns')
   return TyVoid
 
-typeof Implementation { name=name, impl_type=t', functions=fns } = do
+typeof Implementation { pos=pos, name=name, impl_type=t', functions=fns } = do
   ctx <- get
   interface <- gets $ Map.lookup name
-  when (isNothing interface) (throwError "Interface for implementation not found")
+  when (isNothing interface) (throwError (pos, "Interface for implementation not found"))
 
   t <- typeof t'
   modify $ Map.insert (ty_variable $ fromJust interface) t
@@ -145,10 +145,10 @@ typeof Implementation { name=name, impl_type=t', functions=fns } = do
   ctx' <- get
   return TyVoid
 
-typeof t = throwError ("Unhandled node: " ++ (show t))
+typeof t = throwError (SourcePos { file="", line=0, column=0 }, "Unhandled node: " ++ (show t))
 
-tyeqv :: Type -> Type -> (TypeCheckerMonad ())
-tyeqv t1 t2 = do
+tyeqv :: SourcePos -> Type -> Type -> (TypeCheckerMonad ())
+tyeqv pos t1 t2 = do
   t1' <- simplify t1
   t2' <- simplify t2
   ctx <- get
@@ -161,14 +161,14 @@ tyeqv t1 t2 = do
       return ()
     (t, TyGeneric a) | fromJust (Map.lookup a ctx) /= t2 -> do
       let a' = fromJust (Map.lookup a ctx)
-       in tyeqv t a'
+       in tyeqv pos t a'
     (TyGeneric a, t) | fromJust (Map.lookup a ctx) /= t1 -> do
       let a' = fromJust (Map.lookup a ctx)
-       in tyeqv a' t
+       in tyeqv pos a' t
     (_, _) ->
       if t1' == t2'
       then return ()
-      else throwError $ printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2')
+      else throwError (pos, printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2'))
 
 simplify :: Type -> TypeCheckerState
 simplify generic@(TyGeneric name) = do

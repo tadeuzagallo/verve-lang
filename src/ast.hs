@@ -1,6 +1,7 @@
 module AST where
 
-import Text.Parsec (SourcePos)
+data SourcePos = SourcePos { line :: Int, column :: Int, file :: String }
+  deriving (Show, Eq)
 
 data AST = Program { pos :: SourcePos, imports :: [AST], expressions:: [AST] }
          | Import { pos :: SourcePos, names :: (Maybe [String]), path :: String, alias :: (Maybe String) }

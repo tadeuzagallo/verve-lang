@@ -4,7 +4,7 @@ import AST
 import Lexer
 
 import Control.Monad (liftM)
-import Text.Parsec hiding (string, char)
+import Text.Parsec hiding (string, char, getPosition)
 
 p_program =
   (Program <$> getPosition
@@ -178,5 +178,5 @@ p_identifier =
   Identifier <$> getPosition
              <*> identifier
 
-parseString :: String -> Either ParseError AST
-parseString input = parse p_program "(stdin)" input
+parseString :: String -> String -> Either ParseError AST
+parseString file_name source = parse p_program file_name source

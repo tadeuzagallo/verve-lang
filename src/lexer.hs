@@ -30,6 +30,14 @@ whiteSpace = Token.whiteSpace lexer
 string a = whiteSpace *> (Parsec.string a) <* whiteSpace
 char a = whiteSpace *> (Parsec.char a) <* whiteSpace
 
+getPosition = do
+  pos <- Parsec.getPosition
+  return SourcePos {
+    line=(Parsec.sourceLine pos),
+    column=(Parsec.sourceColumn pos),
+    file=(Parsec.sourceName pos)
+            }
+
 op_table =
   [ [prefix "-", prefix "+"]
   , [binary "*" AssocLeft, binary "/" AssocLeft, binary "%" AssocLeft]
@@ -39,7 +47,7 @@ op_table =
   , [binary "&&" AssocLeft, binary "||" AssocLeft]
   ]
 
-binary  name assoc = Infix (do{ reservedOp name; pos <- Parsec.getPosition; return (BinaryOp pos name) }) assoc
-prefix  name = Prefix (do{ reservedOp name; pos <- Parsec.getPosition; return (UnaryOp pos name) })
+binary  name assoc = Infix (do{ reservedOp name; pos <- getPosition; return (BinaryOp pos name) }) assoc
+prefix  name = Prefix (do{ reservedOp name; pos <- getPosition; return (UnaryOp pos name) })
 
 expr_parser = buildExpressionParser op_table
