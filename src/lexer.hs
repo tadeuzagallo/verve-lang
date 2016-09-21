@@ -39,7 +39,7 @@ op_table =
   , [binary "&&" AssocLeft, binary "||" AssocLeft]
   ]
 
-binary  name assoc = Infix (do{ reservedOp name; return (BinaryOp name) }) assoc
-prefix  name = Prefix (do{ reservedOp name; return (UnaryOp name) })
+binary  name assoc = Infix (do{ reservedOp name; pos <- Parsec.getPosition; return (BinaryOp pos name) }) assoc
+prefix  name = Prefix (do{ reservedOp name; pos <- Parsec.getPosition; return (UnaryOp pos name) })
 
 expr_parser = buildExpressionParser op_table

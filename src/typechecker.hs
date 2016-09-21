@@ -28,28 +28,30 @@ bind ast = do
     Function { name=name } -> do
       put (Map.insert name t ctx)
       return t
-    Extern Prototype { name=name } -> do
+
+    Extern { prototype=Prototype { name=name } } -> do
       put (Map.insert name t ctx)
       return t
+
     _ -> return t
 
 typeof :: AST -> TypeCheckerState
 typeof Program { expressions=body } =
   foldlM (flip $ const . bind) TyVoid body
 
-typeof (Block nodes) =
+typeof Block { nodes=nodes } =
   foldlM (flip $ const . bind) TyVoid nodes
 
-typeof (Number (Left _)) = return TyInt
-typeof (Number (Right _)) = return TyFloat
-typeof (String _) = return TyString
+typeof Number { num_value=(Left  _) } = return TyInt
+typeof Number { num_value=(Right _) } = return TyFloat
+typeof String {} = return TyString
 
-typeof (Identifier name) = do
+typeof Identifier { name=name } = do
   value <- gets (Map.lookup name)
   maybe throw return value
     where throw = throwError $ printf "Unknown identifier: `%s`" name
 
-typeof (BasicType t) = do
+typeof BasicType { type_name=t } = do
   value <- gets (Map.lookup t)
   case t of
     "char" -> return TyChar
@@ -81,8 +83,8 @@ typeof Function {name=name} = do
 typeof FunctionType { parameters=params, return_type=ret_type } =
   function_type params ret_type
 
-typeof (Extern prototype) = typeof prototype
-typeof (Virtual prototype) = typeof prototype
+typeof Extern  { prototype=prototype } = typeof prototype
+typeof Virtual { prototype=prototype } = typeof prototype
 
 typeof Prototype { prototype=fn_type } = typeof fn_type
 
@@ -124,7 +126,7 @@ typeof Interface { name=name, variable=var, functions=fns } = do
   modify $ Map.insert var' (TyGeneric var')
   ctx <- get
   mapM (\(fn, t)->
-    let fn_name = case fn of (Virtual (Prototype {name=name})) -> name
+    let fn_name = case fn of Virtual { prototype=Prototype {name=name} } -> name
      in modify $ Map.insert fn_name (TyAbstractFunction t name)
      ) (zip fns fns')
   return TyVoid

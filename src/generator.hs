@@ -54,25 +54,25 @@ generate_node Program { imports=imports, expressions=body } = do
 
 generate_node Import {} = return ()
 
-generate_node (Block nodes) =
+generate_node Block { nodes=nodes } =
   mapM_ generate_node nodes
 
-generate_node (Number a) = do
+generate_node Number { num_value=a } = do
   emit_opcode Op_push
   (case a of
      Left a -> write (toInteger a)
      Right a -> write (decode_double a))
 
-generate_node (String str) = do
+generate_node String { str_value=str } = do
   emit_opcode Op_load_string
   unique_string str
 
-generate_node (Identifier name) = do
+generate_node Identifier { name=name } = do
   emit_opcode Op_lookup
   unique_string name
   write 0 -- lookup cache id - empty for now
 
-generate_node (List items) = do
+generate_node List { items=items } = do
   emit_opcode Op_alloc_list
   write (toInteger ((length items) + 1))
   mapM_ generate_item items
@@ -102,7 +102,7 @@ generate_node fn@Function { name=name } = do
      _   -> emit_opcode Op_bind >> unique_string name)
   generate_function_source fn
 
-generate_node (Extern _) = return ()
+generate_node Extern {} = return ()
 generate_node Interface {} = return ()
 generate_node Implementation {} = return ()
 
