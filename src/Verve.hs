@@ -1,10 +1,10 @@
 module Verve where
 
-import AST
 import BytecodeWriter
-import Parser
+import ErrorReporter
 import Generator
 import Naming
+import Parser
 import TypeChecker
 
 import System.Environment (getArgs)
@@ -25,9 +25,7 @@ main = do
       let nast = naming ast
        in case type_check nast of
             Left (pos, err) -> do
-              printf "On file `%s`, line %d, column %d: \n" (file pos) (line pos) (column pos)
-              putStr "TypeError: "
-              putStrLn err
+              reportError "TypeError" pos err
               exitWith (ExitFailure 1)
             Right _ -> let bytecode = generate nast
                         in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)
