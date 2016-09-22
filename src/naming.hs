@@ -4,43 +4,60 @@ import AST
 
 import qualified Data.Map as Map
 
+import Control.Monad (liftM)
+import Control.Monad.State (State, evalState, gets, modify)
+
 type Context = (Map.Map String AST)
 
 naming :: AST -> AST
-naming = naming' Map.empty
+naming ast = evalState (naming' ast) Map.empty
 
-naming' :: Context -> AST -> AST
-naming' ctx ast =
-  case ast of
-    program@Program { expressions=nodes } ->
-      program { expressions=naming' ctx <$> nodes }
+naming' :: AST -> State Context AST
+naming' program@Program { expressions=nodes } = do
+  nodes' <- mapM naming' nodes
+  return program { expressions=nodes' }
 
-    block@Block { nodes=nodes } ->
-      block { nodes=naming' ctx <$> nodes }
+naming' block@Block { nodes=nodes } = do
+  nodes' <- mapM naming' nodes
+  return block { nodes=nodes' }
 
-    list@List { items=items } ->
-      list { items=naming' ctx <$> items }
+naming' list@List { items=items } = do
+  items' <- mapM naming' items
+  return list { items=items' }
 
-    unop@UnaryOp { operand=operand } ->
-      unop { operand=(naming' ctx operand) }
+naming' unop@UnaryOp { operand=operand } = do
+  operand' <- naming' operand
+  return unop { operand=operand' }
 
-    binop@BinaryOp { lhs=lhs, rhs=rhs } ->
-      binop { lhs=(naming' ctx lhs), rhs=(naming' ctx rhs) }
+naming' binop@BinaryOp { lhs=lhs, rhs=rhs } = do
+  lhs' <- naming' lhs
+  rhs' <- naming' rhs
+  return binop { lhs=lhs', rhs=rhs' }
 
-    iff@If { condition=cond, consequent=conseq, alternate=alt } ->
-      iff { condition=(naming' ctx cond), consequent=(naming' ctx conseq), alternate=(naming' ctx <$> alt) }
+naming' iff@If { condition=cond, consequent=conseq, alternate=alt } = do
+  cond' <- naming' cond
+  conseq' <- naming' conseq
+  {- TODO: there must be a cleaner way of writing this ⬇️ -}
+  alt' <- case alt of
+            Nothing -> return Nothing
+            Just a -> naming' a >>= \a' -> return $ Just a'
+  return iff { condition=cond', consequent=conseq', alternate=alt' }
 
-    fn@Function { params=params, body=body } ->
-      let params' = foldl (\ params p -> params ++ [p { index=length params }]) [] params in
-      let ctx' = foldl (\ c n -> Map.insert (name n) n c) ctx params' in
-      fn { params=params', body=(naming' ctx' body) }
+naming' fn@Function { params=params, body=body } = do
+  let params' = foldl (\ params p -> params ++ [p { index=length params }]) [] params
+  mapM_ (\n -> modify $ Map.insert (name n) n) params'
+  body' <- naming' body
+  return fn { params=params', body=body' }
 
-    id@Identifier { name=name } ->
-      case Map.lookup name ctx of 
-        Nothing -> id
-        Just f -> f
+naming' id@Identifier { pos=pos, name=name } = do
+  value <- gets $ Map.lookup name
+  return $ case value of
+    Nothing -> id
+    Just f -> f { pos=pos }
 
-    call@Call { callee=callee, arguments=args } ->
-      call { callee=(naming' ctx callee), arguments=(naming' ctx <$> args) }
+naming' call@Call { callee=callee, arguments=args } = do
+  callee' <- naming' callee
+  args' <- mapM naming' args
+  return call { callee=callee', arguments=args' }
 
-    _ -> ast
+naming' ast = return ast
