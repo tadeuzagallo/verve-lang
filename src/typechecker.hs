@@ -1,4 +1,4 @@
-module TypeChecker (type_check) where
+module TypeChecker (type_check, Context) where
 
 import AST
 import Type
@@ -17,8 +17,8 @@ type Error = (SourcePos, String)
 type TypeCheckerMonad = ExceptT Error (State Context)
 type TypeCheckerState = TypeCheckerMonad Type
 
-type_check :: AST -> Either (SourcePos, String) Type
-type_check node = evalState (runExceptT $ typeof node) Map.empty
+type_check :: AST -> Either (SourcePos, String) Context
+type_check node = evalState (runExceptT $ typeof node >> get) Map.empty
 
 bind :: AST -> TypeCheckerState
 bind ast = do

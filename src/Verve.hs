@@ -27,5 +27,5 @@ main = do
             Left (pos, err) -> do
               reportError "TypeError" pos err
               exitWith (ExitFailure 1)
-            Right _ -> let bytecode = generate nast
-                        in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)
+            Right ctx -> let bytecode = generate ctx nast
+                          in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)

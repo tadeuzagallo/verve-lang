@@ -60,4 +60,12 @@ naming' call@Call { callee=callee, arguments=args } = do
   args' <- mapM naming' args
   return call { callee=callee', arguments=args' }
 
+naming' intf@Interface { name=name, functions=fns } = do
+  fns' <- mapM naming' fns
+  return intf { functions=fns' }
+
+naming' impl@Implementation { name=name, impl_type=t, functions=fns } = do
+  fns' <- mapM naming' fns
+  return impl { functions=fns' }
+
 naming' ast = return ast

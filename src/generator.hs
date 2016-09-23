@@ -3,10 +3,14 @@ module Generator (generate) where
 import AST hiding (functions)
 import Bytecode
 import Opcode
+import TypeChecker
 
+import Control.Monad.Reader (ReaderT, runReaderT)
 import Control.Monad.State (State, state, get, put, evalState)
 import Data.Bits (shiftL, (.|.))
 import Data.List (elemIndex)
+
+type BytecodeState = ReaderT Context (State Bytecode) ()
 
 initialState = Bytecode
   {
@@ -15,21 +19,21 @@ initialState = Bytecode
     functions = []
   }
 
-generate :: AST -> Bytecode
-generate program =
-  evalState (generate_node program >> get) initialState
+generate :: Context -> AST -> Bytecode
+generate ctx program =
+  evalState (runReaderT (generate_node program >> get) ctx) initialState
 
-emit_opcode :: Opcode -> State Bytecode ()
+emit_opcode :: Opcode -> BytecodeState
 emit_opcode op = do
   bc <- get
   put bc { text = (text bc) ++ [toInteger $ fromEnum op] }
 
-write :: Integer -> State Bytecode ()
+write :: Integer -> BytecodeState
 write value = do
   bc <- get
   put bc { text = (text bc) ++ [value] }
 
-unique_string :: String -> State Bytecode ()
+unique_string :: String -> BytecodeState
 unique_string str = do
   bc <- get
   case elemIndex str (strings bc) of
@@ -46,7 +50,7 @@ decode_double double =
   let (significand, exponent) = decodeFloat double
    in (shiftL (toInteger exponent) 53) .|. significand
 
-generate_node :: AST -> State Bytecode ()
+generate_node :: AST -> BytecodeState
 generate_node Program { imports=imports, expressions=body } = do
   mapM_ generate_node imports
   mapM_ generate_node body
@@ -92,7 +96,7 @@ generate_node Call { callee=callee, arguments=args } = do
   emit_opcode Op_call
   write (toInteger $ length args)
 
-generate_node fn@Function { name=name } = do
+generate_node fn@Function { name=name, params=params, body=body } = do
   bc <- get
   emit_opcode Op_create_closure
   write (toInteger . length $ functions bc)
@@ -100,10 +104,12 @@ generate_node fn@Function { name=name } = do
   (case name of
      "_" -> return ()
      _   -> emit_opcode Op_bind >> unique_string name)
-  generate_function_source fn
+  generate_function_source name params body
 
 generate_node Extern {} = return ()
+
 generate_node Interface {} = return ()
+
 generate_node Implementation {} = return ()
 
 generate_node BinaryOp { op=op, lhs=lhs, rhs=rhs } = do
@@ -119,8 +125,8 @@ generate_node BinaryOp { op=op, lhs=lhs, rhs=rhs } = do
 
 generate_node node = error ("Unhandled node: " ++ (show node))
 
-generate_function_source :: AST -> State Bytecode ()
-generate_function_source Function { name=name, params=params, body=body } = do
+generate_function_source :: String -> [AST] -> AST -> BytecodeState
+generate_function_source name params body = do
   bc <- get
   put initialState { strings = strings bc }
   unique_string name
@@ -134,6 +140,6 @@ generate_function_source Function { name=name, params=params, body=body } = do
     functions = (functions bc) ++ (functions bc2) ++ [text bc2]
            }
 
-param_name :: AST -> State Bytecode ()
+param_name :: AST -> BytecodeState
 param_name FunctionParameter { name=name } =
   unique_string name
