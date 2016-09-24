@@ -90,7 +90,7 @@ typeof Call { pos=pos, callee=callee, arguments=args } = do
     (TyAbstractFunction _ interface_name) -> do
       (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
       t <- gets $ Map.lookup var
-      when (isNothing t) (throwError (pos, "Undecidable abstract function call"))
+      when (case fromJust t of (TyEmptyGeneric _) -> True; _ -> False) (throwError (pos, "Undecidable abstract function call"))
       when (not $ (fromJust t) `elem` impls) (throwError (pos, printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))
       return ()
     _ -> return ()
@@ -112,7 +112,7 @@ typeof Interface { name=name, variable=var, functions=fns } = do
   fns' <- mapM typeof fns
   let interface = (TyInterface name var' fns' [])
   modify $ Map.insert name interface
-  modify $ Map.insert var' (TyGeneric var')
+  modify $ Map.insert var' (TyEmptyGeneric var')
   ctx <- get
   mapM (\(fn, t)->
     let fn_name = case fn of Virtual { prototype=Prototype {name=name} } -> name
@@ -164,8 +164,7 @@ simplify generic@(TyGeneric name) = do
   t <- gets $ Map.lookup name
   case t of
     Nothing -> return generic
-    Just t | t == generic -> return (TyEmptyGeneric name)
-    Just t -> return t
+    Just t -> simplify t
 simplify t = return t
 
 function_type :: [AST] -> AST -> TypeCheckerState
@@ -182,7 +181,7 @@ load_type_variables (Just vars) = do
   -- add_var :: Context -> String -> (MonadState ())
     where add_var = \ctx str -> do {
           str' <- uniquify str;
-          return $ Map.insert str' (TyGeneric str') ctx
+          return $ Map.insert str' (TyEmptyGeneric str') ctx
                                    }
 
 uniquify :: String -> (TypeCheckerMonad String)
