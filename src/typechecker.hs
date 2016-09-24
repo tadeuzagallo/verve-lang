@@ -20,27 +20,12 @@ type TypeCheckerState = TypeCheckerMonad Type
 type_check :: AST -> Either (SourcePos, String) Context
 type_check node = evalState (runExceptT $ typeof node >> get) Map.empty
 
-bind :: AST -> TypeCheckerState
-bind ast = do
-  ctx <- get
-  t <- typeof ast
-  case ast of
-    Function { name=name } -> do
-      put (Map.insert name t ctx)
-      return t
-
-    Extern { prototype=Prototype { name=name } } -> do
-      put (Map.insert name t ctx)
-      return t
-
-    _ -> return t
-
 typeof :: AST -> TypeCheckerState
-typeof Program { expressions=body } =
-  foldlM (flip $ const . bind) TyVoid body
+typeof Program { expressions=nodes } =
+  foldlM (flip $ const . typeof) TyVoid nodes
 
 typeof Block { nodes=nodes } =
-  foldlM (flip $ const . bind) TyVoid nodes
+  foldlM (flip $ const . typeof) TyVoid nodes
 
 typeof Number { num_value=(Left  _) } = return TyInt
 typeof Number { num_value=(Right _) } = return TyFloat
@@ -64,14 +49,14 @@ typeof BasicType { pos=pos, type_name=t } = do
     _ -> maybe throw return value
       where throw = throwError (pos, printf "Unknown type: `%s`" t)
 
-typeof Function { pos=pos, params=params, variables=variables, ret_type=(Just ret_type), body=body } = do
+typeof Function { pos=pos, name=name, params=params, variables=variables, ret_type=(Just ret_type), body=body } = do
   ctx <- get
   load_type_variables variables
   ty_body <- typeof body
   ty_ret <- typeof ret_type
   tyeqv pos ty_body ty_ret
   t <- function_type params ret_type
-  put ctx
+  put (Map.insert name t ctx)
   return t
 
 {-typeless function-}
@@ -83,7 +68,11 @@ typeof Function { pos=pos, name=name } = do
 typeof FunctionType { parameters=params, return_type=ret_type } =
   function_type params ret_type
 
-typeof Extern  { prototype=prototype } = typeof prototype
+typeof Extern  { prototype=prototype } = do
+  t <- typeof prototype
+  modify $ Map.insert (name prototype) t
+  return t
+
 typeof Virtual { prototype=prototype } = typeof prototype
 
 typeof Prototype { prototype=fn_type } = typeof fn_type
