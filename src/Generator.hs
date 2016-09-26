@@ -4,6 +4,7 @@ import AST hiding (functions)
 import Bytecode
 import Opcode
 import TypeChecker
+import Data.Bits (shiftL, (.|.))
 
 import Control.Monad.Reader (ReaderT, runReaderT)
 import Control.Monad.State (State, state, get, put, evalState)
@@ -101,7 +102,7 @@ generate_literal (String str) = do
   emit_opcode Op_load_string
   unique_string str
 
-generate_literal (Identifier name) = do
+generate_literal (Identifier (Loc _ name)) = do
   emit_opcode Op_lookup
   unique_string name
   write 0 -- lookup cache id - empty for now
@@ -147,5 +148,5 @@ generate_function_source name params body = do
            }
 
 param_name :: FunctionParameter String -> BytecodeState
-param_name FunctionParameter { AST.param_name=name } =
+param_name FunctionParameter { AST.param_name=(Loc _ name) } =
   unique_string name

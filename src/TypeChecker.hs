@@ -13,8 +13,7 @@ import Data.Maybe (isNothing, fromJust)
 import Text.Printf (printf)
 
 type Context = (Map.Map String TyType)
-{-type Error = (SourcePos, String)-}
-type Error = String
+type Error = (SourcePos, String)
 type TCState = ExceptT Error (State Context)
 
 type_check :: Program String -> Either Error Context
@@ -38,20 +37,23 @@ typeof_decl (ExternDecl extern) =
 typeof_decl (TypeDecl enum_type) =
   return TyVoid
 
-typeof_decl (ExprDecl expr) =
-  return TyVoid
+typeof_decl (ExprDecl expr) = typeof_expr expr
+
+typeof_expr :: Expr String -> TCState TyType
+typeof_expr (LiteralExpr lit) = typeof_literal lit
+typeof_expr _ = return TyVoid
 
 typeof_literal :: Literal String -> TCState TyType
 typeof_literal (Number (Left  _))  = return TyInt
 typeof_literal (Number (Right  _)) = return TyFloat
 typeof_literal (String _)          = return TyString
-typeof_literal (Identifier name)   = do
+typeof_literal (Identifier (Loc pos name))   = do
   value <- gets (Map.lookup name)
   maybe throw return value
-    where throw = throwError (printf "Unknown identifier: `%s`" name)
+    where throw = throwError (pos, printf "Unknown identifier: `%s`" name)
 
 typeof_type :: Type String -> TCState TyType
-typeof_type (BasicType t) = do
+typeof_type (BasicType (Loc pos t)) = do
   value <- gets (Map.lookup t)
   case t of
     "char" -> return TyChar
@@ -62,7 +64,7 @@ typeof_type (BasicType t) = do
     "bool" -> return TyBool
     "string" -> return TyString
     _ -> maybe throw return value
-      where throw = throwError (printf "Unknown type: `%s`" t)
+      where throw = throwError (pos, printf "Unknown type: `%s`" t)
 
 {-typeof Function { fn_name=name, params=params, variables=variables, ret_type=(Just ret_type), body=body } = do-}
   {-ctx <- get-}
@@ -159,7 +161,7 @@ tyeqv pos t1 t2 = do
     (_, _) ->
       if t1' == t2'
       then return ()
-      else throwError (printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2'))
+      else throwError (pos, printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2'))
 
 simplify :: TyType -> TCState TyType
 {-simplify generic@(TyGeneric name) = do-}
