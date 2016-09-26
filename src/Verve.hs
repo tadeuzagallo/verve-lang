@@ -24,8 +24,8 @@ main = do
     Right ast ->
       let nast = naming ast
        in case type_check nast of
-            Left (pos, err) -> do
-              reportError "TypeError" pos err
+            Left err -> do
+              putStrLn ("TypeError: " ++ err)
               exitWith (ExitFailure 1)
             Right ctx -> let bytecode = generate ctx nast
                           in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)

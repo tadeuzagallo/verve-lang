@@ -7,65 +7,46 @@ import qualified Data.Map as Map
 import Control.Monad (liftM)
 import Control.Monad.State (State, evalState, gets, modify)
 
-type Context = (Map.Map String AST)
+type Context = (Map.Map String Expr)
+type NamingState = State Context
 
-naming :: AST -> AST
-naming ast = evalState (naming' ast) Map.empty
+naming :: Program -> Program
+naming program = evalState (naming_program program) Map.empty
 
-naming' :: AST -> State Context AST
-naming' program@Program { expressions=nodes } = do
-  nodes' <- mapM naming' nodes
-  return program { expressions=nodes' }
 
-naming' block@Block { nodes=nodes } = do
-  nodes' <- mapM naming' nodes
-  return block { nodes=nodes' }
+naming_program :: Program -> NamingState Program
+naming_program (Program imports decls) = do
+  imports' <- mapM naming_import imports
+  decls' <- mapM naming_decl decls
+  return $ Program imports' decls'
 
-naming' list@List { items=items } = do
-  items' <- mapM naming' items
-  return list { items=items' }
+naming_import :: Import -> NamingState Import
+naming_import imp = return imp
 
-naming' unop@UnaryOp { operand=operand } = do
-  operand' <- naming' operand
-  return unop { operand=operand' }
+naming_decl :: TopDecl -> NamingState TopDecl
+naming_decl (InterfaceDecl interface) =
+  InterfaceDecl <$> naming_interface interface 
 
-naming' binop@BinaryOp { lhs=lhs, rhs=rhs } = do
-  lhs' <- naming' lhs
-  rhs' <- naming' rhs
-  return binop { lhs=lhs', rhs=rhs' }
+naming_decl (ImplementationDecl implementation) =
+  ImplementationDecl <$> naming_implementation implementation
 
-naming' iff@If { condition=cond, consequent=conseq, alternate=alt } = do
-  cond' <- naming' cond
-  conseq' <- naming' conseq
-  {- TODO: there must be a cleaner way of writing this ⬇️ -}
-  alt' <- case alt of
-            Nothing -> return Nothing
-            Just a -> naming' a >>= \a' -> return $ Just a'
-  return iff { condition=cond', consequent=conseq', alternate=alt' }
+naming_decl (ExternDecl prototype) =
+  ExternDecl <$> naming_prototype prototype
 
-naming' fn@Function { params=params, body=body } = do
-  let params' = foldl (\ params p -> params ++ [p { index=length params }]) [] params
-  mapM_ (\n -> modify $ Map.insert (name n) n) params'
-  body' <- naming' body
-  return fn { params=params', body=body' }
+naming_decl (TypeDecl enum_type) =
+  return $ TypeDecl enum_type
 
-naming' id@Identifier { pos=pos, name=name } = do
-  value <- gets $ Map.lookup name
-  return $ case value of
-    Nothing -> id
-    Just f -> f { pos=pos }
+naming_decl (ExprDecl expr) =
+  ExprDecl <$> naming_expr expr
 
-naming' call@Call { callee=callee, arguments=args } = do
-  callee' <- naming' callee
-  args' <- mapM naming' args
-  return call { callee=callee', arguments=args' }
+naming_interface :: Interface -> NamingState Interface
+naming_interface interface = return interface
 
-naming' intf@Interface { name=name, functions=fns } = do
-  fns' <- mapM naming' fns
-  return intf { functions=fns' }
+naming_implementation :: Implementation -> NamingState Implementation
+naming_implementation implementation = return implementation
 
-naming' impl@Implementation { name=name, impl_type=t, functions=fns } = do
-  fns' <- mapM naming' fns
-  return impl { functions=fns' }
+naming_prototype :: Prototype -> NamingState Prototype
+naming_prototype prototype = return prototype
 
-naming' ast = return ast
+naming_expr :: Expr -> NamingState Expr
+naming_expr expr = return expr

@@ -12,31 +12,46 @@ import Data.Foldable (foldlM)
 import Data.Maybe (isNothing, fromJust)
 import Text.Printf (printf)
 
-type Context = (Map.Map String Type)
-type Error = (SourcePos, String)
-type TypeCheckerMonad = ExceptT Error (State Context)
-type TypeCheckerState = TypeCheckerMonad Type
+type Context = (Map.Map String TyType)
+{-type Error = (SourcePos, String)-}
+type Error = String
+type TCState = ExceptT Error (State Context)
 
-type_check :: AST -> Either (SourcePos, String) Context
-type_check node = evalState (runExceptT $ typeof node >> get) Map.empty
+type_check :: Program -> Either Error Context
+type_check program =
+  evalState (runExceptT $ typeof_program program >> get) Map.empty
 
-typeof :: AST -> TypeCheckerState
-typeof Program { expressions=nodes } =
-  foldlM (flip $ const . typeof) TyVoid nodes
+typeof_program :: Program -> TCState TyType
+typeof_program (Program imports decls) = do
+  mapM_ typeof_decl decls
+  return TyVoid
 
-typeof Block { nodes=nodes } =
-  foldlM (flip $ const . typeof) TyVoid nodes
+typeof_decl (InterfaceDecl interface) =
+  return TyVoid
 
-typeof Number { num_value=(Left  _) } = return TyInt
-typeof Number { num_value=(Right _) } = return TyFloat
-typeof String {} = return TyString
+typeof_decl (ImplementationDecl implementation) =
+  return TyVoid
 
-typeof Identifier { pos=pos, name=name } = do
+typeof_decl (ExternDecl extern) =
+  return TyVoid
+
+typeof_decl (TypeDecl enum_type) =
+  return TyVoid
+
+typeof_decl (ExprDecl expr) =
+  return TyVoid
+
+typeof_literal :: Literal -> TCState TyType
+typeof_literal (Number (Left  _))  = return TyInt
+typeof_literal (Number (Right  _)) = return TyFloat
+typeof_literal (String _)          = return TyString
+typeof_literal (Identifier name)   = do
   value <- gets (Map.lookup name)
   maybe throw return value
-    where throw = throwError (pos, printf "Unknown identifier: `%s`" name)
+    where throw = throwError (printf "Unknown identifier: `%s`" name)
 
-typeof BasicType { pos=pos, type_name=t } = do
+typeof_type :: Type -> TCState TyType
+typeof_type (BasicType t) = do
   value <- gets (Map.lookup t)
   case t of
     "char" -> return TyChar
@@ -47,96 +62,83 @@ typeof BasicType { pos=pos, type_name=t } = do
     "bool" -> return TyBool
     "string" -> return TyString
     _ -> maybe throw return value
-      where throw = throwError (pos, printf "Unknown type: `%s`" t)
+      where throw = throwError (printf "Unknown type: `%s`" t)
 
-typeof Function { pos=pos, name=name, params=params, variables=variables, ret_type=(Just ret_type), body=body } = do
-  ctx <- get
-  load_type_variables variables
-  ty_body <- typeof body
-  ty_ret <- typeof ret_type
-  tyeqv pos ty_body ty_ret
-  t <- function_type params ret_type
-  put (Map.insert name t ctx)
-  return t
+{-typeof Function { fn_name=name, params=params, variables=variables, ret_type=(Just ret_type), body=body } = do-}
+  {-ctx <- get-}
+  {-load_type_variables variables-}
+  {-ty_body <- typeof body-}
+  {-ty_ret <- typeof ret_type-}
+  {-tyeqv pos ty_body ty_ret-}
+  {-t <- function_type params ret_type-}
+  {-put (Map.insert name t ctx)-}
+  {-return t-}
 
 {-typeless function-}
-typeof Function { pos=pos, name=name } = do
-  t <- gets $ Map.lookup name
-  when (isNothing t) (throwError (pos, "Typeless function without prior declaration"))
-  return (fromJust t)
+{-typeof Function { fn_name=name } = do-}
+  {-t <- gets $ Map.lookup name-}
+  {-when (isNothing t) (throwError ("Typeless function without prior declaration"))-}
+  {-return (fromJust t)-}
 
-typeof FunctionType { parameters=params, return_type=ret_type } =
-  function_type params ret_type
+{-typeof FunctionType { parameters=params, return_type=ret_type } =-}
+  {-function_type params ret_type-}
 
-typeof Extern  { prototype=prototype } = do
-  t <- typeof prototype
-  modify $ Map.insert (name prototype) t
-  return t
+{-typeof Call { callee=callee, arguments=args } = do-}
+  {-ctx <- get-}
+  {-callee_type <- typeof callee-}
+  {-let (params, ret_type) = case callee_type of-}
+                             {-(TyFunction params ret_type) -> (params, ret_type)-}
+                             {-(TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)-}
+  {-when (length params /= length args) (throwError ("Wrong number of arguments for function call"))-}
+  {-args' <- mapM typeof args-}
+  {-mapM_ (uncurry (tyeqv pos)) (zip params args')-}
+  {-case callee_type of-}
+    {-(TyAbstractFunction _ interface_name) -> do-}
+      {-(Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name-}
+      {-t <- gets $ Map.lookup var-}
+      {-when (case fromJust t of (TyEmptyGeneric _) -> True; _ -> False) (throwError ("Undecidable abstract function call"))-}
+      {-when (not $ (fromJust t) `elem` impls) (throwError (printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))-}
+      {-return ()-}
+    {-_ -> return ()-}
+  {-put ctx-}
+  {-return ret_type-}
 
-typeof Virtual { prototype=prototype } = typeof prototype
+{-typeof BinaryOp { lhs=lhs, rhs=rhs } = do-}
+  {-lhs' <- typeof lhs-}
+  {-rhs' <- typeof rhs-}
+  {-case (lhs', rhs') of-}
+    {-(TyInt, TyInt) -> return TyInt-}
+    {-(TyFloat, TyFloat) -> return TyFloat-}
+    {-(_, _) -> throwError ("Binary operations can only happen on two integers or two floats")-}
 
-typeof Prototype { prototype=fn_type } = typeof fn_type
+{-typeof Interface { name=name, variable=var, functions=fns } = do-}
+  {-var' <- uniquify var-}
+  {-fns' <- mapM typeof fns-}
+  {-let interface = (TyInterface name var' fns' [])-}
+  {-modify $ Map.insert name interface-}
+  {-modify $ Map.insert var' (TyEmptyGeneric var')-}
+  {-ctx <- get-}
+  {-mapM (\(fn, t)->-}
+    {-let fn_name = case fn of Virtual { prototype=Prototype {name=name} } -> name-}
+     {-in modify $ Map.insert fn_name (TyAbstractFunction t name)-}
+     {-) (zip fns fns')-}
+  {-return TyVoid-}
 
-typeof Call { pos=pos, callee=callee, arguments=args } = do
-  ctx <- get
-  callee_type <- typeof callee
-  let (params, ret_type) = case callee_type of
-                             (TyFunction params ret_type) -> (params, ret_type)
-                             (TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)
-  when (length params /= length args) (throwError (pos, "Wrong number of arguments for function call"))
-  args' <- mapM typeof args
-  mapM_ (uncurry (tyeqv pos)) (zip params args')
-  case callee_type of
-    (TyAbstractFunction _ interface_name) -> do
-      (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
-      t <- gets $ Map.lookup var
-      when (case fromJust t of (TyEmptyGeneric _) -> True; _ -> False) (throwError (pos, "Undecidable abstract function call"))
-      when (not $ (fromJust t) `elem` impls) (throwError (pos, printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))
-      return ()
-    _ -> return ()
-  put ctx
-  return ret_type
+{-typeof Implementation { name=name, impl_type=t', functions=fns } = do-}
+  {-ctx <- get-}
+  {-interface <- gets $ Map.lookup name-}
+  {-when (isNothing interface) (throwError ("Interface for implementation not found"))-}
 
-typeof FunctionParameter { type'=(Just t) } = typeof t
+  {-t <- typeof t'-}
+  {-modify $ Map.insert (ty_variable $ fromJust interface) t-}
+  {-mapM_ typeof fns-}
 
-typeof BinaryOp { pos=pos, lhs=lhs, rhs=rhs } = do
-  lhs' <- typeof lhs
-  rhs' <- typeof rhs
-  case (lhs', rhs') of
-    (TyInt, TyInt) -> return TyInt
-    (TyFloat, TyFloat) -> return TyFloat
-    (_, _) -> throwError (pos, "Binary operations can only happen on two integers or two floats")
+  {-let i = fromJust interface-}
+  {-put $ Map.adjust (\i -> i { ty_implementations=t:(ty_implementations i) }) name ctx-}
+  {-ctx' <- get-}
+  {-return TyVoid-}
 
-typeof Interface { name=name, variable=var, functions=fns } = do
-  var' <- uniquify var
-  fns' <- mapM typeof fns
-  let interface = (TyInterface name var' fns' [])
-  modify $ Map.insert name interface
-  modify $ Map.insert var' (TyEmptyGeneric var')
-  ctx <- get
-  mapM (\(fn, t)->
-    let fn_name = case fn of Virtual { prototype=Prototype {name=name} } -> name
-     in modify $ Map.insert fn_name (TyAbstractFunction t name)
-     ) (zip fns fns')
-  return TyVoid
-
-typeof Implementation { pos=pos, name=name, impl_type=t', functions=fns } = do
-  ctx <- get
-  interface <- gets $ Map.lookup name
-  when (isNothing interface) (throwError (pos, "Interface for implementation not found"))
-
-  t <- typeof t'
-  modify $ Map.insert (ty_variable $ fromJust interface) t
-  mapM_ typeof fns
-
-  let i = fromJust interface
-  put $ Map.adjust (\i -> i { ty_implementations=t:(ty_implementations i) }) name ctx
-  ctx' <- get
-  return TyVoid
-
-typeof t = throwError (SourcePos { file="", line=0, column=0 }, "Unhandled node: " ++ (show t))
-
-tyeqv :: SourcePos -> Type -> Type -> (TypeCheckerMonad ())
+tyeqv :: SourcePos -> TyType -> TyType -> TCState ()
 tyeqv pos t1 t2 = do
   t1' <- simplify t1
   t2' <- simplify t2
@@ -157,21 +159,17 @@ tyeqv pos t1 t2 = do
     (_, _) ->
       if t1' == t2'
       then return ()
-      else throwError (pos, printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2'))
+      else throwError (printf "Invalid type: expected `%s` but received `%s`" (show t1') (show t2'))
 
-simplify :: Type -> TypeCheckerState
-simplify generic@(TyGeneric name) = do
-  t <- gets $ Map.lookup name
-  case t of
-    Nothing -> return generic
-    Just t -> simplify t
+simplify :: TyType -> TCState TyType
+{-simplify generic@(TyGeneric name) = do-}
+  {-t <- gets $ Map.lookup name-}
+  {-case t of-}
+    {-Nothing -> return generic-}
+    {-Just t -> simplify t-}
 simplify t = return t
 
-function_type :: [AST] -> AST -> TypeCheckerState
-function_type params ret_type =
-  TyFunction <$> (mapM typeof params) <*> (typeof ret_type)
-
-load_type_variables :: Maybe [String] -> (TypeCheckerMonad ())
+load_type_variables :: Maybe [String] -> TCState ()
 load_type_variables Nothing = return ()
 load_type_variables (Just vars) = do
   ctx <- get
@@ -184,14 +182,15 @@ load_type_variables (Just vars) = do
           return $ Map.insert str' (TyEmptyGeneric str') ctx
                                    }
 
-uniquify :: String -> (TypeCheckerMonad String)
+uniquify :: String -> (TCState String)
 uniquify var = uniquify' var var
 
-uniquify' :: String -> String -> (TypeCheckerMonad String)
+uniquify' :: String -> String -> (TCState String)
 uniquify' orig var = do
   t <- gets $ Map.lookup var
   case t of
     Nothing -> do
       modify $ Map.insert orig (TyGeneric var)
       return var
+
     Just t -> uniquify' orig (var ++ "'")
