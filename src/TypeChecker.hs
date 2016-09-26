@@ -41,7 +41,28 @@ typeof_decl (ExprDecl expr) = typeof_expr expr
 
 typeof_expr :: Expr String -> TCState TyType
 typeof_expr (LiteralExpr lit) = typeof_literal lit
-typeof_expr _ = return TyVoid
+
+typeof_expr (Call callee (Loc pos args)) = do
+  ctx <- get
+  callee_type <- typeof_expr callee
+  let (params, ret_type) = case callee_type of
+                             (TyFunction params ret_type) -> (params, ret_type)
+                             (TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)
+  when (length params /= length args) (throwError (pos, "Wrong number of arguments for function call"))
+  args' <- mapM typeof_expr args
+  mapM_ (uncurry (tyeqv pos)) (zip params args')
+  case callee_type of
+    (TyAbstractFunction _ interface_name) -> do
+      (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
+      t <- gets $ Map.lookup var
+      when (case fromJust t of (TyEmptyGeneric _) -> True; _ -> False) (throwError (pos, "Undecidable abstract function call"))
+      when (not $ (fromJust t) `elem` impls) (throwError (pos, printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))
+      return ()
+    _ -> return ()
+  put ctx
+  return ret_type
+
+typeof_expr expr = throwError (SourcePos 0 0 "/tmp/foo.vrv", "Unsupported expr: " ++ (show expr))
 
 typeof_literal :: Literal String -> TCState TyType
 typeof_literal (Number (Left  _))  = return TyInt
@@ -84,26 +105,6 @@ typeof_type (BasicType (Loc pos t)) = do
 
 {-typeof FunctionType { parameters=params, return_type=ret_type } =-}
   {-function_type params ret_type-}
-
-{-typeof Call { callee=callee, arguments=args } = do-}
-  {-ctx <- get-}
-  {-callee_type <- typeof callee-}
-  {-let (params, ret_type) = case callee_type of-}
-                             {-(TyFunction params ret_type) -> (params, ret_type)-}
-                             {-(TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)-}
-  {-when (length params /= length args) (throwError ("Wrong number of arguments for function call"))-}
-  {-args' <- mapM typeof args-}
-  {-mapM_ (uncurry (tyeqv pos)) (zip params args')-}
-  {-case callee_type of-}
-    {-(TyAbstractFunction _ interface_name) -> do-}
-      {-(Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name-}
-      {-t <- gets $ Map.lookup var-}
-      {-when (case fromJust t of (TyEmptyGeneric _) -> True; _ -> False) (throwError ("Undecidable abstract function call"))-}
-      {-when (not $ (fromJust t) `elem` impls) (throwError (printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))-}
-      {-return ()-}
-    {-_ -> return ()-}
-  {-put ctx-}
-  {-return ret_type-}
 
 {-typeof BinaryOp { lhs=lhs, rhs=rhs } = do-}
   {-lhs' <- typeof lhs-}

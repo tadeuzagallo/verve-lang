@@ -100,7 +100,7 @@ data Expr id = Match { match_value :: Expr id, cases :: [Case id] }
              | If { condition :: Expr id, consequent :: Block id, alternate :: Maybe (Block id) }
              | Let { assignments :: [Assignment id], let_block :: Block id } 
              | FunctionExpr (Function id)
-             | Call { callee :: Expr id, arguments ::  [Expr id] }
+             | Call { callee :: Expr id, arguments ::  Loc [Expr id] }
              | UnaryOp { op :: id, operand :: Expr id}
              | BinaryOp { op :: id, lhs :: Expr id, rhs :: Expr id}
              | LiteralExpr (Literal id)

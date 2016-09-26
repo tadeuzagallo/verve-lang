@@ -68,7 +68,7 @@ generate_expr (FunctionExpr fn) = generate_function fn
 
 generate_expr (LiteralExpr lit) = generate_literal lit
 
-generate_expr (Call callee args) = do
+generate_expr (Call callee (Loc _ args)) = do
   mapM_ generate_expr (reverse args)
   generate_expr callee
   emit_opcode Op_call

@@ -4,7 +4,7 @@ import AST
 import Lexer
 
 import Control.Monad (liftM)
-import Text.Parsec hiding (string, char)
+import Text.Parsec hiding (string, char, getPosition)
 
 p_program =
   (Program <$> (many p_import)
@@ -135,8 +135,8 @@ p_pattern =
 
 p_call =
   make_call <$> ((FunctionExpr <$> p_function) <|> p_identifier)
-            <*> many (parens $ list p_expr)
-    where make_call x xs = foldl Call x xs
+            <*> many (loc <*> (parens $ list p_expr))
+              where make_call x xs = foldl Call x xs
 
 p_function = (try $ string "fn") *>
   (Function <$> identifier

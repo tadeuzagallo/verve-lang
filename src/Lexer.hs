@@ -38,6 +38,7 @@ getPosition = do
     file=(Parsec.sourceName pos)
             }
 
+loc = Loc <$> getPosition
 loc_id = Loc <$> getPosition <*> identifier
 
 op_table =

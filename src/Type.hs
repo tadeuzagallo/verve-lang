@@ -14,4 +14,5 @@ data TyType = TyChar
             | TyImplementation TyType TyType
             | TyEnum [TyType]
             | TyFunction [TyType] TyType
+            | TyAbstractFunction TyType String
             deriving (Show, Eq)
