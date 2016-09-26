@@ -19,7 +19,7 @@ initialState = Bytecode
     functions = []
   }
 
-generate :: Context -> Program -> Bytecode
+generate :: Context -> Program String -> Bytecode
 generate ctx program =
   evalState (runReaderT (generate_program program >> get) ctx) initialState
 
@@ -50,19 +50,19 @@ decode_double double =
   let (significand, exponent) = decodeFloat double
    in (shiftL (toInteger exponent) 53) .|. significand
 
-generate_program :: Program -> BytecodeState
+generate_program :: Program String -> BytecodeState
 generate_program (Program _ decls) = do
   mapM_ generate_decl decls
   emit_opcode Op_exit
 
-generate_decl :: TopDecl -> BytecodeState
+generate_decl :: TopDecl String -> BytecodeState
 generate_decl (InterfaceDecl _) = return ()
 generate_decl (ImplementationDecl _) = return ()
 generate_decl (ExternDecl _) = return ()
 generate_decl (TypeDecl _) = return ()
 generate_decl (ExprDecl expr) = generate_expr expr
 
-generate_expr :: Expr -> BytecodeState
+generate_expr :: Expr String -> BytecodeState
 generate_expr (FunctionExpr fn) = generate_function fn
 
 generate_expr (LiteralExpr lit) = generate_literal lit
@@ -86,11 +86,11 @@ generate_expr (BinaryOp op lhs rhs) = do
 
 generate_expr expr = error ("Unhandled expr: " ++ (show expr))
 
-generate_block :: Block -> BytecodeState
+generate_block :: Block String -> BytecodeState
 generate_block (Block exprs) =
   mapM_ generate_expr exprs
 
-generate_literal :: Literal -> BytecodeState
+generate_literal :: Literal String -> BytecodeState
 generate_literal (Number a) = do
   emit_opcode Op_push
   (case a of
@@ -115,12 +115,12 @@ generate_literal (List items) = do
                                   ; write 1
                                   }
 
-generate_fn_param :: FunctionParameter -> BytecodeState
+generate_fn_param :: FunctionParameter String -> BytecodeState
 generate_fn_param FunctionParameter { index=index } = do
   emit_opcode Op_push_arg
   write (toInteger index)
 
-generate_function :: Function -> BytecodeState
+generate_function :: Function String -> BytecodeState
 generate_function fn@Function { fn_name=name, params=params, body=body } = do
   bc <- get
   emit_opcode Op_create_closure
@@ -131,7 +131,7 @@ generate_function fn@Function { fn_name=name, params=params, body=body } = do
      _   -> emit_opcode Op_bind >> unique_string name)
   generate_function_source name params body
 
-generate_function_source :: String -> [FunctionParameter] -> Block -> BytecodeState
+generate_function_source :: String -> [FunctionParameter String] -> Block String -> BytecodeState
 generate_function_source name params body = do
   bc <- get
   put initialState { strings = strings bc }
@@ -146,6 +146,6 @@ generate_function_source name params body = do
     functions = (functions bc) ++ (functions bc2) ++ [text bc2]
            }
 
-param_name :: FunctionParameter -> BytecodeState
+param_name :: FunctionParameter String -> BytecodeState
 param_name FunctionParameter { AST.param_name=name } =
   unique_string name

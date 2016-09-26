@@ -17,11 +17,11 @@ type Context = (Map.Map String TyType)
 type Error = String
 type TCState = ExceptT Error (State Context)
 
-type_check :: Program -> Either Error Context
+type_check :: Program String -> Either Error Context
 type_check program =
   evalState (runExceptT $ typeof_program program >> get) Map.empty
 
-typeof_program :: Program -> TCState TyType
+typeof_program :: Program String -> TCState TyType
 typeof_program (Program imports decls) = do
   mapM_ typeof_decl decls
   return TyVoid
@@ -41,7 +41,7 @@ typeof_decl (TypeDecl enum_type) =
 typeof_decl (ExprDecl expr) =
   return TyVoid
 
-typeof_literal :: Literal -> TCState TyType
+typeof_literal :: Literal String -> TCState TyType
 typeof_literal (Number (Left  _))  = return TyInt
 typeof_literal (Number (Right  _)) = return TyFloat
 typeof_literal (String _)          = return TyString
@@ -50,7 +50,7 @@ typeof_literal (Identifier name)   = do
   maybe throw return value
     where throw = throwError (printf "Unknown identifier: `%s`" name)
 
-typeof_type :: Type -> TCState TyType
+typeof_type :: Type String -> TCState TyType
 typeof_type (BasicType t) = do
   value <- gets (Map.lookup t)
   case t of

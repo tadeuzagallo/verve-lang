@@ -156,5 +156,5 @@ p_ret_type = (string "->") *> p_type
 p_identifier =
   LiteralExpr <$> (Identifier <$> identifier)
 
-parseString :: String -> String -> Either ParseError Program
+parseString :: String -> String -> Either ParseError (Program String)
 parseString file_name source = parse p_program file_name source
