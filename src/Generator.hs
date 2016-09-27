@@ -68,6 +68,15 @@ generate_expr (FunctionExpr fn) = generate_function fn
 
 generate_expr (LiteralExpr lit) = generate_literal lit
 
+generate_expr (Var (Loc _ name)) = do
+  emit_opcode Op_lookup
+  unique_string name
+  write 0 -- lookup cache id - empty for now
+
+generate_expr (Arg _ index) = do
+  emit_opcode Op_push_arg
+  write (toInteger index)
+
 generate_expr (Call callee (Loc _ args)) = do
   mapM_ generate_expr (reverse args)
   generate_expr callee
@@ -102,11 +111,6 @@ generate_literal (String str) = do
   emit_opcode Op_load_string
   unique_string str
 
-generate_literal (Identifier (Loc _ name)) = do
-  emit_opcode Op_lookup
-  unique_string name
-  write 0 -- lookup cache id - empty for now
-
 generate_literal (List items) = do
   emit_opcode Op_alloc_list
   write (toInteger ((length items) + 1))
@@ -116,13 +120,8 @@ generate_literal (List items) = do
                                   ; write 1
                                   }
 
-generate_fn_param :: FunctionParameter String -> BytecodeState
-generate_fn_param FunctionParameter { index=index } = do
-  emit_opcode Op_push_arg
-  write (toInteger index)
-
 generate_function :: Function String -> BytecodeState
-generate_function fn@Function { fn_name=name, params=params, body=body } = do
+generate_function fn@Function { fn_name=(Loc _ name), params=params, body=body } = do
   bc <- get
   emit_opcode Op_create_closure
   write (toInteger . length $ functions bc)

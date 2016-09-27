@@ -46,7 +46,6 @@ data ImplementationFunction id = ExternImplementation id
 
 data Literal id = Number (Either Integer Double)
                 | String id
-                | Identifier (Loc id)
                 | List [Expr id]
                 deriving (Show)
 
@@ -89,7 +88,7 @@ data Pattern id =  Pattern { ctor :: id
 data Block id = Block [Expr id] 
   deriving (Show)
 
-data Function id = Function { fn_name :: id
+data Function id = Function { fn_name :: Loc id
                             , variables :: Maybe [id]
                             , params :: [FunctionParameter id]
                             , ret_type :: Maybe (Type id)
@@ -103,5 +102,7 @@ data Expr id = Match { match_value :: Expr id, cases :: [Case id] }
              | Call { callee :: Expr id, arguments ::  Loc [Expr id] }
              | UnaryOp { op :: id, operand :: Expr id}
              | BinaryOp { op :: id, lhs :: Expr id, rhs :: Expr id}
+             | Var (Loc id)
+             | Arg (Loc id) Int
              | LiteralExpr (Literal id)
              deriving (Show)
