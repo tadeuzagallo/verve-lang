@@ -26,10 +26,10 @@ typeof_program (Program imports decls) = do
   return TyVoid
 
 typeof_decl (InterfaceDecl interface) =
-  return TyVoid
+   typeof_interface interface
 
 typeof_decl (ImplementationDecl implementation) =
-  return TyVoid
+  typeof_implementation implementation
 
 typeof_decl (ExternDecl (Prototype name signature)) = do
   fn_type <- typeof_fn_type signature
@@ -51,6 +51,15 @@ typeof_expr (Arg (Loc pos name) _) =
 
 typeof_expr (Var (Loc pos name)) =
   typeof_ident pos name
+
+{-typeof_expr BinaryOp { lhs=lhs, rhs=rhs } = do-}
+  {-lhs' <- typeof_expr lhs-}
+  {-rhs' <- typeof_expr rhs-}
+  {-case (lhs', rhs') of-}
+    {-(TyInt, TyInt) -> return TyInt-}
+    {-(TyFloat, TyFloat) -> return TyFloat-}
+    {-(_, _) -> throwError (pos, "Binary operations can only happen on two integers or two floats")-}
+
 
 typeof_expr (Call callee (Loc pos args)) = do
   ctx <- get
@@ -115,6 +124,12 @@ typeof_function Function { fn_name=(Loc pos name), params=params, variables=vari
   put (Map.insert name t ctx)
   return t
 
+{-typeless function-}
+typeof_function Function { fn_name=(Loc pos name) } = do
+  t <- gets $ Map.lookup name
+  when (isNothing t) (throwError (pos, "Typeless function without prior declaration"))
+  return (fromJust t)
+
 typeof_block :: Block String -> TCState TyType
 typeof_block (Block exprs) =
   foldlM (flip $ const . typeof_expr) TyVoid exprs
@@ -125,46 +140,56 @@ typeof_fn_param (FunctionParameter (Loc _ name) _ (Just param_type)) = do
   modify $ Map.insert name ty_param
   return ty_param
 
-{-typeless function-}
-{-typeof Function { fn_name=name } = do-}
-  {-t <- gets $ Map.lookup name-}
-  {-when (isNothing t) (throwError ("Typeless function without prior declaration"))-}
-  {-return (fromJust t)-}
+typeof_interface :: Interface String -> TCState TyType
+typeof_interface Interface { interface_name=name, interface_var=var, interface_functions=fns } = do
+  var' <- uniquify var
+  fns' <- mapM typeof_interface_fn fns
+  let interface = (TyInterface name var' fns' [])
+  modify $ Map.insert name interface
+  modify $ Map.insert var' (TyEmptyGeneric var')
+  ctx <- get
+  mapM (\(fn, t)->
+    let fn_name = case fn of (AbstractFunction (Prototype name _)) -> name
+     in modify $ Map.insert fn_name (TyAbstractFunction t name)
+     ) (zip fns fns')
+  return TyVoid
 
-{-typeof BinaryOp { lhs=lhs, rhs=rhs } = do-}
-  {-lhs' <- typeof lhs-}
-  {-rhs' <- typeof rhs-}
-  {-case (lhs', rhs') of-}
-    {-(TyInt, TyInt) -> return TyInt-}
-    {-(TyFloat, TyFloat) -> return TyFloat-}
-    {-(_, _) -> throwError ("Binary operations can only happen on two integers or two floats")-}
+typeof_interface_fn :: InterfaceFunction String -> TCState TyType
+typeof_interface_fn  (AbstractFunction proto) =
+  typeof_prototype proto
 
-{-typeof Interface { name=name, variable=var, functions=fns } = do-}
-  {-var' <- uniquify var-}
-  {-fns' <- mapM typeof fns-}
-  {-let interface = (TyInterface name var' fns' [])-}
-  {-modify $ Map.insert name interface-}
-  {-modify $ Map.insert var' (TyEmptyGeneric var')-}
-  {-ctx <- get-}
-  {-mapM (\(fn, t)->-}
-    {-let fn_name = case fn of Virtual { prototype=Prototype {name=name} } -> name-}
-     {-in modify $ Map.insert fn_name (TyAbstractFunction t name)-}
-     {-) (zip fns fns')-}
-  {-return TyVoid-}
+typeof_interface_fn (ConcreteFunction fn) =
+  typeof_function fn
 
-{-typeof Implementation { name=name, impl_type=t', functions=fns } = do-}
-  {-ctx <- get-}
-  {-interface <- gets $ Map.lookup name-}
-  {-when (isNothing interface) (throwError ("Interface for implementation not found"))-}
+typeof_prototype :: Prototype String -> TCState TyType
+typeof_prototype (Prototype name signature) = do
+  t <- typeof_fn_type signature
+  modify $ Map.insert name t
+  return t
 
-  {-t <- typeof t'-}
-  {-modify $ Map.insert (ty_variable $ fromJust interface) t-}
-  {-mapM_ typeof fns-}
+typeof_implementation :: Implementation String -> TCState TyType
+typeof_implementation Implementation { target_interface=(Loc pos name), implementation_type=t', implementation_functions=fns } = do
+  ctx <- get
+  interface <- gets $ Map.lookup name
+  when (isNothing interface) (throwError (pos, "Interface for implementation not found"))
 
-  {-let i = fromJust interface-}
-  {-put $ Map.adjust (\i -> i { ty_implementations=t:(ty_implementations i) }) name ctx-}
-  {-ctx' <- get-}
-  {-return TyVoid-}
+  t <- typeof_type t'
+  modify $ Map.insert (ty_variable $ fromJust interface) t
+  mapM_ typeof_impl_fn fns
+
+  let i = fromJust interface
+  put $ Map.adjust (\i -> i { ty_implementations=t:(ty_implementations i) }) name ctx
+  ctx' <- get
+  return TyVoid
+
+typeof_impl_fn :: ImplementationFunction String -> TCState TyType
+typeof_impl_fn (ExternImplementation (Loc pos name)) = do
+  t <- gets $ Map.lookup name
+  maybe throw return t
+    where throw = (throwError (pos, "Externing unknown function"))
+
+typeof_impl_fn (LocalImplementation fn) =
+  typeof_function fn
 
 tyeqv :: SourcePos -> TyType -> TyType -> TCState ()
 tyeqv pos t1 t2 = do

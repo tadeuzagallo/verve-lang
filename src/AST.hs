@@ -35,12 +35,12 @@ data InterfaceFunction id = AbstractFunction (Prototype id)
                           | ConcreteFunction (Function id)
                           deriving (Show)
 
-data Implementation id = Implementation { target_interface :: id
+data Implementation id = Implementation { target_interface :: Loc id
                                         , implementation_type :: Type id
                                         , implementation_functions :: [ImplementationFunction id]
                                         } deriving (Show)
 
-data ImplementationFunction id = ExternImplementation id
+data ImplementationFunction id = ExternImplementation (Loc id)
                                | LocalImplementation (Function id)
                                deriving (Show)
 

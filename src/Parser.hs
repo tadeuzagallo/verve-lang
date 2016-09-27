@@ -31,7 +31,7 @@ p_interface =
             <*> braces (many1 (p_virtual_function <|> (ConcreteFunction <$> p_function)))
 
 p_implementation =
-  Implementation <$> ((try $ string "implementation") *> identifier)
+  Implementation <$> ((try $ string "implementation") *> loc identifier)
                  <*> angles p_type
                  <*> braces (many1 ((ExternImplementation <$> p_extern_impl) <|> (LocalImplementation <$> p_typeless_function)))
 
@@ -39,7 +39,7 @@ p_extern_decl = (try $ string "extern") *>
    p_prototype
 
 p_extern_impl = (try $ string "extern") *>
-  identifier
+  loc identifier
 
 p_virtual_function = (try $ string "virtual") *>
   (AbstractFunction <$> p_prototype)
