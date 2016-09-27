@@ -38,8 +38,7 @@ getPosition = do
     file=(Parsec.sourceName pos)
             }
 
-loc = Loc <$> getPosition
-loc_id = Loc <$> getPosition <*> identifier
+loc a = Loc <$> getPosition <*> a
 
 op_table =
   [ [prefix "-", prefix "+"]

@@ -45,9 +45,9 @@ p_virtual_function = (try $ string "virtual") *>
   (AbstractFunction <$> p_prototype)
 
 p_typeless_function = (try $ string "fn") *>
-  (Function <$> (loc <*> identifier)
+  (Function <$> loc identifier
             <*> return Nothing
-            <*> parens (list (FunctionParameter <$> loc_id <*> (return 0) <*> (return Nothing)))
+            <*> parens (list (FunctionParameter <$> loc identifier <*> (return 0) <*> (return Nothing)))
             <*> (return Nothing)
             <*> p_block)
 
@@ -76,7 +76,7 @@ p_data_type =
            <*> (angles $ list1 p_type)
 
 p_basic_type =
-  BasicType <$> loc_id
+  BasicType <$> loc identifier
 
 p_prototype =
   Prototype <$> identifier
@@ -135,11 +135,11 @@ p_pattern =
 
 p_call =
   make_call <$> ((FunctionExpr <$> p_function) <|> p_identifier)
-            <*> many (loc <*> (parens $ list p_expr))
+            <*> many (loc . parens $ list p_expr)
               where make_call x xs = foldl Call x xs
 
 p_function = (try $ string "fn") *>
-  (Function <$> (loc <*> identifier)
+  (Function <$> loc identifier
             <*> p_generics
             <*> p_params
             <*> liftM Just p_ret_type
@@ -147,13 +147,13 @@ p_function = (try $ string "fn") *>
 
 p_params =
   parens . list $
-    FunctionParameter <$> loc_id
+    FunctionParameter <$> loc identifier
                       <*> (return 0)
                       <*> (char ':' *> liftM Just p_type)
 
 p_ret_type = (string "->") *> p_type
 
-p_identifier = Var <$> loc_id
+p_identifier = Var <$> loc identifier
 
 parseString :: String -> String -> Either ParseError (Program String)
 parseString file_name source = parse p_program file_name source
