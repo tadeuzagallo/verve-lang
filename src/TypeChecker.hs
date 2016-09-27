@@ -1,4 +1,4 @@
-module TypeChecker (type_check, Context) where
+module TypeChecker (type_check, Context, TcId(..)) where
 
 import AST
 import Type
@@ -16,12 +16,12 @@ type Context = (Map.Map String TyType)
 type Error = (SourcePos, String)
 type TcState = ExceptT Error (State Context)
 
-data TcId = TcId String TyType
+data TcId = TcId String TyType deriving (Show)
 type TcRes t = TcState (t TcId, TyType)
 
-type_check :: Program String -> Either Error Context
+type_check :: Program String -> Either Error (Program TcId)
 type_check program =
-  evalState (runExceptT $ typeof_program program >> get) Map.empty
+  liftM fst $ evalState (runExceptT $ typeof_program program) Map.empty
 
 typeof_program :: Program String -> TcRes Program
 typeof_program (Program _ decls) = do
@@ -209,7 +209,7 @@ typeof_implementation Implementation { target_interface=(Loc pos name), implemen
   (fns', ty_fns) <- liftM unzip $ mapM typeof_impl_fn fns
 
   put $ Map.adjust (\i -> i { ty_implementations=ty_t:(ty_implementations i) }) name ctx
-  return (Implementation (Loc pos (TcId name ty_interface)) t' fns', TyVoid)
+  return (Implementation (Loc pos (TcId name ty_t)) t' fns', TyVoid)
 
 typeof_impl_fn :: ImplementationFunction String -> TcRes ImplementationFunction
 typeof_impl_fn (ExternImplementation (Loc pos name)) = do

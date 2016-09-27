@@ -11,7 +11,7 @@ import Control.Monad.State (State, state, get, put, evalState)
 import Data.Bits (shiftL, (.|.))
 import Data.List (elemIndex)
 
-type BytecodeState = ReaderT Context (State Bytecode) ()
+type BytecodeState = State Bytecode ()
 
 initialState = Bytecode
   {
@@ -20,9 +20,9 @@ initialState = Bytecode
     functions = []
   }
 
-generate :: Context -> Program String -> Bytecode
-generate ctx program =
-  evalState (runReaderT (generate_program program >> get) ctx) initialState
+generate :: Program TcId -> Bytecode
+generate program =
+  evalState (generate_program program >> get) initialState
 
 emit_opcode :: Opcode -> BytecodeState
 emit_opcode op = do
@@ -51,24 +51,24 @@ decode_double double =
   let (significand, exponent) = decodeFloat double
    in (shiftL (toInteger exponent) 53) .|. significand
 
-generate_program :: Program String -> BytecodeState
+generate_program :: Program TcId -> BytecodeState
 generate_program (Program _ decls) = do
   mapM_ generate_decl decls
   emit_opcode Op_exit
 
-generate_decl :: TopDecl String -> BytecodeState
+generate_decl :: TopDecl TcId -> BytecodeState
 generate_decl (InterfaceDecl _) = return ()
 generate_decl (ImplementationDecl _) = return ()
 generate_decl (ExternDecl _) = return ()
 generate_decl (TypeDecl _) = return ()
 generate_decl (ExprDecl expr) = generate_expr expr
 
-generate_expr :: Expr String -> BytecodeState
+generate_expr :: Expr TcId -> BytecodeState
 generate_expr (FunctionExpr fn) = generate_function fn
 
 generate_expr (LiteralExpr lit) = generate_literal lit
 
-generate_expr (Var (Loc _ name)) = do
+generate_expr (Var (Loc _ (TcId name _))) = do
   emit_opcode Op_lookup
   unique_string name
   write 0 -- lookup cache id - empty for now
@@ -92,7 +92,7 @@ generate_expr (List items) = do
                                   ; write 1
                                   }
 
-generate_expr (BinaryOp op lhs rhs) = do
+generate_expr (BinaryOp (TcId op _) lhs rhs) = do
   generate_expr lhs
   generate_expr rhs
 
@@ -105,7 +105,7 @@ generate_expr (BinaryOp op lhs rhs) = do
 
 generate_expr expr = error ("Unhandled expr: " ++ (show expr))
 
-generate_block :: Block String -> BytecodeState
+generate_block :: Block TcId -> BytecodeState
 generate_block (Block exprs) =
   mapM_ generate_expr exprs
 
@@ -120,8 +120,8 @@ generate_literal (String str) = do
   emit_opcode Op_load_string
   unique_string str
 
-generate_function :: Function String -> BytecodeState
-generate_function fn@Function { fn_name=(Loc _ name), params=params, body=body } = do
+generate_function :: Function TcId -> BytecodeState
+generate_function fn@Function { fn_name=(Loc _ (TcId name _)), params=params, body=body } = do
   bc <- get
   emit_opcode Op_create_closure
   write (toInteger . length $ functions bc)
@@ -131,7 +131,7 @@ generate_function fn@Function { fn_name=(Loc _ name), params=params, body=body }
      _   -> emit_opcode Op_bind >> unique_string name)
   generate_function_source name params body
 
-generate_function_source :: String -> [FunctionParameter String] -> Block String -> BytecodeState
+generate_function_source :: String -> [FunctionParameter TcId] -> Block TcId -> BytecodeState
 generate_function_source name params body = do
   bc <- get
   put initialState { strings = strings bc }
@@ -146,6 +146,6 @@ generate_function_source name params body = do
     functions = (functions bc) ++ (functions bc2) ++ [text bc2]
            }
 
-param_name :: FunctionParameter String -> BytecodeState
-param_name FunctionParameter { AST.param_name=(Loc _ name) } =
+param_name :: FunctionParameter TcId -> BytecodeState
+param_name FunctionParameter { AST.param_name=(Loc _ (TcId name _)) } =
   unique_string name

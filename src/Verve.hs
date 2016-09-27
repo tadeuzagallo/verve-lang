@@ -1,6 +1,7 @@
 module Verve where
 
 import BytecodeWriter
+import DeSugar
 import ErrorReporter
 import Generator
 import Naming
@@ -27,5 +28,5 @@ main = do
             Left (pos, err) -> do
               reportError "TypeError" pos err
               exitWith (ExitFailure 1)
-            Right ctx -> let bytecode = generate ctx nast
-                          in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)
+            Right tast -> let bytecode = generate $ desugar tast
+                           in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)
