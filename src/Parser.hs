@@ -85,7 +85,7 @@ p_prototype =
 -- TODO: operators
 p_expr = expr_parser p_expr'
 
-p_expr' = (LiteralExpr <$> p_list)
+p_expr' = p_list
        <|> (LiteralExpr <$> p_number)
        <|> (LiteralExpr <$> p_string)
        <|> p_if

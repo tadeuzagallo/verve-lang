@@ -83,5 +83,5 @@ naming_block :: Block String -> NamingState (Block String)
 naming_block (Block exprs) =
   Block <$> mapM naming_expr exprs
 
-naming_literal :: Literal String -> NamingState (Literal String)
+naming_literal :: Literal -> NamingState Literal
 naming_literal lit = return lit

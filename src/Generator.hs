@@ -83,6 +83,15 @@ generate_expr (Call callee (Loc _ args)) = do
   emit_opcode Op_call
   write (toInteger $ length args)
 
+generate_expr (List items) = do
+  emit_opcode Op_alloc_list
+  write (toInteger ((length items) + 1))
+  mapM_ generate_expr items
+    where generate_item item = do { generate_expr item
+                                  ; emit_opcode Op_obj_store_at
+                                  ; write 1
+                                  }
+
 generate_expr (BinaryOp op lhs rhs) = do
   generate_expr lhs
   generate_expr rhs
@@ -100,7 +109,7 @@ generate_block :: Block String -> BytecodeState
 generate_block (Block exprs) =
   mapM_ generate_expr exprs
 
-generate_literal :: Literal String -> BytecodeState
+generate_literal :: Literal -> BytecodeState
 generate_literal (Number a) = do
   emit_opcode Op_push
   (case a of
@@ -110,15 +119,6 @@ generate_literal (Number a) = do
 generate_literal (String str) = do
   emit_opcode Op_load_string
   unique_string str
-
-generate_literal (List items) = do
-  emit_opcode Op_alloc_list
-  write (toInteger ((length items) + 1))
-  mapM_ generate_expr items
-    where generate_item item = do { generate_expr item
-                                  ; emit_opcode Op_obj_store_at
-                                  ; write 1
-                                  }
 
 generate_function :: Function String -> BytecodeState
 generate_function fn@Function { fn_name=(Loc _ name), params=params, body=body } = do

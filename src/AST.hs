@@ -44,10 +44,10 @@ data ImplementationFunction id = ExternImplementation (Loc id)
                                | LocalImplementation (Function id)
                                deriving (Show)
 
-data Literal id = Number (Either Integer Double)
-                | String id
-                | List [Expr id]
-                deriving (Show)
+data Literal
+  = Number (Either Integer Double)
+  | String String
+  deriving (Show)
 
 data FnType id = FnType { fn_variables :: (Maybe [id])
                         , parameters :: [Type id]
@@ -104,5 +104,6 @@ data Expr id = Match { match_value :: Expr id, cases :: [Case id] }
              | BinaryOp { op :: id, lhs :: Expr id, rhs :: Expr id}
              | Var (Loc id)
              | Arg (Loc id) Int
-             | LiteralExpr (Literal id)
+             | LiteralExpr Literal
+             | List [Expr id]
              deriving (Show)
