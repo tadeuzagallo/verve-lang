@@ -31,8 +31,10 @@ typeof_decl (InterfaceDecl interface) =
 typeof_decl (ImplementationDecl implementation) =
   return TyVoid
 
-typeof_decl (ExternDecl extern) =
-  return TyVoid
+typeof_decl (ExternDecl (Prototype name signature)) = do
+  fn_type <- typeof_fn_type signature
+  modify $ Map.insert name fn_type
+  return fn_type
 
 typeof_decl (TypeDecl enum_type) =
   return TyVoid
@@ -72,6 +74,10 @@ typeof_literal (Identifier (Loc pos name))   = do
   value <- gets (Map.lookup name)
   maybe throw return value
     where throw = throwError (pos, printf "Unknown identifier: `%s`" name)
+
+typeof_fn_type :: FnType String -> TCState TyType
+typeof_fn_type (FnType _  params ret_type) = do
+  TyFunction <$> mapM typeof_type params <*> typeof_type ret_type
 
 typeof_type :: Type String -> TCState TyType
 typeof_type (BasicType (Loc pos t)) = do
