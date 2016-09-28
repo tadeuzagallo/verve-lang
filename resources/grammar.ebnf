@@ -4,7 +4,7 @@ import ::= "import" pattern "from" STRING (e | "as" UCID)
 
 pattern ::= "*" | "{" (LCID ",")+ "}"
 
-top_level ::= interface | implementation | extern | expr | type_decl
+top_level ::= interface | implementation | extern_decl | expr | type_decl
 
 expr(prec) ::= factor {binop expr(q)}
 
@@ -26,13 +26,15 @@ interface_decl ::= virtual | function
 
 implementation ::= "implementation" LCID "<" type ">" "{" {implementation_decl} "}"
 
-implementation_decl ::= typeless_function | extern
+implementation_decl ::= typeless_function | extern_impl
 
 typeless_function ::= "fn" LCID "(" {LCID ","} ")" body
 
+extern_impl ::= "extern" LCID
+
 virtual ::= "virtual" prototype
 
-extern ::= "extern" prototype
+extern_decl ::= "extern" prototype
 
 prototype ::= LCID generics "(" {type ","} ")" "->" type
 
