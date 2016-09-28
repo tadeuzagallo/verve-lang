@@ -15,7 +15,19 @@ desugar_decl (InterfaceDecl interface) =
 desugar_decl (ImplementationDecl impl) =
   desugar_impl impl
 
+desugar_decl (ExprDecl expr) =
+  ExprDecl <$> desugar_expr expr
+
 desugar_decl decl = [decl]
+
+desugar_expr :: Expr TcId -> [Expr TcId]
+desugar_expr expr@(Call callee@(Var (Loc _ (TcId _ (TyAbstractFunction _ _)))) (Loc pos args)) =
+  [Call callee (Loc pos $ args ++ [LiteralExpr $ Number $ Left 0x42])]
+
+desugar_expr expr@(Call callee (Loc pos args)) =
+  [Call (head $ desugar_expr callee) (Loc pos $ concatMap desugar_expr args)]
+
+desugar_expr expr = [expr]
 
 desugar_interface :: Interface TcId -> [TopDecl TcId]
 desugar_interface (Interface name var fns) =
@@ -33,7 +45,7 @@ desugar_interface_fn (TcId iname _) (AbstractFunction (Prototype (TcId fname t) 
     Nothing
     (Block [
     Call
-      (Call (var "at") (loc [var $ iname ++ "$" ++ fname, arg (length params)]))
+      (Call (var "type$map") (loc [var $ iname ++ "$" ++ fname, arg (length params)]))
       (loc $ foldl toArg [] params) ])]
         where toParam a t = a ++ [param $ length a]
               toArg a t = a ++ [arg $ length a]
@@ -48,6 +60,8 @@ desugar_impl_fn _ _ (ExternImplementation {}) = []
 desugar_impl_fn iname tname (LocalImplementation fn@(Function { fn_name=(Loc _ (TcId fname _)) })) =
   return fn { fn_name=loc_id (iname ++ "$" ++ tname ++ "$" ++ fname) }
 
+
+-- Helpers
 dummy_loc :: SourcePos
 dummy_loc = (SourcePos 0 0 "")
 
