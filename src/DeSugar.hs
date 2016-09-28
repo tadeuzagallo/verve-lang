@@ -4,30 +4,45 @@ import AST
 import Type
 import TypeChecker
 
-desugar :: Program TcId -> Program TcId
-desugar (Program imports decls) =
-  Program imports (concatMap desugar_decl decls)
+import Control.Monad (liftM)
+import Control.Monad.Reader (Reader, runReader)
 
-desugar_decl :: TopDecl TcId -> [TopDecl TcId]
+type DsState = Reader Context
+
+desugar :: Context -> Program TcId -> Program TcId
+desugar ctx program =
+  runReader (desugar_program program) ctx
+
+desugar_program :: Program TcId -> DsState (Program TcId)
+desugar_program (Program imports decls) = do
+  decls' <- mapM desugar_decl decls
+  return $ Program imports (concat decls')
+
+desugar_decl :: TopDecl TcId -> DsState [TopDecl TcId]
 desugar_decl (InterfaceDecl interface) =
-  desugar_interface interface
+  return $ desugar_interface interface
 
 desugar_decl (ImplementationDecl impl) =
-  desugar_impl impl
+  return $ desugar_impl impl
 
-desugar_decl (ExprDecl expr) =
-  ExprDecl <$> desugar_expr expr
+desugar_decl (ExprDecl expr) = do
+  exprs <- desugar_expr expr
+  return $ ExprDecl <$> exprs
 
-desugar_decl decl = [decl]
+desugar_decl decl = return [decl]
 
-desugar_expr :: Expr TcId -> [Expr TcId]
-desugar_expr expr@(Call callee@(Var (Loc _ (TcId _ (TyAbstractFunction _ _)))) (Loc pos args)) =
-  [Call callee (Loc pos $ args ++ [LiteralExpr $ Number $ Left 0x42])]
+desugar_expr :: Expr TcId -> DsState [Expr TcId]
+desugar_expr (Call callee@(Var (Loc _ (TcId _ (TyAbstractFunction _ _)))) (Loc pos args)) = do
+  let args' = args ++ [LiteralExpr $ Number $ Left 0x42]
+  (callee':_) <- desugar_expr callee
+  return [Call callee' (Loc pos args')]
 
-desugar_expr expr@(Call callee (Loc pos args)) =
-  [Call (head $ desugar_expr callee) (Loc pos $ concatMap desugar_expr args)]
+desugar_expr expr@(Call callee (Loc pos args)) = do
+  (callee':_) <- desugar_expr callee
+  args' <- mapM desugar_expr args
+  return [Call callee' (Loc pos $ concat args')]
 
-desugar_expr expr = [expr]
+desugar_expr expr = return $ [expr]
 
 desugar_interface :: Interface TcId -> [TopDecl TcId]
 desugar_interface (Interface name var fns) =
@@ -35,7 +50,7 @@ desugar_interface (Interface name var fns) =
 
 desugar_interface_fn :: TcId -> InterfaceFunction TcId -> [Function TcId]
 desugar_interface_fn (TcId name _) (ConcreteFunction fn@(Function { fn_name=(Loc _ (TcId fname _)) })) =
-  return fn { fn_name=loc_id (name) }
+  return fn { fn_name=loc_id fname }
 
 desugar_interface_fn (TcId iname _) (AbstractFunction (Prototype (TcId fname t) (FnType vars params ret_type))) =
   [Function

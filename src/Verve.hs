@@ -24,9 +24,10 @@ main = do
       exitWith (ExitFailure 1)
     Right ast ->
       let nast = naming ast
-       in case type_check nast of
+          (tast, ctx) = type_check nast
+       in case tast of
             Left (pos, err) -> do
               reportError "TypeError" pos err
               exitWith (ExitFailure 1)
-            Right tast -> let bytecode = generate $ desugar tast
+            Right tast -> let bytecode = generate $ desugar ctx tast
                            in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)

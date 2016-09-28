@@ -6,7 +6,7 @@ import Type
 import Control.Monad (when, liftM)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity, runIdentity)
-import Control.Monad.State (State, evalState, get, gets, put, modify)
+import Control.Monad.State (State, runState, get, gets, put, modify)
 import qualified Data.Map as Map
 import Data.Foldable (foldlM)
 import Data.Maybe (isNothing, fromJust)
@@ -19,9 +19,10 @@ type TcState = ExceptT Error (State Context)
 data TcId = TcId String TyType deriving (Show)
 type TcRes t = TcState (t TcId, TyType)
 
-type_check :: Program String -> Either Error (Program TcId)
+type_check :: Program String -> (Either Error (Program TcId), Context)
 type_check program =
-  liftM fst $ evalState (runExceptT $ typeof_program program) Map.empty
+  let (res, ctx) = runState (runExceptT $ typeof_program program) Map.empty
+   in (liftM fst res, ctx)
 
 typeof_program :: Program String -> TcRes Program
 typeof_program (Program _ decls) = do
