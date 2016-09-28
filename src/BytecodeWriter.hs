@@ -8,9 +8,12 @@ import Data.ByteString (hPut, pack)
 import Data.Word (Word8)
 import System.IO (Handle, hPutStr, hPutChar)
 
+import qualified Data.Map as Map
+
 write_bytecode :: Bytecode -> Handle -> IO ()
 write_bytecode bytecode handle =
   write_strings handle (strings bytecode) >>
+  write_type_maps handle (type_maps bytecode) >>
   write_functions handle (functions bytecode) >>
   write_text handle (text bytecode)
 
@@ -37,6 +40,17 @@ write_padding handle strings =
       padding_size = (8 - size) `mod` 8
       padding = map (\_ -> 1 :: Word8) [1..padding_size]
    in hPut handle (pack padding)
+
+write_type_maps :: Handle -> Map.Map Integer [Integer] -> IO [[()]]
+write_type_maps handle type_maps =
+  write_section handle TypeMaps >>
+  mapM (write_type_map handle) (Map.toList type_maps)
+
+write_type_map :: Handle -> (Integer, [Integer]) -> IO [()]
+write_type_map handle (dict, insts) =
+  write_int handle type_map_header >>
+  write_int handle dict >>
+  mapM (write_int handle) insts
 
 write_functions :: Handle -> [[Integer]] -> IO [()]
 write_functions _ [] = return []
