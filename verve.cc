@@ -35,6 +35,9 @@ void printUsage() {
 
   printf("  %-30s", "verve --print-ast <input>");
   puts("Print the Abstract Syntax Tree for <input>");
+
+  printf("  %-30s", "verve --dis-bc <input>");
+  puts("Print the disassembly for the pre-generated <input> bytecode file");
 }
 
 #if !__APPLE__
@@ -58,21 +61,22 @@ int main(int argc, char **argv) {
   bool isDebug = first && strcmp(first, "-d") == 0;
   bool isCompile = first && strcmp(first, "-c") == 0;
   bool isBytecode = first && strcmp(first, "-b") == 0;
+  bool isDisassembleBytecode = first && strcmp(first, "--dis-bc") == 0;
   bool isAST = first && strcmp(first, "--print-ast") == 0;
   bool isHelp = first && (strcmp(first, "-h") == 0 || strcmp(first, "--help") == 0);
 
   if (
       (isCompile && argc != 4) ||
-      ((isDebug || isBytecode || isAST) && argc != 3) ||
+      ((isDebug || isBytecode || isAST || isDisassembleBytecode) && argc != 3) ||
       isHelp ||
-      (!isHelp && !isDebug && !isCompile && !isBytecode && !isAST && argc != 2)
+      (!isHelp && !isDebug && !isCompile && !isBytecode && !isAST && !isDisassembleBytecode && argc != 2)
      )
   {
     printUsage();
     return EXIT_FAILURE;
   }
 
-  auto filename = isDebug || isCompile || isBytecode || isAST ? argv[2] : argv[1];
+  auto filename = isDebug || isCompile || isBytecode || isAST || isDisassembleBytecode ? argv[2] : argv[1];
 
   FILE *source = fopen(filename, "r");
 
@@ -82,6 +86,18 @@ int main(int argc, char **argv) {
     printf("Error: Cannot open file at `%s`\n", name);
     return EXIT_FAILURE;
   }
+
+  if (isDisassembleBytecode) {
+    fclose(source);
+    std::ifstream input(filename, std::ios_base::binary);
+    std::stringstream bytecode;
+    bytecode << input.rdbuf();
+    input.close();
+    Verve::Disassembler disassembler(bytecode);
+    disassembler.dump();
+    return EXIT_SUCCESS;
+  }
+
 
   fseek(source, 0, SEEK_END);
   size_t sourceSize = ftell(source);
