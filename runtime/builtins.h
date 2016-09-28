@@ -41,6 +41,8 @@ namespace Verve {
   VERVE_FUNCTION(count);
   VERVE_FUNCTION(heapSize);
 
+  VERVE_FUNCTION(type_map);
+
   void registerBuiltins(VM &);
 
 }

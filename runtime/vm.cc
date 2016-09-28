@@ -81,6 +81,7 @@ uintptr_t allocate(VM *vm, unsigned size) {
     assert(header == Section::Header);
 
     loadStrings();
+    loadTypeMaps();
     loadFunctions();
     loadText();
   }
@@ -104,6 +105,36 @@ uintptr_t allocate(VM *vm, unsigned size) {
       m_stringTable.push_back(str);
 
       while (m_bytecode[pc] == '\1') pc++;
+    }
+  }
+
+  inline void VM::loadTypeMaps() {
+    auto header = read<uint64_t>();
+    if (header != Section::TypeMaps) {
+      pc -= WORD_SIZE;
+      return;
+    }
+
+    auto initialHeader = read<uint64_t>();
+    assert(initialHeader == Section::TypeMapHeader);
+
+    while (true) {
+      auto inameId = read<uint64_t>();
+
+      std::vector<int> insts;
+      bool done = false;
+      while (true) {
+        auto argId = read<uint64_t>();
+        if (argId == Section::Header || argId == Section::TypeMapHeader) {
+          done = argId == Section::Header;
+          break;
+        }
+
+        insts.push_back(argId);
+      }
+
+      m_typeMaps[m_stringTable[inameId].str()] = insts;
+      if (done) break;
     }
   }
 

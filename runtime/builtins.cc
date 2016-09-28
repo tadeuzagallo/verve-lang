@@ -49,6 +49,8 @@ namespace Verve {
     REGISTER(substr, substr);
     REGISTER(count, count);
     REGISTER(__heap-size__, heapSize);
+
+    REGISTER(type$map, type_map);
   }
 
 
@@ -222,4 +224,16 @@ namespace Verve {
     return Value((int)vm->heapSize);
   }
 
+  VERVE_FUNCTION(type_map) {
+    assert(argc == 2);
+
+    auto dictName = argv[0].asString();
+    auto typeIndex = argv[1].asInt();
+
+    auto typeMap = vm->m_typeMaps[dictName.str()];
+    auto fnNameIndex = typeMap[typeIndex];
+    auto fnName = vm->m_stringTable[fnNameIndex];
+
+    return vm->m_scope->get(fnName);
+  }
 }

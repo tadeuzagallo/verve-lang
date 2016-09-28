@@ -9,6 +9,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <unordered_map>
 
 #pragma once
 
@@ -31,6 +32,7 @@ namespace Verve {
       void execute();
       void linkBytecode();
       inline void loadStrings();
+      inline void loadTypeMaps();
       inline void loadFunctions();
       inline void loadText();
       void trackAllocation(void *, size_t);
@@ -60,6 +62,7 @@ namespace Verve {
       bool m_needsLinking;
       std::vector<String> m_stringTable;
       std::vector<Function> m_userFunctions;
+      std::unordered_map<std::string, std::vector<int>> m_typeMaps;
 
     private:
       uint8_t *m_bytecode;
