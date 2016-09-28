@@ -29,5 +29,5 @@ main = do
             Left (pos, err) -> do
               reportError "TypeError" pos err
               exitWith (ExitFailure 1)
-            Right tast -> let bytecode = generate $ desugar ctx tast
+            Right tast -> let bytecode = generate ctx $ desugar ctx tast
                            in withBinaryFile (args !! 1) WriteMode (write_bytecode bytecode)

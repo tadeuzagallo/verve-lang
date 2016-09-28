@@ -65,7 +65,7 @@ desugar_interface_fn (TcId iname _) (AbstractFunction (Prototype (TcId fname t) 
     Nothing
     (Block [
     Call
-      (Call (var "type$map") (loc [var $ iname ++ "$" ++ fname, arg (length params)]))
+      (Call (var "type$map") (loc [string $ iname ++ "$" ++ fname, arg (length params)]))
       (loc $ foldl toArg [] params) ])]
         where toParam a t = a ++ [param $ length a]
               toArg a t = a ++ [arg $ length a]
@@ -96,6 +96,9 @@ loc_id = loc . tcid
 
 var :: String -> Expr TcId
 var n = Var (loc_id n)
+
+string :: String -> Expr TcId
+string s = LiteralExpr $ String s
 
 arg :: Int -> Expr TcId
 arg index = Arg (loc_id "") index

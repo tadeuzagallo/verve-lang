@@ -3,26 +3,31 @@ module Generator (generate) where
 import AST hiding (functions)
 import Bytecode
 import Opcode
+import Type
 import TypeChecker
 import Data.Bits (shiftL, (.|.))
 
-import Control.Monad.Reader (ReaderT, runReaderT)
-import Control.Monad.State (State, state, get, put, evalState)
+import Control.Monad.Reader (ReaderT, asks, runReaderT)
+import Control.Monad.State (State, evalState, get, gets, modify, put, state)
 import Data.Bits (shiftL, (.|.))
 import Data.List (elemIndex)
 
-type BytecodeState = State Bytecode ()
+import qualified Data.Map as Map
+
+type BcM = ReaderT Context (State Bytecode)
+type BytecodeState = BcM ()
 
 initialState = Bytecode
   {
     text = [],
     strings = [],
-    functions = []
+    functions = [],
+    type_maps = Map.empty
   }
 
-generate :: Program TcId -> Bytecode
-generate program =
-  evalState (generate_program program >> get) initialState
+generate :: Context -> Program TcId -> Bytecode
+generate ctx program =
+  evalState (runReaderT (generate_program program >> get) ctx) initialState
 
 emit_opcode :: Opcode -> BytecodeState
 emit_opcode op = do
@@ -34,17 +39,20 @@ write value = do
   bc <- get
   put bc { text = (text bc) ++ [value] }
 
-unique_string :: String -> BytecodeState
+unique_string :: String -> BcM Integer
 unique_string str = do
   bc <- get
   case elemIndex str (strings bc) of
-    Just index -> write $ toInteger index
+    Just index -> return $ toInteger index
     Nothing -> let id = toInteger $ length (strings bc)
                 in do {
                       put bc { strings = (strings bc) ++ [str] };
-                      write id
+                      return id
                       }
 
+write_unique_string :: String -> BytecodeState
+write_unique_string s =
+  unique_string s >>= write
 
 decode_double :: Double -> Integer
 decode_double double =
@@ -70,7 +78,7 @@ generate_expr (LiteralExpr lit) = generate_literal lit
 
 generate_expr (Var (Loc _ (TcId name _))) = do
   emit_opcode Op_lookup
-  unique_string name
+  write_unique_string name
   write 0 -- lookup cache id - empty for now
 
 generate_expr (Arg _ index) = do
@@ -82,6 +90,7 @@ generate_expr (Call callee (Loc _ args)) = do
   generate_expr callee
   emit_opcode Op_call
   write (toInteger $ length args)
+  generate_type_map callee
 
 generate_expr (List items) = do
   emit_opcode Op_alloc_list
@@ -97,7 +106,7 @@ generate_expr (BinaryOp (TcId op _) lhs rhs) = do
   generate_expr rhs
 
   emit_opcode Op_lookup
-  unique_string op
+  write_unique_string op
   write 0 -- lookup cache disabled for now
 
   emit_opcode Op_call
@@ -118,7 +127,7 @@ generate_literal (Number a) = do
 
 generate_literal (String str) = do
   emit_opcode Op_load_string
-  unique_string str
+  write_unique_string str
 
 generate_function :: Function TcId -> BytecodeState
 generate_function fn@Function { fn_name=(Loc _ (TcId name _)), params=params, body=body } = do
@@ -128,14 +137,14 @@ generate_function fn@Function { fn_name=(Loc _ (TcId name _)), params=params, bo
   write 0 -- capturesScope
   (case name of
      "_" -> return ()
-     _   -> emit_opcode Op_bind >> unique_string name)
+     _   -> emit_opcode Op_bind >> write_unique_string name)
   generate_function_source name params body
 
 generate_function_source :: String -> [FunctionParameter TcId] -> Block TcId -> BytecodeState
 generate_function_source name params body = do
   bc <- get
   put initialState { strings = strings bc }
-  unique_string name
+  write_unique_string name
   write (toInteger $ length params)
   mapM_ Generator.param_name params
   generate_block body
@@ -148,4 +157,20 @@ generate_function_source name params body = do
 
 param_name :: FunctionParameter TcId -> BytecodeState
 param_name FunctionParameter { AST.param_name=(Loc _ (TcId name _)) } =
-  unique_string name
+  write_unique_string name
+
+generate_type_map :: Expr TcId -> BytecodeState
+generate_type_map (Var (Loc _ (TcId _ (TyAbsInst t (TyAbstractFunction _ iname))))) = do
+  (Just (TyInterface {ty_implementations=impls, ty_functions=fns})) <- asks $ Map.lookup iname
+  mapM (generate_interface_fn iname impls) fns
+  return ()
+
+generate_type_map _ = return ()
+
+generate_interface_fn :: String -> [TyType] -> TyType -> BytecodeState
+generate_interface_fn iname insts (TyFunction fname _) = do
+  iname_id <- unique_string (iname ++ "$" ++ fname)
+  impl_ids <- mapM (unique_string . (\n -> iname ++ "$" ++ n ++ "$" ++ fname) . show) insts
+  ty_maps <- gets $ type_maps
+  let maps = Map.insert iname_id impl_ids ty_maps
+  modify $ (\bc -> bc { type_maps=maps })

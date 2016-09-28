@@ -13,7 +13,8 @@ data TyType = TyChar
             | TyInterface { ty_name :: String, ty_variable :: String, ty_functions :: [TyType], ty_implementations :: [TyType] }
             | TyImplementation TyType TyType
             | TyEnum [TyType]
-            | TyFunction [TyType] TyType
+            | TyFnType [TyType] TyType
+            | TyFunction String TyType
             | TyAbstractFunction TyType String
             | TyAbsInst TyType TyType
             deriving (Show, Eq)

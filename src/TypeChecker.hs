@@ -38,10 +38,9 @@ typeof_decl (ImplementationDecl implementation) = do
   (i, ty) <- typeof_implementation implementation
   return (ImplementationDecl i, ty)
 
-typeof_decl (ExternDecl (Prototype name signature)) = do
-  (proto, fn_type) <- typeof_fn_type signature
-  modify $ Map.insert name fn_type
-  return (ExternDecl (Prototype (TcId name fn_type) proto), fn_type)
+typeof_decl (ExternDecl proto@(Prototype name _)) = do
+  (proto', ty_proto) <- typeof_prototype proto
+  return (ExternDecl proto', ty_proto)
 
 {-typeof_decl (TypeDecl enum_type) =-}
   {-return (TyVoid-}
@@ -80,8 +79,8 @@ typeof_expr (Call callee (Loc pos args)) = do
   ctx <- get
   (callee', callee_type) <- typeof_expr callee
   let (params, ret_type) = case callee_type of
-                             (TyFunction params ret_type) -> (params, ret_type)
-                             (TyAbstractFunction (TyFunction params ret_type) _) -> (params, ret_type)
+                             (TyFunction _ (TyFnType params ret_type)) -> (params, ret_type)
+                             (TyAbstractFunction (TyFunction _ (TyFnType params ret_type)) _) -> (params, ret_type)
   when (length params /= length args) (throwError (pos, "Wrong number of arguments for function call"))
   (args', ty_args) <- liftM unzip $ mapM typeof_expr args
   mapM_ (uncurry (tyeqv pos)) (zip params ty_args)
@@ -119,7 +118,7 @@ typeof_fn_type (FnType vars params ret_type) = do
   (params', ty_params) <- liftM unzip $ mapM typeof_type params
   (ret_type', ty_ret_type) <- typeof_type ret_type
   {-TODO: fix function variables-}
-  return (FnType (Just []) params' ret_type', TyFunction ty_params ty_ret_type)
+  return (FnType (Just []) params' ret_type', TyFnType ty_params ty_ret_type)
 
 typeof_type :: Type String -> TcRes Type
 typeof_type (BasicType (Loc pos t)) = do
@@ -144,7 +143,7 @@ typeof_function Function { fn_name=(Loc pos name), params=params, variables=vari
   (body', ty_body) <- typeof_block body
   (ret_type', ty_ret) <- typeof_type ret_type
   tyeqv pos ty_body ty_ret
-  let t = TyFunction ty_params ty_ret
+  let t = TyFunction name (TyFnType ty_params ty_ret)
   put (Map.insert name t ctx)
   return (Function (Loc pos (TcId name t)) (Nothing) params' (Just ret_type') body', t)
 
@@ -152,7 +151,7 @@ typeof_function Function { fn_name=(Loc pos name), params=params, variables=vari
 typeof_function fn@Function { fn_name=(Loc pos name), params=params, body=body } = do
   t <- gets $ Map.lookup name
   when (isNothing t) (throwError (pos, "Typeless function without prior declaration"))
-  let (TyAbstractFunction (TyFunction ty_params ty_ret) _) = fromJust t
+  let (TyAbstractFunction (TyFunction _ (TyFnType ty_params ty_ret)) _) = fromJust t
   let params' = map (\((FunctionParameter (Loc pos name) index Nothing), ty_param) ->
                       FunctionParameter (Loc pos (TcId name ty_param)) index Nothing) (zip params ty_params)
 
@@ -200,8 +199,9 @@ typeof_interface_fn (ConcreteFunction fn) = do
 typeof_prototype :: Prototype String -> TcRes Prototype
 typeof_prototype (Prototype name signature) = do
   (proto, t) <- typeof_fn_type signature
-  modify $ Map.insert name t
-  return (Prototype (TcId name t) proto, t)
+  let t' = TyFunction name t
+  modify $ Map.insert name t'
+  return (Prototype (TcId name t') proto, t')
 
 typeof_implementation :: Implementation String -> TcRes Implementation
 typeof_implementation Implementation { target_interface=(Loc pos name), implementation_type=t, implementation_functions=fns } = do

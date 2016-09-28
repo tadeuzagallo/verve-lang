@@ -9,4 +9,5 @@ function_header = 0xCE0F
 data Section = Strings
              | Functions
              | Text
+             | InstanceMaps
              deriving (Show, Enum)
