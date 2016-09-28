@@ -15,4 +15,5 @@ data TyType = TyChar
             | TyEnum [TyType]
             | TyFunction [TyType] TyType
             | TyAbstractFunction TyType String
+            | TyAbsInst TyType TyType
             deriving (Show, Eq)

@@ -85,16 +85,21 @@ typeof_expr (Call callee (Loc pos args)) = do
   when (length params /= length args) (throwError (pos, "Wrong number of arguments for function call"))
   (args', ty_args) <- liftM unzip $ mapM typeof_expr args
   mapM_ (uncurry (tyeqv pos)) (zip params ty_args)
-  case callee_type of
-    (TyAbstractFunction _ interface_name) -> do
-      (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
-      t <- gets $ Map.lookup var
-      when (case fromJust t of (TyEmptyGeneric _) -> True; _ -> False) (throwError (pos, "Undecidable abstract function call"))
-      when (not $ (fromJust t) `elem` impls) (throwError (pos, printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ fromJust t) (show impls)))
-      return ()
-    _ -> return ()
+  t <- case callee_type of
+            (TyAbstractFunction _ interface_name) -> do
+              (Just (TyInterface {ty_name=name, ty_variable=var, ty_implementations=impls})) <- gets $ Map.lookup interface_name
+              (Just t) <- gets $ Map.lookup var
+              when (case t of (TyEmptyGeneric _) -> True; _ -> False) (throwError (pos, "Undecidable abstract function call"))
+              when (not $ t `elem` impls) (throwError (pos, printf "Implementation not found: interface `%s`, impl_type `%s`, impls: `%s`" name (show $ t) (show impls)))
+              return $ Just t
+            _ -> return Nothing
   put ctx
-  return (Call callee' (Loc pos args'), ret_type)
+  let callee'' = case (t, callee') of
+                  (Just t, (Var (Loc pos (TcId n abs@(TyAbstractFunction {}))))) ->
+                    Var (Loc pos (TcId n (TyAbsInst t abs)))
+                  _ -> callee'
+
+  return (Call callee'' (Loc pos args'), ret_type)
 
 typeof_expr expr = throwError (SourcePos 0 0 "/tmp/foo.vrv", "Unsupported expr: " ++ (show expr))
 

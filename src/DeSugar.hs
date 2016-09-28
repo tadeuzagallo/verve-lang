@@ -5,7 +5,11 @@ import Type
 import TypeChecker
 
 import Control.Monad (liftM)
-import Control.Monad.Reader (Reader, runReader)
+import Control.Monad.Reader (Reader, runReader, asks)
+import Data.List (elemIndex)
+import Data.Maybe (fromJust)
+
+import qualified Data.Map as Map
 
 type DsState = Reader Context
 
@@ -32,8 +36,9 @@ desugar_decl (ExprDecl expr) = do
 desugar_decl decl = return [decl]
 
 desugar_expr :: Expr TcId -> DsState [Expr TcId]
-desugar_expr (Call callee@(Var (Loc _ (TcId _ (TyAbstractFunction _ _)))) (Loc pos args)) = do
-  let args' = args ++ [LiteralExpr $ Number $ Left 0x42]
+desugar_expr (Call callee@(Var (Loc _ (TcId _ (TyAbsInst t (TyAbstractFunction _ iname))))) (Loc pos args)) = do
+  (Just (TyInterface {ty_implementations=impls})) <- asks $ Map.lookup iname
+  let args' = args ++ [LiteralExpr $ Number $ Left $ toInteger $ fromJust $ t `elemIndex` impls]
   (callee':_) <- desugar_expr callee
   return [Call callee' (Loc pos args')]
 
@@ -49,7 +54,7 @@ desugar_interface (Interface name var fns) =
   ExprDecl <$> (FunctionExpr <$> concatMap (desugar_interface_fn name) fns)
 
 desugar_interface_fn :: TcId -> InterfaceFunction TcId -> [Function TcId]
-desugar_interface_fn (TcId name _) (ConcreteFunction fn@(Function { fn_name=(Loc _ (TcId fname _)) })) =
+desugar_interface_fn _ (ConcreteFunction fn@(Function { fn_name=(Loc _ (TcId fname _)) })) =
   return fn { fn_name=loc_id fname }
 
 desugar_interface_fn (TcId iname _) (AbstractFunction (Prototype (TcId fname t) (FnType vars params ret_type))) =
