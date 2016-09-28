@@ -67,7 +67,7 @@ p_type = (FunctionType <$> p_function_type)
      <|> p_basic_type
 
 p_function_type =
-  FnType <$> return Nothing
+  FnType <$> p_generics
          <*> (parens $ list p_type)
          <*> ((string "->") *> p_type)
 
