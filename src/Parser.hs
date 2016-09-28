@@ -59,8 +59,8 @@ p_type_decl = (try $ string "type") *>
 p_generics = optionMaybe . angles $ list1 identifier
 
 p_type_ctor =
-  TypeContructor <$> identifier
-                 <*> (parens $ list p_type)
+  TypeConstructor <$> identifier
+                  <*> (parens $ list p_type)
 
 p_type = (FunctionType <$> p_function_type)
      <|> try p_data_type
@@ -72,7 +72,7 @@ p_function_type =
          <*> ((string "->") *> p_type)
 
 p_data_type =
-  DataType <$> identifier
+  DataType <$> loc identifier
            <*> (angles $ list1 p_type)
 
 p_basic_type =

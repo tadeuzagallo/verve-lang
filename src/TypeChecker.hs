@@ -42,12 +42,29 @@ typeof_decl (ExternDecl proto@(Prototype name _)) = do
   (proto', ty_proto) <- typeof_prototype proto
   return (ExternDecl proto', ty_proto)
 
-{-typeof_decl (TypeDecl enum_type) =-}
-  {-return (TyVoid-}
+typeof_decl (TypeDecl enum_type) = do
+  (enum_type', ty_enum) <- typeof_enum enum_type
+  return (TypeDecl enum_type', ty_enum)
 
 typeof_decl (ExprDecl expr) = do
   (expr', ty) <- typeof_expr expr
   return (ExprDecl expr', ty)
+
+typeof_enum :: EnumType String -> TcRes EnumType
+typeof_enum (EnumType name vars ctors) = do
+  ctx <- get
+  load_type_variables vars
+  (ctors', ty_ctors) <- liftM unzip $ mapM (typeof_ctor name) ctors
+  let t = TyEnum ty_ctors
+  put $ Map.insert name t ctx
+  mapM (\((TypeConstructor n _), t) -> modify $ Map.insert n t) (zip ctors ty_ctors)
+  return (EnumType (TcId name t) vars ctors', t)
+
+typeof_ctor :: String -> TypeConstructor String -> TcRes TypeConstructor
+typeof_ctor ename (TypeConstructor name args) = do
+  (args', ty_args) <- liftM unzip $ mapM typeof_type args
+  let t = TyCtor ty_args ename
+  return (TypeConstructor (TcId name t) args', t)
 
 typeof_expr :: Expr String -> TcRes Expr
 typeof_expr (LiteralExpr lit) = do
@@ -134,6 +151,18 @@ typeof_type (BasicType (Loc pos t)) = do
          _ -> maybe throw return value
            where throw = throwError (pos, printf "Unknown type: `%s`" t)
   return (BasicType (Loc pos (TcId t t')), t')
+
+typeof_type (FunctionType fn_type) = do
+  (fn_type', t) <- typeof_fn_type fn_type
+  return (FunctionType fn_type', t)
+
+typeof_type (DataType (Loc pos name) types) = do
+  t' <- gets $ Map.lookup name
+  when (isNothing t') (throwError (pos, "Unknown type"))
+  let t = fromJust t'
+
+  (types', ty_types) <- liftM unzip $ mapM typeof_type types
+  return (DataType (Loc pos (TcId name t)) types', TyDataInst t ty_types)
 
 typeof_function :: Function String -> TcRes Function
 typeof_function Function { fn_name=(Loc pos name), params=params, variables=variables, ret_type=(Just ret_type), body=body } = do

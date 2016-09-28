@@ -22,7 +22,7 @@ data TopDecl id = InterfaceDecl (Interface id)
                 deriving (Show)
 
 data EnumType id = EnumType { enum_name :: id
-                            , type_variables :: (Maybe [id])
+                            , type_variables :: (Maybe [String])
                             , constructors :: [TypeConstructor id]
                             } deriving (Show)
 
@@ -54,13 +54,13 @@ data FnType id = FnType { fn_variables :: (Maybe [id])
                         , return_type :: Type id
                         } deriving (Show)
 
-data TypeConstructor id = TypeContructor { ctor_name :: id
-                                         , ctor_arguments :: [Type id]
-                                         } deriving (Show)
+data TypeConstructor id = TypeConstructor { ctor_name :: id
+                                          , ctor_arguments :: [Type id]
+                                          } deriving (Show)
 
 data Type id = BasicType (Loc id)
              | FunctionType (FnType id)
-             | DataType id [Type id]
+             | DataType (Loc id) [Type id]
              deriving (Show)
 
 
