@@ -12,7 +12,12 @@ lexer = Token.makeTokenParser javaStyle {
   Token.identStart = Parsec.letter `mplus` Parsec.char '_'
 }
 
-identifier = Token.identifier lexer
+identifier =
+  whiteSpace *>
+    (Token.identifier lexer
+    Parsec.<|> (Parsec.char '`') *> (Parsec.many $ Parsec.noneOf "`") <* (Parsec.char '`'))
+    <* whiteSpace
+
 reserved = Token.reserved lexer
 reservedOp = Token.reservedOp lexer
 operator = Token.operator lexer
