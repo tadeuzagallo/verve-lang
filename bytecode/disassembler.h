@@ -31,6 +31,7 @@ private:
   int calculateJmpTarget(int target);
   void printOpcode(Opcode::Type opcode);
   void dumpStrings();
+  void dumpTypeMaps();
   void dumpFunctions();
   void dumpText();
 

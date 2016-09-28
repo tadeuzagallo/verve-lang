@@ -47,6 +47,7 @@ namespace Verve {
     assert(verve == Section::Header);
 
     dumpStrings();
+    dumpTypeMaps();
     dumpFunctions();
     dumpText();
 
@@ -78,6 +79,43 @@ namespace Verve {
       }
       m_strings.push_back(str);
       write((float)(m_bytecode.tellg() - p)/WORD_SIZE) <<  "$" << str_index++ << ": " << str;
+    }
+  }
+
+  void Disassembler::dumpTypeMaps() {
+    auto header = read();
+    if (header != Section::TypeMaps) {
+      m_bytecode.seekg(-sizeof(header), m_bytecode.cur);
+      return;
+    }
+
+    m_padding = "";
+    write(2) << "TYPE MAPS:";
+    m_padding = "  ";
+
+    while (true) {
+      auto header = read();
+      if (header == Section::Header) {
+        return;
+      }
+      assert(header == Section::TypeMapHeader);
+
+      auto dict = read();
+
+      m_padding = "";
+      write(1) << m_strings[dict] << ":";
+      m_padding = "  ";
+
+      while (true) {
+        auto header = read();
+        m_bytecode.seekg(-sizeof(header), m_bytecode.cur);
+        if (header == Section::FunctionHeader || header == Section::Header) {
+          break;
+        }
+
+        auto t = read();
+        write(1) << m_strings[t];
+      }
     }
   }
 
