@@ -54,7 +54,7 @@ op_table =
   , [binary "&&" AssocLeft, binary "||" AssocLeft]
   ]
 
-binary  name assoc = Infix (do{ reservedOp name; pos <- getPosition; return (BinaryOp name) }) assoc
-prefix  name = Prefix (do{ reservedOp name; pos <- getPosition; return (UnaryOp name) })
+binary  name assoc = Infix (do{ reservedOp name; pos <- getPosition; return (BinaryOp (Loc pos name)) }) assoc
+prefix  name = Prefix (do{ reservedOp name; pos <- getPosition; return (UnaryOp (Loc pos name)) })
 
 expr_parser = buildExpressionParser op_table

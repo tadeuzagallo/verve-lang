@@ -83,21 +83,32 @@ typeof_expr (Var (Loc pos name)) = do
   ty <- typeof_ident pos name
   return (Var (Loc pos (TcId name ty)), ty)
 
-{-typeof_expr BinaryOp { lhs=lhs, rhs=rhs } = do-}
-  {-lhs' <- typeof_expr lhs-}
-  {-rhs' <- typeof_expr rhs-}
-  {-case (lhs', rhs') of-}
-    {-(TyInt, TyInt) -> return TyInt-}
-    {-(TyFloat, TyFloat) -> return TyFloat-}
-    {-(_, _) -> throwError (pos, "Binary operations can only happen on two integers or two floats")-}
+typeof_expr (Let assignments block) = do
+  ctx <- get
+  (assignments', _) <- liftM unzip $ mapM typeof_assign assignments
+  (block', ty_block) <- typeof_block block
+  put ctx
+  return (Let assignments' block', ty_block)
 
+typeof_expr (BinaryOp (Loc pos op) lhs rhs) = do
+  (lhs', ty_lhs) <- typeof_expr lhs
+  (rhs', ty_rhs) <- typeof_expr rhs
+  ty_ret <- case (ty_lhs, ty_rhs) of
+              (TyInt, TyInt) -> return TyInt
+              (TyFloat, TyFloat) -> return TyFloat
+              (_, _) -> throwError (pos, "Binary operations can only happen on two integers or two floats")
+  return (BinaryOp (Loc pos (TcId op ty_ret))  lhs' rhs', ty_ret)
 
 typeof_expr (Call callee (Loc pos args)) = do
   ctx <- get
   (callee', callee_type) <- typeof_expr callee
-  let (params, ret_type) = case callee_type of
-                             (TyFunction _ (TyFnType params ret_type)) -> (params, ret_type)
-                             (TyAbstractFunction (TyFunction _ (TyFnType params ret_type)) _) -> (params, ret_type)
+  (params, ret_type) <- case callee_type of
+                             (TyFunction _ (TyFnType params ret_type)) ->
+                               return (params, ret_type)
+                             (TyAbstractFunction (TyFunction _ (TyFnType params ret_type)) _) ->
+                               return (params, ret_type)
+                             (TyCtor ty_args ename) ->
+                               gets $ Map.lookup ename >>= \(Just enum) -> return (ty_args, enum)
   when (length params /= length args) (throwError (pos, "Wrong number of arguments for function call"))
   (args', ty_args) <- liftM unzip $ mapM typeof_expr args
   mapM_ (uncurry (tyeqv pos)) (zip params ty_args)
@@ -118,6 +129,23 @@ typeof_expr (Call callee (Loc pos args)) = do
   return (Call callee'' (Loc pos args'), ret_type)
 
 typeof_expr expr = throwError (SourcePos 0 0 "/tmp/foo.vrv", "Unsupported expr: " ++ (show expr))
+
+typeof_assign :: Assignment String -> TcRes Assignment
+typeof_assign (Assignment (Var (Loc pos name)) value) = do
+  (value', ty_value) <- typeof_expr value
+  modify $ Map.insert name ty_value
+  return (Assignment (Var (Loc pos (TcId name ty_value))) value', ty_value)
+
+typeof_assign (Assignment (Call (Var (Loc pos name)) (Loc vpos vars)) value) = do
+  (value', ty_rhs) <- typeof_expr value
+  (Just ty_lhs) <- gets $ Map.lookup name
+  let (TyCtor ty_types ename) = ty_lhs
+  (Just ty_enum) <- gets $ Map.lookup ename
+  when (ty_enum /= ty_rhs) (throwError (pos, "Invalid type destructuring"))
+  mapM (\((Var (Loc _ name)), t) -> modify $ Map.insert name t) (zip vars ty_types)
+  (vars', _) <- liftM unzip $ mapM typeof_expr vars
+
+  return  (Assignment (Call (Var (Loc pos (TcId name ty_lhs))) (Loc vpos vars')) value', ty_lhs)
 
 typeof_ident :: SourcePos -> String -> TcState TyType
 typeof_ident pos name = do

@@ -101,7 +101,7 @@ generate_expr (List items) = do
                                   ; write 1
                                   }
 
-generate_expr (BinaryOp (TcId op _) lhs rhs) = do
+generate_expr (BinaryOp (Loc _ (TcId op _)) lhs rhs) = do
   generate_expr lhs
   generate_expr rhs
 
