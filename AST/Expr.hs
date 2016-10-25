@@ -10,7 +10,7 @@ data Expr =
   | ECall
   | EVar
   | EArg
-  | EBinop
-  | EUnop
+  | EBinop String Expr Expr
+  | EUnop String Expr
   | ELiteral Literal
   deriving (Show)

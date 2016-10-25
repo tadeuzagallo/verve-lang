@@ -15,6 +15,8 @@ p_program =
 
 p_decl = DExpr <$> p_expr
 
-p_expr = ELiteral <$> p_literal
+p_expr = exprParser p_expr'
+
+p_expr' = ELiteral <$> p_literal
 
 p_literal = LNum <$> naturalOrFloat
