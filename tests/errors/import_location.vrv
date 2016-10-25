@@ -1,5 +1,0 @@
-fn foo() -> void {}
-
-import * from "../import_helper_1"
-
-fn bar() -> void {}

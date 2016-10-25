@@ -1,4 +1,0 @@
-Type Error: Expected `int` but got `list<char>` on arg #1 for function `print_int`
-On file `tests/errors/./type_error.vrv` at 3:11
-3: print_int("ASD")
-             ^

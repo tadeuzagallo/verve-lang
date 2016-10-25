@@ -1,4 +1,0 @@
-Type Error: Lists can't have mixed types: found an element of type `list<char>` when elements' inferred type was `int`
-On file `tests/errors/mixed_list.vrv` at 1:6
-1: [ 1, "foo" ]
-        ^

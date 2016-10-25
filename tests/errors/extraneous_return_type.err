@@ -1,4 +1,0 @@
-Unexpected token `->` at 3:8
-On file `tests/errors/extraneous_return_type.vrv` at 3:8
-3: foo(1) -> int
-          ^

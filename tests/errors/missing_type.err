@@ -1,4 +1,0 @@
-Unexpected token `{` at 1:8
-On file `tests/errors/missing_type.vrv` at 1:8
-1: foo(a) { a }
-          ^

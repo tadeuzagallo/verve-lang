@@ -1,4 +1,0 @@
-interface f<t> {
-  virtual x<u>(u) -> t
-  virtual y(u) -> t
-}

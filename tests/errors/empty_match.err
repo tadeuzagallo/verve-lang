@@ -1,4 +1,0 @@
-Type Error: Cannot have `match` expression with no cases
-On file `tests/errors/empty_match.vrv` at 1:7
-1: match 1 {}
-         ^

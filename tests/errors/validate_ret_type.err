@@ -1,4 +1,0 @@
-Type Error: Invalid return type for function: expected `int` but got `list<char>`
-On file `tests/errors/validate_ret_type.vrv` at 1:17
-1: fn foo() -> int {
-                   ^

@@ -1,4 +1,0 @@
-Type Error: Match can't have mixed types on its cases: found a case with type `list<char>` when previous cases' inferred type was `int`
-On file `tests/errors/mixed_match.vrv` at 4:3
-4:   G() => "foo"
-     ^

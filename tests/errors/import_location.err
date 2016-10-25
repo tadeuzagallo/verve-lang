@@ -1,4 +1,0 @@
-Type Error: Unknown identifier: `import`
-On file `tests/errors/import_location.vrv` at 3:1
-3: import * from "../import_helper_1"
-   ^

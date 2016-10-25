@@ -1,4 +1,0 @@
-Type Error: Undefined constructor: `F`
-On file `tests/errors/untyped_ctor.vrv` at 1:2
-1: F()
-    ^
