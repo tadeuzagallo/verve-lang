@@ -1,3 +1,17 @@
+import Options.Applicative
+
+data Cmd = Cmd { file :: String }
+
 main :: IO ()
-main = do
-  putStrLn "Let's build yet another Verve compiler!"
+main =
+  execParser opts >>= runCmd
+    where
+      opts = info (helper <*> parseArgs) (fullDesc <> header "Verve compiler")
+
+runCmd :: Cmd -> IO ()
+runCmd (Cmd file) =
+  putStrLn ("Compile: " ++ file)
+
+parseArgs :: Parser Cmd
+parseArgs = Cmd <$>
+  argument str (metavar "<file>")
