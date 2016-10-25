@@ -4,14 +4,22 @@ import AST
 
 import Text.Parsec.Expr
 
+import qualified Text.Parsec as P
 import qualified Text.Parsec.Token as T
 import qualified Text.Parsec.Language as L
 
 lexer = T.makeTokenParser L.javaStyle
 
-naturalOrFloat = T.naturalOrFloat lexer
+braces = T.braces lexer
+char a = whiteSpace *> (P.char a) <* whiteSpace
 exprParser = buildExpressionParser op_table
+identifier = whiteSpace *> T.identifier lexer <* whiteSpace
+naturalOrFloat = T.naturalOrFloat lexer
+parens = T.parens lexer
 reservedOp = T.reservedOp lexer
+whiteSpace = T.whiteSpace lexer
+
+list = (`P.sepEndBy` (char ','))
 
 op_table =
   [ [prefix "-", prefix "+"]
