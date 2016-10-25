@@ -11,7 +11,7 @@ parse filename =
   parseFromFile p_program filename
 
 p_program =
-  AProgram <$> (many p_decl)
+  AProgram <$> (many p_decl) <* eof
 
 p_decl = DExpr <$> p_expr
 
