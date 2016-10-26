@@ -3,7 +3,7 @@ module Parser (Parser.parse) where
 import AST
 import Lexer
 
-import Text.Parsec (ParseError, eof, many, string, (<|>))
+import Text.Parsec (ParseError, eof, many, string, try, (<|>))
 import Text.Parsec.String (parseFromFile)
 
 parse :: String -> IO (Either ParseError AST)
@@ -19,6 +19,7 @@ p_expr = exprParser p_expr'
 
 p_expr' =
       EFn <$> p_fn
+  <|> ELet <$> ((try $ string "let") *> identifier) <*> (char '=' *> p_expr)
   <|> ELiteral <$> p_literal
 
 p_fn =

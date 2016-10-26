@@ -5,7 +5,7 @@ import AST.Literal
 data Expr =
   EMatch
   | EIf
-  | ELet
+  | ELet String Expr
   | EFn Fn
   | ECall
   | EVar
