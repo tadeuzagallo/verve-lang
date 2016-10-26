@@ -24,14 +24,13 @@ p_stmt = SExpr <$>  p_expr
 
 p_expr = exprParser p_expr'
 
-p_expr' = do
-  expr <- p_expr''
-  (ECall expr <$> parens (list p_expr)) <|> return expr
-
-p_expr'' =
-      EFn <$> p_fn
+p_expr' =
+  ( EFn <$> p_fn
   <|> ELiteral <$> p_literal
-  <|> EVar <$> identifier
+  <|> EVar <$> identifier) >>= p_call
+
+p_call expr = do
+  ((ECall expr <$> parens (list p_expr)) >>= p_call) <|> return expr
 
 p_fn =
   Fn <$> (char '\\' *> parens (list p_fn_param))
