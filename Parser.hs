@@ -13,14 +13,25 @@ parse filename =
 p_program =
   AProgram <$> (many p_decl) <* eof
 
-p_decl = DExpr <$> p_expr
+p_decl = DBind <$> p_bind
+
+p_bind = 
+      BLet <$> ((try $ string "let") *> identifier) <*> (char '=' *> p_stmt)
+  <|> BStmt <$> p_stmt
+
+
+p_stmt = SExpr <$>  p_expr
 
 p_expr = exprParser p_expr'
 
-p_expr' =
+p_expr' = do
+  expr <- p_expr''
+  (ECall expr <$> parens (list p_expr)) <|> return expr
+
+p_expr'' =
       EFn <$> p_fn
-  <|> ELet <$> ((try $ string "let") *> identifier) <*> (char '=' *> p_expr)
   <|> ELiteral <$> p_literal
+  <|> EVar <$> identifier
 
 p_fn =
   Fn <$> (char '\\' *> parens (list p_fn_param))

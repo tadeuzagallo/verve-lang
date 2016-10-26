@@ -7,5 +7,5 @@ data Decl =
   | DInterface
   | DImplementation
   | DType
-  | DExpr Expr
+  | DBind Bind
   deriving (Show)
