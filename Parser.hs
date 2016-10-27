@@ -35,7 +35,7 @@ p_call expr = do
 p_fn =
   Fn <$> (char '\\' *> parens (list p_fn_param))
      <*> (string "->" *> p_type)
-     <*> braces (many p_expr)
+     <*> braces (many p_bind)
 
 p_fn_param = identifier
 

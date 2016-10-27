@@ -1,4 +1,5 @@
 import Parser
+import IRGen
 
 import Options.Applicative
 
@@ -14,8 +15,8 @@ runCmd :: Cmd -> IO ()
 runCmd (Cmd file) = do
   pRes <- parse file
   case pRes of
-    Left e -> putStrLn ("ParseError: " ++ show e)
-    Right ast -> putStrLn $ show ast
+    Left e -> putStrLn ("SyntaxError: " ++ show e)
+    Right ast -> putStrLn $ show (generateIR ast)
 
 
 parseArgs :: Parser Cmd

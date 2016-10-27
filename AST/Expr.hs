@@ -24,7 +24,7 @@ data Expr =
   | EStmt Stmt
   deriving (Show)
 
-data Fn = Fn [String] Type [Expr]
+data Fn = Fn [String] Type [Bind]
   deriving Show
 
 data Type = TBasic String
