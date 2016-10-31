@@ -3,7 +3,8 @@ module AST.Expr where
 import AST.Literal
 
 data Bind =
-  BLet String Stmt
+    BLet String Stmt
+  | BFn String Fn
   | BStmt Stmt
   deriving (Show)
 

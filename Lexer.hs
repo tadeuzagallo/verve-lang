@@ -19,6 +19,7 @@ parens = T.parens lexer
 reservedOp = T.reservedOp lexer
 whiteSpace = T.whiteSpace lexer
 stringLiteral = T.stringLiteral lexer
+reserved = T.reserved lexer
 
 list = (`P.sepEndBy` (char ','))
 

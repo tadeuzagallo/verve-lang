@@ -118,9 +118,17 @@ runBind bind xs g =
       do { r <- g_stmt stmt
          ; g r xs}
 
-    BLet name stmt ->
+    BFn name fn ->
       do { emit (Label name)
-         ; r <- g_stmt stmt
+         ; r <- g_fn fn
+         ; case r of
+             Just reg ->
+               local (extendEnv name reg) (g r xs)
+             Nothing -> g r xs
+         }
+
+    BLet name stmt ->
+      do { r <- g_stmt stmt
          ; case r of
              Just reg ->
                local (extendEnv name reg) (g r xs)
