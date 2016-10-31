@@ -64,20 +64,11 @@ g_program (AProgram decls) = do
 
 g_decls :: [Decl] -> IR Val
 g_decls [] = return (Const 0)
-g_decls (DBind bind:xs) =
-  case bind of
-    BStmt stmt ->
-      do { g_stmt stmt
-         ; g_decls xs}
+g_decls (DBind b:xs) = runBind b xs g_decls
 
-    BLet name stmt ->
-      do { emit (Label name)
-         ; r <- g_stmt stmt
-         ; case r of
-             Just reg ->
-               local (extendEnv name reg) (g_decls xs)
-             Nothing -> g_decls xs
-         }
+g_binds :: [Bind] -> IR Val
+g_binds [] = return (Const 0)
+g_binds (b:xs) = runBind b xs g_binds
 
 g_stmt :: Stmt -> IR (Maybe Val)
 g_stmt (SExpr expr) =
@@ -95,6 +86,7 @@ g_expr (ECall (EVar name) args) = do
   return $ Just tmpReg
 
 g_fn (Fn params tyRet body) = do
+  g_binds body
   emit $ Ret (Const 0)
   return Nothing
 
@@ -118,3 +110,19 @@ regOrRef label = do
 extendEnv :: String -> Val -> Env -> Env
 extendEnv name val (Env env) =
   Env $ Map.insert name val env
+
+runBind :: Bind -> [a] -> ([a] -> IR Val) -> IR Val
+runBind bind xs g =
+  case bind of
+    BStmt stmt ->
+      do { g_stmt stmt
+         ; g xs}
+
+    BLet name stmt ->
+      do { emit (Label name)
+         ; r <- g_stmt stmt
+         ; case r of
+             Just reg ->
+               local (extendEnv name reg) (g xs)
+             Nothing -> g xs
+         }
