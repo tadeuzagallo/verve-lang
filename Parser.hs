@@ -25,7 +25,7 @@ p_stmt = SExpr <$>  p_expr
 p_expr = exprParser p_expr'
 
 p_expr' =
-  ( EFn <$> p_fn
+  (EFn <$> p_fn
   <|> ELiteral <$> p_literal
   <|> EVar <$> identifier) >>= p_call
 
@@ -41,4 +41,6 @@ p_fn_param = identifier
 
 p_type = TBasic <$> identifier
 
-p_literal = LNum <$> naturalOrFloat
+p_literal =
+  LNum <$> naturalOrFloat
+  <|> LStr <$> stringLiteral

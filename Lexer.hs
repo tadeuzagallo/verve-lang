@@ -18,6 +18,7 @@ naturalOrFloat = T.naturalOrFloat lexer
 parens = T.parens lexer
 reservedOp = T.reservedOp lexer
 whiteSpace = T.whiteSpace lexer
+stringLiteral = T.stringLiteral lexer
 
 list = (`P.sepEndBy` (char ','))
 
