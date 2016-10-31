@@ -18,7 +18,7 @@ data Cmd =
   | JmpIfTrue Val String
   | JmpIfFalse Val String
   | Jmp String
-  | Ret Val
+  | Ret (Maybe Val)
   | Copy Val Val
   | Label String
   deriving (Show)
@@ -59,16 +59,16 @@ generateIR ast =
 
 g_program :: AST -> IR ()
 g_program (AProgram decls) = do
-  g_decls decls
+  g_decls Nothing decls
   return ()
 
-g_decls :: [Decl] -> IR Val
-g_decls [] = return (Const 0)
-g_decls (DBind b:xs) = runBind b xs g_decls
+g_decls :: (Maybe Val) -> [Decl] -> IR (Maybe Val)
+g_decls v [] = return v
+g_decls _ (DBind b:xs) = runBind b xs g_decls
 
-g_binds :: [Bind] -> IR Val
-g_binds [] = return (Const 0)
-g_binds (b:xs) = runBind b xs g_binds
+g_binds :: (Maybe Val) -> [Bind] -> IR (Maybe Val)
+g_binds v [] = return v
+g_binds _ (b:xs) = runBind b xs g_binds
 
 g_stmt :: Stmt -> IR (Maybe Val)
 g_stmt (SExpr expr) =
@@ -86,8 +86,8 @@ g_expr (ECall (EVar name) args) = do
   return $ Just tmpReg
 
 g_fn (Fn params tyRet body) = do
-  g_binds body
-  emit $ Ret (Const 0)
+  v <- g_binds Nothing body
+  emit $ Ret v
   return Nothing
 
 genReg :: IR Val
@@ -111,18 +111,18 @@ extendEnv :: String -> Val -> Env -> Env
 extendEnv name val (Env env) =
   Env $ Map.insert name val env
 
-runBind :: Bind -> [a] -> ([a] -> IR Val) -> IR Val
+runBind :: Bind -> [a] -> (Maybe Val -> [a] -> IR (Maybe Val)) -> IR (Maybe Val)
 runBind bind xs g =
   case bind of
     BStmt stmt ->
-      do { g_stmt stmt
-         ; g xs}
+      do { r <- g_stmt stmt
+         ; g r xs}
 
     BLet name stmt ->
       do { emit (Label name)
          ; r <- g_stmt stmt
          ; case r of
              Just reg ->
-               local (extendEnv name reg) (g xs)
-             Nothing -> g xs
+               local (extendEnv name reg) (g r xs)
+             Nothing -> g r xs
          }
