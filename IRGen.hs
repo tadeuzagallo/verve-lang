@@ -77,7 +77,6 @@ g_stmt (SExpr expr) =
 g_expr :: Expr -> IR (Maybe Val)
 g_expr (EFn fn) = do
   g_fn fn
-  return Nothing
 
 g_expr (ECall (EVar name) args) = do
   tmpReg <- genReg
@@ -86,15 +85,21 @@ g_expr (ECall (EVar name) args) = do
   return $ Just tmpReg
 
 g_fn (Fn params tyRet body) = do
+  uid <- ((++) "fn_") . show <$> genUID
+  emit $ Label uid
   v <- g_binds Nothing body
   emit $ Ret v
-  return Nothing
+  return $ Just $ Ref uid
 
-genReg :: IR Val
-genReg = do
+genUID :: IR Int
+genUID = do
   s <- get
   put s{reg = reg s + 1}
-  return $ Reg $ reg s
+  return $ reg s
+
+genReg :: IR Val
+genReg =
+  Reg <$> genUID
 
 emit :: Cmd -> IR ()
 emit cmd =
@@ -119,8 +124,7 @@ runBind bind xs g =
          ; g r xs}
 
     BFn name fn ->
-      do { emit (Label name)
-         ; r <- g_fn fn
+      do { r <- g_fn fn
          ; case r of
              Just reg ->
                local (extendEnv name reg) (g r xs)
