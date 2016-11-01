@@ -14,7 +14,7 @@ data Cmd =
     Binop Val Op Val Val
   | Unop Val Op Val
   | Call Val Val Int
-  | Param Val
+  | Arg Val
   | JmpIfTrue Val String
   | JmpIfFalse Val String
   | Jmp String
@@ -34,7 +34,7 @@ data Op =
   deriving (Show)
 
 data Val =
-    Const Integer
+    StrLit String
   | Reg Reg
   | Ref String
   deriving (Show)
@@ -81,8 +81,21 @@ g_expr (EFn fn) = do
 g_expr (ECall (EVar name) args) = do
   tmpReg <- genReg
   callee <- regOrRef name
+  mapM g_arg args
   emit (Call tmpReg callee (length args))
   return $ Just tmpReg
+
+g_expr (ELiteral l) =
+  Just <$> g_lit l
+
+g_lit :: Literal  -> IR Val
+g_lit (LStr str) =
+  return $ StrLit str
+
+g_arg :: Expr -> IR ()
+g_arg expr = do
+  Just reg <- g_expr expr
+  emit $ Arg reg
 
 g_fn (Fn params tyRet body) = do
   uid <- ((++) "fn_") . show <$> genUID
