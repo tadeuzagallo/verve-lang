@@ -1,4 +1,4 @@
-module IRGen (generateIR) where
+module IRGen where
 
 import AST
 
