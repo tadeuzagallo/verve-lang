@@ -17,7 +17,7 @@ runCmd (Cmd file) = do
   pRes <- parse file
   case pRes of
     Left e -> putStrLn ("SyntaxError: " ++ show e)
-    Right ast -> putStrLn $ x64 (generateIR ast)
+    Right ast -> x64 (generateIR ast)
 
 
 parseArgs :: Parser Cmd

@@ -4,10 +4,11 @@ import IRGen
 
 import qualified Data.Map as Map
 
+import Control.Monad.Reader
 import Control.Monad.State
 import Data.List (sortOn)
-
-import Debug.Trace
+import Data.Maybe (fromJust)
+import Text.Printf
 
 data X64Reg
   = Rdi
@@ -16,8 +17,14 @@ data X64Reg
   | Rcx
   | R8
   | R9
-  | UnusedReg
-  deriving (Show)
+
+instance Show X64Reg where
+  show Rdi = "%rdi"
+  show Rsi = "%rsi"
+  show Rdx = "%rdx"
+  show Rcx = "%rcx"
+  show R8 = "%r8"
+  show R9 = "%r9"
 
 type AddrMap = Map.Map Int Addr
 
@@ -34,7 +41,7 @@ type LIM -- LiveIntervalMap
   = Map.Map Int LiveInterval
 
 data LAS -- LiveAnalisysState
-  = LAS { lasOff :: Int 
+  = LAS { lasOff :: Int
         , lasMap :: LIM
         }
 
@@ -49,8 +56,40 @@ data RAS -- RegisterAllocationState
 
 type RA = State RAS
 
-x64 :: [Cmd] -> String
-x64 cmds = show (linearScanRegisterAllocation $ liveStates cmds)
+x64 :: [Cmd] -> IO ()
+x64 cmds =
+  let regInfo = linearScanRegisterAllocation $ liveStates cmds
+      prints = runReader (mapM x64' cmds) regInfo
+   in sequence prints >> return ()
+
+type XRS = Reader AddrMap
+
+p :: String -> (String -> IO ())
+p s = printf s
+
+x64' :: Cmd -> XRS (IO ())
+x64' (Call out callee argc) = do
+  f <- p "\tcall %s\n" <$> (x64_addr callee)
+  g <- p "\tmov %%rax, %s\n" <$> (x64_addr out)
+  return (f >> g)
+
+x64' (Ret v) = do
+  case v of
+    Nothing -> (return $ return ()) :: XRS (IO ())
+    Just v -> p "\tmov %s, %%rax\n" <$> (x64_addr v)
+  return $ printf "\tret\n"
+
+x64' (Label l) =
+  return $ (printf "%s:\n" l)
+
+x64_addr :: Val -> XRS String
+x64_addr (Reg reg) =
+  asks $ \m ->
+    case fromJust $ Map.lookup reg m of
+      X64Reg r -> show r
+
+x64_addr (Ref str) =
+  return str
 
 linearScanRegisterAllocation :: LIM -> AddrMap
 linearScanRegisterAllocation lim =
@@ -105,10 +144,7 @@ consume r li = do
        , registers=Map.insert r (X64Reg reg) (registers st)
        }
 
-
-liveStates :: [Cmd] -> LIM
-liveStates cmds = do
-  let ls = \c -> count >> liveState c
+liveStates :: [Cmd] -> LIM liveStates cmds = do let ls = \c -> count >> liveState c
       (_, st) = runState (mapM_ ls cmds) initLAS
    in lasMap st
 
@@ -136,14 +172,14 @@ liveState (Ret Nothing) = return ()
 
 useR :: Val -> LiveAnalysis ()
 useR (Reg r) =
-  modify $ \st -> 
+  modify $ \st ->
     st{ lasMap=Map.adjust (\li -> li{ end=lasOff st }) r (lasMap st) }
 
 useR _ = return ()
 
 initR :: Val -> LiveAnalysis ()
 initR (Reg r) =
-  modify $ \st -> 
+  modify $ \st ->
     st{ lasMap=Map.insert r LI { start=(lasOff st), end=(lasOff st) }  (lasMap st) }
 
 initR _ = return ()
