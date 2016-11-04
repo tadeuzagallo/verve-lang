@@ -23,8 +23,8 @@ instance Show X64Reg where
   show Rsi = "%rsi"
   show Rdx = "%rdx"
   show Rcx = "%rcx"
-  show R8 = "%r8"
-  show R9 = "%r9"
+  show R8  = "%r8"
+  show R9  = "%r9"
 
 type AddrMap = Map.Map Int Addr
 
@@ -144,7 +144,9 @@ consume r li = do
        , registers=Map.insert r (X64Reg reg) (registers st)
        }
 
-liveStates :: [Cmd] -> LIM liveStates cmds = do let ls = \c -> count >> liveState c
+liveStates :: [Cmd] -> LIM
+liveStates cmds = do
+  let ls = \c -> count >> liveState c
       (_, st) = runState (mapM_ ls cmds) initLAS
    in lasMap st
 
