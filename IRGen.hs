@@ -1,5 +1,4 @@
 module IRGen where
-
 import AST
 
 import qualified Data.Map as Map
@@ -39,11 +38,15 @@ data Val =
   | Ref String
   deriving (Show)
 
-type IR a = (RWS Env [Cmd] IRS) a
+type IR a = (RWS Env () IRS) a
 
 newtype Env = Env (Map.Map String Val)
 
-newtype IRS = IRS { reg :: Int }
+data IRS =
+  IRS { reg :: Int
+      , isFunction :: Bool
+      , functions :: [Cmd]
+      }
 
 type Reg = Int
 
@@ -51,14 +54,19 @@ initEnv :: Env
 initEnv = Env Map.empty
 
 initIRS :: IRS
-initIRS = IRS 0
+initIRS =
+  IRS { reg = 0
+      , isFunction = False
+      , functions = []
+      }
 
 generateIR :: AST -> [Cmd]
 generateIR ast =
-  snd $ evalRWS (g_program ast) initEnv initIRS
+  functions . fst $ execRWS (g_program ast) initEnv initIRS
 
 g_program :: AST -> IR ()
 g_program (AProgram decls) = do
+  emit $ Label "start"
   g_decls Nothing decls
   return ()
 
@@ -76,7 +84,7 @@ g_stmt (SExpr expr) =
 
 g_expr :: Expr -> IR (Maybe Val)
 g_expr (EFn fn) = do
-  g_fn fn
+  function (g_fn fn)
 
 g_expr (ECall (EVar name) args) = do
   tmpReg <- genReg
@@ -97,6 +105,7 @@ g_arg expr = do
   Just reg <- g_expr expr
   emit $ Arg reg
 
+g_fn :: Fn -> IR (Maybe Val)
 g_fn (Fn params tyRet body) = do
   uid <- ((++) "fn_") . show <$> genUID
   emit $ Label uid
@@ -114,9 +123,17 @@ genReg :: IR Val
 genReg =
   Reg <$> genUID
 
+function :: IR (Maybe Val) -> IR (Maybe Val)
+function fn = do
+  bc <- gets functions
+  modify $ \st -> st{ functions=[] }
+  ret <- fn
+  modify $ \st -> st{ functions=(functions st)++bc }
+  return ret
+
 emit :: Cmd -> IR ()
 emit cmd =
-  tell [cmd]
+ modify $ \st -> st{ functions=(functions st)++[cmd] }
 
 regOrRef :: String -> IR Val
 regOrRef label = do
@@ -137,7 +154,7 @@ runBind bind xs g =
          ; g r xs}
 
     BFn name fn ->
-      do { r <- g_fn fn
+      do { r <- function (g_fn fn)
          ; case r of
              Just reg ->
                local (extendEnv name reg) (g r xs)
