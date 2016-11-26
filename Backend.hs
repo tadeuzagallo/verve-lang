@@ -60,7 +60,16 @@ x64 :: [Cmd] -> IO ()
 x64 cmds =
   let regInfo = linearScanRegisterAllocation $ liveStates cmds
       prints = runReader (mapM x64' cmds) regInfo
-   in sequence prints >> return ()
+   in sequence prints >> printBootstrap
+
+printBootstrap :: IO ()
+printBootstrap =
+  putStrLn "  .globl start \n\
+           \start: \n\
+           \  call main \n\
+           \  mov $0x2000001, %rax \n\
+           \  xor %rdi, %rdi \n\
+           \  syscall "
 
 type XRS = Reader AddrMap
 

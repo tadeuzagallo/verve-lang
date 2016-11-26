@@ -66,8 +66,9 @@ generateIR ast =
 
 g_program :: AST -> IR ()
 g_program (AProgram decls) = do
-  emit $ Label "start"
+  emit $ Label "main"
   g_decls Nothing decls
+  emit $ Ret Nothing
   return ()
 
 g_decls :: (Maybe Val) -> [Decl] -> IR (Maybe Val)
