@@ -1,0 +1,20 @@
+fn f<>() -> T {}
+
+fn g<T>() -> T {}
+fn g<T: U>() -> T {}
+fn g<T: (U, V)>() -> T {}
+
+fn g<U, T>() -> T {}
+fn g<U, T: U>() -> T {}
+fn g<U, T: (U, V)>() -> T {}
+
+fn g<U: X, T>() -> T {}
+fn g<U: X, T: U>() -> T {}
+fn g<U: X, T: (U, V)>() -> T {}
+
+fn g<U: (X, Y), T>() -> T {}
+fn g<U: (X, Y), T: U>() -> T {}
+fn g<U: (X, Y), T: (U, V)>() -> T {}
+
+fn f<>(x: T) -> T {}
+fn f<>(x: T, y: U) -> T {}
