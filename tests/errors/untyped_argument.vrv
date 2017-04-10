@@ -1,3 +1,0 @@
-fn foo(s: string) -> void {}
-
-foo(bar)

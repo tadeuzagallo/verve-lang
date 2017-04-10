@@ -1,9 +1,0 @@
-// test nested types with same type variable name don't interfere on each other
-type u { T() }
-fn _<t>(x: t) -> t {
-  fn _<t>(x: t) -> t {
-    print("asd")
-    x
-  }(x)
-  x
-}(1)

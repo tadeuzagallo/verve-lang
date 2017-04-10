@@ -1,4 +1,0 @@
-Type Error: Binary operations only accept `int`, but found `list<char>`
-On file `tests/errors/type_check_operation.vrv` at 1:7
-1: print("asd" + 1)
-         ^

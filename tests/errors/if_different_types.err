@@ -1,4 +1,0 @@
-Type Error: `if` and `else` branches evaluate to different types
-On file `tests/errors/if_different_types.vrv` at 1:10
-1: print(if (1) {
-            ^

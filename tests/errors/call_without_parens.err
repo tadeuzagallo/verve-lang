@@ -1,4 +1,0 @@
-Unexpected token `{` at 1:7
-On file `tests/errors/call_without_parens.vrv` at 1:7
-1: print {  }
-         ^

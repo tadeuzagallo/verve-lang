@@ -1,4 +1,0 @@
-Unexpected token `:` at 2:6
-On file `tests/errors/trailing_type.vrv` at 2:6
-2:   foo: t
-        ^

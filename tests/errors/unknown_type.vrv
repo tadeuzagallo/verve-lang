@@ -1,2 +1,0 @@
-fn f() -> foo { }
-print(f())

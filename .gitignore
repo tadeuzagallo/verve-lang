@@ -1,5 +1,0 @@
-*.o
-*.dSYM
-verve
-**/*.test_
-.build

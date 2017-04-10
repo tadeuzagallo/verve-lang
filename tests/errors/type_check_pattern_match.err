@@ -1,4 +1,0 @@
-Type Error: Trying to pattern match value of type `foo` with constructor `Y(int) -> bar`
-On file `tests/errors/type_check_pattern_match.vrv` at 5:7
-5:   let Y(y) = x {
-         ^

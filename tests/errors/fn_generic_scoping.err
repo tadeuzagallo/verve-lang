@@ -1,4 +1,0 @@
-Type Error: Unknown type: `u`
-On file `tests/errors/fn_generic_scoping.vrv` at 3:13
-3:   virtual y(u) -> t
-               ^

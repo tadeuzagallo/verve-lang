@@ -1,4 +1,0 @@
-Type Error: Unknown type: `foo`
-On file `tests/errors/unknown_type.vrv` at 1:11
-1: fn f() -> foo { }
-             ^
