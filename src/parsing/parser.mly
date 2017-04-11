@@ -23,11 +23,11 @@ open Absyn
 %token <string> LCID
 %token <string> UCID
 
-%start <Absyn.expr list> program
+%start <Absyn.program> program
 
 %%
 
-program: exprs EOF { $1 }
+program: exprs EOF { { imports = []; exports = []; body = $1 } }
 
 exprs:
   expr* { $1 }
@@ -37,13 +37,13 @@ expr:
 
 /* function expressions */
 function_:
-  FN LCID generic_parameters parameters return_type function_body { E ($2, $3, $4, $5, $6) }
+  FN LCID generic_parameters parameters return_type function_body { Function { name = Some $2; generics = $3; parameters = $4; return_type = $5; body = $6 } }
 
 generic_parameters:
   L_ANGLE separated_list(COMMA, generic_parameter) R_ANGLE { $2 }
 
 generic_parameter:
-  UCID bounded_quantification? { ($1, $2) }
+  UCID bounded_quantification? { { name = TVar $1; constraints = $2 } }
 
 bounded_quantification:
   COLON quantifiers { $2 }
@@ -56,7 +56,7 @@ parameters:
   L_PAREN separated_list(COMMA, parameter) R_PAREN { $2 }
 
 parameter:
-  pattern COLON type_ { ($1, $3) }
+  pattern COLON type_ { { name = $1; type_ = $3 } }
 
 pattern:
   LCID { $1 }
@@ -69,4 +69,4 @@ function_body:
 
 /* types */
 type_:
-  UCID { $1 }
+  UCID { Con $1 }
