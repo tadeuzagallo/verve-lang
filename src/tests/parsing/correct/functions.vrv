@@ -3,6 +3,7 @@ fn f<>() -> T {}
 fn g<T>() -> T {}
 fn g<T: U>() -> T {}
 fn g<T: (U, V)>() -> T {}
+fn g<T: (U, V)>() -> (T) -> U {}
 
 fn g<U, T>() -> T {}
 fn g<U, T: U>() -> T {}
@@ -18,3 +19,5 @@ fn g<U: (X, Y), T: (U, V)>() -> T {}
 
 fn f<>(x: T) -> T {}
 fn f<>(x: T, y: U) -> T {}
+fn f<>(x: T, y: (T) -> U) -> U {}
+fn f<>(x: T, y: (T) -> U) -> (T) -> U {}

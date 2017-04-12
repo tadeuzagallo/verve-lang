@@ -20,8 +20,12 @@ let print_generic out { name = TVar name; constraints } =
       fprintf out ": (%a)"
         (print_list ", " (fun out x -> fprintf out "%s" x)) constraints'
 
-let print_type out = function
+let rec print_type out = function
   | Con t -> fprintf out "%s" t
+  | Arrow (ps, r) ->
+      fprintf out "(%a) -> %a"
+        (print_list "," print_type) ps
+        print_type r
   | _ -> assert false (* TODO *)
 
 let print_param out { name; type_ } =

@@ -8,7 +8,7 @@ type tvar = TVar of name
 type type_ =
   | Var of tvar
   | Con of name
-  | Arrow of type_ * type_
+  | Arrow of type_ list * type_
 
 type generic = {
   name : tvar;

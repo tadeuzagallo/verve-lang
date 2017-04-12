@@ -25,6 +25,8 @@ open Absyn
 
 %start <Absyn.program> program
 
+%right ARROW
+
 %%
 
 program: exprs EOF { { imports = []; exports = []; body = $1 } }
@@ -71,7 +73,11 @@ function_body:
 
 /* types */
 type_:
-  UCID { Con $1 }
+  | UCID { Con $1 }
+  | arrow_type { $1 }
+
+arrow_type:
+  L_PAREN separated_list(COMMA, type_) R_PAREN ARROW type_ { Arrow($2, $5) }
 
 /* application */
 
