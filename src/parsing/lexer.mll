@@ -1,5 +1,7 @@
 {
 open Parser
+
+exception SyntaxError of string
 }
 
 rule read = parse
@@ -25,3 +27,11 @@ rule read = parse
 (* whitespace *)
 | (" " | "\t") { read lexbuf }
 | ("\n" | "\r" | "\r\n") { Lexing.new_line lexbuf; read lexbuf }
+| "/*" { comment 1 lexbuf }
+| "//" _* "\n" { Lexing.new_line lexbuf; read lexbuf }
+
+and comment depth = parse
+| "/*" { comment (depth + 1) lexbuf }
+| "*/" { if depth = 1 then read lexbuf else comment (depth - 1) lexbuf }
+| eof { raise (SyntaxError "Unterminated comment") }
+| _ { comment depth lexbuf }

@@ -1,10 +1,10 @@
-fn f<>() -> Void {}<>()
+fn f<>(x: T) -> Void {x}<>(fn g<>() -> U {})
 
-f<>()
-f<T>()
-f<T,U>()
+/*f<>()*/
+/*f<T>()*/
+/*f<T,U>()*/
 
-f<T>(a)
-f<T,U>(a, fn f<>(x: T) -> U {})
+/*f<T>(a)*/
+/*f<T,U>(a, fn f<>(x: T) -> U {})*/
 
-f<T,U>(f<T,U>(a, fn f<>(x: T) -> U {}))
+/*f<T,U>(f<T,U>(a, fn f<>(x: T) -> U {}))*/

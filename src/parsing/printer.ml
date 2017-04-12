@@ -53,6 +53,7 @@ and print_expr out = function
   | Function fn -> print_fn out fn
   | Application app -> print_app out app
   | Var str -> fprintf out "%s" str
+  | Unit -> fprintf out "()"
 
 let print_program p =
   List.iter (print_expr stderr) p.body

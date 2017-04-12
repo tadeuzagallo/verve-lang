@@ -40,6 +40,7 @@ and expr =
   | Function of function_
   | Application of application
   | Var of name
+  | Unit
 
 type program = {
   imports : import list;
