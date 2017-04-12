@@ -39,8 +39,16 @@ let rec print_fn out { name; generics; parameters; return_type; body } =
     print_type return_type
     (print_list "\n" print_expr) body
 
+and print_app out { callee; generic_arguments; arguments } =
+  fprintf out "%a<%a>(%a)\n"
+    print_expr callee
+    (print_list ", " print_type) generic_arguments
+    (print_list ", " print_expr) arguments
+
 and print_expr out = function
   | Function fn -> print_fn out fn
+  | Application app -> print_app out app
+  | Var str -> fprintf out "%s" str
 
 let print_program p =
   List.iter (print_expr stderr) p.body

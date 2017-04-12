@@ -33,7 +33,9 @@ exprs:
   expr* { $1 }
 
 expr:
-  function_ { $1 }
+  | function_ { $1 }
+  | application { $1 }
+  | LCID { Var $1 }
 
 /* function expressions */
 function_:
@@ -70,3 +72,14 @@ function_body:
 /* types */
 type_:
   UCID { Con $1 }
+
+/* application */
+
+application:
+  expr generic_arguments arguments { Application { callee = $1; generic_arguments = $2; arguments = $3 } }
+
+generic_arguments:
+  L_ANGLE separated_list(COMMA, type_) R_ANGLE { $2 }
+
+arguments:
+  L_PAREN separated_list(COMMA, expr) R_PAREN { $2 }

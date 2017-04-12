@@ -1,0 +1,10 @@
+fn f<>() -> Void {}<>()
+
+f<>()
+f<T>()
+f<T,U>()
+
+f<T>(a)
+f<T,U>(a, fn f<>(x: T) -> U {})
+
+f<T,U>(f<T,U>(a, fn f<>(x: T) -> U {}))

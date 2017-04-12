@@ -30,8 +30,16 @@ and function_ = {
   body: body;
 }
 
+and application = {
+  callee: expr;
+  generic_arguments: type_ list;
+  arguments: expr list;
+}
+
 and expr =
   | Function of function_
+  | Application of application
+  | Var of name
 
 type program = {
   imports : import list;

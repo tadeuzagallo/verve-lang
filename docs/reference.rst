@@ -76,10 +76,19 @@ Examples:
     }
   }
 
+Variables
+
+Variables are lowercase identifiers, for parameters and assigned variables (let) or uppercase identifiers, if referring to data constructors.
+
+::
+
+  x
+
+
 Function applications
 
 ::
-  
+
   fst<A,B>(x)
 
   f(x, y) = f(x)(y) /= f((x, y))
