@@ -25,8 +25,6 @@ open Absyn
 
 %start <Absyn.program> program
 
-%right ARROW
-
 %%
 
 program: exprs EOF { { imports = []; exports = []; body = $1 } }

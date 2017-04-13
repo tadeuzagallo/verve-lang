@@ -13,8 +13,6 @@ let parse file =
     exit (-1)
 
 let () =
-  let ast = parse stdin in
-  List.iter (fun exp ->
-    let v = Interpreter.eval exp in
-    Printer.print_expr stderr v
-  ) ast.Absyn.body
+  let program = parse stdin in
+  let value = Interpreter.eval program in
+  Printer.print_expr stdout value

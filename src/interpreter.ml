@@ -1,9 +1,11 @@
 open Absyn
 
 exception Unbound_variable
+exception Runtime_error of string
 
 let subst arguments fn =
   let rec aux args = function
+    | Unit -> Unit
     | Var x as v -> begin
         try List.assoc x args
         with Not_found -> v
@@ -21,17 +23,34 @@ let subst arguments fn =
     | _ -> assert false
   in
   let parameters' = List.map (fun (p: parameter) -> p.name) parameters in
-  let args = List.combine parameters' arguments in
+  let args =
+    try List.combine parameters' arguments
+    with Invalid_argument _ ->
+      raise (Runtime_error "wrong number of arguments for function call")
+  in
   let body' = List.map (aux args) body in
   let length = List.length body' in
   if length = 0 then
     Unit
   else List.nth body' (length - 1)
 
-let rec eval = function
+let rec eval env = function
+  | Unit -> (Unit, env)
   | Application { callee; generic_arguments; arguments } ->
-      let callee' = eval callee in
-      let arguments' = List.map eval arguments in
-      eval (subst arguments callee)
-  | Var v -> raise Unbound_variable
-  | v -> v
+      let (callee', _) = eval env callee in
+      let arguments' = List.map (fun a -> fst @@ eval env a) arguments in
+      let (v, _) = eval env (subst arguments' callee') in
+      (v, env)
+  | Var v -> begin
+      try (List.assoc v env, env)
+      with Not_found ->
+        raise Unbound_variable
+  end
+  | (Function { name }) as fn ->
+      match name with
+      | Some n -> (fn, (n, fn)::env)
+      | None -> (fn, env)
+
+let eval { body } =
+  List.fold_left (fun (_, env) node -> eval env node) (Unit, []) body
+  |> fst
