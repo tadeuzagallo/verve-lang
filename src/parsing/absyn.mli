@@ -10,6 +10,9 @@ type type_ =
   | Con of name
   | Arrow of type_ list * type_
 
+type literal =
+  | Int of int
+
 type generic = {
   name : tvar;
   constraints : name list option;
@@ -40,6 +43,7 @@ and expr =
   | Function of function_
   | Application of application
   | Var of name
+  | Literal of literal
   | Unit
 
 type program = {

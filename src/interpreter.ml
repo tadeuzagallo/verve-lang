@@ -6,6 +6,7 @@ exception Runtime_error of string
 let subst arguments fn =
   let rec aux args = function
     | Unit -> Unit
+    | Literal l -> Literal l
     | Var x as v -> begin
         try List.assoc x args
         with Not_found -> v
@@ -36,6 +37,7 @@ let subst arguments fn =
 
 let rec eval env = function
   | Unit -> (Unit, env)
+  | Literal l -> (Literal l, env)
   | Application { callee; generic_arguments; arguments } ->
       let (callee', _) = eval env callee in
       let arguments' = List.map (fun a -> fst @@ eval env a) arguments in

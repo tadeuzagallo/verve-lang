@@ -22,6 +22,7 @@ open Absyn
 /* tokens with semantic values */
 %token <string> LCID
 %token <string> UCID
+%token <int> INT
 
 %start <Absyn.program> program
 
@@ -36,6 +37,7 @@ expr:
   | function_ { $1 }
   | application { $1 }
   | LCID { Var $1 }
+  | literal { Literal $1 }
 
 /* function expressions */
 function_:
@@ -87,3 +89,10 @@ generic_arguments:
 
 arguments:
   L_PAREN separated_list(COMMA, expr) R_PAREN { $2 }
+
+/* literals */
+literal:
+  | int_ { $1 }
+
+int_:
+  INT { Int $1 }

@@ -1,6 +1,9 @@
 open Absyn
 open Printf
 
+let print_literal out = function
+  | Int i -> fprintf out "%d" i
+
 let print_list sep printer out =
   let rec aux = function
     | x :: y :: rest ->
@@ -53,6 +56,7 @@ and print_expr out = function
   | Function fn -> print_fn out fn
   | Application app -> print_app out app
   | Var str -> fprintf out "%s" str
+  | Literal l -> fprintf out "%a" print_literal l
   | Unit -> fprintf out "()"
 
 let print_program p =
