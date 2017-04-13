@@ -1,3 +1,4 @@
 "parsing": include
+"typing": include
 
 true: use_menhir

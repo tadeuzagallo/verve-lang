@@ -14,5 +14,6 @@ let parse file =
 
 let () =
   let program = parse stdin in
+  Typing.check program;
   let value = Interpreter.eval program in
   Printer.print_expr stdout value

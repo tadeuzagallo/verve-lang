@@ -1,10 +1,10 @@
-fn f<>(x: T) -> Void {x}
+fn f<>(x: Int) -> Int { x }
 
 f<>(f)
 f<T>(f)
 f<T,U>(f)
 
 f<T>(f)
-f<T,U>(fn x<>(x: T) -> U {})
+f<T,U>(fn x<>(x: Int) -> Void {})
 
 f<T,U>(f<T,U>(f))
