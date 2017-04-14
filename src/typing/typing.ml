@@ -2,6 +2,7 @@ module T = Types
 open Absyn
 
 exception TypeError of string
+exception UnificationError of string
 
 type ty_env = (name * T.ty) list
 let ty_int = T.Const "Int"
@@ -13,7 +14,16 @@ let default_env = [
   ("Void", ty_unit);
 ]
 
-let unify t1 t2 = ()
+let rec unify = function
+  | T.Type, T.Type -> ()
+  | T.Const t1, T.Const t2 when t1 = t2 -> ()
+  | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
+      unify (t11, t21);
+      unify (t12, t22)
+  | t1, t2 ->
+      let msg = Printf.sprintf "Failed to unify %s with %s"
+        (T.to_string t1) (T.to_string t2)
+      in raise (UnificationError msg)
 
 let check_literal = function
   | Int _ -> ty_int
@@ -44,7 +54,7 @@ let rec check_fn env { name; parameters; return_type; body } =
     parameters (ret_type, env)
   in
   let (ret, _) = check_exprs env' body in
-  unify ret ret_type;
+  unify (ret, ret_type);
   match name with
   | Some n -> (fn_type, (n, fn_type)::env)
   | None -> (fn_type, env)
@@ -55,7 +65,7 @@ and check_app env { callee; arguments } =
     let (ty_arg, _) = check_expr env argument in
     match call with
     | T.Arrow (t1, t2) ->
-        unify t1 ty_arg;
+        unify (t1, ty_arg);
         t2
     | _ -> raise (TypeError "Invalid type for function call")
   in
@@ -76,4 +86,4 @@ and check_exprs env exprs =
     (fun (_, env) node -> check_expr env node)
     (ty_unit, env) exprs
 
-let check program = check_exprs default_env program.body
+let check program = fst @@ check_exprs default_env program.body

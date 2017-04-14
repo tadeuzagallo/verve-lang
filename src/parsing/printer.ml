@@ -59,5 +59,10 @@ and print_expr out = function
   | Literal l -> fprintf out "%a" print_literal l
   | Unit -> fprintf out "()"
 
+let print expr ty =
+  fprintf stderr "%a : %s\n"
+    print_expr expr
+    (Types.to_string ty)
+
 let print_program p =
   List.iter (print_expr stderr) p.body
