@@ -126,11 +126,16 @@ and check_app env { callee; generic_arguments; arguments } =
     | _ -> raise (TypeError "Invalid type for generic application")
   and check (call, s1) argument =
     let (ty_arg, _, s2) = check_expr env argument in
-    match call with
-    | T.Arrow (t1, t2) ->
-        let s3 = unify (t1, ty_arg) in
-        (t2, s3 >> s2 >> s1)
-    | _ -> raise (TypeError "Invalid type for function call")
+    let rec check ty =
+      match ty with
+      | T.Arrow (t1, t2) ->
+          let s3 = unify (apply (s2 >> s1) t1, ty_arg) in
+          (t2, s3 >> s2 >> s1)
+      | T.TypeArrow (_, t2) ->
+          check t2
+      | _ -> raise (TypeError "Invalid type for function call")
+    in
+    check call
   in
   let ty, s2 = List.fold_left check_type (ty_callee, s1) gen_args in
   let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
