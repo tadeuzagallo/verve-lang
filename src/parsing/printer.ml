@@ -15,7 +15,7 @@ let print_list sep printer out =
     | [] -> ()
   in aux
 
-let print_generic out { name = TVar name; constraints } =
+let print_generic out { name; constraints } =
   fprintf out "%s" name;
   match constraints with
   | None -> ()

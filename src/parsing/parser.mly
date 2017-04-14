@@ -47,7 +47,7 @@ generic_parameters:
   L_ANGLE separated_list(COMMA, generic_parameter) R_ANGLE { $2 }
 
 generic_parameter:
-  UCID bounded_quantification? { { name = TVar $1; constraints = $2 } }
+  UCID bounded_quantification? { { name = $1; constraints = $2 } }
 
 bounded_quantification:
   COLON quantifiers { $2 }

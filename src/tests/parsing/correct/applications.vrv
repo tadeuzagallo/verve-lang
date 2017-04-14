@@ -1,11 +1,19 @@
 fn f<>(x: Int) -> Int { x }
+fn id<T>(x: T) -> T { x }
 
 f<>(42)
-f<T>(42)
-f<T,U>(100_000)
+id<Int>(42)
+f<>(100_000)
 
 fn g<>(h: (Int) -> Int) -> Void {}
-g<T>(f)
-g<T,U>(fn x<>(x: Int) -> Int { x })
+g<>(f)
+g<>(fn x<>(x: Int) -> Int { x })
 
-f<T,U>(f<T,U>(42))
+f<>(f<>(42))
+
+fn apply<T>(f: (T) -> T, x: T) -> T { f<>(x) }
+apply<Int>(f, 42)
+
+fn g<>(x: (Int) -> Int) -> Int { x<>(42) }
+g<>(f)
+g<>(id)

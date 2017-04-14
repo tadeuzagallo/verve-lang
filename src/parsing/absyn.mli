@@ -3,10 +3,7 @@ type name = string
 type import
 type export
 
-type tvar = TVar of name
-
 type type_ =
-  | Var of tvar
   | Con of name
   | Arrow of type_ list * type_
 
@@ -14,7 +11,7 @@ type literal =
   | Int of int
 
 type generic = {
-  name : tvar;
+  name : name;
   constraints : name list option;
 }
 
