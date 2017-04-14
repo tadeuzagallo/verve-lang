@@ -92,10 +92,11 @@ let rec check_fn env { name; generics; parameters; return_type; body } =
   let fn_type' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type in
   let (ret, _, s1) = check_exprs env'' body in
   let s2 = unify (ret, ret_type) in
+  let fn_type'' = apply (s2 >> s1) fn_type' in
 
   match name with
-  | Some n -> (fn_type', extend_env env (n, fn_type'), s2 >> s1)
-  | None -> (fn_type', env, s2 >> s1)
+  | Some n -> (fn_type'', extend_env env (n, fn_type''), s2 >> s1)
+  | None -> (fn_type'', env, s2 >> s1)
 
 and check_app env { callee; generic_arguments; arguments } =
   let (ty_callee, _, s1) = check_expr env callee in
