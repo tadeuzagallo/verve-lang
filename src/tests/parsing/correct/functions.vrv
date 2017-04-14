@@ -24,3 +24,7 @@ fn f<T, U>(x: T, y: (T) -> U) -> (T) -> U { y }
 
 fn h<T>() -> T { 42 }
 h<(Int) -> Int>()
+
+fn h() -> Int { 13 }
+fn i(x: Int) -> Int { h() }
+i(42)
