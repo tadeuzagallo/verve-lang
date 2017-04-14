@@ -41,10 +41,10 @@ expr:
 
 /* function expressions */
 function_:
-  FN LCID generic_parameters parameters return_type function_body { Function { name = Some $2; generics = $3; parameters = $4; return_type = $5; body = $6 } }
+  FN LCID generic_parameters? parameters return_type function_body { Function { name = Some $2; generics = $3; parameters = $4; return_type = $5; body = $6 } }
 
 generic_parameters:
-  L_ANGLE separated_list(COMMA, generic_parameter) R_ANGLE { $2 }
+  L_ANGLE separated_nonempty_list(COMMA, generic_parameter) R_ANGLE { $2 }
 
 generic_parameter:
   UCID bounded_quantification? { { name = $1; constraints = $2 } }
@@ -82,10 +82,10 @@ arrow_type:
 /* application */
 
 application:
-  expr generic_arguments arguments { Application { callee = $1; generic_arguments = $2; arguments = $3 } }
+  expr generic_arguments? arguments { Application { callee = $1; generic_arguments = $2; arguments = $3 } }
 
 generic_arguments:
-  L_ANGLE separated_list(COMMA, type_) R_ANGLE { $2 }
+  L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
 
 arguments:
   L_PAREN separated_list(COMMA, expr) R_PAREN { $2 }

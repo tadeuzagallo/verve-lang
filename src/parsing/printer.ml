@@ -38,18 +38,27 @@ let print_maybe out = function
   | Some str -> fprintf out "%s" str
   | None -> ()
 
+let print_generics out = function
+  | None -> ()
+  | Some generics ->
+      fprintf out "<%a>" (print_list ", " print_generic) generics
+
 let rec print_fn out { name; generics; parameters; return_type; body } = 
-  fprintf out "fn %a <%a>(%a) -> %a { %a }\n"
+  fprintf out "fn %a %a(%a) -> %a { %a }\n"
     print_maybe name
-    (print_list ", " print_generic) generics
+    print_generics generics
     (print_list ", " print_param) parameters
     print_type return_type
     (print_list "\n" print_expr) body
 
+and print_generic_arguments out = function
+  | None -> ()
+  | Some args ->
+      fprintf out "<%a>" (print_list ", " print_type) args
+
 and print_app out { callee; generic_arguments; arguments } =
-  fprintf out "%a<%a>(%a)\n"
+  fprintf out "%a(%a)\n"
     print_expr callee
-    (print_list ", " print_type) generic_arguments
     (print_list ", " print_expr) arguments
 
 and print_expr out = function

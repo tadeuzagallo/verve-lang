@@ -24,7 +24,7 @@ type body = expr list
 
 and function_ = {
   name : name option;
-  generics : generic list;
+  generics : generic list option;
   parameters : parameter list;
   return_type : type_;
   body: body;
@@ -32,7 +32,7 @@ and function_ = {
 
 and application = {
   callee: expr;
-  generic_arguments: type_ list;
+  generic_arguments: type_ list option;
   arguments: expr list;
 }
 

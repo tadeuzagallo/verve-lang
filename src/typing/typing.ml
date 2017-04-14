@@ -74,6 +74,11 @@ let rec check_type env : type_ -> T.ty = function
       in fn_type
 
 let rec check_fn env { name; generics; parameters; return_type; body } =
+  let generics = match generics with
+  | Some g -> g
+  | None -> []
+  in
+
   let generics' = List.map (fun (g: generic) -> new_var g.name) generics in
   let env' = List.fold_left
     (fun env (g, v : generic * T.tvar) -> extend_env env (g.name, T.Var v))
@@ -82,7 +87,6 @@ let rec check_fn env { name; generics; parameters; return_type; body } =
 
   let ret_type = check_type env' return_type in
 
-
   let (fn_type, env'') = List.fold_right
     (fun p (t, env'') ->
       let ty = check_type env' p.type_ in
@@ -90,6 +94,7 @@ let rec check_fn env { name; generics; parameters; return_type; body } =
     parameters (ret_type, env)
   in
   let fn_type' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type in
+
   let (ret, _, s1) = check_exprs env'' body in
   let s2 = unify (ret, ret_type) in
   let fn_type'' = apply (s2 >> s1) fn_type' in
@@ -99,6 +104,11 @@ let rec check_fn env { name; generics; parameters; return_type; body } =
   | None -> (fn_type'', env, s2 >> s1)
 
 and check_app env { callee; generic_arguments; arguments } =
+  let generic_arguments = match generic_arguments with
+  | Some g -> g
+  | None -> []
+  in
+
   let (ty_callee, _, s1) = check_expr env callee in
   let gen_args = List.map (check_type env) generic_arguments in
 
