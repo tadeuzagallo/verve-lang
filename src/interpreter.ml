@@ -23,17 +23,23 @@ let subst arguments fn =
     | Function f -> f
     | _ -> assert false
   in
-  let parameters' = List.map (fun (p: parameter) -> p.name) parameters in
-  let args =
-    try List.combine parameters' arguments
-    with Invalid_argument _ ->
-      raise (Runtime_error "wrong number of arguments for function call")
+  let subst, params =
+    let rec combine (subst, params) : parameter list * expr list -> 'a * 'b = function
+      | x::xs, y::ys ->
+          combine ((x.name,y)::subst, params) (xs, ys)
+      | x::xs, [] ->
+          combine (subst, x::params) (xs, [])
+      | [], [] ->
+          (List.rev subst, List.rev params)
+      | [], _ ->
+          raise (Runtime_error "Function applied to too many arguments")
+    in combine ([], []) (parameters, arguments)
   in
-  let body' = List.map (aux args) body in
-  let length = List.length body' in
-  if length = 0 then
-    Unit
-  else List.nth body' (length - 1)
+  let body' = List.rev_map (aux subst) body in
+  match params, body' with
+  | [], [] -> Unit
+  | [], _ -> List.hd body'
+  | _ -> Function { fn with parameters = params; body = body' }
 
 let rec eval env = function
   | Unit -> (Unit, env)
