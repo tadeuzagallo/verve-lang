@@ -5,7 +5,7 @@ f(f(42))
 
 fn id<T>(x: T) -> T { x }
 id<Int>(42)
-id(42)
+id(id)(id)(id)(id)(fn _<T>(x: T) -> T { x })(42)
 
 fn g(h: (Int) -> Int) -> Void {}
 g(f)
@@ -13,10 +13,13 @@ g(id)
 g(fn x(x: Int) -> Int { x })
 g(fn x<T>(x: T) -> T { x })
 
-fn apply<T>(f: (T) -> T, x: T) -> T { f(x) }
-apply<Int>(f, 42)
-apply(f, 42)
-
 fn h(x: (Int) -> Int) -> Int { x(42) }
 h(f)
 h(id)
+
+fn apply<T>(f: (T) -> T, x: T) -> T { f(x) }
+apply<Int>(f, 42)
+apply(id)
+apply(f, 42)
+apply(f)(42)
+apply(id)(apply)(id)(apply)(f)(42)

@@ -1,4 +1,4 @@
-type tvar = TV of unit ref * string
+type tvar = TV of int * string
 
 type ty = 
   | Const of string
@@ -11,6 +11,6 @@ let rec to_string = function
   | Var (TV (_, name)) ->
       "'" ^ name
   | Arrow (t1, t2) ->
-      (to_string t1) ^ " -> " ^ (to_string t2)
+      "(" ^ (to_string t1) ^ ") -> " ^ (to_string t2)
   | TypeArrow (t1, t2) ->
       (to_string (Var t1)) ^ " : Type -> " ^ (to_string t2)

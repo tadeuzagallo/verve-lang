@@ -7,7 +7,10 @@ exception UnificationError of string
 type ty_env = (name * T.ty) list
 type subst = (T.tvar * T.ty) list
 
-let new_var name = T.TV (ref (), name)
+let _type_id = ref 0
+let new_var name =
+  incr _type_id;
+  T.TV (!_type_id, name)
 let extend_env env (x, t) = (x, t)::env
 
 let ty_int = T.Const "Int"
@@ -49,7 +52,14 @@ let rec unify = function
 
   | T.TypeArrow (v11, t12), T.Arrow (t21, t22)
   | T.Arrow (t21, t22), T.TypeArrow (v11, t12) ->
-      unify (apply [(v11, t21)] t12, apply [(v11, t21)] (T.Arrow(t21, t22)))
+      let s1 = [(v11, t21)] in
+      let s2 = unify (apply s1 t12, apply s1 (T.Arrow(t21, t22))) in
+      s2 >> s1
+
+  | T.TypeArrow (v11, t12), T.TypeArrow (v21, t22) ->
+      let s1 = [(v11, T.Var v21)] in
+      let s2 = unify (apply s1 t12, apply s1 t22) in
+      s2 >> s1
 
   | t1, t2 ->
       let msg = Printf.sprintf "Failed to unify %s with %s"
@@ -59,8 +69,17 @@ let rec unify = function
 let check_literal = function
   | Int _ -> ty_int
 
+let rec instantiate s1 = function
+  | T.TypeArrow (var, ty) ->
+      let T.TV (_, name) = var in
+      let var' = new_var name in
+      T.TypeArrow (var', instantiate ([(var, T.Var var')] >> s1) ty)
+  | T.Arrow (t1, t2) ->
+      T.Arrow (instantiate s1 t1, instantiate s1 t2)
+  | t -> apply s1 t
+
 let get_type env v =
-  try List.assoc v env
+  try instantiate [] (List.assoc v env)
   with Not_found ->
     raise (TypeError "Unknown Type")
 
@@ -126,16 +145,17 @@ and check_app env { callee; generic_arguments; arguments } =
     | _ -> raise (TypeError "Invalid type for generic application")
   and check (call, s1) argument =
     let (ty_arg, _, s2) = check_expr env argument in
-    let rec check ty =
+    let rec check s3 ty =
       match ty with
       | T.Arrow (t1, t2) ->
-          let s3 = unify (apply (s2 >> s1) t1, ty_arg) in
-          (t2, s3 >> s2 >> s1)
-      | T.TypeArrow (_, t2) ->
-          check t2
+          let s4 = unify (apply (s2 >> s1) t1, ty_arg) in
+          (t2, s4 >> s3)
+      | T.TypeArrow (v1, t2) ->
+          let s4 = unify (apply s3 (T.Var v1), ty_arg) in
+          check (s4 >> s3) t2
       | _ -> raise (TypeError "Invalid type for function call")
     in
-    check call
+    check (s2 >> s1) call
   in
   let ty, s2 = List.fold_left check_type (ty_callee, s1) gen_args in
   let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
