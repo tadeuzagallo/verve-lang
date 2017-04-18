@@ -17,6 +17,7 @@ open Absyn
 %token R_BRACE
 %token L_PAREN
 %token R_PAREN
+%token EOL
 %token EOF
 
 /* tokens with semantic values */
@@ -28,25 +29,26 @@ open Absyn
 
 %%
 
-program: body EOF { { imports = []; exports = []; body = $1 } }
-
-body:
-  decl* { $1 }
+program: EOL* decl* EOF { { imports = []; exports = []; body = $2 } }
 
 decl:
-  | expr { Expr $1 }
-  | enum { Enum $1 }
+  | expr EOL+ { Expr $1 }
+  | enum EOL+ { Enum $1 }
+
+atom:
+  | LCID { Var $1 }
+  | literal { Literal $1 }
+  | application { $1 }
+  | L_PAREN expr R_PAREN { $2 }
 
 expr:
   | function_ { $1 }
-  | application { $1 }
-  | LCID { Var $1 }
   | constructor { $1 }
-  | literal { Literal $1 }
+  | atom { $1 }
 
 /* function expressions */
 function_:
-  FN LCID generic_parameters? parameters return_type function_body { Function { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
+  FN LCID generic_parameters? parameters return_type body(expr) { Function { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
 
 generic_parameters:
   L_ANGLE separated_nonempty_list(COMMA, generic_parameter) R_ANGLE { $2 }
@@ -73,8 +75,15 @@ pattern:
 return_type:
   ARROW type_ { $2 }
 
-function_body:
-  L_BRACE expr* R_BRACE { $2 }
+body(expr):
+  L_BRACE EOL* body_(expr) R_BRACE { $3 }
+
+body_(expr):
+  | expr { [$1] }
+  | body_eol(expr)* { $1 }
+
+body_eol(expr):
+  expr EOL+ { $1 }
 
 /* types */
 type_:
@@ -87,7 +96,7 @@ arrow_type:
 /* application */
 
 application:
-  expr generic_arguments? arguments { Application { callee = $1; generic_arguments = $2; arguments = $3 } }
+  atom generic_arguments? arguments { Application { callee = $1; generic_arguments = $2; arguments = $3 } }
 
 generic_arguments:
   L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
@@ -104,7 +113,7 @@ int_:
 
 /* enums */
 enum:
-  ENUM UCID generic_parameters? L_BRACE enum_item+ R_BRACE { { enum_name = $2; enum_generics = $3; enum_items = $5 } }
+  ENUM UCID generic_parameters? body(enum_item) { { enum_name = $2; enum_generics = $3; enum_items = $4 } }
 
 enum_item:
   UCID generic_parameters? enum_item_type? { { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; } }

@@ -14,3 +14,14 @@ enum Nat {
 Zero
 Succ(Zero)
 Succ(Succ(Zero))
+
+// newline rules
+
+enum A { B }
+
+// enum A { B C } - fails: multiple constructors must be separated by a newline
+
+enum X {
+  A
+  B
+}

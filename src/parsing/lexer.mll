@@ -4,6 +4,9 @@ open Parser
 exception SyntaxError of string
 }
 
+let newline = ('\013'* '\010')
+let blank = [' ' '\009' '\012']
+
 rule read = parse
 (* keywords *)
 | "fn" { FN }
@@ -29,13 +32,18 @@ rule read = parse
 | ['0'-'9']['0'-'9' '_']* { INT(int_of_string @@ Lexing.lexeme lexbuf) }
 
 (* whitespace *)
-| (" " | "\t") { read lexbuf }
-| ("\n" | "\r" | "\r\n") { Lexing.new_line lexbuf; read lexbuf }
+| blank { read lexbuf }
+| newline { Lexing.new_line lexbuf; EOL }
 | "/*" { comment 1 lexbuf }
-| "//" _* "\n" { Lexing.new_line lexbuf; read lexbuf }
+| "//" { single_line_comment lexbuf }
 
 and comment depth = parse
 | "/*" { comment (depth + 1) lexbuf }
 | "*/" { if depth = 1 then read lexbuf else comment (depth - 1) lexbuf }
 | eof { raise (SyntaxError "Unterminated comment") }
 | _ { comment depth lexbuf }
+
+and single_line_comment = parse
+| newline { read lexbuf }
+| eof { EOF }
+| _ { single_line_comment lexbuf }
