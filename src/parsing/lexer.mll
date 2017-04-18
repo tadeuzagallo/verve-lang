@@ -7,6 +7,7 @@ exception SyntaxError of string
 rule read = parse
 (* keywords *)
 | "fn" { FN }
+| "enum" { ENUM }
 
 (* punctuation *)
 | "->" { ARROW }

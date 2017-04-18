@@ -1,4 +1,4 @@
 "parsing": include
 "typing": include
 
-true: use_menhir
+true: use_menhir, explain

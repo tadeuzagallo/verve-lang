@@ -1,0 +1,16 @@
+enum Bool {
+  True
+  False
+}
+
+True
+False
+
+enum Nat {
+  Zero
+  Succ(Nat)
+}
+
+Zero
+Succ(Zero)
+Succ(Succ(Zero))

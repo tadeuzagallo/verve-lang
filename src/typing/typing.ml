@@ -13,9 +13,9 @@ let new_var name =
   T.TV (!_type_id, name)
 let extend_env env (x, t) = (x, t)::env
 
-let ty_int = T.Const "Int"
-let ty_type = T.Const "Type"
-let ty_unit = T.Const "Unit"
+let ty_int = T.Type "Int"
+let ty_type = T.Type "Type"
+let ty_unit = T.Type "Unit"
 
 let default_env = [
   ("Type", ty_type);
@@ -31,7 +31,7 @@ let rec apply s =
     try List.assoc v s
     with Not_found -> T.Var v
   in function
-  | T.Const t -> T.Const t
+  | T.Type t -> T.Type t
   | T.Var v -> var v
   | T.Arrow (t1, t2) ->
       T.Arrow (apply s t1, apply s t2)
@@ -39,7 +39,7 @@ let rec apply s =
       T.TypeArrow (v1, apply s t2)
 
 let rec unify = function
-  | T.Const t1, T.Const t2 when t1 = t2 -> []
+  | T.Type t1, T.Type t2 when t1 = t2 -> []
 
   | T.Var t1, t2
   | t2, T.Var t1 ->
@@ -92,25 +92,25 @@ let rec check_type env : type_ -> T.ty = function
         parameters ret
       in fn_type
 
-let rec check_fn env { name; generics; parameters; return_type; body } =
-  let generics = match generics with
+let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
+  let generics = match fn_generics with
   | Some g -> g
   | None -> []
   in
 
-  let generics' = List.map (fun (g: generic) -> new_var g.name) generics in
+  let generics' = List.map (fun g -> new_var g.name) generics in
   let env' = List.fold_left
     (fun env (g, v : generic * T.tvar) -> extend_env env (g.name, T.Var v))
     env (List.combine generics generics')
   in
 
-  let ret_type = check_type env' return_type in
+  let ret_type = check_type env' fn_return_type in
 
   let (fn_type, env'') = List.fold_right
     (fun p (t, env'') ->
-      let ty = check_type env' p.type_ in
-      (T.Arrow (ty , t), extend_env env'' (p.name, ty)))
-    parameters (ret_type, env)
+      let ty = check_type env' p.param_type in
+      (T.Arrow (ty , t), extend_env env'' (p.param_name, ty)))
+    fn_parameters (ret_type, env)
   in
   let fn_type' = match fn_type with
   | T.Arrow _ -> fn_type
@@ -118,21 +118,22 @@ let rec check_fn env { name; generics; parameters; return_type; body } =
   in
   let fn_type'' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type' in
 
-  let (ret, _, s1) = check_exprs env'' body in
+  let (ret, _, s1) = check_exprs env'' fn_body in
   let s2 = unify (ret, ret_type) in
   let fn_type'' = apply (s2 >> s1) fn_type'' in
 
-  match name with
+  match fn_name with
   | Some n -> (fn_type'', extend_env env (n, fn_type''), s2 >> s1)
   | None -> (fn_type'', env, s2 >> s1)
 
-and check_app env { callee; generic_arguments; arguments } =
+and check_generic_application env (callee, generic_arguments, arguments) =
   let generic_arguments = match generic_arguments with
   | Some g -> g
   | None -> []
   and arguments = match arguments with
-  | [] -> [Unit]
-  | _ -> arguments
+  | None -> []
+  | Some [] -> [Unit]
+  | Some args -> args
   in
 
   let (ty_callee, _, s1) = check_expr env callee in
@@ -161,13 +162,19 @@ and check_app env { callee; generic_arguments; arguments } =
   let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
   (ty', env, s3)
 
+and check_app env { callee; generic_arguments; arguments } =
+  check_generic_application env (callee, generic_arguments, Some arguments)
+
+and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
+  check_generic_application env (Var ctor_name, ctor_generic_arguments, ctor_arguments)
+
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (ty_unit, env, [])
   | Literal l -> (check_literal l, env, [])
   | Var v -> (get_type env v, env, [])
-
   | Function fn -> check_fn env fn
   | Application app -> check_app env app
+  | Ctor ctor -> check_ctor env ctor
 
 and check_exprs env exprs =
   List.fold_left
@@ -176,6 +183,34 @@ and check_exprs env exprs =
       (ty, env', s2 >> s1))
     (ty_unit, env, []) exprs
 
+and check_enum_item enum_ty env { enum_item_name; enum_item_parameters } =
+  match enum_item_parameters with
+  | None -> extend_env env (enum_item_name, enum_ty)
+  | Some ps ->
+      let aux p enum_ty =
+        let t = check_type env p in
+        T.Arrow (t, enum_ty)
+      in
+      let ty = List.fold_right aux ps enum_ty in
+      extend_env env (enum_item_name, ty)
+
+and check_enum env { enum_name; enum_items } =
+  let enum_ty = T.Type enum_name in
+  let env' = extend_env env (enum_name, enum_ty) in
+  let env'' = List.fold_left (check_enum_item enum_ty) env' enum_items in
+  (ty_type, env'', [])
+
+and check_decl env = function
+  | Expr expr -> check_expr env expr
+  | Enum enum -> check_enum env enum
+
+and check_decls env decls =
+  List.fold_left
+    (fun (_, env, s1) node ->
+      let ty, env', s2 = check_decl env node in
+      (ty, env', s2 >> s1))
+    (ty_unit, env, []) decls
+
 let check program =
-  let ty, _, s = check_exprs default_env program.body in
+  let ty, _, s = check_decls default_env program.body in
   apply s ty

@@ -1,6 +1,8 @@
 open Absyn
 open Printf
 
+module V = Value
+
 let print_literal out = function
   | Int i -> fprintf out "%d" i
 
@@ -29,10 +31,9 @@ let rec print_type out = function
       fprintf out "(%a) -> %a"
         (print_list "," print_type) ps
         print_type r
-  | _ -> assert false (* TODO *)
 
-let print_param out { name; type_ } =
-  fprintf out "%s: %a" name print_type type_
+let print_param out { param_name; param_type } =
+  fprintf out "%s: %a" param_name print_type param_type
 
 let print_maybe out = function
   | Some str -> fprintf out "%s" str
@@ -43,13 +44,13 @@ let print_generics out = function
   | Some generics ->
       fprintf out "<%a>" (print_list ", " print_generic) generics
 
-let rec print_fn out { name; generics; parameters; return_type; body } = 
+let rec print_fn out { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   fprintf out "fn %a %a(%a) -> %a { %a }\n"
-    print_maybe name
-    print_generics generics
-    (print_list ", " print_param) parameters
-    print_type return_type
-    (print_list "\n" print_expr) body
+    print_maybe fn_name
+    print_generics fn_generics
+    (print_list ", " print_param) fn_parameters
+    print_type fn_return_type
+    (print_list "\n" print_expr) fn_body
 
 and print_generic_arguments out = function
   | None -> ()
@@ -61,17 +62,32 @@ and print_app out { callee; generic_arguments; arguments } =
     print_expr callee
     (print_list ", " print_expr) arguments
 
+and print_ctor out { ctor_name;  ctor_generic_arguments; ctor_arguments } =
+  let print_opt_args out = function
+    | None -> ()
+    | Some args ->
+        fprintf out "(%a)" (print_list ", " print_expr) args
+  in
+  fprintf out "%s%a%a"
+    ctor_name
+    print_generic_arguments ctor_generic_arguments
+    print_opt_args ctor_arguments
+
 and print_expr out = function
   | Function fn -> print_fn out fn
+  | Ctor ctor -> print_ctor out ctor
   | Application app -> print_app out app
   | Var str -> fprintf out "%s" str
   | Literal l -> fprintf out "%a" print_literal l
   | Unit -> fprintf out "()"
 
+and print_value out = function
+  | V.Function fn -> print_fn out fn
+  | V.Ctor ctor -> print_ctor out ctor
+  | V.Literal l -> fprintf out "%a" print_literal l
+  | V.Unit -> fprintf out "()"
+
 let print expr ty =
   fprintf stderr "%a : %s\n"
-    print_expr expr
+    print_value expr
     (Types.to_string ty)
-
-let print_program p =
-  List.iter (print_expr stderr) p.body

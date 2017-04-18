@@ -1,13 +1,13 @@
 type tvar = TV of int * string
 
 type ty = 
-  | Const of string
+  | Type of string
   | Arrow of ty * ty
   | TypeArrow of tvar * ty
   | Var of tvar
 
 let rec to_string = function
-  | Const s -> s
+  | Type s -> s
   | Var (TV (_, name)) ->
       "'" ^ name
   | Arrow (t1, t2) ->

@@ -13,17 +13,17 @@ Enums
 ::
 
   enum Optional<T> {
-    None()
+    None
     Some(T)
   }
 
   enum List<T> {
-    None()
-    Some(T, List<T>)
+    Nil
+    Cons(T, List<T>)
   }
 
   enum Nat {
-    Z()
+    Z
     S(Nat)
   }
 
@@ -33,7 +33,7 @@ GADTs
 
   enum Term<_> {
     Int(Int) -> Term<Int>
-    Add() -> Term<(Int, Int) -> Int>
+    Add -> Term<(Int, Int) -> Int>
     App<T, U>(Term<T -> U>, Term<T>) -> Term<U>
   }
 
@@ -42,8 +42,8 @@ co- and contra-variance not necessary (?)
 
 ::
 
-  class List<T> {
-    items: List'<T>
+  class Stack<T> {
+    items: List<T>
 
     // can't capture T
     fn append<T>(self: List<T>, x: T) -> List<T> {
