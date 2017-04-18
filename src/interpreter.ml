@@ -72,7 +72,7 @@ let rec eval_expr env = function
 
 and eval_decl env = function
   | Expr expr -> eval_expr env expr
-  | Enum enum -> (V.Unit, env)
+  | Enum { enum_name } -> (V.Type enum_name , env)
 
 let eval { body } =
   List.fold_left (fun (_, env) node -> eval_decl env node) (V.Unit, []) body

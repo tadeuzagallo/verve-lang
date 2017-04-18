@@ -86,6 +86,7 @@ and print_value out = function
   | V.Ctor ctor -> print_ctor out ctor
   | V.Literal l -> fprintf out "%a" print_literal l
   | V.Unit -> fprintf out "()"
+  | V.Type t -> fprintf out "%s" t
 
 let print expr ty =
   fprintf stderr "%a : %s\n"
