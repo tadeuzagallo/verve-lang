@@ -15,12 +15,12 @@ let extend_env env (x, t) = (x, t)::env
 
 let ty_int = T.Type "Int"
 let ty_type = T.Type "Type"
-let ty_unit = T.Type "Unit"
+let ty_void = T.Type "Void"
 
 let default_env = [
   ("Type", ty_type);
   ("Int", ty_int);
-  ("Void", ty_unit);
+  ("Void", ty_void);
 ]
 
 let (>>) s1 s2 =
@@ -139,7 +139,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   in
   let fn_type' = match fn_type with
   | T.Arrow _ -> fn_type
-  | _ -> T.Arrow (ty_unit, fn_type)
+  | _ -> T.Arrow (ty_void, fn_type)
   in
   let fn_type'' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type' in
 
@@ -188,7 +188,7 @@ and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   check_generic_application env (Var ctor_name, ctor_generic_arguments, ctor_arguments)
 
 and check_expr env : expr -> T.ty * ty_env * subst = function
-  | Unit -> (ty_unit, env, [])
+  | Unit -> (ty_void, env, [])
   | Literal l -> (check_literal l, env, [])
   | Var v -> (get_type env v, env, [])
   | Function fn -> check_fn env fn
@@ -200,7 +200,7 @@ and check_exprs env exprs =
     (fun (_, env, s1) node ->
       let ty, env', s2 = check_expr env node in
       (ty, env', s2 >> s1))
-    (ty_unit, env, []) exprs
+    (ty_void, env, []) exprs
 
 and check_enum_item make enum_ty (env, s1) { enum_item_name; enum_item_parameters } =
   match enum_item_parameters with
@@ -240,7 +240,7 @@ and check_decls env decls =
     (fun (_, env, s1) node ->
       let ty, env', s2 = check_decl env node in
       (ty, env', s2 >> s1))
-    (ty_unit, env, []) decls
+    (ty_void, env, []) decls
 
 let check program =
   let ty, _, s = check_decls default_env program.body in
