@@ -20,6 +20,8 @@ h(id)
 fn apply<T>(f: (T) -> T, x: T) -> T { f(x) }
 apply<Int>(f, 42)
 apply(id)
+apply(id)(id)(42)
+apply(id)(id)(id)
 apply(f, 42)
 apply(f)(42)
 apply(id)(apply)(id)(apply)(id)(f)(42)

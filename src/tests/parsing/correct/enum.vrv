@@ -25,3 +25,10 @@ enum X {
   A
   B
 }
+
+enum List<T> {
+  Nil
+  Cons(T, List<T>)
+}
+
+Cons(2, Cons(1, Nil))

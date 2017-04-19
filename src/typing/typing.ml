@@ -24,7 +24,12 @@ let default_env = [
 ]
 
 let (>>) s1 s2 =
-  s1 @ s2
+  let apply s1 s2 =
+    let aux (k, v) =
+      try (k, List.assoc k s1)
+      with Not_found -> (k, v)
+    in List.map aux s2
+  in apply s1 s2 @ s1
 
 let rec apply s =
   let var v =
@@ -35,8 +40,13 @@ let rec apply s =
   | T.Var v -> var v
   | T.Arrow (t1, t2) ->
       T.Arrow (apply s t1, apply s t2)
+  | T.TypeCtor (name, types) ->
+      let types' = List.map (apply s) types in
+      T.TypeCtor (name, types')
   | T.TypeArrow (v1, t2) ->
-      T.TypeArrow (v1, apply s t2)
+      match var v1 with
+      | T.Var v -> T.TypeArrow (v, apply s t2)
+      | _ -> apply s t2
 
 let rec unify = function
   | T.Type t1, T.Type t2 when t1 = t2 -> []
@@ -50,16 +60,14 @@ let rec unify = function
       let s2 = unify (apply s1 t12, apply s1 t22) in
       s2 >> s1
 
-  | T.TypeArrow (v11, t12), T.Arrow (t21, t22)
-  | T.Arrow (t21, t22), T.TypeArrow (v11, t12) ->
-      let s1 = [(v11, t21)] in
-      let s2 = unify (apply s1 t12, apply s1 (T.Arrow(t21, t22))) in
-      s2 >> s1
+  | T.TypeArrow (_, t1), t2
+  | t2, T.TypeArrow (_, t1) ->
+      unify (t1, t2)
 
-  | T.TypeArrow (v11, t12), T.TypeArrow (v21, t22) ->
-      let s1 = [(v11, T.Var v21)] in
-      let s2 = unify (apply s1 t12, apply s1 t22) in
-      s2 >> s1
+  | T.TypeCtor (n1, t1s), T.TypeCtor (n2, t2s) when n1 = n2 ->
+      let aux s t1 t2 =
+        unify (t1, t2) >> s
+      in List.fold_left2 aux [] t1s t2s
 
   | t1, t2 ->
       let msg = Printf.sprintf "Failed to unify %s with %s"
@@ -76,6 +84,9 @@ let rec instantiate s1 = function
       T.TypeArrow (var', instantiate ([(var, T.Var var')] >> s1) ty)
   | T.Arrow (t1, t2) ->
       T.Arrow (instantiate s1 t1, instantiate s1 t2)
+  | T.TypeCtor (n, ts) ->
+      let ts' = List.map (instantiate s1) ts in
+      T.TypeCtor (n, ts')
   | t -> apply s1 t
 
 let get_type env v =
@@ -83,14 +94,28 @@ let get_type env v =
   with Not_found ->
     raise (TypeError "Unknown Type")
 
-let rec check_type env : type_ -> T.ty = function
-  | Con t -> get_type env t
+let rec check_type env : type_ -> T.ty * subst = function
+  | Con t -> get_type env t, []
   | Arrow (parameters, return_type) ->
-      let ret = check_type env return_type in
+      let ret, s = check_type env return_type in
       let fn_type = List.fold_right
-        (fun p t -> T.Arrow (check_type env p, t))
-        parameters ret
+        (fun p (t, s1) -> let ty_p, s2 = check_type env p in T.Arrow (ty_p, t), s2 >> s1)
+        parameters (ret, s)
       in fn_type
+  | Inst (t, args) ->
+      let ty = get_type env t in
+      apply_generics env ty args []
+
+and apply_generics env ty_callee gen_args s1 =
+  let gen_args' = List.map (check_type env) gen_args in
+  let check_type (call, s1) (g, s2) =
+    match call with
+    | T.TypeArrow (g', tail) ->
+        let s = [(g', g)] >> s2 >> s1 in
+        (apply s tail, s)
+    | _ -> raise (TypeError "Invalid type for generic application")
+  in
+  List.fold_left check_type (ty_callee, s1) gen_args'
 
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   let generics = match fn_generics with
@@ -104,13 +129,13 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
     env (List.combine generics generics')
   in
 
-  let ret_type = check_type env' fn_return_type in
+  let ret_type, s0 = check_type env' fn_return_type in
 
-  let (fn_type, env'') = List.fold_right
-    (fun p (t, env'') ->
-      let ty = check_type env' p.param_type in
-      (T.Arrow (ty , t), extend_env env'' (p.param_name, ty)))
-    fn_parameters (ret_type, env)
+  let (fn_type, env'', s1) = List.fold_right
+    (fun p (t, env'', s1) ->
+      let ty, s2 = check_type env' p.param_type in
+      (T.Arrow (ty , t), extend_env env'' (p.param_name, ty), s2 >> s1))
+      fn_parameters (ret_type, env, s0)
   in
   let fn_type' = match fn_type with
   | T.Arrow _ -> fn_type
@@ -118,13 +143,13 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   in
   let fn_type'' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type' in
 
-  let (ret, _, s1) = check_exprs env'' fn_body in
-  let s2 = unify (ret, ret_type) in
-  let fn_type'' = apply (s2 >> s1) fn_type'' in
+  let (ret, _, s2) = check_exprs env'' fn_body in
+  let s3 = unify (ret, ret_type) in
+  let fn_type'' = apply (s3 >> s2 >> s1) fn_type'' in
 
   match fn_name with
-  | Some n -> (fn_type'', extend_env env (n, fn_type''), s2 >> s1)
-  | None -> (fn_type'', env, s2 >> s1)
+  | Some n -> (fn_type'', extend_env env (n, fn_type''), s3 >> s2 >> s1)
+  | None -> (fn_type'', env, s3 >> s2 >> s1)
 
 and check_generic_application env (callee, generic_arguments, arguments) =
   let generic_arguments = match generic_arguments with
@@ -137,28 +162,22 @@ and check_generic_application env (callee, generic_arguments, arguments) =
   in
 
   let (ty_callee, _, s1) = check_expr env callee in
-  let gen_args = List.map (check_type env) generic_arguments in
 
-  let check_type (call, s) g =
-    match call with
-    | T.TypeArrow (g', tail) ->
-        (tail, [(g', g)] >> s)
-    | _ -> raise (TypeError "Invalid type for generic application")
-  and check (call, s1) argument =
+  let check (call, s1) argument =
     let (ty_arg, _, s2) = check_expr env argument in
     let rec check s3 ty =
       match ty with
       | T.Arrow (t1, t2) ->
-          let s4 = unify (apply (s2 >> s1) t1, ty_arg) in
+          let s4 = unify (apply s3 t1, ty_arg) in
           (t2, s4 >> s3)
       | T.TypeArrow (v1, t2) ->
-          let s4 = unify (apply s3 (T.Var v1), ty_arg) in
-          check (s4 >> s3) t2
+          let t2', s = check s3 t2 in
+          T.TypeArrow (v1, t2'), s
       | _ -> raise (TypeError "Invalid type for function call")
     in
     check (s2 >> s1) call
   in
-  let ty, s2 = List.fold_left check_type (ty_callee, s1) gen_args in
+  let ty, s2 = apply_generics env ty_callee generic_arguments s1 in
   let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
   (ty', env, s3)
 
@@ -183,22 +202,34 @@ and check_exprs env exprs =
       (ty, env', s2 >> s1))
     (ty_unit, env, []) exprs
 
-and check_enum_item enum_ty env { enum_item_name; enum_item_parameters } =
+and check_enum_item make enum_ty (env, s1) { enum_item_name; enum_item_parameters } =
   match enum_item_parameters with
-  | None -> extend_env env (enum_item_name, enum_ty)
+  | None -> extend_env env (enum_item_name, make enum_ty), s1
   | Some ps ->
-      let aux p enum_ty =
-        let t = check_type env p in
-        T.Arrow (t, enum_ty)
+      let aux p (enum_ty, s1) =
+        let t, s2 = check_type env p in
+        T.Arrow (t, enum_ty), s2 >> s1
       in
-      let ty = List.fold_right aux ps enum_ty in
-      extend_env env (enum_item_name, ty)
+      let ty, s2 = List.fold_right aux ps (enum_ty, s1) in
+      let ty' = make ty in
+      extend_env env (enum_item_name, ty'), s2
 
-and check_enum env { enum_name; enum_items } =
-  let enum_ty = T.Type enum_name in
-  let env' = extend_env env (enum_name, enum_ty) in
-  let env'' = List.fold_left (check_enum_item enum_ty) env' enum_items in
-  (ty_type, env'', [])
+and check_enum env { enum_name; enum_generics; enum_items } =
+  let make, enum_ty, env' = match enum_generics with
+    | None -> (fun x -> x), T.Type enum_name, env
+    | Some gen ->
+        let create_var (vars, env) g =
+          let var = new_var g.name in
+          (var :: vars, extend_env env (g.name, T.Var var))
+        in
+        let gen', env' = List.fold_left create_var ([], env) gen in
+        let base_ty = T.TypeCtor (enum_name, List.map (fun v -> T.Var v) gen') in
+        let make t = List.fold_right (fun g t -> T.TypeArrow (g, t)) gen' t in
+        make, base_ty , env'
+  in
+  let env'' = extend_env env' (enum_name, make enum_ty) in
+  let env''', s = List.fold_left (check_enum_item make enum_ty) (env'', []) enum_items in
+  (enum_ty, env''', s)
 
 and check_decl env = function
   | Expr expr -> check_expr env expr
