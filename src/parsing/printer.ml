@@ -31,6 +31,8 @@ let rec print_type out = function
       fprintf out "(%a) -> %a"
         (print_list "," print_type) ps
         print_type r
+  | Inst (n, ts) ->
+      fprintf out "%s<%a>" n (print_list ", " print_type) ts
 
 let print_param out { param_name; param_type } =
   fprintf out "%s: %a" param_name print_type param_type
