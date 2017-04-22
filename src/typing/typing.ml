@@ -11,6 +11,7 @@ let _type_id = ref 0
 let new_var name =
   incr _type_id;
   T.TV (!_type_id, name)
+
 let extend_env env (x, t) = (x, t)::env
 
 let ty_int = T.Type "Int"
@@ -32,19 +33,22 @@ let (>>) s1 s2 =
   in apply s1 s2 @ s1
 
 let rec apply s =
-  let var v =
+  let var v ?(default=T.Var v) () =
     try List.assoc v s
-    with Not_found -> T.Var v
+    with Not_found -> default
   in function
   | T.Type t -> T.Type t
-  | T.Var v -> var v
+  | T.Var v -> var v ()
   | T.Arrow (t1, t2) ->
       T.Arrow (apply s t1, apply s t2)
   | T.TypeCtor (name, types) ->
       let types' = List.map (apply s) types in
       T.TypeCtor (name, types')
+  | T.Interface i -> T.Interface i
+  | T.Implementation i -> T.Implementation i
+  | T.ConstrainedVar (v, _) as t -> var v ~default:t ()
   | T.TypeArrow (v1, t2) ->
-      match var v1 with
+      match var v1 () with
       | T.Var v -> T.TypeArrow (v, apply s t2)
       | _ -> apply s t2
 
@@ -69,13 +73,21 @@ let rec unify = function
         unify (t1, t2) >> s
       in List.fold_left2 aux [] t1s t2s
 
+  | T.ConstrainedVar (v, cs), t
+  | t, T.ConstrainedVar (v, cs) ->
+      let impls t intf_desc =
+        if not (List.mem_assoc t intf_desc.T.intf_impls) then
+          let msg = Printf.sprintf "Type %s does not implement interface %s"
+            (T.to_string t) intf_desc.intf_name
+          in raise (UnificationError msg)
+      in
+      List.iter (impls t) cs;
+      [ v, t ]
+
   | t1, t2 ->
       let msg = Printf.sprintf "Failed to unify %s with %s"
         (T.to_string t1) (T.to_string t2)
       in raise (UnificationError msg)
-
-let check_literal = function
-  | Int _ -> ty_int
 
 let rec instantiate s1 = function
   | T.TypeArrow (var, ty) ->
@@ -93,6 +105,21 @@ let get_type env v =
   try instantiate [] (List.assoc v env)
   with Not_found ->
     raise (TypeError "Unknown Type")
+
+let cvar_of_generic env { name; constraints } =
+  let resolve n = match get_type env n with
+    | T.Interface i -> i
+    | t -> raise (TypeError "Generic constraint must be an interface")
+  in
+  let var = new_var name in
+  let intfs = match constraints with
+    | None -> []
+    | Some c -> List.map resolve c
+  in
+  T.ConstrainedVar (var, intfs)
+
+let check_literal = function
+  | Int _ -> ty_int
 
 let rec check_type env : type_ -> T.ty * subst = function
   | Con t -> get_type env t, []
@@ -231,9 +258,46 @@ and check_enum env { enum_name; enum_generics; enum_items } =
   let env''', s = List.fold_left (check_enum_item make enum_ty) (env'', []) enum_items in
   (enum_ty, env''', s)
 
+and check_interface env { intf_name; intf_param; intf_functions } =
+  let intf_ty = T.Interface { intf_name; intf_impls = [] } in
+  let env' = extend_env env (intf_name, intf_ty) in
+  let generic = { name = intf_param.name; constraints =
+    match intf_param.constraints with
+    | None -> Some [ intf_name ]
+    | Some cs -> Some (intf_name::cs)
+  } in
+  let var = cvar_of_generic env' generic in
+  let env'' = List.fold_left (check_proto (intf_param.name, var)) env' intf_functions in
+  (intf_ty, env'', [])
+
+and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; proto_ret_type } =
+  let env' = extend_env env (var_name, var) in
+  let ret_type, s1 = check_type env' proto_ret_type in
+  let make_arrow param (t, s1) =
+    let param_ty, s2 = check_type env' param in
+    T.Arrow (param_ty, t), s2 >> s1
+  in
+  let fn_ty, s = List.fold_right make_arrow proto_params (ret_type, s1) in
+  extend_env env (proto_name, apply s fn_ty)
+
+and check_implementation env { impl_name; impl_arg; impl_functions } =
+  let impl_arg_ty, s1 = check_type env impl_arg in
+  let impl_desc : T.implementation_desc = { impl_name; impl_type = impl_arg_ty; impl_functions = [] } in
+  let impl_ty = T.Implementation impl_desc in
+  let intf_desc =
+    match get_type env impl_name with
+    | T.Interface i -> i
+    | t -> raise (TypeError (impl_name ^ " is not an interface"))
+  in
+  intf_desc.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.intf_impls;
+  let env' = extend_env env (impl_name, impl_ty) in
+  (impl_ty, env', s1)
+
 and check_decl env = function
   | Expr expr -> check_expr env expr
   | Enum enum -> check_enum env enum
+  | Interface intf -> check_interface env intf
+  | Implementation impl -> check_implementation env impl
 
 and check_decls env decls =
   List.fold_left

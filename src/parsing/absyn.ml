@@ -33,6 +33,19 @@ type enum = {
   enum_items : enum_item list;
 }
 
+type interface = {
+  intf_name : string;
+  intf_param : generic;
+  intf_functions : prototype list;
+}
+
+and prototype = {
+  proto_name : string;
+  proto_generics : generic list option;
+  proto_params : type_ list;
+  proto_ret_type : type_;
+}
+
 type body = expr list
 
 and function_ = {
@@ -41,6 +54,12 @@ and function_ = {
   fn_parameters : parameter list;
   fn_return_type : type_;
   fn_body: body;
+}
+
+and implementation = {
+  impl_name : string;
+  impl_arg : type_;
+  impl_functions : function_ list;
 }
 
 and application = {
@@ -66,6 +85,8 @@ and expr =
 and decl =
   | Enum of enum
   | Expr of expr
+  | Interface of interface
+  | Implementation of implementation
 
 type program = {
   imports : import list;

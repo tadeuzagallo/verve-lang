@@ -11,6 +11,8 @@ rule read = parse
 (* keywords *)
 | "fn" { FN }
 | "enum" { ENUM }
+| "interface" { INTERFACE }
+| "implementation" { IMPLEMENTATION }
 
 (* punctuation *)
 | "->" { ARROW }

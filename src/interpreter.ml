@@ -72,7 +72,15 @@ let rec eval_expr env = function
 
 and eval_decl env = function
   | Expr expr -> eval_expr env expr
-  | Enum { enum_name } -> (V.Type enum_name , env)
+  | Enum { enum_name } -> (V.Type enum_name, env)
+  | Interface { intf_name; intf_functions } ->
+      let aux env { proto_name } =
+        (proto_name, V.Unit)::env
+      in
+      let env' = List.fold_left aux env intf_functions in
+      (V.Type intf_name, env')
+  | Implementation { impl_name } ->
+      (V.Type impl_name, env)
 
 let eval { body } =
   List.fold_left (fun (_, env) node -> eval_decl env node) (V.Unit, []) body

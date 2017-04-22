@@ -1,0 +1,32 @@
+interface Intish<T> {
+  fn to_int(T) -> Int
+}
+// Intish => type_ list ref
+// to_int<T: Intish>(x : T) -> Int
+
+implementation Intish<Int> {
+  fn to_int(x: Int) -> Int { x }
+}
+// Intish := (Int, [ Int::to_int ]) :: !Intish
+// unify(Intish<Int>::to_int, Intish<T>::to_int)
+
+to_int(42)
+/*
+fn f<T: Intish>(x: T) -> Int {
+  to_int(x)
+}
+
+f(42)
+*/
+
+/**
+
+fn Int::to_int(x: Int) -> Int { x }
+
+fn f<T: Intish>(d: Intish, x: T) -> Int {
+  d.to_int(x)
+}
+
+f(Intish<Int>, 42)
+
+**/

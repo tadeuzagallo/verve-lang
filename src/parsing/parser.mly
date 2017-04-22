@@ -1,11 +1,13 @@
 %{
 
-open Absyn 
+open Absyn
 %}
 
 /* keywords */
 %token ENUM
 %token FN
+%token INTERFACE
+%token IMPLEMENTATION
 
 /* punctuation */
 %token ARROW
@@ -32,8 +34,10 @@ open Absyn
 program: EOL* decl* EOF { { imports = []; exports = []; body = $2 } }
 
 decl:
+  | enum EOL+ { $1 }
+  | interface EOL+ { $1 }
+  | implementation EOL+ { $1 }
   | expr EOL+ { Expr $1 }
-  | enum EOL+ { Enum $1 }
 
 atom:
   | LCID { Var $1 }
@@ -42,13 +46,13 @@ atom:
   | L_PAREN expr R_PAREN { $2 }
 
 expr:
-  | function_ { $1 }
+  | function_ { Function $1 }
   | constructor { $1 }
   | atom { $1 }
 
 /* function expressions */
 function_:
-  FN LCID generic_parameters? parameters return_type body(expr) { Function { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
+  FN LCID generic_parameters? parameters return_type body(expr) { { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
 
 generic_parameters:
   L_ANGLE separated_nonempty_list(COMMA, generic_parameter) R_ANGLE { $2 }
@@ -114,7 +118,7 @@ int_:
 
 /* enums */
 enum:
-  ENUM UCID generic_parameters? body(enum_item) { { enum_name = $2; enum_generics = $3; enum_items = $4 } }
+  ENUM UCID generic_parameters? body(enum_item) { Enum { enum_name = $2; enum_generics = $3; enum_items = $4 } }
 
 enum_item:
   UCID generic_parameters? enum_item_type? { { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; } }
@@ -124,3 +128,17 @@ enum_item_type:
 
 constructor:
   UCID generic_arguments? arguments? { Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 } }
+
+/* interfaces */
+interface:
+  INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) { Interface { intf_name = $2; intf_param = $4; intf_functions = $6; } }
+
+prototype:
+  FN LCID generic_parameters? proto_params return_type { { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 } }
+
+proto_params:
+  L_PAREN separated_list(COMMA, type_) R_PAREN { $2 }
+
+/* implementations */
+implementation:
+  IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) { Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6 } }
