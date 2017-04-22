@@ -46,7 +46,16 @@ let rec apply s =
       T.TypeCtor (name, types')
   | T.Interface i -> T.Interface i
   | T.Implementation i -> T.Implementation i
-  | T.ConstrainedVar (v, _) as t -> var v ~default:t ()
+  | T.ConstrainedVar (v, cs) as t ->
+    begin try
+      match List.assoc v s with
+      | T.Var v -> T.ConstrainedVar (v, cs)
+      | T.ConstrainedVar (v, cs') -> T.ConstrainedVar (v, cs @ cs') (* TODO: merge constraints *)
+      | t -> t
+    with Not_found -> t
+    end
+  | T.InterfaceFunction (fn, cs) ->
+      T.InterfaceFunction (apply s fn, cs)
   | T.TypeArrow (v1, t2) ->
       match var v1 () with
       | T.Var v -> T.TypeArrow (v, apply s t2)
@@ -99,6 +108,10 @@ let rec instantiate s1 = function
   | T.TypeCtor (n, ts) ->
       let ts' = List.map (instantiate s1) ts in
       T.TypeCtor (n, ts')
+  | T.InterfaceFunction (fn, T.ConstrainedVar (T.TV(_, name) as var, cs)) as t ->
+      let var' = new_var name in
+      let s = [(var, T.Var var')] >> s1 in
+      T.InterfaceFunction (instantiate s fn, T.ConstrainedVar (var', cs))
   | t -> apply s1 t
 
 let get_type env v =
@@ -178,7 +191,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   | Some n -> (fn_type'', extend_env env (n, fn_type''), s3 >> s2 >> s1)
   | None -> (fn_type'', env, s3 >> s2 >> s1)
 
-and check_generic_application env (callee, generic_arguments, arguments) =
+and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
   let generic_arguments = match generic_arguments with
   | Some g -> g
   | None -> []
@@ -187,8 +200,6 @@ and check_generic_application env (callee, generic_arguments, arguments) =
   | Some [] -> [Unit]
   | Some args -> args
   in
-
-  let (ty_callee, _, s1) = check_expr env callee in
 
   let check (call, s1) argument =
     let (ty_arg, _, s2) = check_expr env argument in
@@ -208,11 +219,20 @@ and check_generic_application env (callee, generic_arguments, arguments) =
   let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
   (ty', env, s3)
 
-and check_app env { callee; generic_arguments; arguments } =
-  check_generic_application env (callee, generic_arguments, Some arguments)
+and check_app env ({ callee; generic_arguments; arguments } as app) =
+  let (ty_callee, _, s1) = check_expr env callee in
+  match ty_callee with
+  | T.InterfaceFunction (fn, var) ->
+      let ty, env', s = check_generic_application env s1 (fn, generic_arguments, Some arguments) in
+      let resolved_ty = apply s var in
+      app.impl_type <- Some (resolved_ty);
+      ty, env', s
+  | _ ->
+      check_generic_application env s1 (ty_callee, generic_arguments, Some arguments)
 
 and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
-  check_generic_application env (Var ctor_name, ctor_generic_arguments, ctor_arguments)
+  let (ty_ctor, _, s1) = check_expr env (Var ctor_name) in
+  check_generic_application env s1 (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (ty_void, env, [])
@@ -278,10 +298,13 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
     T.Arrow (param_ty, t), s2 >> s1
   in
   let fn_ty, s = List.fold_right make_arrow proto_params (ret_type, s1) in
-  extend_env env (proto_name, apply s fn_ty)
+  let fn_ty' = apply s fn_ty in
+  let fn_ty'' = T.InterfaceFunction (fn_ty', var) in
+  extend_env env (proto_name, fn_ty'')
 
-and check_implementation env { impl_name; impl_arg; impl_functions } =
+and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =
   let impl_arg_ty, s1 = check_type env impl_arg in
+  impl.impl_arg_type <- Some impl_arg_ty;
   let impl_desc : T.implementation_desc = { impl_name; impl_type = impl_arg_ty; impl_functions = [] } in
   let impl_ty = T.Implementation impl_desc in
   let intf_desc =
@@ -290,8 +313,7 @@ and check_implementation env { impl_name; impl_arg; impl_functions } =
     | t -> raise (TypeError (impl_name ^ " is not an interface"))
   in
   intf_desc.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.intf_impls;
-  let env' = extend_env env (impl_name, impl_ty) in
-  (impl_ty, env', s1)
+  (impl_ty, env, s1)
 
 and check_decl env = function
   | Expr expr -> check_expr env expr

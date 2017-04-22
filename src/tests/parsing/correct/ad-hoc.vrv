@@ -5,15 +5,35 @@ interface Intish<T> {
 // to_int<T: Intish>(x : T) -> Int
 
 implementation Intish<Int> {
-  fn to_int(x: Int) -> Int { x }
+  fn to_int(x: Int) -> Int { 42 }
 }
+
+implementation Intish<Void> {
+  fn to_int(_ : Void) -> Int { 0 }
+}
+
+implementation Intish<(Void) -> Int> {
+  fn to_int(f : () -> Int) -> Int {
+    f()
+  }
+}
+
 // Intish := (Int, [ Int::to_int ]) :: !Intish
 // unify(Intish<Int>::to_int, Intish<T>::to_int)
 
+to_int
 to_int(42)
+to_int((fn _() -> Void {})())
+to_int(fn _() -> Int { 13 })
+
 /*
-fn f<T: Intish>(x: T) -> Int {
+
+fn g<T: Intish>(x: T) -> T {
   to_int(x)
+}
+
+fn f<T: Intish>(x: T) -> Int {
+  g(x)
 }
 
 f(42)

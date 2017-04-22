@@ -101,7 +101,7 @@ arrow_type:
 /* application */
 
 application:
-  atom generic_arguments? arguments { Application { callee = $1; generic_arguments = $2; arguments = $3 } }
+  atom generic_arguments? arguments { Application { callee = $1; generic_arguments = $2; arguments = $3; impl_type=None } }
 
 generic_arguments:
   L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
@@ -141,4 +141,4 @@ proto_params:
 
 /* implementations */
 implementation:
-  IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) { Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6 } }
+  IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) { Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None } }

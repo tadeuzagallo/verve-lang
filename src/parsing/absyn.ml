@@ -60,12 +60,14 @@ and implementation = {
   impl_name : string;
   impl_arg : type_;
   impl_functions : function_ list;
+  mutable impl_arg_type : Types.ty option;
 }
 
 and application = {
   callee: expr;
   generic_arguments: type_ list option;
   arguments: expr list;
+  mutable impl_type : Types.ty option;
 }
 
 and ctor = {
