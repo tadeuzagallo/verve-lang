@@ -13,7 +13,7 @@ type literal =
 
 type generic = {
   name : name;
-  constraints : name list option;
+  constraints : name list;
 }
 
 type parameter = {

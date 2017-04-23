@@ -20,8 +20,9 @@ let print_list sep printer out =
 let print_generic out { name; constraints } =
   fprintf out "%s" name;
   match constraints with
-  | None -> ()
-  | Some constraints' ->
+  | [] -> ()
+  | [ x ] -> fprintf out ": %s" x
+  | constraints' ->
       fprintf out ": (%a)"
         (print_list ", " (fun out x -> fprintf out "%s" x)) constraints'
 

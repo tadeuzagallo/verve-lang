@@ -125,10 +125,7 @@ let cvar_of_generic env { name; constraints } =
     | t -> raise (TypeError "Generic constraint must be an interface")
   in
   let var = new_var name in
-  let intfs = match constraints with
-    | None -> []
-    | Some c -> List.map resolve c
-  in
+  let intfs = List.map resolve constraints in
   T.ConstrainedVar (var, intfs)
 
 let check_literal = function
@@ -282,10 +279,7 @@ and check_interface env { intf_name; intf_param; intf_functions } =
   let intf_ty = T.Interface { intf_name; intf_impls = [] } in
   let env' = extend_env env (intf_name, intf_ty) in
   let generic = { name = intf_param.name; constraints =
-    match intf_param.constraints with
-    | None -> Some [ intf_name ]
-    | Some cs -> Some (intf_name::cs)
-  } in
+intf_name::intf_param.constraints } in
   let var = cvar_of_generic env' generic in
   let env'' = List.fold_left (check_proto (intf_param.name, var)) env' intf_functions in
   (intf_ty, env'', [])
