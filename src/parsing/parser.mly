@@ -103,10 +103,11 @@ arrow_type:
 /* application */
 
 application:
-  atom generic_arguments? arguments { Application { callee = $1; generic_arguments = $2; arguments = $3; impl_type=None } }
+  atom generic_arguments arguments { Application { callee = $1; generic_arguments = $2; arguments = $3; impl_type=None } }
 
 generic_arguments:
-  L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
+  | { [] }
+  | L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
 
 arguments:
   L_PAREN separated_list(COMMA, expr) R_PAREN { $2 }
@@ -129,7 +130,7 @@ enum_item_type:
   L_PAREN separated_nonempty_list(COMMA, type_) R_PAREN { $2 }
 
 constructor:
-  UCID generic_arguments? arguments? { Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 } }
+  UCID generic_arguments arguments? { Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 } }
 
 /* interfaces */
 interface:

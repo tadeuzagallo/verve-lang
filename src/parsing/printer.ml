@@ -56,8 +56,8 @@ let rec print_fn out { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
     (print_list "\n" print_expr) fn_body
 
 and print_generic_arguments out = function
-  | None -> ()
-  | Some args ->
+  | [] -> ()
+  | args ->
       fprintf out "<%a>" (print_list ", " print_type) args
 
 and print_app out { callee; generic_arguments; arguments } =

@@ -184,10 +184,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   | None -> (fn_type'', env, s3 >> s2 >> s1)
 
 and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
-  let generic_arguments = match generic_arguments with
-  | Some g -> g
-  | None -> []
-  and arguments = match arguments with
+  let arguments = match arguments with
   | None -> []
   | Some [] -> [Unit]
   | Some args -> args

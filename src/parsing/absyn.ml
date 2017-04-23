@@ -65,14 +65,14 @@ and implementation = {
 
 and application = {
   callee: expr;
-  generic_arguments: type_ list option;
+  generic_arguments: type_ list;
   arguments: expr list;
   mutable impl_type : Types.ty option;
 }
 
 and ctor = {
   ctor_name : name;
-  ctor_generic_arguments : type_ list option;
+  ctor_generic_arguments : type_ list;
   ctor_arguments : expr list option;
 }
 
