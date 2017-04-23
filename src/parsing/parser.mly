@@ -52,10 +52,11 @@ expr:
 
 /* function expressions */
 function_:
-  FN LCID generic_parameters? parameters return_type body(expr) { { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
+  FN LCID generic_parameters parameters return_type body(expr) { { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
 
 generic_parameters:
-  L_ANGLE separated_nonempty_list(COMMA, generic_parameter) R_ANGLE { $2 }
+  | { [] }
+  | L_ANGLE separated_nonempty_list(COMMA, generic_parameter) R_ANGLE { $2 }
 
 generic_parameter:
   UCID bounded_quantification { { name = $1; constraints = $2 } }
@@ -119,10 +120,10 @@ int_:
 
 /* enums */
 enum:
-  ENUM UCID generic_parameters? body(enum_item) { Enum { enum_name = $2; enum_generics = $3; enum_items = $4 } }
+  ENUM UCID generic_parameters body(enum_item) { Enum { enum_name = $2; enum_generics = $3; enum_items = $4 } }
 
 enum_item:
-  UCID generic_parameters? enum_item_type? { { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; } }
+  UCID generic_parameters enum_item_type? { { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; } }
 
 enum_item_type:
   L_PAREN separated_nonempty_list(COMMA, type_) R_PAREN { $2 }
@@ -135,7 +136,7 @@ interface:
   INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) { Interface { intf_name = $2; intf_param = $4; intf_functions = $6; } }
 
 prototype:
-  FN LCID generic_parameters? proto_params return_type { { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 } }
+  FN LCID generic_parameters proto_params return_type { { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 } }
 
 proto_params:
   L_PAREN separated_list(COMMA, type_) R_PAREN { $2 }

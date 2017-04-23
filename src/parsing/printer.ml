@@ -43,8 +43,8 @@ let print_maybe out = function
   | None -> ()
 
 let print_generics out = function
-  | None -> ()
-  | Some generics ->
+  | [] -> ()
+  | generics ->
       fprintf out "<%a>" (print_list ", " print_generic) generics
 
 let rec print_fn out { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =

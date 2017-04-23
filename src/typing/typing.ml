@@ -155,15 +155,10 @@ and apply_generics env ty_callee gen_args s1 =
   List.fold_left check_type (ty_callee, s1) gen_args'
 
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-  let generics = match fn_generics with
-  | Some g -> g
-  | None -> []
-  in
-
-  let generics' = List.map (fun g -> new_var g.name) generics in
+  let generics' = List.map (fun g -> new_var g.name) fn_generics in
   let env' = List.fold_left
     (fun env (g, v : generic * T.tvar) -> extend_env env (g.name, T.Var v))
-    env (List.combine generics generics')
+    env (List.combine fn_generics generics')
   in
 
   let ret_type, s0 = check_type env' fn_return_type in
@@ -260,8 +255,9 @@ and check_enum_item make enum_ty (env, s1) { enum_item_name; enum_item_parameter
 
 and check_enum env { enum_name; enum_generics; enum_items } =
   let make, enum_ty, env' = match enum_generics with
-    | None -> (fun x -> x), T.Type enum_name, env
-    | Some gen ->
+    | [] -> (fun x -> x), T.Type enum_name, env
+    | gen ->
+        (* TODO: merge logic *)
         let create_var (vars, env) g =
           let var = new_var g.name in
           (var :: vars, extend_env env (g.name, T.Var var))

@@ -23,13 +23,13 @@ type parameter = {
 
 type enum_item = {
   enum_item_name : name;
-  enum_item_generics : generic list option;
+  enum_item_generics : generic list;
   enum_item_parameters : type_ list option;
 }
 
 type enum = {
   enum_name : name;
-  enum_generics : generic list option;
+  enum_generics : generic list; 
   enum_items : enum_item list;
 }
 
@@ -41,7 +41,7 @@ type interface = {
 
 and prototype = {
   proto_name : string;
-  proto_generics : generic list option;
+  proto_generics : generic list;
   proto_params : type_ list;
   proto_ret_type : type_;
 }
@@ -50,7 +50,7 @@ type body = expr list
 
 and function_ = {
   fn_name : name option;
-  fn_generics : generic list option;
+  fn_generics : generic list;
   fn_parameters : parameter list;
   fn_return_type : type_;
   fn_body: body;
