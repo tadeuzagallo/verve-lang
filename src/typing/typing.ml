@@ -7,11 +7,6 @@ exception UnificationError of string
 type ty_env = (name * T.ty) list
 type subst = (T.tvar * T.ty) list
 
-let _type_id = ref 0
-let new_var name =
-  incr _type_id;
-  T.TV (!_type_id, name)
-
 let extend_env env (x, t) = (x, t)::env
 
 let ty_int = T.Type "Int"
@@ -32,13 +27,8 @@ let (>>) s1 s2 =
     in List.map aux s2
   in apply s1 s2 @ s1
 
-let rec apply s =
-  let var v ?(default=T.Var v) () =
-    try List.assoc v s
-    with Not_found -> default
-  in function
+let rec apply s = function
   | T.Type t -> T.Type t
-  | T.Var v -> var v ()
   | T.Arrow (t1, t2) ->
       T.Arrow (apply s t1, apply s t2)
   | T.TypeCtor (name, types) ->
@@ -46,27 +36,23 @@ let rec apply s =
       T.TypeCtor (name, types')
   | T.Interface i -> T.Interface i
   | T.Implementation i -> T.Implementation i
-  | T.ConstrainedVar (v, cs) as t ->
-    begin try
-      match List.assoc v s with
-      | T.Var v -> T.ConstrainedVar (v, cs)
-      | T.ConstrainedVar (v, cs') -> T.ConstrainedVar (v, cs @ cs') (* TODO: merge constraints *)
-      | t -> t
-    with Not_found -> t
+  | T.RigidVar var -> T.RigidVar var
+  | T.Var ({ T.name; T.constraints } as var) ->
+    begin try List.assoc var s
+    with Not_found -> T.Var var
     end
   | T.InterfaceFunction (fn, cs) ->
       T.InterfaceFunction (apply s fn, cs)
   | T.TypeArrow (v1, t2) ->
-      match var v1 () with
+      let v1' =
+        try List.assoc v1 s
+        with Not_found -> T.Var v1
+      in match v1' with
       | T.Var v -> T.TypeArrow (v, apply s t2)
       | _ -> apply s t2
 
 let rec unify = function
   | T.Type t1, T.Type t2 when t1 = t2 -> []
-
-  | T.Var t1, t2
-  | t2, T.Var t1 ->
-      [(t1, t2)]
 
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
       let s1 = unify (t11, t21) in
@@ -82,57 +68,95 @@ let rec unify = function
         unify (t1, t2) >> s
       in List.fold_left2 aux [] t1s t2s
 
-  | T.ConstrainedVar (v, cs), t
-  | t, T.ConstrainedVar (v, cs) ->
-      let impls t intf_desc =
-        if not (List.mem_assoc t intf_desc.T.intf_impls) then
-          let msg = Printf.sprintf "Type %s does not implement interface %s"
-            (T.to_string t) intf_desc.intf_name
-          in raise (UnificationError msg)
+  | T.Var ({ T.constraints = cs1 } as var1),
+    T.Var ({ T.constraints = cs2 } as var2) ->
+      let aux c1 c2 = String.compare c1.T.intf_name c2.T.intf_name in
+      [(var1, T.Var { var2 with T.constraints = List.sort_uniq aux (cs1 @ cs2)})]
+
+  | T.Var ({ T.constraints } as var), t
+  | t, T.Var ({ T.constraints } as var) ->
+       let raise_ intf_desc =
+        let msg = Printf.sprintf "Type %s does not implement interface %s"
+          (T.to_string t) intf_desc.T.intf_name
+        in raise (UnificationError msg)
       in
-      List.iter (impls t) cs;
-      [ v, t ]
+      let impls intf_desc =
+        match t with
+        | T.Var var
+        | T.RigidVar var ->
+            if not (List.mem intf_desc var.T.constraints) then
+              raise_ intf_desc
+        | t ->
+            if not (List.mem_assoc t intf_desc.T.intf_impls) then
+              raise_ intf_desc
+      in
+      List.iter impls constraints;
+      [ var, t ]
+
+  | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
   | t1, t2 ->
       let msg = Printf.sprintf "Failed to unify %s with %s"
         (T.to_string t1) (T.to_string t2)
       in raise (UnificationError msg)
 
+let _fresh_tbl = Hashtbl.create 256
+let _default_id = 1
+let _fresh name =
+  try
+    let type_id = Hashtbl.find _fresh_tbl name in
+    incr type_id;
+    !type_id
+  with Not_found ->
+    Hashtbl.add _fresh_tbl name (ref _default_id);
+    _default_id
+
+let fresh ({ T.name } as var) =
+  { var with T.id = _fresh name }
+
 let rec instantiate s1 = function
-  | T.TypeArrow (var, ty) ->
-      let T.TV (_, name) = var in
-      let var' = new_var name in
-      T.TypeArrow (var', instantiate ([(var, T.Var var')] >> s1) ty)
   | T.Arrow (t1, t2) ->
       T.Arrow (instantiate s1 t1, instantiate s1 t2)
+  | T.TypeArrow (var, ty) ->
+      let var' = fresh var in
+      let s = [(var, T.Var var')] >> s1 in
+      T.TypeArrow (var', instantiate s ty)
+  | T.InterfaceFunction (fn, var) ->
+      let var' = fresh var in
+      let s = [(var, T.Var var')] >> s1 in
+      T.InterfaceFunction (instantiate s fn, var')
   | T.TypeCtor (n, ts) ->
       let ts' = List.map (instantiate s1) ts in
       T.TypeCtor (n, ts')
-  | T.InterfaceFunction (fn, T.ConstrainedVar (T.TV(_, name) as var, cs)) as t ->
-      let var' = new_var name in
-      let s = [(var, T.Var var')] >> s1 in
-      T.InterfaceFunction (instantiate s fn, T.ConstrainedVar (var', cs))
   | t -> apply s1 t
+
+let rec loosen = function
+  | T.Arrow (t1, t2) -> T.Arrow (loosen t1, loosen t2)
+  | T.TypeArrow (var, ty) -> T.TypeArrow (var, loosen ty)
+  | T.InterfaceFunction (fn, var) -> T.InterfaceFunction (loosen fn, var)
+  | T.TypeCtor (n, ts) -> T.TypeCtor (n, List.map loosen ts)
+  | T.RigidVar var -> T.Var var
+  | t -> t
 
 let get_type env v =
   try instantiate [] (List.assoc v env)
   with Not_found ->
     raise (TypeError "Unknown Type")
 
-let cvar_of_generic env { name; constraints } =
+let var_of_generic env { name; constraints } =
   let resolve n = match get_type env n with
     | T.Interface i -> i
     | t -> raise (TypeError "Generic constraint must be an interface")
   in
-  let var = new_var name in
   let intfs = List.map resolve constraints in
-  T.ConstrainedVar (var, intfs)
+  { T.id = _fresh name; T.name; T.constraints = intfs }
 
 let check_literal = function
   | Int _ -> ty_int
 
 let rec check_type env : type_ -> T.ty * subst = function
   | Con t -> get_type env t, []
+
   | Arrow (parameters, return_type) ->
       let ret, s = check_type env return_type in
       let fn_type = List.fold_right
@@ -155,9 +179,9 @@ and apply_generics env ty_callee gen_args s1 =
   List.fold_left check_type (ty_callee, s1) gen_args'
 
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-  let generics' = List.map (fun g -> new_var g.name) fn_generics in
+  let generics' = List.map (var_of_generic env) fn_generics in
   let env' = List.fold_left
-    (fun env (g, v : generic * T.tvar) -> extend_env env (g.name, T.Var v))
+    (fun env (g, v : generic * T.tvar) -> extend_env env (g.name, T.RigidVar v))
     env (List.combine fn_generics generics')
   in
 
@@ -177,7 +201,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
 
   let (ret, _, s2) = check_exprs env'' fn_body in
   let s3 = unify (ret, ret_type) in
-  let fn_type'' = apply (s3 >> s2 >> s1) fn_type'' in
+  let fn_type'' = loosen @@ apply (s3 >> s2 >> s1) fn_type'' in
 
   match fn_name with
   | Some n -> (fn_type'', extend_env env (n, fn_type''), s3 >> s2 >> s1)
@@ -213,7 +237,7 @@ and check_app env ({ callee; generic_arguments; arguments } as app) =
   match ty_callee with
   | T.InterfaceFunction (fn, var) ->
       let ty, env', s = check_generic_application env s1 (fn, generic_arguments, Some arguments) in
-      let resolved_ty = apply s var in
+      let resolved_ty = apply s (T.Var var) in
       app.impl_type <- Some (resolved_ty);
       ty, env', s
   | _ ->
@@ -256,7 +280,7 @@ and check_enum env { enum_name; enum_generics; enum_items } =
     | gen ->
         (* TODO: merge logic *)
         let create_var (vars, env) g =
-          let var = new_var g.name in
+          let var = var_of_generic env g in
           (var :: vars, extend_env env (g.name, T.Var var))
         in
         let gen', env' = List.fold_left create_var ([], env) gen in
@@ -269,37 +293,37 @@ and check_enum env { enum_name; enum_generics; enum_items } =
   (enum_ty, env''', s)
 
 and check_interface env { intf_name; intf_param; intf_functions } =
-  let intf_ty = T.Interface { intf_name; intf_impls = [] } in
+  let intf_ty = T.Interface { T.intf_name; T.intf_impls = [] } in
   let env' = extend_env env (intf_name, intf_ty) in
   let generic = { name = intf_param.name; constraints =
 intf_name::intf_param.constraints } in
-  let var = cvar_of_generic env' generic in
+  let var = var_of_generic env' generic in
   let env'' = List.fold_left (check_proto (intf_param.name, var)) env' intf_functions in
   (intf_ty, env'', [])
 
 and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; proto_ret_type } =
-  let env' = extend_env env (var_name, var) in
+  let env' = extend_env env (var_name, T.RigidVar var) in
   let ret_type, s1 = check_type env' proto_ret_type in
   let make_arrow param (t, s1) =
     let param_ty, s2 = check_type env' param in
     T.Arrow (param_ty, t), s2 >> s1
   in
   let fn_ty, s = List.fold_right make_arrow proto_params (ret_type, s1) in
-  let fn_ty' = apply s fn_ty in
+  let fn_ty' = loosen @@ apply s fn_ty in
   let fn_ty'' = T.InterfaceFunction (fn_ty', var) in
   extend_env env (proto_name, fn_ty'')
 
 and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =
   let impl_arg_ty, s1 = check_type env impl_arg in
   impl.impl_arg_type <- Some impl_arg_ty;
-  let impl_desc : T.implementation_desc = { impl_name; impl_type = impl_arg_ty; impl_functions = [] } in
+  let impl_desc = { T.impl_name; T.impl_type = impl_arg_ty; T.impl_functions = [] } in
   let impl_ty = T.Implementation impl_desc in
   let intf_desc =
     match get_type env impl_name with
     | T.Interface i -> i
     | t -> raise (TypeError (impl_name ^ " is not an interface"))
   in
-  intf_desc.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.intf_impls;
+  intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
   (impl_ty, env, s1)
 
 and check_decl env = function

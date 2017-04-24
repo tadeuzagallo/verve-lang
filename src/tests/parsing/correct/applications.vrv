@@ -4,7 +4,7 @@ f(100_000)
 f(f(42))
 
 fn id<T>(x: T) -> T { x }
-id<Int>(42)
+id<Int>(2)
 id(id)(id)(id)(id)(fn _<T>(x: T) -> T { x })(42)
 
 fn g(h: (Int) -> Int) -> Void {}
@@ -47,3 +47,13 @@ apply(id)(apply)(id)(apply)(id)(f)(42)
 })(42)
 
 (fn x(y: Int) -> Void {})(42)
+
+enum Unit { Unit_ }
+
+fn apply'<T, U>(f: (T) -> U, x: T) -> U { f(x) }
+fn f(x: Int) -> Int { 7 }
+apply'(f, 8)
+fn g(x: Int) -> Void { }
+apply'(g, 3)
+fn h(x: Unit) -> Int { 13 }
+apply'(h, Unit_)

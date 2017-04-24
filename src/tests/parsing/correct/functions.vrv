@@ -1,28 +1,30 @@
-fn f<T>() -> T {}
+fn f<T>(x: T) -> T { x }
 
-fn g<T>() -> T {}
-fn g<T: U>() -> T {}
-fn g<T: (U, V)>() -> T {}
+interface U<T> {}
+interface V<T> {}
+
+fn g<T: U>(x: T) -> T { x }
+fn g<T: (U, V)>(x : T) -> T { x }
 fn g<T: (U, V), U>(x: (T) -> U) -> (T) -> U { x }
 
-fn g<U, T>() -> T {}
-fn g<U, T: U>() -> T {}
-fn g<U, T: (U, V)>() -> T {}
+fn g<U, T>(x : T) -> T { x }
+fn g<U, T: U>(x : T) -> T { x }
+fn g<U, T: (U, V)>(x : T) -> T { x }
 
-fn g<U: X, T>() -> T {}
-fn g<U: X, T: U>() -> T {}
-fn g<U: X, T: (U, V)>() -> T {}
+fn g<U: V, T>(x : T) -> T { x }
+fn g<U: V, T: U>(x : T) -> T { x }
+fn g<U: V, T: (U, V)>(x : T) -> T { x }
 
-fn g<U: (X, Y), T>() -> T {}
-fn g<U: (X, Y), T: U>() -> T {}
-fn g<U: (X, Y), T: (U, V)>() -> T {}
+fn g<U: (U, V), T>(x : T) -> T { x }
+fn g<U: (U, V), T: U>(x : T) -> T { x }
+fn g<U: (U, V), T: (U, V)>(x : T) -> T { x }
 
-fn f<T>(x: T) -> T {}
-fn f<T, U>(x: T, y: U) -> T {}
-fn f<T, U>(x: T, y: (T) -> U) -> U {}
+fn f<T>(x: T) -> T { x }
+fn f<T, U>(x: T, y: U) -> T { x }
+fn f<T, U>(x: (T) -> U, y: T) -> U { x(y) }
 fn f<T, U>(x: T, y: (T) -> U) -> (T) -> U { y }
 
-fn h<T>() -> T { 42 }
+fn h<T>() -> Int { 42 }
 
 fn h() -> Int { 13 }
 fn i(x: Int) -> Int { h() }

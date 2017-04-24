@@ -27,11 +27,19 @@ to_int((fn _() -> Void {})())
 to_int(fn _() -> Int { 13 })
 
 /*
+fn g'<T>(x: T) -> Int {
+  // Invalid because there's a missing constraint `: Intish` on `T`
+  to_int(x)
+}
+*/
 
-fn g<T: Intish>(x: T) -> T {
+fn g<T: Intish>(x: T) -> Int {
   to_int(x)
 }
 
+/*g(7)*/
+
+/*
 fn f<T: Intish>(x: T) -> Int {
   g(x)
 }
