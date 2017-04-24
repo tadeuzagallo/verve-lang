@@ -7,7 +7,6 @@ type ty =
   | TypeCtor of string * ty list
   | Interface of interface_desc
   | Implementation of implementation_desc
-  | InterfaceFunction of ty * tvar
 
 and tvar = {
   id : int;
@@ -56,5 +55,3 @@ let rec to_string = function
       "interface " ^ i.intf_name
   | Implementation i ->
       "implementation " ^ i.impl_name ^ "<" ^ to_string i.impl_type ^ ">"
-  | InterfaceFunction (fn, _) ->
-      to_string fn

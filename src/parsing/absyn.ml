@@ -67,7 +67,7 @@ and application = {
   callee: expr;
   generic_arguments: type_ list;
   arguments: expr list;
-  mutable impl_type : Types.ty option;
+  mutable generic_arguments_ty: Types.ty list;
 }
 
 and ctor = {

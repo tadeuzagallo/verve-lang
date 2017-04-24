@@ -103,7 +103,7 @@ arrow_type:
 /* application */
 
 application:
-  atom generic_arguments arguments { Application { callee = $1; generic_arguments = $2; arguments = $3; impl_type=None } }
+  atom generic_arguments arguments { Application { callee = $1; generic_arguments = $2; arguments = $3; generic_arguments_ty = [] } }
 
 generic_arguments:
   | { [] }

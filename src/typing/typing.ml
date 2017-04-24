@@ -41,8 +41,6 @@ let rec apply s = function
     begin try List.assoc var s
     with Not_found -> T.Var var
     end
-  | T.InterfaceFunction (fn, cs) ->
-      T.InterfaceFunction (apply s fn, cs)
   | T.TypeArrow (v1, t2) ->
       let v1' =
         try List.assoc v1 s
@@ -121,10 +119,6 @@ let rec instantiate s1 = function
       let var' = fresh var in
       let s = [(var, T.Var var')] >> s1 in
       T.TypeArrow (var', instantiate s ty)
-  | T.InterfaceFunction (fn, var) ->
-      let var' = fresh var in
-      let s = [(var, T.Var var')] >> s1 in
-      T.InterfaceFunction (instantiate s fn, var')
   | T.TypeCtor (n, ts) ->
       let ts' = List.map (instantiate s1) ts in
       T.TypeCtor (n, ts')
@@ -133,7 +127,6 @@ let rec instantiate s1 = function
 let rec loosen = function
   | T.Arrow (t1, t2) -> T.Arrow (loosen t1, loosen t2)
   | T.TypeArrow (var, ty) -> T.TypeArrow (var, loosen ty)
-  | T.InterfaceFunction (fn, var) -> T.InterfaceFunction (loosen fn, var)
   | T.TypeCtor (n, ts) -> T.TypeCtor (n, List.map loosen ts)
   | T.RigidVar var -> T.Var var
   | t -> t
@@ -234,14 +227,12 @@ and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
 
 and check_app env ({ callee; generic_arguments; arguments } as app) =
   let (ty_callee, _, s1) = check_expr env callee in
-  match ty_callee with
-  | T.InterfaceFunction (fn, var) ->
-      let ty, env', s = check_generic_application env s1 (fn, generic_arguments, Some arguments) in
-      let resolved_ty = apply s (T.Var var) in
-      app.impl_type <- Some (resolved_ty);
-      ty, env', s
-  | _ ->
-      check_generic_application env s1 (ty_callee, generic_arguments, Some arguments)
+  let ty, env', s = check_generic_application env s1 (ty_callee, generic_arguments, Some arguments) in
+  let rec aux acc = function
+    | T.TypeArrow (var, t) -> aux (apply s (T.Var var) :: acc) t
+    | _ -> List.rev acc
+  in app.generic_arguments_ty <- aux [] ty_callee;
+  ty, env', s
 
 and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   let (ty_ctor, _, s1) = check_expr env (Var ctor_name) in
@@ -310,7 +301,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
   in
   let fn_ty, s = List.fold_right make_arrow proto_params (ret_type, s1) in
   let fn_ty' = loosen @@ apply s fn_ty in
-  let fn_ty'' = T.InterfaceFunction (fn_ty', var) in
+  let fn_ty'' = T.TypeArrow (var, fn_ty') in
   extend_env env (proto_name, fn_ty'')
 
 and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =

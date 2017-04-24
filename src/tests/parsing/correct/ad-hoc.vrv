@@ -5,7 +5,7 @@ interface Intish<T> {
 // to_int<T: Intish>(x : T) -> Int
 
 implementation Intish<Int> {
-  fn to_int(x: Int) -> Int { 42 }
+  fn to_int(x: Int) -> Int { x }
 }
 
 implementation Intish<Void> {
@@ -33,19 +33,17 @@ fn g'<T>(x: T) -> Int {
 }
 */
 
-fn g<T: Intish>(x: T) -> Int {
+fn g<U, T: Intish>(x: T) -> Int {
   to_int(x)
 }
 
-/*g(7)*/
+g(7)
 
-/*
 fn f<T: Intish>(x: T) -> Int {
   g(x)
 }
 
-f(42)
-*/
+f(32)
 
 /**
 
