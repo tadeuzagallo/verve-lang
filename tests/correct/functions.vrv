@@ -1,3 +1,5 @@
+// RUN: %verve
+
 fn f<T>(x: T) -> T { x }
 
 interface U<T> {}
