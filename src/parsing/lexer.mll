@@ -46,6 +46,6 @@ and comment depth = parse
 | _ { comment depth lexbuf }
 
 and single_line_comment = parse
-| newline { read lexbuf }
-| eof { EOF }
+| newline { Lexing.new_line lexbuf; EOL }
+| eof { EOL }
 | _ { single_line_comment lexbuf }
