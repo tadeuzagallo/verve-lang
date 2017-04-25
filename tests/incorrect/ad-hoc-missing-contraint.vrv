@@ -1,0 +1,9 @@
+// RUN: %not %verve | %check
+
+interface Intish<T> {
+  fn to_int(T) -> Int
+}
+
+fn g'<T>(x: T) -> Int {
+  to_int(x) // CHECK: Type 'T.* does not implement interface Intish
+}

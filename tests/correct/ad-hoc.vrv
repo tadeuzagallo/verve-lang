@@ -30,10 +30,6 @@ to_int((fn _() -> Void {})())
 to_int(fn _() -> Int { 13 })
 
 /*
-fn g'<T>(x: T) -> Int {
-  // Invalid because there's a missing constraint `: Intish` on `T`
-  to_int(x)
-}
 */
 
 fn g<U, T: Intish>(x: T) -> Int {
@@ -47,15 +43,3 @@ fn f<T: Intish>(x: T) -> Int {
 }
 
 f(32)
-
-/**
-
-fn Int::to_int(x: Int) -> Int { x }
-
-fn f<T: Intish>(d: Intish, x: T) -> Int {
-  d.to_int(x)
-}
-
-f(Intish<Int>, 42)
-
-**/
