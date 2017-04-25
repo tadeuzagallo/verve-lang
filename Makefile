@@ -1,8 +1,12 @@
 .PHONY: build
 build:
-	ocamlbuild -use-ocamlfind  src/main.byte
+	cd src && ocamlbuild -use-ocamlfind  main.byte
 	ln -fs src/main.byte verve
 
 .PHONY: test
-test:
+test: build
 	lit -v tests
+
+.PHONY: clean
+clean:
+	cd src && ocamlbuild -clean
