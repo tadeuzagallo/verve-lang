@@ -9,9 +9,13 @@ type subst = (T.tvar * T.ty) list
 
 let extend_env env (x, t) = (x, t)::env
 
-let ty_int = T.Type "Int"
-let ty_type = T.Type "Type"
-let ty_void = T.Type "Void"
+let ty_int = T.TypeCtor ("Int", [])
+let ty_type = T.TypeCtor ("Type", [])
+let ty_void = T.TypeCtor ("Void", [])
+
+let val_int = T.TypeInst ("Int", [])
+let val_type = T.TypeInst ("Type", [])
+let val_void = T.TypeInst ("Void", [])
 
 let default_env = [
   ("Type", ty_type);
@@ -28,12 +32,14 @@ let (>>) s1 s2 =
   in apply s1 s2 @ s1
 
 let rec apply s = function
-  | T.Type t -> T.Type t
   | T.Arrow (t1, t2) ->
       T.Arrow (apply s t1, apply s t2)
   | T.TypeCtor (name, types) ->
       let types' = List.map (apply s) types in
       T.TypeCtor (name, types')
+  | T.TypeInst (name, types) ->
+      let types' = List.map (apply s) types in
+      T.TypeInst (name, types')
   | T.Interface i -> T.Interface i
   | T.Implementation i -> T.Implementation i
   | T.RigidVar var -> T.RigidVar var
@@ -50,7 +56,15 @@ let rec apply s = function
       | _ -> apply s t2
 
 let rec unify = function
-  | T.Type t1, T.Type t2 when t1 = t2 -> []
+  | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)
+  when n1 = n2 ->
+      let aux s t1 t2 =
+        unify (t1, t2) >> s
+      in List.fold_left2 aux [] t1s t2s
+
+  | T.TypeCtor _, t
+  | t, T.TypeCtor _
+  when t = val_type -> []
 
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
       let s1 = unify (t11, t21) in
@@ -60,11 +74,6 @@ let rec unify = function
   | T.TypeArrow (_, t1), t2
   | t2, T.TypeArrow (_, t1) ->
       unify (t1, t2)
-
-  | T.TypeCtor (n1, t1s), T.TypeCtor (n2, t2s) when n1 = n2 ->
-      let aux s t1 t2 =
-        unify (t1, t2) >> s
-      in List.fold_left2 aux [] t1s t2s
 
   | T.Var ({ T.constraints = cs1 } as var1),
     T.Var ({ T.constraints = cs2 } as var2) ->
@@ -127,7 +136,7 @@ let rec instantiate s1 = function
 let rec loosen = function
   | T.Arrow (t1, t2) -> T.Arrow (loosen t1, loosen t2)
   | T.TypeArrow (var, ty) -> T.TypeArrow (var, loosen ty)
-  | T.TypeCtor (n, ts) -> T.TypeCtor (n, List.map loosen ts)
+  | T.TypeInst (n, ts) -> T.TypeInst (n, List.map loosen ts)
   | T.RigidVar var -> T.Var var
   | t -> t
 
@@ -135,6 +144,13 @@ let get_type env v =
   try instantiate [] (List.assoc v env)
   with Not_found ->
     raise (TypeError "Unknown Type")
+
+let rec to_value = function
+  | T.TypeCtor (n, ts) -> T.TypeInst (n, List.map to_value ts)
+  | T.TypeInst (n, ts) -> T.TypeInst (n, List.map to_value ts)
+  | T.Arrow (t1, t2) -> T.Arrow (to_value t1, to_value t2)
+  | T.TypeArrow (var, ty) -> T.TypeArrow (var, to_value ty)
+  | t -> t
 
 let var_of_generic env { name; constraints } =
   let resolve n = match get_type env n with
@@ -145,10 +161,14 @@ let var_of_generic env { name; constraints } =
   { T.id = _fresh name; T.name; T.constraints = intfs }
 
 let check_literal = function
-  | Int _ -> ty_int
+  | Int _ -> val_int
 
 let rec check_type env : type_ -> T.ty * subst = function
-  | Con t -> get_type env t, []
+  | Con t ->
+      let t' = match get_type env t with
+      | T.TypeInst _ -> raise (TypeError "Cannot use type instance as type")
+      | t -> to_value t
+      in t', []
 
   | Arrow (parameters, return_type) ->
       let ret, s = check_type env return_type in
@@ -157,7 +177,7 @@ let rec check_type env : type_ -> T.ty * subst = function
         parameters (ret, s)
       in fn_type
   | Inst (t, args) ->
-      let ty = get_type env t in
+      let ty, _ = check_type env (Con t) in
       apply_generics env ty args []
 
 and apply_generics env ty_callee gen_args s1 =
@@ -188,7 +208,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   in
   let fn_type' = match fn_type with
   | T.Arrow _ -> fn_type
-  | _ -> T.Arrow (ty_void, fn_type)
+  | _ -> T.Arrow (val_void, fn_type)
   in
   let fn_type'' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type' in
 
@@ -239,7 +259,7 @@ and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   check_generic_application env s1 (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
 and check_expr env : expr -> T.ty * ty_env * subst = function
-  | Unit -> (ty_void, env, [])
+  | Unit -> (val_void, env, [])
   | Literal l -> (check_literal l, env, [])
   | Var v -> (get_type env v, env, [])
   | Function fn -> check_fn env fn
@@ -251,36 +271,31 @@ and check_exprs env exprs =
     (fun (_, env, s1) node ->
       let ty, env', s2 = check_expr env node in
       (ty, env', s2 >> s1))
-    (ty_void, env, []) exprs
+    (val_void, env, []) exprs
 
-and check_enum_item make enum_ty (env, s1) { enum_item_name; enum_item_parameters } =
+and check_enum_item make item_ty (env, s1) { enum_item_name; enum_item_parameters } =
   match enum_item_parameters with
-  | None -> extend_env env (enum_item_name, make enum_ty), s1
+  | None -> extend_env env (enum_item_name, make item_ty), s1
   | Some ps ->
       let aux p (enum_ty, s1) =
         let t, s2 = check_type env p in
         T.Arrow (t, enum_ty), s2 >> s1
       in
-      let ty, s2 = List.fold_right aux ps (enum_ty, s1) in
+      let ty, s2 = List.fold_right aux ps (item_ty, s1) in
       let ty' = make ty in
       extend_env env (enum_item_name, ty'), s2
 
 and check_enum env { enum_name; enum_generics; enum_items } =
-  let make, enum_ty, env' = match enum_generics with
-    | [] -> (fun x -> x), T.Type enum_name, env
-    | gen ->
-        (* TODO: merge logic *)
-        let create_var (vars, env) g =
-          let var = var_of_generic env g in
-          (var :: vars, extend_env env (g.name, T.Var var))
-        in
-        let gen', env' = List.fold_left create_var ([], env) gen in
-        let base_ty = T.TypeCtor (enum_name, List.map (fun v -> T.Var v) gen') in
-        let make t = List.fold_right (fun g t -> T.TypeArrow (g, t)) gen' t in
-        make, base_ty , env'
+  let create_var (vars, env) g =
+    let var = var_of_generic env g in
+    (var :: vars, extend_env env (g.name, T.Var var))
   in
+  let gen, env' = List.fold_left create_var ([], env) enum_generics in
+  let enum_ty = T.TypeCtor (enum_name, List.map (fun v -> T.Var v) gen) in
+  let item_ty = T.TypeInst (enum_name, List.map (fun v -> T.Var v) gen) in
+  let make t = List.fold_right (fun g t -> T.TypeArrow (g, t)) gen t in
   let env'' = extend_env env' (enum_name, make enum_ty) in
-  let env''', s = List.fold_left (check_enum_item make enum_ty) (env'', []) enum_items in
+  let env''', s = List.fold_left (check_enum_item make item_ty) (env'', []) enum_items in
   (enum_ty, env''', s)
 
 and check_interface env { intf_name; intf_param; intf_functions } =
@@ -306,7 +321,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
 
 and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =
   let impl_arg_ty, s1 = check_type env impl_arg in
-  impl.impl_arg_type <- Some impl_arg_ty;
+  impl.impl_arg_type <- Some (impl_arg_ty);
   let impl_desc = { T.impl_name; T.impl_type = impl_arg_ty; T.impl_functions = [] } in
   let impl_ty = T.Implementation impl_desc in
   let intf_desc =
@@ -328,7 +343,7 @@ and check_decls env decls =
     (fun (_, env, s1) node ->
       let ty, env', s2 = check_decl env node in
       (ty, env', s2 >> s1))
-    (ty_void, env, []) decls
+    (val_void, env, []) decls
 
 let check program =
   let ty, _, s = check_decls default_env program.body in

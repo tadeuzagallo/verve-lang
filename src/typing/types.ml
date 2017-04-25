@@ -1,10 +1,10 @@
 type ty =
-  | Type of string
+  | TypeCtor of string * ty list
+  | TypeInst of string * ty list
   | Arrow of ty * ty
   | TypeArrow of tvar * ty
   | Var of tvar
   | RigidVar of tvar
-  | TypeCtor of string * ty list
   | Interface of interface_desc
   | Implementation of implementation_desc
 
@@ -39,7 +39,6 @@ let string_of_constraints = function
       ": (" ^ String.concat ", " cs' ^ ")"
 
 let rec to_string = function
-  | Type s -> s
   | Var { id; name; constraints } ->
       name ^ subscript_of_number id ^ string_of_constraints constraints
   | RigidVar var ->
@@ -47,11 +46,18 @@ let rec to_string = function
   | Arrow (t1, t2) ->
       "(" ^ (to_string t1) ^ ") -> " ^ (to_string t2)
   | TypeArrow (t1, t2) ->
-      (to_string (Var t1)) ^ " : Type -> " ^ (to_string t2)
+      (to_string (Var t1)) ^ " -> " ^ (to_string t2)
   | TypeCtor (n, ts) ->
-      let ts' = List.map to_string ts in
-      n ^ "<" ^ String.concat ", " ts' ^ ">"
+      "Type"
+  | TypeInst (n, ts) ->
+      n ^ string_of_generics ts
   | Interface i ->
       "interface " ^ i.intf_name
   | Implementation i ->
       "implementation " ^ i.impl_name ^ "<" ^ to_string i.impl_type ^ ">"
+
+and string_of_generics = function
+  | [] -> ""
+  | ts ->
+      let ts' = List.map to_string ts in
+      "<" ^ String.concat ", " ts' ^ ">"

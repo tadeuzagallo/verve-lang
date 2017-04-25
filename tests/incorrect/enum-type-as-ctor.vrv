@@ -1,0 +1,9 @@
+// RUN: %not %verve | %check
+
+enum Bool {
+  True
+  False
+}
+
+fn f(x: Bool) -> Bool { x }
+f(Bool) // CHECK: Failed to unify Bool with Type

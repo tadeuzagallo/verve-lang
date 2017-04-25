@@ -11,10 +11,6 @@ implementation Intish<Int> {
   fn to_int(x: Int) -> Int { x }
 }
 
-implementation Intish<Void> {
-  fn to_int(_ : Void) -> Int { 0 }
-}
-
 implementation Intish<(Void) -> Int> {
   fn to_int(f : () -> Int) -> Int {
     f()
@@ -26,7 +22,6 @@ implementation Intish<(Void) -> Int> {
 
 to_int
 to_int(42)
-to_int((fn _() -> Void {})())
 to_int(fn _() -> Int { 13 })
 
 /*

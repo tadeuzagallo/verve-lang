@@ -35,4 +35,4 @@ enum List<T> {
 
 Cons(2, Cons(1, Nil))
 
-fn j(x: List<Int>) -> Int { 42 }
+fn head(x: List<Int>) -> Int { 42 }
