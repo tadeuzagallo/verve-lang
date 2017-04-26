@@ -1,0 +1,9 @@
+S src
+S src/parsing
+S src/typing
+
+B src/_build
+B src/_build/parsing
+B src/_build/typing
+
+PKG ocamlfind MenhirLib fmt
