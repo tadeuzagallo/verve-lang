@@ -79,7 +79,7 @@ let subst generics arguments fn =
         | _ -> assert false
         end
     | v ->
-        Printer.print_expr stderr (V.expr_of_value v);
+        Printer.Value.pp Format.err_formatter v;
         print_newline ();
         assert false
   in

@@ -20,4 +20,5 @@ depends: [
   "ocamlbuild" { build }
   "ocamlfind" { build }
   "menhir" { build }
+  "fmt"
 ]

@@ -2,3 +2,5 @@
 "typing": include
 
 true: use_menhir, explain, debug, warn_a, annot, bin_annot
+
+"parsing/printer.ml" or "typing/typing.ml" or "main.byte": package(fmt)

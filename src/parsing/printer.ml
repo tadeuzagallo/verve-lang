@@ -1,98 +1,132 @@
+open Fmt
+
+(* Combinators *)
+let angles pp_v ppf v = pf ppf "@[<1><%a>@]" pp_v v
+
+let comma_sep pp_v ppf v =
+  let sep ppf () = pf ppf ",@ " in
+  list ~sep pp_v ppf v
+
+(* AST Printing *)
 open Absyn
-open Printf
 
-module V = Value
+module Absyn = struct
+  let pp_literal ppf = function
+    | Int i -> int ppf i
 
-let print_literal out = function
-  | Int i -> fprintf out "%d" i
-
-let print_list sep printer out =
-  let rec aux = function
-    | x :: y :: rest ->
-        printer out x;
-        fprintf out "%s" sep;
-        aux (y :: rest)
-    | x :: [] ->
-        printer out x
+  let pp_generic ppf { name; constraints } =
+    string ppf name;
+    match constraints with
     | [] -> ()
-  in aux
+    | [ x ] -> pf ppf "@,: %s" x
+    | constraints' ->
+      pf ppf "@,: %a" (box @@ parens @@ comma_sep string) constraints'
 
-let print_generic out { name; constraints } =
-  fprintf out "%s" name;
-  match constraints with
-  | [] -> ()
-  | [ x ] -> fprintf out ": %s" x
-  | constraints' ->
-      fprintf out ": (%a)"
-        (print_list ", " (fun out x -> fprintf out "%s" x)) constraints'
+  let pp_generics ppf = function
+    | [] -> ()
+    | generics -> (box @@ angles @@ comma_sep pp_generic) ppf generics
 
-let print_maybe out = function
-  | Some str -> fprintf out "%s" str
-  | None -> ()
+  let rec pp_type ppf = function
+    | Arrow (ps, r) -> pf ppf "%a@ -> %a" (box @@ parens @@ comma_sep pp_type) ps pp_type r
+    | Inst (n, ts) -> pf ppf "%s%a" n pp_generic_arguments ts
 
-let print_generics out = function
-  | [] -> ()
-  | generics ->
-      fprintf out "<%a>" (print_list ", " print_generic) generics
+  and pp_param ppf { param_name; param_type } =
+    pf ppf "%s@,: %a" param_name pp_type param_type
 
-let rec print_type out = function
-  | Arrow (ps, r) ->
-      fprintf out "(%a) -> %a"
-        (print_list "," print_type) ps
-        print_type r
-  | Inst (n, ts) ->
-      fprintf out "%s%a" n
-        print_generic_arguments ts
+  and pp_fn ppf { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
+    pf ppf "fn %a%a%a@ -> %a@ %a"
+      (option string) fn_name
+      pp_generics fn_generics
+      (hvbox @@ parens @@ comma_sep pp_param) fn_parameters
+      pp_type fn_return_type
+      (vbox @@ braces @@ prefix sp @@ suffix sp @@ list pp) fn_body
 
-and print_param out { param_name; param_type } =
-  fprintf out "%s: %a" param_name print_type param_type
+  and pp_generic_arguments ppf = function
+    | [] -> ()
+    | args -> (box @@ angles @@ comma_sep pp_type) ppf args
 
-and print_fn out { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-  fprintf out "fn %a %a(%a) -> %a { %a }\n"
-    print_maybe fn_name
-    print_generics fn_generics
-    (print_list ", " print_param) fn_parameters
-    print_type fn_return_type
-    (print_list "\n" print_expr) fn_body
+  and pp_app ppf { callee; generic_arguments; arguments } =
+    pf ppf "%a%a"
+      pp callee
+      (hvbox @@ parens @@ comma_sep pp) arguments
 
-and print_generic_arguments out = function
-  | [] -> ()
-  | args ->
-      fprintf out "<%a>" (print_list ", " print_type) args
+  and pp_ctor ppf { ctor_name;  ctor_generic_arguments; ctor_arguments } =
+    pf ppf "%s%a%a"
+      ctor_name
+      pp_generic_arguments ctor_generic_arguments
+      (option @@ hvbox @@ parens @@ comma_sep pp) ctor_arguments
 
-and print_app out { callee; generic_arguments; arguments } =
-  fprintf out "%a(%a)\n"
-    print_expr callee
-    (print_list ", " print_expr) arguments
+  and pp' ppf = function
+    | Function fn -> pp_fn ppf fn
+    | Ctor ctor -> pp_ctor ppf ctor
+    | Application app -> pp_app ppf app
+    | Var str -> string ppf str
+    | Literal l -> pp_literal ppf l
+    | Unit -> string ppf "()"
 
-and print_ctor out { ctor_name;  ctor_generic_arguments; ctor_arguments } =
-  let print_opt_args out = function
-    | None -> ()
-    | Some args ->
-        fprintf out "(%a)" (print_list ", " print_expr) args
-  in
-  fprintf out "%s%a%a"
-    ctor_name
-    print_generic_arguments ctor_generic_arguments
-    print_opt_args ctor_arguments
+  and pp ppf v = (box ~indent:2 pp') ppf v
+end
 
-and print_expr out = function
-  | Function fn -> print_fn out fn
-  | Ctor ctor -> print_ctor out ctor
-  | Application app -> print_app out app
-  | Var str -> fprintf out "%s" str
-  | Literal l -> fprintf out "%a" print_literal l
-  | Unit -> fprintf out "()"
+(* Value Printing *)
 
-and print_value out = function
-  | V.Function fn -> print_fn out fn
-  | V.Ctor ctor -> print_ctor out ctor
-  | V.Literal l -> fprintf out "%a" print_literal l
-  | V.Unit -> fprintf out "()"
-  | V.Type t -> fprintf out "%s" t
-  | V.InterfaceFunction t -> fprintf out "%s" t
+module Value = struct
+  open Value
 
+  let rec pp' ppf = function
+    | Function fn -> Absyn.pp_fn ppf fn
+    | Ctor ctor -> Absyn.pp_ctor ppf ctor
+    | Literal l -> Absyn.pp_literal ppf l
+    | Unit -> string ppf "()"
+    | Type t -> string ppf t
+    | InterfaceFunction t -> string ppf t
+
+  and pp ppf v = (box ~indent:2 pp') ppf v
+
+end
+
+(* Type Printing *)
+module Type = struct
+  open Types
+
+  let rec subscript_of_number = function
+    | n when n < 10 ->
+        "\xE2\x82" ^ String.make 1 @@ char_of_int (0x80 + n)
+    | n ->
+        subscript_of_number (n / 10) ^ subscript_of_number (n mod 10)
+
+  let pp_intf_name ppf { intf_name } = string ppf intf_name
+
+  let pp_constraints ppf = function
+    | [] -> ()
+    | [ c ] -> pf ppf "@,: %a" pp_intf_name c
+    | cs -> pf ppf "@,: %a" (box @@ parens @@ comma_sep pp_intf_name) cs
+
+  let rec pp' ppf = function
+    | Var { id; name; constraints } ->
+        pf ppf "%s%s%a" name (subscript_of_number id) pp_constraints constraints
+    | RigidVar var ->
+        pf ppf "'%a" pp (Var var)
+    | Arrow (t1, t2) ->
+        pf ppf "%a@ -> %a"
+          (box @@ parens pp) t1
+          pp t2
+    | TypeArrow (t1, t2) ->
+        pf ppf "forall %a,@ %a" pp (Var t1) pp t2
+    | TypeCtor (n, ts) ->
+        string ppf "Type"
+    | TypeInst (n, ts) ->
+        pf ppf "%s%a" n pp_generics ts
+    | Interface i ->
+        pf ppf "interface %s" i.intf_name
+    | Implementation i ->
+        pf ppf "implementation %s<%a>" i.impl_name pp i.impl_type
+  and pp ppf v = (box ~indent:2 pp') ppf v
+
+  and pp_generics ppf = function
+    | [] -> ()
+    | g -> (box @@ angles @@ comma_sep pp) ppf g
+end
+
+(* Entry Point *)
 let print expr ty =
-  fprintf stderr "%a : %s\n"
-    print_value expr
-    (Types.to_string ty)
+  pf stdout "@[<hov 2>%a@ : %a@]@." Value.pp expr Type.pp ty;

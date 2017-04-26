@@ -83,9 +83,9 @@ let rec unify = function
   | T.Var ({ T.constraints } as var), t
   | t, T.Var ({ T.constraints } as var) ->
        let raise_ intf_desc =
-        let msg = Printf.sprintf "Type %s does not implement interface %s"
-          (T.to_string t) intf_desc.T.intf_name
-        in raise (UnificationError msg)
+        let msg = Format.fprintf Format.str_formatter "Type %a does not implement interface %s"
+          Printer.Type.pp t intf_desc.T.intf_name
+        in raise (UnificationError (Format.flush_str_formatter ()))
       in
       let impls intf_desc =
         match t with
@@ -103,9 +103,9 @@ let rec unify = function
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
   | t1, t2 ->
-      let msg = Printf.sprintf "Failed to unify %s with %s"
-        (T.to_string t1) (T.to_string t2)
-      in raise (UnificationError msg)
+      let msg = Format.fprintf Format.str_formatter "Failed to unify %a with %a"
+        Printer.Type.pp t1 Printer.Type.pp t2
+      in raise (UnificationError (Format.flush_str_formatter ()))
 
 let _fresh_tbl = Hashtbl.create 256
 let _default_id = 1
