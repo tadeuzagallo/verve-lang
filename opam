@@ -1,0 +1,23 @@
+opam-version: "1.2"
+name: "verve"
+version: "0.1"
+maintainer: "Tadeu Zagallo <tadeuzagallo@gmail.com>"
+author: "Tadeu Zagallo <tadeuzagallo@gmail.com>"
+homepage: "https://tadeuzagallo.com/verve-lang/"
+bug-reports: "https://github.com/tadeuzagallo/verve-lang/issues"
+license: "MIT"
+dev-repo: "https://tadeuzagallo.com/verve-lang.git"
+
+build: [
+  [make]
+]
+
+build-test: [
+  [make "test"]
+]
+
+depends: [
+  "ocamlbuild" { build }
+  "ocamlfind" { build }
+  "menhir" { build }
+]

@@ -1,0 +1,29 @@
+language: python
+sudo: required
+
+matrix:
+    include:
+        - os: linux
+          sudo: required
+          env: OCAML_VERSION=4.04 PACKAGE=verve
+        - os: linux
+          sudo: required
+          env: OCAML_VERSION=4.05 PACKAGE=verve
+        - os: osx
+          language: generic
+          env: OCAML_VERSION=4.04 PACKAGE=verve
+        - os: osx
+          language: generic
+          env: OCAML_VERSION=4.05 PACKAGE=verve
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python || true; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then virtualenv env; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source env/bin/activate; fi
+  - pip install -r tests/requirements.txt
+
+install:
+  - wget https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/.travis-opam.sh
+
+script:
+  - bash -ex .travis-opam.sh

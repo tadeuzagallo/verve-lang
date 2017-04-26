@@ -1,0 +1,3 @@
+bin: [
+  "src/_build/main.byte"   {"verve"}
+]
