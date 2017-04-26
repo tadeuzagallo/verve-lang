@@ -4,7 +4,6 @@ type import
 type export
 
 type type_ =
-  | Con of name
   | Arrow of type_ list * type_
   | Inst of name * type_ list
 

@@ -93,7 +93,6 @@ body_eol(expr):
 
 /* types */
 type_:
-  | UCID { Con $1 }
   | UCID generic_arguments { Inst ($1, $2) }
   | arrow_type { $1 }
 

@@ -26,18 +26,6 @@ let print_generic out { name; constraints } =
       fprintf out ": (%a)"
         (print_list ", " (fun out x -> fprintf out "%s" x)) constraints'
 
-let rec print_type out = function
-  | Con t -> fprintf out "%s" t
-  | Arrow (ps, r) ->
-      fprintf out "(%a) -> %a"
-        (print_list "," print_type) ps
-        print_type r
-  | Inst (n, ts) ->
-      fprintf out "%s<%a>" n (print_list ", " print_type) ts
-
-let print_param out { param_name; param_type } =
-  fprintf out "%s: %a" param_name print_type param_type
-
 let print_maybe out = function
   | Some str -> fprintf out "%s" str
   | None -> ()
@@ -47,7 +35,19 @@ let print_generics out = function
   | generics ->
       fprintf out "<%a>" (print_list ", " print_generic) generics
 
-let rec print_fn out { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
+let rec print_type out = function
+  | Arrow (ps, r) ->
+      fprintf out "(%a) -> %a"
+        (print_list "," print_type) ps
+        print_type r
+  | Inst (n, ts) ->
+      fprintf out "%s%a" n
+        print_generic_arguments ts
+
+and print_param out { param_name; param_type } =
+  fprintf out "%s: %a" param_name print_type param_type
+
+and print_fn out { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   fprintf out "fn %a %a(%a) -> %a { %a }\n"
     print_maybe fn_name
     print_generics fn_generics

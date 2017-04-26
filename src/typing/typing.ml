@@ -164,12 +164,6 @@ let check_literal = function
   | Int _ -> val_int
 
 let rec check_type env : type_ -> T.ty * subst = function
-  | Con t ->
-      let t' = match get_type env t with
-      | T.TypeInst _ -> raise (TypeError "Cannot use type instance as type")
-      | t -> to_value t
-      in t', []
-
   | Arrow (parameters, return_type) ->
       let ret, s = check_type env return_type in
       let fn_type = List.fold_right
@@ -177,8 +171,10 @@ let rec check_type env : type_ -> T.ty * subst = function
         parameters (ret, s)
       in fn_type
   | Inst (t, args) ->
-      let ty, _ = check_type env (Con t) in
-      apply_generics env ty args []
+      let ty = match get_type env t with
+      | T.TypeInst _ -> raise (TypeError "Cannot use type instance as type")
+      | t -> to_value t
+      in apply_generics env ty args []
 
 and apply_generics env ty_callee gen_args s1 =
   let gen_args' = List.map (check_type env) gen_args in
