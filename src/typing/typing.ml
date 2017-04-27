@@ -69,10 +69,7 @@ let rec unify = function
       let s2 = unify (apply s1 t12, apply s1 t22) in
       s2 >> s1
 
-  | T.TypeArrow (_, t1), t2
-  | t2, T.TypeArrow (_, t1) ->
-      unify (t1, t2)
-
+  (* Order matters: Var must come before TypeArrow *)
   | T.Var ({ T.constraints = cs1 } as var1),
     T.Var ({ T.constraints = cs2 } as var2) ->
       let aux c1 c2 = String.compare c1.T.intf_name c2.T.intf_name in
@@ -92,6 +89,10 @@ let rec unify = function
       in
       List.iter impls constraints;
       [ var, t ]
+
+  | T.TypeArrow (_, t1), t2
+  | t2, T.TypeArrow (_, t1) ->
+      unify (t1, t2)
 
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
