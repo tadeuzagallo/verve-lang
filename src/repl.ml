@@ -39,8 +39,18 @@ let rec loop term history state =
       | exn -> Lwt.fail exn)
   >>= function
   | Some command ->
-    let state, value, ty = eval state command in
-    LTerm.fprintls term (make_output value ty) >>= fun () ->
+    Lwt.catch
+      (fun () ->
+         let state, value, ty = eval state command in
+         LTerm.fprintls term (make_output value ty)
+         >>= fun () -> return state)
+      (function
+        | Type_error.Error e ->
+          Type_error.report_error Format.str_formatter e;
+          let err = LTerm_text.eval [S (Format.flush_str_formatter ())] in
+          LTerm.fprintls term err >>= fun () -> return state
+        | exn -> Lwt.fail exn)
+    >>= fun state ->
       LTerm_history.add history command;
       loop term history state
   | None ->
