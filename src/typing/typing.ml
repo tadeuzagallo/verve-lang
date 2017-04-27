@@ -1,8 +1,7 @@
-module T = Types
 open Absyn
+open Type_error
 
-exception TypeError of string
-exception UnificationError of string
+module T = Types
 
 type ty_env = (name * T.ty) list
 type subst = (T.tvar * T.ty) list
@@ -82,20 +81,15 @@ let rec unify = function
 
   | T.Var ({ T.constraints } as var), t
   | t, T.Var ({ T.constraints } as var) ->
-       let raise_ intf_desc =
-        let msg = Format.fprintf Format.str_formatter "Type %a does not implement interface %s"
-          Printer.Type.pp t intf_desc.T.intf_name
-        in raise (UnificationError (Format.flush_str_formatter ()))
-      in
       let impls intf_desc =
         match t with
         | T.Var var
         | T.RigidVar var ->
             if not (List.mem intf_desc var.T.constraints) then
-              raise_ intf_desc
+              raise (Error (Instance_not_found (t, intf_desc)))
         | t ->
             if not (List.mem_assoc t intf_desc.T.intf_impls) then
-              raise_ intf_desc
+              raise (Error (Instance_not_found (t, intf_desc)))
       in
       List.iter impls constraints;
       [ var, t ]
@@ -103,9 +97,7 @@ let rec unify = function
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
   | t1, t2 ->
-      let msg = Format.fprintf Format.str_formatter "Failed to unify %a with %a"
-        Printer.Type.pp t1 Printer.Type.pp t2
-      in raise (UnificationError (Format.flush_str_formatter ()))
+      raise (Error (Unification_error (t1, t2)))
 
 let _fresh_tbl = Hashtbl.create 256
 let _default_id = 1
@@ -143,7 +135,7 @@ let rec loosen = function
 let get_type env v =
   try instantiate [] (List.assoc v env)
   with Not_found ->
-    raise (TypeError "Unknown Type")
+    raise (Error (Unknown_type v))
 
 let rec to_value = function
   | T.TypeCtor (n, ts) -> T.TypeInst (n, List.map to_value ts)
@@ -155,7 +147,7 @@ let rec to_value = function
 let var_of_generic env { name; constraints } =
   let resolve n = match get_type env n with
     | T.Interface i -> i
-    | t -> raise (TypeError "Generic constraint must be an interface")
+    | t -> raise (Error (Invalid_constraint (name, t)))
   in
   let intfs = List.map resolve constraints in
   { T.id = _fresh name; T.name; T.constraints = intfs }
@@ -172,7 +164,7 @@ let rec check_type env : type_ -> T.ty * subst = function
       in fn_type
   | Inst (t, args) ->
       let ty = match get_type env t with
-      | T.TypeInst _ -> raise (TypeError "Cannot use type instance as type")
+      | T.TypeInst _ as t ->  raise (Error (Value_as_type t))
       | t -> to_value t
       in apply_generics env ty args []
 
@@ -183,7 +175,7 @@ and apply_generics env ty_callee gen_args s1 =
     | T.TypeArrow (g', tail) ->
         let s = [(g', g)] >> s2 >> s1 in
         (apply s tail, s)
-    | _ -> raise (TypeError "Invalid type for generic application")
+    | _ -> raise (Error Invalid_generic_application)
   in
   List.fold_left check_type (ty_callee, s1) gen_args'
 
@@ -233,7 +225,7 @@ and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
       | T.TypeArrow (v1, t2) ->
           let t2', s = check s3 t2 in
           T.TypeArrow (v1, t2'), s
-      | _ -> raise (TypeError "Invalid type for function call")
+      | _ -> raise (Error Invalid_application)
     in
     check (s2 >> s1) call
   in
@@ -323,7 +315,7 @@ and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =
   let intf_desc =
     match get_type env impl_name with
     | T.Interface i -> i
-    | t -> raise (TypeError (impl_name ^ " is not an interface"))
+    | t -> raise (Error (Invalid_implementation (impl_name, t)))
   in
   intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
   (impl_ty, env, s1)
@@ -342,5 +334,10 @@ and check_decls env decls =
     (val_void, env, []) decls
 
 let check program =
-  let ty, _, s = check_decls default_env program.body in
-  apply s ty
+  try
+    let ty, _, s = check_decls default_env program.body in
+    apply s ty
+  with Error e ->
+    report_error Format.err_formatter e;
+    Format.pp_print_newline Format.err_formatter ();
+    exit 1
