@@ -3,6 +3,7 @@
 
 true: use_menhir, explain, debug, warn_a, annot, bin_annot
 
-"main.ml": package(cmdliner)
+"main.ml": package(cmdliner, lwt)
+"repl.ml": package(lwt, lambda-term)
 "parsing/printer.ml" or "typing/typing.ml": package(fmt)
-"main.byte": package(cmdliner, fmt)
+"main.byte": package(cmdliner, fmt, lwt, lambda-term)

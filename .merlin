@@ -6,4 +6,4 @@ B src/_build
 B src/_build/parsing
 B src/_build/typing
 
-PKG ocamlfind MenhirLib fmt
+PKG MenhirLib fmt cmdliner lwt lambda-term

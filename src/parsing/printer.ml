@@ -174,5 +174,9 @@ module Type = struct
 end
 
 (* Entry Point *)
-let print expr ty =
-  pf stdout "@[<hov 2>%a@ : %a@]@." Value.pp expr Type.pp ty;
+let print_raw ppf value ty =
+  pf ppf "@[<hov 2>%a@ : %a@]" Value.pp value Type.pp ty
+
+let print value ty =
+  print_raw stdout value ty;
+  Format.pp_print_newline stdout;

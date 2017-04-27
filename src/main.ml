@@ -1,5 +1,6 @@
 open Lexing
 open Cmdliner
+open Lwt
 
 (*
  * verve fmt foo.vrv
@@ -41,7 +42,9 @@ let run_run = with_file @@ fun file ->
   let ty = Typing.check ast in
   Interpreter.eval ast |> ignore
 
-let run_repl = `Ok ()
+let run_repl =
+  Lwt_main.run (Repl.main ());
+  `Ok ()
 
 (* Common options *)
 let file =

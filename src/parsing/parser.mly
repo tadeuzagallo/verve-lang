@@ -1,5 +1,4 @@
 %{
-
 open Absyn
 %}
 
@@ -28,16 +27,21 @@ open Absyn
 %token <int> INT
 
 %start <Absyn.program> program
+%start <Absyn.decl> decl_start
 
 %%
 
 program: EOL* decl* EOF { { imports = []; exports = []; body = $2 } }
 
-decl:
-  | enum EOL+ { $1 }
-  | interface EOL+ { $1 }
-  | implementation EOL+ { $1 }
-  | expr EOL+ { Expr $1 }
+decl_:
+  | enum { $1 }
+  | interface { $1 }
+  | implementation { $1 }
+  | expr { Expr $1 }
+
+decl_start: decl EOF { $1 }
+
+decl: decl_ EOL+ { $1 }
 
 atom:
   | LCID { Var $1 }
