@@ -51,7 +51,10 @@ let rec subst_expr ty_args args = function
   end
   | Application ({ callee; arguments; generic_arguments_ty } as app) ->
       let callee = subst_expr ty_args args callee in
-      let arguments = List.map (subst_expr ty_args args) arguments in
+      let arguments = match arguments with
+        | None -> None
+        | Some a -> Some (List.map (subst_expr ty_args args) a)
+      in
       let generic_arguments_ty = List.map (subst_ty ty_args) generic_arguments_ty in
       Application { app with callee; arguments; generic_arguments_ty }
 
@@ -97,7 +100,10 @@ let rec eval_expr env = function
   | Literal l -> (V.Literal l, env)
   | Application { callee; generic_arguments; arguments; generic_arguments_ty } ->
       let (callee', _) = eval_expr env callee in
-      let arguments' = List.map (fun a -> V.expr_of_value @@ fst @@ eval_expr env a) arguments in
+      let arguments' = match arguments with
+        | None -> []
+        | Some a -> List.map (fun a -> V.expr_of_value @@ fst @@ eval_expr env a) a
+      in
       let (v, _) = eval_expr env (subst generic_arguments_ty arguments' callee') in
       (v, env)
   | Var v -> begin

@@ -235,7 +235,7 @@ and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
 
 and check_app env ({ callee; generic_arguments; arguments } as app) =
   let (ty_callee, _, s1) = check_expr env callee in
-  let ty, env', s = check_generic_application env s1 (ty_callee, generic_arguments, Some arguments) in
+  let ty, env', s = check_generic_application env s1 (ty_callee, generic_arguments, arguments) in
   let rec aux acc = function
     | T.TypeArrow (var, t) -> aux (apply s (T.Var var) :: acc) t
     | _ -> List.rev acc

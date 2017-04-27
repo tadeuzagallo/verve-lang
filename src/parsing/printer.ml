@@ -52,7 +52,7 @@ module Absyn = struct
   and pp_app ppf { callee; generic_arguments; arguments } =
     pf ppf "%a%a"
       pp callee
-      (parens @@ comma_sep pp) arguments
+      (option @@ parens @@ comma_sep pp) arguments
 
   and pp_ctor ppf { ctor_name;  ctor_generic_arguments; ctor_arguments } =
     pf ppf "%s%a%a"
@@ -179,4 +179,4 @@ let print_raw ppf value ty =
 
 let print value ty =
   print_raw stdout value ty;
-  Format.pp_print_newline stdout;
+  Format.pp_print_newline stdout ();

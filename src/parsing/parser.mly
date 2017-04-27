@@ -106,10 +106,14 @@ arrow_type:
 /* application */
 
 application:
-  atom generic_arguments arguments { Application { callee = $1; generic_arguments = $2; arguments = $3; generic_arguments_ty = [] } }
+  | atom arguments { Application { callee = $1; generic_arguments = []; arguments = Some $2; generic_arguments_ty = [] } }
+  | atom generic_arguments_strict { Application { callee = $1; generic_arguments = $2; arguments = None; generic_arguments_ty = [] } }
 
 generic_arguments:
   | { [] }
+  | generic_arguments_strict { $1 }
+
+generic_arguments_strict:
   | L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
 
 arguments:

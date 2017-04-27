@@ -65,7 +65,7 @@ and implementation = {
 and application = {
   callee: expr;
   generic_arguments: type_ list;
-  arguments: expr list;
+  arguments: expr list option;
   mutable generic_arguments_ty: Types.ty list;
 }
 
