@@ -1,11 +1,15 @@
 open Fmt
 
 (* Combinators *)
-let angles pp_v ppf v = pf ppf "@[<1><%a>@]" pp_v v
+let angles pp_v ppf v = pf ppf "<%a>" pp_v v
+let parens pp_v ppf v = pf ppf "(%a)" pp_v v
+let brackets pp_v ppf v = pf ppf "[%a]" pp_v v
+let braces pp_v ppf v = pf ppf "{%a}" pp_v v
+let list v = Fmt.list ~sep:sp v
 
 let comma_sep pp_v ppf v =
   let sep ppf () = pf ppf ",@ " in
-  list ~sep pp_v ppf v
+  Fmt.list ~sep pp_v ppf v
 
 (* AST Printing *)
 open Absyn
@@ -27,19 +31,19 @@ module Absyn = struct
     | generics -> (box @@ angles @@ comma_sep pp_generic) ppf generics
 
   let rec pp_type ppf = function
-    | Arrow (ps, r) -> pf ppf "%a@ -> %a" (box @@ parens @@ comma_sep pp_type) ps pp_type r
+    | Arrow (ps, r) -> pf ppf "%a -> %a" (parens @@ comma_sep pp_type) ps pp_type r
     | Inst (n, ts) -> pf ppf "%s%a" n pp_generic_arguments ts
 
   and pp_param ppf { param_name; param_type } =
     pf ppf "%s@,: %a" param_name pp_type param_type
 
   and pp_fn ppf { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-    pf ppf "fn %a%a%a@ -> %a@ %a"
+    pf ppf "@[<v>@[<v 2>fn %a%a%a -> %a {@ %a@]@ }@]"
       (option string) fn_name
       pp_generics fn_generics
       (hvbox @@ parens @@ comma_sep pp_param) fn_parameters
       pp_type fn_return_type
-      (vbox @@ braces @@ prefix sp @@ suffix sp @@ list pp) fn_body
+      (list pp) fn_body
 
   and pp_generic_arguments ppf = function
     | [] -> ()
@@ -48,7 +52,7 @@ module Absyn = struct
   and pp_app ppf { callee; generic_arguments; arguments } =
     pf ppf "%a%a"
       pp callee
-      (hvbox @@ parens @@ comma_sep pp) arguments
+      (parens @@ comma_sep pp) arguments
 
   and pp_ctor ppf { ctor_name;  ctor_generic_arguments; ctor_arguments } =
     pf ppf "%s%a%a"
@@ -65,6 +69,48 @@ module Absyn = struct
     | Unit -> string ppf "()"
 
   and pp ppf v = (box ~indent:2 pp') ppf v
+
+  let pp_enum_item ppf { enum_item_name; enum_item_generics; enum_item_parameters } =
+    pf ppf "%s%a%a"
+      enum_item_name
+      pp_generics enum_item_generics
+      (option @@ box @@ parens @@ comma_sep pp_type) enum_item_parameters
+
+  let pp_enum ppf { enum_name; enum_generics; enum_items } =
+    pf ppf "@[<v>@[<v 2>enum %s%a = {@ %a@]@ }@ @]"
+      enum_name
+      pp_generics enum_generics
+      (list pp_enum_item) enum_items
+
+  let pp_prototype ppf proto =
+    pf ppf "fn %s%a%a -> %a"
+      proto.proto_name
+      pp_generics proto.proto_generics
+      (parens @@ hvbox ~indent:2 @@ comma_sep pp_type) proto.proto_params
+      pp_type proto.proto_ret_type
+
+  let pp_interface ppf { intf_name; intf_param; intf_functions } =
+    pf ppf "@[<v>@[<v 2>interface %s<%a> {@ %a@]}@]@ "
+      intf_name
+      pp_generic intf_param
+      (list pp_prototype) intf_functions
+
+  let pp_implementation ppf { impl_name; impl_arg; impl_functions } =
+    pf ppf "@[<v>@[<v 2>implementation %s<%a> {@ %a@]@ }@]"
+      impl_name
+      pp_type impl_arg
+      (list pp_fn) impl_functions
+
+  let pp_decl ppf = function
+    | Enum e -> pp_enum ppf e
+    | Interface i -> pp_interface ppf i
+    | Implementation i -> pp_implementation ppf i
+    | Expr e -> pp ppf e
+
+  let pp_program ppf { imports; exports; body } =
+    (*"@[<v>%a@ @ %a@ @ %a@]@."*)
+    pf ppf "@[<v>%a@]@."
+      (Fmt.list ~sep:(suffix sp sp)pp_decl) body
 end
 
 (* Value Printing *)
