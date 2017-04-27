@@ -61,9 +61,8 @@ let rec unify = function
         unify (t1, t2) >> s
       in List.fold_left2 aux [] t1s t2s
 
-  | T.TypeCtor _, t
-  | t, T.TypeCtor _
-  when t = val_type -> []
+  | T.TypeCtor _, t when t = val_type -> []
+  | t, T.TypeCtor _ when t = val_type -> []
 
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
       let s1 = unify (t11, t21) in
