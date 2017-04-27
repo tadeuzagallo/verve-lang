@@ -21,4 +21,5 @@ depends: [
   "ocamlfind" { build }
   "menhir" { build }
   "fmt"
+  "cmdliner"
 ]

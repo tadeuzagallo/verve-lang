@@ -1,4 +1,19 @@
 open Lexing
+open Cmdliner
+
+(*
+ * verve fmt foo.vrv
+ * verve compile foo.vrv
+ * verve dump-ast foo.vrv
+ * verve
+ *)
+
+(* Helper functions *)
+let with_file fn file =
+  let in_ch = open_in file in
+  let ret = fn in_ch in
+  close_in in_ch;
+  ret
 
 let print_position outx lexbuf =
   let pos = lexbuf.lex_curr_p in
@@ -12,8 +27,59 @@ let parse file =
     Printf.fprintf stderr "%a: syntax error at '%s'\n" print_position lexbuf (Lexing.lexeme lexbuf);
     exit (-1)
 
+(* Command functions *)
+let run_fmt = with_file @@ fun file ->
+  let ast = parse file in
+  Printer.Absyn.pp_program Format.std_formatter ast
+
+let run_compile = ()
+
+let run_dump_ast = ()
+
+let run_run = with_file @@ fun file ->
+  let ast = parse file in
+  let ty = Typing.check ast in
+  Interpreter.eval ast |> ignore
+
+let run_repl = `Ok ()
+
+(* Common options *)
+let file =
+  let doc = "The input file" in
+  Arg.(last & pos_all file [] & info [] ~docv:"file")
+
+(* Commands *)
+let fmt =
+  let doc = "Pretty print a file" in
+  let info = Term.info "fmt" ~doc in
+  let fmt_t = Term.(const run_fmt $ file) in
+  (fmt_t, info)
+
+let compile =
+  let doc = "Compile a verve file to a native executable" in
+  let info = Term.info "compile" ~doc in
+  let compile_t = Term.(const run_compile) in
+  (compile_t, info)
+
+let dump_ast =
+  let doc = "Dump the Abstract Syntax Tree (AST) of a verve file" in
+  let info = Term.info "dump-ast" ~doc in
+  let dump_ast_t = Term.(const run_dump_ast) in
+  (dump_ast_t, info)
+
+let run =
+  let doc = "Evaluate a Verve source file" in
+  let info = Term.info "run" ~doc in
+  let run_t = Term.(const run_run $ file) in
+  (run_t, info)
+
+let repl =
+  let doc = "The toolchain for the Verve programming language" in let info = Term.info "verve" ~version:"%%VERSION%%" ~doc in
+  let info = Term.info "verve" ~doc in
+  let repl_t = Term.(ret @@ const run_repl) in
+  (repl_t, info)
+
+(* *)
 let () =
-  let program = parse stdin in
-  let ty = Typing.check program in
-  let value = Interpreter.eval program in
-  Printer.print value ty
+  let cmds = [ fmt; compile; dump_ast; run ] in
+  Term.(exit @@ eval_choice repl cmds)
