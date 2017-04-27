@@ -11,14 +11,17 @@ let make_output value ty =
   Printer.print_raw Format.str_formatter value ty;
   eval [ S (Format.flush_str_formatter ()) ]
 
-let eval (tenv, s1, venv) str =
-  let lexbuf = Lexing.from_string (str ^ "\n") in
-  let decl = Parser.decl_start Lexer.read lexbuf in
+let eval (tenv, s1, venv) decl =
   let ty, tenv', s2 = Typing.check_decl tenv decl in
   let value, venv' = Interpreter.eval_decl venv decl in
   let subst = Typing.(s2 >> s1) in
   let ty' = Typing.(apply subst ty) in
   (tenv', subst, venv'), value, ty'
+
+let parse_and_eval state str =
+  let lexbuf = Lexing.from_string (str ^ "\n") in
+  let decl = Parser.decl_start Lexer.read lexbuf in
+  eval state decl
 
 class read_line ~term ~history ~state = object(self)
   inherit LTerm_read_line.read_line ~history ()
@@ -41,7 +44,7 @@ let rec loop term history state =
   | Some command ->
     Lwt.catch
       (fun () ->
-         let state, value, ty = eval state command in
+         let state, value, ty = parse_and_eval state command in
          LTerm.fprintls term (make_output value ty)
          >>= fun () -> return state)
       (function

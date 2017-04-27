@@ -38,9 +38,19 @@ let run_compile = ()
 let run_dump_ast = ()
 
 let run_file = with_file @@ fun file ->
+  let eval (state, has_error) decl = try
+      let state', value, ty = Repl.eval state decl in
+      Printer.print value ty;
+      state', has_error
+    with Type_error.Error e ->
+      Type_error.report_error Format.err_formatter e;
+      Format.pp_print_newline Format.err_formatter ();
+      state, true
+  in
   let ast = parse file in
-  Typing.check ast |> ignore;
-  Interpreter.eval ast |> ignore
+  let state = (Typing.default_env, [], []) in
+  let _, err = List.fold_left eval (state, false) ast.Absyn.body in
+  if err then exit 1
 
 let run_repl () =
   Lwt_main.run (Repl.main ())
