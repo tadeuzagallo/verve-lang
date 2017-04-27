@@ -231,7 +231,7 @@ and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
   in
   let ty, s2 = apply_generics env ty_callee generic_arguments s1 in
   let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
-  (ty', env, s3)
+  (apply s3 ty', env, s3)
 
 and check_app env ({ callee; generic_arguments; arguments } as app) =
   let (ty_callee, _, s1) = check_expr env callee in
