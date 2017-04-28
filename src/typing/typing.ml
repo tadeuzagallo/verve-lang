@@ -73,7 +73,9 @@ let rec unify = function
   | T.Var ({ T.constraints = cs1 } as var1),
     T.Var ({ T.constraints = cs2 } as var2) ->
       let aux c1 c2 = String.compare c1.T.intf_name c2.T.intf_name in
-      [(var1, T.Var { var2 with T.constraints = List.sort_uniq aux (cs1 @ cs2)})]
+      let ty = T.Var { var2 with T.constraints = List.sort_uniq aux (cs1 @ cs2)} in
+      var1.T.resolved_ty <- Some ty;
+      [(var1, ty)]
 
   | T.Var ({ T.constraints } as var), t
   | t, T.Var ({ T.constraints } as var) ->
@@ -88,6 +90,7 @@ let rec unify = function
               raise (Error (Instance_not_found (t, intf_desc)))
       in
       List.iter impls constraints;
+      var.T.resolved_ty <- Some t;
       [ var, t ]
 
   | T.TypeArrow (_, t1), t2
@@ -150,7 +153,7 @@ let var_of_generic env { name; constraints } =
     | t -> raise (Error (Invalid_constraint (name, t)))
   in
   let intfs = List.map resolve constraints in
-  { T.id = _fresh name; T.name; T.constraints = intfs }
+  { T.id = _fresh name; T.name; T.constraints = intfs; T.resolved_ty = None }
 
 let check_literal = function
   | Int _ -> val_int

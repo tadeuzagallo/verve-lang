@@ -11,7 +11,8 @@ type ty =
 and tvar = {
   id : int;
   name : string;
-  constraints : interface_desc list
+  constraints : interface_desc list;
+  mutable resolved_ty : ty option;
 }
 
 and interface_desc = {

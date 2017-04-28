@@ -1,4 +1,4 @@
-// RUN: %verve
+// RUN: %verve | %check
 
 interface Intish<T> {
   fn to_int(T) -> Int
@@ -17,24 +17,42 @@ implementation Intish<(Void) -> Int> {
   }
 }
 
-// Intish := (Int, [ Int::to_int ]) :: !Intish
-// unify(Intish<Int>::to_int, Intish<T>::to_int)
-
-to_int
-to_int(42)
-to_int(fn _() -> Int { 13 })
-
-/*
-*/
+to_int // CHECK: to_int : forall T.*: Intish, \(T.*: Intish\) -> Int
+to_int(42) // CHECK: 42 : Int
+to_int(fn _() -> Int { 13 }) // CHECK: 13 : Int
 
 fn g<U, T: Intish>(x: T) -> Int {
   to_int(x)
 }
 
-g(7)
+g(7) // CHECK: 7 : forall U.*, Int
 
 fn f<T: Intish>(x: T) -> Int {
   g(x)
 }
 
-f(32)
+f(32) // CHECK: 32 : Int
+
+interface Read<T> {
+  fn read() -> T
+}
+
+enum Bool {
+  True
+  False
+}
+implementation Read<Int> {
+  fn read() -> Int {
+    17
+  }
+}
+implementation Read<Bool> {
+  fn read() -> Bool {
+    True
+  }
+}
+
+fn id<T>(x: T) -> T { x }
+
+id<Int>(read()) // CHECK: 17 : Int
+id<Bool>(read()) // CHECK: True : Bool

@@ -75,10 +75,14 @@ let subst generics arguments fn =
     | V.InterfaceFunction fn ->
         begin match generics with
         | [t] ->
-            let intf = Hashtbl.find fn_to_intf fn in
-            let impls = Hashtbl.find intf_to_impls intf in
-            let impl = List.assoc t !impls in
-            (List.assoc fn impl)
+          let rec get_type = function
+            | T.Var { T.resolved_ty = (Some t) } -> get_type t
+            | t -> t
+          in
+          let intf = Hashtbl.find fn_to_intf fn in
+          let impls = Hashtbl.find intf_to_impls intf in
+          let impl = List.assoc (get_type t) !impls in
+          (List.assoc fn impl)
         | _ -> assert false
         end
     | v ->
