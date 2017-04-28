@@ -1,0 +1,11 @@
+// RUN: %verve
+enum Bool {
+  True
+  False
+}
+
+fn pair<T, U>(x: T, y: U) -> Void { }
+pair<Int, Bool>(4, True)
+
+enum Pair<T, U> { Pair(T, U) }
+Pair<Int, Bool>(4, True)

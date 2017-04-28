@@ -277,11 +277,11 @@ and check_enum_item make item_ty (env, s1) { enum_item_name; enum_item_parameter
       extend_env env (enum_item_name, ty'), s2
 
 and check_enum env { enum_name; enum_generics; enum_items } =
-  let create_var (vars, env) g =
+  let create_var g (vars, env) =
     let var = var_of_generic env g in
     (var :: vars, extend_env env (g.name, T.Var var))
   in
-  let gen, env' = List.fold_left create_var ([], env) enum_generics in
+  let gen, env' = List.fold_right create_var enum_generics ([], env) in
   let enum_ty = T.TypeCtor (enum_name, List.map (fun v -> T.Var v) gen) in
   let item_ty = T.TypeInst (enum_name, List.map (fun v -> T.Var v) gen) in
   let make t = List.fold_right (fun g t -> T.TypeArrow (g, t)) gen t in
