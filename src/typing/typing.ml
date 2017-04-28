@@ -303,9 +303,14 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
     T.Arrow (param_ty, t), s2 >> s1
   in
   let fn_ty, s = List.fold_right make_arrow proto_params (ret_type, s1) in
-  let fn_ty' = loosen @@ apply s fn_ty in
-  let fn_ty'' = T.TypeArrow (var, fn_ty') in
-  extend_env env (proto_name, fn_ty'')
+  let fn_ty' = match fn_ty with
+  | T.Arrow _ -> fn_ty
+  | _ -> T.Arrow (val_void, fn_ty)
+  in
+  let fn_ty'' = List.fold_right (fun g t -> T.TypeArrow (var_of_generic env' g, t)) proto_generics fn_ty' in
+  let fn_ty''' = loosen @@ apply s fn_ty'' in
+  let fn_ty'''' = T.TypeArrow (var, fn_ty''') in
+  extend_env env (proto_name, fn_ty'''')
 
 and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =
   let impl_arg_ty, s1 = check_type env impl_arg in
