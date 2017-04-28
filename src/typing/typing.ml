@@ -300,6 +300,11 @@ intf_name::intf_param.constraints } in
 
 and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; proto_ret_type } =
   let env' = extend_env env (var_name, T.RigidVar var) in
+  let generics' = List.map (var_of_generic env) proto_generics in
+  let env' = List.fold_left
+      (fun env (g, v) -> extend_env env (g.name, T.RigidVar v))
+      env' (List.combine proto_generics generics')
+  in
   let ret_type, s1 = check_type env' proto_ret_type in
   let make_arrow param (t, s1) =
     let param_ty, s2 = check_type env' param in
@@ -310,7 +315,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
   | T.Arrow _ -> fn_ty
   | _ -> T.Arrow (val_void, fn_ty)
   in
-  let fn_ty'' = List.fold_right (fun g t -> T.TypeArrow (var_of_generic env' g, t)) proto_generics fn_ty' in
+  let fn_ty'' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_ty' in
   let fn_ty''' = loosen @@ apply s fn_ty'' in
   let fn_ty'''' = T.TypeArrow (var, fn_ty''') in
   extend_env env (proto_name, fn_ty'''')
