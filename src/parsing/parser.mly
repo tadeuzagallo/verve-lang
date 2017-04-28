@@ -33,68 +33,13 @@ open Absyn
 
 %%
 
+/* Helpers */
+
 plist(x):
   L_PAREN separated_list(COMMA, x) R_PAREN { $2 }
 
-/* Entry points */
-program:
-  EOL* decl* EOF { { imports = []; exports = []; body = $2 } }
-
-decl_:
-  | enum { $1 }
-  | interface { $1 }
-  | implementation { $1 }
-  | expr { Expr $1 }
-
-decl_start: decl EOF { $1 }
-
-decl: decl_ EOL+ { $1 }
-
-atom:
-  | LCID { Var $1 }
-  | literal { Literal $1 }
-  | application { $1 }
-  | L_PAREN expr R_PAREN { $2 }
-  | field_access { $1 }
-
-expr:
-  | function_ { Function $1 }
-  | constructor { $1 }
-  | atom { $1 }
-  | record { $1 }
-
-/* function expressions */
-function_:
-  FN LCID generic_parameters parameters return_type body(expr) { { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 } }
-
-generic_parameters:
-  | { [] }
-  | L_ANGLE separated_nonempty_list(COMMA, generic_parameter) R_ANGLE { $2 }
-
-generic_parameter:
-  UCID bounded_quantification { { name = $1; constraints = $2 } }
-
-bounded_quantification:
-  | { [] }
-  | COLON quantifiers { $2 }
-
-quantifiers:
-  | UCID { [$1] }
-  | L_PAREN separated_list(COMMA, UCID) R_PAREN { $2 }
-
-parameters:
-  L_PAREN separated_list(COMMA, parameter) R_PAREN { $2 }
-
-parameter:
-  pattern COLON type_ {
-    { param_name = $1; param_type = $3 }
-  }
-
-pattern:
-  LCID { $1 }
-
-return_type:
-  ARROW type_ { $2 }
+alist(x):
+  L_ANGLE separated_list(COMMA, x) R_ANGLE { $2 }
 
 body(expr):
   L_BRACE EOL* body_(expr) R_BRACE { $3 }
@@ -106,92 +51,130 @@ body_(expr):
 body_eol(expr):
   expr EOL+ { $1 }
 
+record_base(record_field):
+  delimited(L_BRACE, loption(separated_nonempty_list(COLON, record_field)), R_BRACE) { $1 }
+
+/* Entry points */
+program: EOL* decl* EOF {
+  { imports = []; exports = []; body = $2 }
+}
+
+decl_start: decl EOF { $1 }
+
+decl: decl_ EOL+ { $1 }
+
+decl_:
+  | enum { $1 }
+  | interface { $1 }
+  | implementation { $1 }
+  | expr { Expr $1 }
+
+expr:
+  | function_ { Function $1 }
+  | constructor { $1 }
+  | atom { $1 }
+  | record { $1 }
+
+atom:
+  | LCID { Var $1 }
+  | literal { Literal $1 }
+  | application { $1 }
+  | L_PAREN expr R_PAREN { $2 }
+  | field_access { $1 }
+
+/* function expressions */
+function_: FN LCID generic_parameters parameters return_type body(expr) {
+  { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 }
+}
+
+generic_parameters: loption(alist(generic_parameter)) { $1 }
+
+generic_parameter: UCID loption(bounded_quantification) { { name = $1; constraints = $2 } }
+
+bounded_quantification: COLON quantifiers { $2 }
+
+quantifiers:
+  | UCID { [$1] }
+  | plist(UCID) { $1 }
+
+parameters: plist(parameter) { $1 }
+
+parameter: pattern COLON type_ {
+  { param_name = $1; param_type = $3 }
+}
+
+pattern: LCID { $1 }
+
+return_type: ARROW type_ { $2 }
+
 /* types */
 type_:
   | UCID generic_arguments { Inst ($1, $2) }
   | arrow_type { $1 }
   | record_type { $1 }
 
-arrow_type:
-  L_PAREN separated_list(COMMA, type_) R_PAREN ARROW type_ { Arrow($2, $5) }
+arrow_type: plist(type_) ARROW type_ { Arrow($1, $3) }
+
+record_type: record_base(record_type_field) { RecordType $1 }
+
+record_type_field: LCID COLON type_ { ($1, $3) }
 
 /* application */
 
 application:
-  | atom arguments {
+  | atom plist(expr) {
     Application { callee = $1; generic_arguments = []; arguments = Some $2; generic_arguments_ty = [] }
   }
   | atom generic_arguments_strict {
     Application { callee = $1; generic_arguments = $2; arguments = None; generic_arguments_ty = [] }
   }
 
-generic_arguments:
-  | { [] }
-  | generic_arguments_strict { $1 }
+generic_arguments: loption(generic_arguments_strict) { $1 }
 
-generic_arguments_strict:
-  | L_ANGLE separated_nonempty_list(COMMA, type_) R_ANGLE { $2 }
-
-arguments:
-  L_PAREN separated_list(COMMA, expr) R_PAREN { $2 }
+generic_arguments_strict: alist(type_) { $1 }
 
 /* literals */
 literal:
   | int_ { $1 }
 
-int_:
-  INT { Int $1 }
+int_: INT { Int $1 }
 
 /* enums */
-enum:
-  ENUM UCID generic_parameters body(enum_item) {
-    Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
-  }
+enum: ENUM UCID generic_parameters body(enum_item) {
+  Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
+}
 
-enum_item:
-  UCID generic_parameters enum_item_type? {
-    { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
-  }
+enum_item: UCID generic_parameters enum_item_type? {
+  { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
+}
 
-enum_item_type:
-  L_PAREN separated_nonempty_list(COMMA, type_) R_PAREN { $2 }
+enum_item_type: plist(type_) { $1 }
 
-constructor:
-  UCID generic_arguments arguments? {
-    Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 }
-  }
+constructor: UCID generic_arguments plist(expr)? {
+  Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 }
+}
 
 /* interfaces */
-interface:
-  INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) {
-    Interface { intf_name = $2; intf_param = $4; intf_functions = $6; }
-  }
+interface: INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) {
+  Interface { intf_name = $2; intf_param = $4; intf_functions = $6; }
+}
 
-prototype:
-  FN LCID generic_parameters proto_params return_type {
-    { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 }
-  }
+prototype: FN LCID generic_parameters proto_params return_type {
+  { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 }
+}
 
-proto_params:
-  plist(type_) { $1 }
+proto_params: plist(type_) { $1 }
 
 /* implementations */
-implementation:
-  IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) {
-    Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None }
-  }
+implementation: IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) {
+  Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None }
+}
 
 /* Records */
-record_base(record_field):
-  delimited(L_BRACE, loption(separated_nonempty_list(COLON, record_field)), R_BRACE) { $1 }
 
 record: record_base(record_field) { Record $1 }
 record_field: LCID EQ expr { ($1, $3) }
 
-record_type: record_base(record_type_field) { RecordType $1 }
-record_type_field: LCID COLON type_ { ($1, $3) }
-
-field_access:
-  atom DOT LCID {
-    Field_access { record = $1; field = $3; }
+field_access: atom DOT LCID {
+  Field_access { record = $1; field = $3; }
 }
