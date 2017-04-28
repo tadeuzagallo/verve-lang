@@ -1,0 +1,6 @@
+// RUN: %verve | %check
+
+{ x = 1 } // CHECK: {x = 1} : {x : Int}
+
+fn f(x: { x: Int }) -> Int { 42 } // CHECK: : \({x : Int}\) -> Int
+f({ x = 1 }) // CHECK: 42 : Int

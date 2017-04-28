@@ -11,6 +11,10 @@ let comma_sep pp_v ppf v =
   let sep ppf () = pf ppf ",@ " in
   Fmt.list ~sep pp_v ppf v
 
+let record sep pp ppf fields =
+  let sep ppf () = pf ppf " %c " sep in
+  (braces @@ comma_sep @@ pair ~sep string pp) ppf fields
+
 (* AST Printing *)
 open Absyn
 
@@ -33,9 +37,12 @@ module Absyn = struct
   let rec pp_type ppf = function
     | Arrow (ps, r) -> pf ppf "%a -> %a" (parens @@ comma_sep pp_type) ps pp_type r
     | Inst (n, ts) -> pf ppf "%s%a" n pp_generic_arguments ts
+    | RecordType fields -> record ':' pp_type ppf fields
 
   and pp_param ppf { param_name; param_type } =
     pf ppf "%s@,: %a" param_name pp_type param_type
+
+  and pp_record ppf fields = record '=' pp ppf fields
 
   and pp_fn ppf { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
     pf ppf "@[<v>@[<v 2>fn %a%a%a -> %a {@ %a@]@ }@]"
@@ -67,6 +74,7 @@ module Absyn = struct
     | Var str -> string ppf str
     | Literal l -> pp_literal ppf l
     | Unit -> string ppf "()"
+    | Record r -> pp_record ppf r
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 
@@ -125,6 +133,7 @@ module Value = struct
     | Unit -> string ppf "()"
     | Type t -> string ppf t
     | InterfaceFunction t -> string ppf t
+    | Record r -> record '=' pp' ppf r
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 
@@ -166,6 +175,7 @@ module Type = struct
         pf ppf "interface %s" i.intf_name
     | Implementation i ->
         pf ppf "implementation %s<%a>" i.impl_name pp i.impl_type
+    | Record r -> record ':' pp ppf r
   and pp ppf v = (box ~indent:2 pp') ppf v
 
   and pp_generics ppf = function

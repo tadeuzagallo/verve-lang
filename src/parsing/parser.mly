@@ -12,6 +12,7 @@ open Absyn
 %token ARROW
 %token COLON
 %token COMMA
+%token EQ
 %token L_ANGLE
 %token R_ANGLE
 %token L_BRACE
@@ -31,7 +32,12 @@ open Absyn
 
 %%
 
-program: EOL* decl* EOF { { imports = []; exports = []; body = $2 } }
+plist(x):
+  L_PAREN separated_list(COMMA, x) R_PAREN { $2 }
+
+/* Entry points */
+program:
+  EOL* decl* EOF { { imports = []; exports = []; body = $2 } }
 
 decl_:
   | enum { $1 }
@@ -53,6 +59,7 @@ expr:
   | function_ { Function $1 }
   | constructor { $1 }
   | atom { $1 }
+  | record { $1 }
 
 /* function expressions */
 function_:
@@ -77,7 +84,9 @@ parameters:
   L_PAREN separated_list(COMMA, parameter) R_PAREN { $2 }
 
 parameter:
-  pattern COLON type_ { { param_name = $1; param_type = $3 } }
+  pattern COLON type_ {
+    { param_name = $1; param_type = $3 }
+  }
 
 pattern:
   LCID { $1 }
@@ -99,6 +108,7 @@ body_eol(expr):
 type_:
   | UCID generic_arguments { Inst ($1, $2) }
   | arrow_type { $1 }
+  | record_type { $1 }
 
 arrow_type:
   L_PAREN separated_list(COMMA, type_) R_PAREN ARROW type_ { Arrow($2, $5) }
@@ -106,8 +116,12 @@ arrow_type:
 /* application */
 
 application:
-  | atom arguments { Application { callee = $1; generic_arguments = []; arguments = Some $2; generic_arguments_ty = [] } }
-  | atom generic_arguments_strict { Application { callee = $1; generic_arguments = $2; arguments = None; generic_arguments_ty = [] } }
+  | atom arguments {
+    Application { callee = $1; generic_arguments = []; arguments = Some $2; generic_arguments_ty = [] }
+  }
+  | atom generic_arguments_strict {
+    Application { callee = $1; generic_arguments = $2; arguments = None; generic_arguments_ty = [] }
+  }
 
 generic_arguments:
   | { [] }
@@ -128,27 +142,49 @@ int_:
 
 /* enums */
 enum:
-  ENUM UCID generic_parameters body(enum_item) { Enum { enum_name = $2; enum_generics = $3; enum_items = $4 } }
+  ENUM UCID generic_parameters body(enum_item) {
+    Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
+  }
 
 enum_item:
-  UCID generic_parameters enum_item_type? { { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; } }
+  UCID generic_parameters enum_item_type? {
+    { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
+  }
 
 enum_item_type:
   L_PAREN separated_nonempty_list(COMMA, type_) R_PAREN { $2 }
 
 constructor:
-  UCID generic_arguments arguments? { Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 } }
+  UCID generic_arguments arguments? {
+    Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 }
+  }
 
 /* interfaces */
 interface:
-  INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) { Interface { intf_name = $2; intf_param = $4; intf_functions = $6; } }
+  INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) {
+    Interface { intf_name = $2; intf_param = $4; intf_functions = $6; }
+  }
 
 prototype:
-  FN LCID generic_parameters proto_params return_type { { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 } }
+  FN LCID generic_parameters proto_params return_type {
+    { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 }
+  }
 
 proto_params:
-  L_PAREN separated_list(COMMA, type_) R_PAREN { $2 }
+  plist(type_) { $1 }
 
 /* implementations */
 implementation:
-  IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) { Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None } }
+  IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) {
+    Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None }
+  }
+
+/* Records */
+record_base(record_field):
+  delimited(L_BRACE, loption(separated_nonempty_list(COLON, record_field)), R_BRACE) { $1 }
+
+record: record_base(record_field) { Record $1 }
+record_field: LCID EQ expr { ($1, $3) }
+
+record_type: record_base(record_type_field) { RecordType $1 }
+record_type_field: LCID COLON type_ { ($1, $3) }

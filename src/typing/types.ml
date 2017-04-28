@@ -7,6 +7,7 @@ type ty =
   | RigidVar of tvar
   | Interface of interface_desc
   | Implementation of implementation_desc
+  | Record of (string * ty) list
 
 and tvar = {
   id : int;

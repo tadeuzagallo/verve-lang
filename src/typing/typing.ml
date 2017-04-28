@@ -46,6 +46,8 @@ let rec apply s = function
     begin try List.assoc var s
     with Not_found -> T.Var var
     end
+  | T.Record r ->
+    T.Record (List.map (fun (n, t) -> (n, apply s t)) r)
   | T.TypeArrow (v1, t2) ->
       let v1' =
         try List.assoc v1 s
@@ -99,6 +101,12 @@ let rec unify = function
 
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
+  | T.Record r1, T.Record r2
+  when List.map fst r1 = List.map fst r2 ->
+    let aux s (_, t1) (_, t2) =
+      unify (t1, t2) >> s
+    in List.fold_left2 aux [] r1 r2
+
   | t1, t2 ->
       raise (Error (Unification_error (t1, t2)))
 
@@ -126,6 +134,8 @@ let rec instantiate s1 = function
   | T.TypeCtor (n, ts) ->
       let ts' = List.map (instantiate s1) ts in
       T.TypeCtor (n, ts')
+  | T.Record r ->
+      T.Record (List.map (fun (n, t) -> (n, instantiate s1 t)) r)
   | t -> apply s1 t
 
 let rec loosen = function
@@ -133,6 +143,7 @@ let rec loosen = function
   | T.TypeArrow (var, ty) -> T.TypeArrow (var, loosen ty)
   | T.TypeInst (n, ts) -> T.TypeInst (n, List.map loosen ts)
   | T.RigidVar var -> T.Var var
+  | T.Record r -> T.Record (List.map (fun (n, t) -> (n, loosen t)) r)
   | t -> t
 
 let get_type env v =
@@ -145,6 +156,7 @@ let rec to_value = function
   | T.TypeInst (n, ts) -> T.TypeInst (n, List.map to_value ts)
   | T.Arrow (t1, t2) -> T.Arrow (to_value t1, to_value t2)
   | T.TypeArrow (var, ty) -> T.TypeArrow (var, to_value ty)
+  | T.Record r -> T.Record (List.map (fun (n, t) -> (n, to_value t)) r)
   | t -> t
 
 let var_of_generic env { name; constraints } =
@@ -170,6 +182,13 @@ let rec check_type env : type_ -> T.ty * subst = function
       | T.TypeInst _ as t ->  raise (Error (Value_as_type t))
       | t -> to_value t
       in apply_generics env ty args []
+  | RecordType fields ->
+    let aux (fields, s1) (name, t) =
+      let ty, s2 = check_type env t in
+      (name, ty) :: fields, s2 >> s1
+    in
+    List.fold_left aux ([], []) fields
+    |> fun (fields', s) -> T.Record fields', s
 
 and apply_generics env ty_callee gen_args s1 =
   let gen_args' = List.map (check_type env) gen_args in
@@ -249,6 +268,14 @@ and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   let (ty_ctor, _, s1) = check_expr env (Var ctor_name) in
   check_generic_application env s1 (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
+and check_record env fields =
+  let aux (fields, s1) (name, v) =
+    let ty, _, s2 = check_expr env v in
+    ((name, ty) :: fields, s2 >> s1)
+  in
+  let ty, s = List.fold_left aux ([], []) fields in
+  T.Record (List.rev ty), env, s
+
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (val_void, env, [])
   | Literal l -> (check_literal l, env, [])
@@ -256,6 +283,7 @@ and check_expr env : expr -> T.ty * ty_env * subst = function
   | Function fn -> check_fn env fn
   | Application app -> check_app env app
   | Ctor ctor -> check_ctor env ctor
+  | Record r -> check_record env r
 
 and check_exprs env exprs =
   List.fold_left

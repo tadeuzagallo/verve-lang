@@ -115,6 +115,8 @@ let rec eval_expr env = function
       with Not_found ->
         raise Unbound_variable
       end
+  | Record r ->
+    V.Record (List.map (fun (n, v) -> (n, fst @@ eval_expr env v)) r), env
   | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
       let fn' = V.Function fn in
       match fn_name with

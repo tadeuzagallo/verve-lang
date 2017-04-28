@@ -6,6 +6,7 @@ type export
 type type_ =
   | Arrow of type_ list * type_
   | Inst of name * type_ list
+  | RecordType of (name * type_) list
 
 type literal =
   | Int of int
@@ -81,6 +82,7 @@ and expr =
   | Var of name
   | Ctor of ctor
   | Literal of literal
+  | Record of (name * expr) list
   | Unit
 
 and decl =
