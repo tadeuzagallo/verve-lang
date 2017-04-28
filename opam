@@ -23,4 +23,5 @@ depends: [
   "fmt"
   "lwt"
   "cmdliner"
+  "lambda-term"
 ]
