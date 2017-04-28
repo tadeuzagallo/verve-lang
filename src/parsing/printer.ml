@@ -67,6 +67,9 @@ module Absyn = struct
       pp_generic_arguments ctor_generic_arguments
       (option @@ hvbox @@ parens @@ comma_sep pp) ctor_arguments
 
+  and pp_field_access ppf { record; field } =
+    pf ppf "%a.%s" pp record field
+
   and pp' ppf = function
     | Function fn -> pp_fn ppf fn
     | Ctor ctor -> pp_ctor ppf ctor
@@ -75,6 +78,7 @@ module Absyn = struct
     | Literal l -> pp_literal ppf l
     | Unit -> string ppf "()"
     | Record r -> pp_record ppf r
+    | Field_access f -> pp_field_access ppf f
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 

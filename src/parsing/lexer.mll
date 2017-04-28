@@ -18,6 +18,7 @@ rule read = parse
 | "->" { ARROW }
 | ":" { COLON }
 | "," { COMMA }
+| "." { DOT }
 | "=" { EQ }
 | "<" { L_ANGLE }
 | ">" { R_ANGLE }

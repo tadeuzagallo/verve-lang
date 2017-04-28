@@ -39,6 +39,10 @@ let rec subst_ty ty_args = function
   | T.TypeArrow (v1, t2) ->
       let ty_args' = List.remove_assoc v1.T.name ty_args in
       T.TypeArrow (v1, subst_ty ty_args' t2)
+  | T.Record r ->
+    let aux (n, t) =
+      (n, subst_ty ty_args t)
+    in T.Record (List.map aux r)
   | t -> t
 
 
@@ -68,6 +72,14 @@ let rec subst_expr ty_args args = function
         | None -> None
         | Some cargs -> Some (List.map (subst_expr ty_args args) cargs)
       in Ctor { ctor with ctor_arguments }
+  | Record r ->
+    let aux (name, v) =
+      (name, subst_expr ty_args args v)
+    in
+    let r' = List.map aux r in
+    Record r'
+  | Field_access f ->
+    Field_access { f with record=subst_expr ty_args args f.record }
 
 let subst generics arguments fn =
   let { fn_parameters; fn_body } as fn = match fn with
@@ -117,6 +129,12 @@ let rec eval_expr env = function
       end
   | Record r ->
     V.Record (List.map (fun (n, v) -> (n, fst @@ eval_expr env v)) r), env
+  | Field_access f ->
+    begin match f.record with
+      | Record fields ->
+        eval_expr env (List.assoc f.field fields)
+      | _ -> assert false
+    end
   | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
       let fn' = V.Function fn in
       match fn_name with

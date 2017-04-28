@@ -76,6 +76,11 @@ and ctor = {
   ctor_arguments : expr list option;
 }
 
+and field_access = {
+  record : expr;
+  field : name;
+}
+
 and expr =
   | Function of function_
   | Application of application
@@ -83,6 +88,7 @@ and expr =
   | Ctor of ctor
   | Literal of literal
   | Record of (name * expr) list
+  | Field_access of field_access
   | Unit
 
 and decl =

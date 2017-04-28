@@ -12,6 +12,7 @@ open Absyn
 %token ARROW
 %token COLON
 %token COMMA
+%token DOT
 %token EQ
 %token L_ANGLE
 %token R_ANGLE
@@ -54,6 +55,7 @@ atom:
   | literal { Literal $1 }
   | application { $1 }
   | L_PAREN expr R_PAREN { $2 }
+  | field_access { $1 }
 
 expr:
   | function_ { Function $1 }
@@ -188,3 +190,8 @@ record_field: LCID EQ expr { ($1, $3) }
 
 record_type: record_base(record_type_field) { RecordType $1 }
 record_type_field: LCID COLON type_ { ($1, $3) }
+
+field_access:
+  atom DOT LCID {
+    Field_access { record = $1; field = $3; }
+}

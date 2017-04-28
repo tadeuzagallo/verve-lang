@@ -276,6 +276,18 @@ and check_record env fields =
   let ty, s = List.fold_left aux ([], []) fields in
   T.Record (List.rev ty), env, s
 
+and check_field_access env { record; field } =
+  let record, _, s1 = check_expr env record in
+  let fields = match record with
+    | T.Record r -> r
+    | _ -> raise (Error (Invalid_access (field, record)))
+  in
+  try
+    let ty = List.assoc field fields in
+    ty, env, s1
+  with Not_found ->
+    raise (Error (Unknown_field (field, record)))
+
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (val_void, env, [])
   | Literal l -> (check_literal l, env, [])
@@ -284,6 +296,7 @@ and check_expr env : expr -> T.ty * ty_env * subst = function
   | Application app -> check_app env app
   | Ctor ctor -> check_ctor env ctor
   | Record r -> check_record env r
+  | Field_access f -> check_field_access env f
 
 and check_exprs env exprs =
   List.fold_left

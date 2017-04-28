@@ -10,6 +10,8 @@ type error =
   | Invalid_generic_application
   | Invalid_application
   | Invalid_implementation of string * ty
+  | Unknown_field of string * ty
+  | Invalid_access of string * ty
 
 exception Error of error
 
@@ -35,3 +37,9 @@ let report_error ppf = function
   | Invalid_implementation (name, t) ->
     pf ppf "Trying to implement %s for %a, but %s is not an interface"
       name Printer.Type.pp t name
+  | Unknown_field (field, record) ->
+    pf ppf "Trying to access unknown property %s of object of type %a"
+      field Printer.Type.pp record
+  | Invalid_access (field, t) ->
+    pf ppf "Not an object: Trying to access field %s of value of type %a"
+      field Printer.Type.pp t

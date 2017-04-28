@@ -4,3 +4,6 @@
 
 fn f(x: { x: Int }) -> Int { 42 } // CHECK: : \({x : Int}\) -> Int
 f({ x = 1 }) // CHECK: 42 : Int
+
+fn f(x: { x: Int }) -> Int { x.x }
+f({ x = 1 }) // CHECK: 1 : Int
