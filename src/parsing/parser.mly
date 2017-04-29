@@ -43,8 +43,9 @@ open Absyn
 %inline parens(x): delimited(L_PAREN, x, R_PAREN) { $1 }
 
 %inline plist(x): parens(separated_list(COMMA, x)) { $1 }
-%inline alist(x): angles(separated_list(COMMA, x)) { $1 }
 %inline blist(x): braces(separated_list(COMMA, x)) { $1 }
+
+%inline nonempty_alist(x): angles(separated_nonempty_list(COMMA, x)) { $1 }
 
 /* Entry points */
 program: decl* EOF {
@@ -53,6 +54,7 @@ program: decl* EOF {
 
 decl_start: decl EOF { $1 }
 
+/* high-level structures */
 decl:
   | enum { $1 }
   | interface { $1 }
@@ -74,29 +76,23 @@ atom:
   | field_access { $1 }
 
 /* function expressions */
-function_: FN LCID generic_parameters parameters return_type braces(list(expr)) {
-  { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 }
+function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(expr)) {
+  { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $6; fn_body = $7 }
 }
 
-generic_parameters: loption(alist(generic_parameter)) { $1 }
+generic_parameters: loption(nonempty_alist(generic_parameter)) { $1 }
 
-generic_parameter: UCID loption(bounded_quantification) { { name = $1; constraints = $2 } }
-
-bounded_quantification: COLON quantifiers { $2 }
+generic_parameter: UCID loption(COLON quantifiers { $2 }) {
+  { name = $1; constraints = $2 }
+}
 
 quantifiers:
   | UCID { [$1] }
   | plist(UCID) { $1 }
 
-parameters: plist(parameter) { $1 }
-
-parameter: param_name COLON type_ {
+parameter: LCID COLON type_ {
   { param_name = $1; param_type = $3 }
 }
-
-param_name: LCID { $1 }
-
-return_type: ARROW type_ { $2 }
 
 /* types */
 type_:
@@ -122,7 +118,7 @@ application:
 
 generic_arguments: loption(generic_arguments_strict) { $1 }
 
-generic_arguments_strict: alist(type_) { $1 }
+generic_arguments_strict: nonempty_alist(type_) { $1 }
 
 /* literals */
 literal:
@@ -135,30 +131,26 @@ enum: ENUM UCID generic_parameters braces(nonempty_list(enum_item)) {
   Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
 }
 
-enum_item: UCID generic_parameters enum_item_type? {
+enum_item: UCID generic_parameters plist(type_)? {
   { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
-
-enum_item_type: plist(type_) { $1 }
 
 constructor: UCID generic_arguments plist(expr)? {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 }
 }
 
 /* interfaces */
-interface: INTERFACE UCID L_ANGLE generic_parameter R_ANGLE braces(list(prototype)) {
-  Interface { intf_name = $2; intf_param = $4; intf_functions = $6; }
+interface: INTERFACE UCID angles(generic_parameter) braces(list(prototype)) {
+  Interface { intf_name = $2; intf_param = $3; intf_functions = $4; }
 }
 
-prototype: FN LCID generic_parameters proto_params return_type {
-  { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $5 }
+prototype: FN LCID generic_parameters plist(type_) ARROW type_ {
+  { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $6 }
 }
-
-proto_params: plist(type_) { $1 }
 
 /* implementations */
-implementation: IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE braces(list(function_)) {
-  Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None }
+implementation: IMPLEMENTATION UCID angles(type_) braces(list(function_)) {
+  Implementation { impl_name = $2; impl_arg = $3; impl_functions = $4; impl_arg_type = None }
 }
 
 /* Records */
