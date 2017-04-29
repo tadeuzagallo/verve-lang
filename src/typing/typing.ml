@@ -188,7 +188,7 @@ let rec check_type env : type_ -> T.ty * subst = function
       (name, ty) :: fields, s2 >> s1
     in
     List.fold_left aux ([], []) fields
-    |> fun (fields', s) -> T.Record fields', s
+    |> fun (fields', s) -> T.Record (List.rev fields'), s
 
 and apply_generics env ty_callee gen_args s1 =
   let gen_args' = List.map (check_type env) gen_args in

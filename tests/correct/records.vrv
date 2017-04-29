@@ -7,3 +7,15 @@ f({ x = 1 }) // CHECK: 42 : Int
 
 fn f(x: { x: Int }) -> Int { x.x }
 f({ x = 1 }) // CHECK: 1 : Int
+
+enum PairT<T, U> {
+  Pair(T, U)
+}
+enum Bool {
+  True
+  False
+}
+fn f<T, U>(x: {x: T, y: U}) -> PairT<T, U> {
+  Pair(x.x, x.y)
+}
+f({ x = 42, y = True })
