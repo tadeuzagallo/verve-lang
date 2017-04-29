@@ -99,11 +99,11 @@ quantifiers:
 
 parameters: plist(parameter) { $1 }
 
-parameter: pattern COLON type_ {
+parameter: param_name COLON type_ {
   { param_name = $1; param_type = $3 }
 }
 
-pattern: LCID { $1 }
+param_name: LCID { $1 }
 
 return_type: ARROW type_ { $2 }
 
