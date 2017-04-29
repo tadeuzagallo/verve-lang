@@ -1,0 +1,4 @@
+// RUN: %not %verve | %check
+
+fn f(x: { x: Int }) -> Int { x.x }
+f({ x = 1, y = 2 }) // CHECK: Failed to unify {x : Int} with {x : Int, y : Int}

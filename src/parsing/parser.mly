@@ -52,7 +52,7 @@ body_eol(expr):
   expr EOL+ { $1 }
 
 record_base(record_field):
-  delimited(L_BRACE, loption(separated_nonempty_list(COLON, record_field)), R_BRACE) { $1 }
+  delimited(L_BRACE, loption(separated_nonempty_list(COMMA, record_field)), R_BRACE) { $1 }
 
 /* Entry points */
 program: EOL* decl* EOF {
