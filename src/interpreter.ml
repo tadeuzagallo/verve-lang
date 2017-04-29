@@ -80,6 +80,13 @@ let rec subst_expr ty_args args = function
     Record r'
   | Field_access f ->
     Field_access { f with record=subst_expr ty_args args f.record }
+  | Match m ->
+    let subst_case c =
+      { c with case_value = List.map (subst_expr ty_args args) c.case_value }
+    in Match {
+      match_value = subst_expr ty_args args m.match_value;
+      cases = List.map subst_case m.cases;
+    }
 
 let subst generics arguments fn =
   let { fn_parameters; fn_body } as fn = match fn with
@@ -135,11 +142,45 @@ let rec eval_expr env = function
         eval_expr env (List.assoc f.field fields)
       | _ -> assert false
     end
+  | Match m -> eval_match env m
   | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
       let fn' = V.Function fn in
       match fn_name with
       | Some n -> (fn', (n, fn')::env)
       | None -> (fn', env)
+
+and eval_match env { match_value; cases } =
+  let v, _ = eval_expr env match_value in
+  let matched_case = List.find (matched_case env v) cases in
+  eval_case env v matched_case
+
+and matched_case env value { pattern } =
+  match pattern, value with
+  | Pany, _ -> true
+  | Pvar _, _ -> true
+  | Pctor (name, _), V.Ctor { ctor_name } when name = ctor_name -> true
+  | _ -> false
+
+and eval_case env value { pattern; case_value } =
+  let env' = eval_pattern env pattern value in
+  let value, _ = eval_expr env' (List.hd @@ List.rev @@ case_value) in
+  value, env
+
+and eval_pattern env pattern value =
+  match pattern, value with
+  | Pany, _ -> env
+  | Pvar x, v -> (x, v) :: env
+  | Pctor (_, ps), V.Ctor { ctor_arguments } ->
+    begin match ps, ctor_arguments with
+    | None, None -> env
+    | Some patterns, Some args ->
+      let aux env p a =
+        let a', env' = eval_expr env a in
+        eval_pattern env' p a'
+      in List.fold_left2 aux env patterns args
+    | _ -> assert false
+    end
+  | _ -> assert false
 
 and eval_decl env = function
   | Expr expr -> eval_expr env expr

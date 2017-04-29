@@ -9,10 +9,12 @@ let blank = [' ' '\009' '\012']
 
 rule read = parse
 (* keywords *)
-| "fn" { FN }
+| "case" { CASE }
 | "enum" { ENUM }
+| "fn" { FN }
 | "interface" { INTERFACE }
 | "implementation" { IMPLEMENTATION }
+| "match" { MATCH }
 
 (* punctuation *)
 | "->" { ARROW }
@@ -20,6 +22,7 @@ rule read = parse
 | "," { COMMA }
 | "." { DOT }
 | "=" { EQ }
+| "_" { UNDERSCORE }
 | "<" { L_ANGLE }
 | ">" { R_ANGLE }
 | "{" { L_BRACE }

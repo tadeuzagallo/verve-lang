@@ -70,6 +70,25 @@ module Absyn = struct
   and pp_field_access ppf { record; field } =
     pf ppf "%a.%s" pp record field
 
+  and pp_match ppf { match_value; cases } =
+    pf ppf "@[<v>@[<v 2>match %a {@ %a@]@ }@]"
+      pp match_value
+      (list pp_case) cases
+
+  and pp_case ppf { pattern; case_value } =
+    pf ppf "case %a: %a"
+      pp_pattern pattern
+      (list pp) case_value
+
+  and pp_pattern ppf = function
+    | Pany -> string ppf "_"
+    | Pvar v -> string ppf v
+    | Pctor (n, ps) ->
+      pf ppf "%s%a"
+        n
+        (option @@ hvbox @@ parens @@ comma_sep pp_pattern) ps
+
+
   and pp' ppf = function
     | Function fn -> pp_fn ppf fn
     | Ctor ctor -> pp_ctor ppf ctor
@@ -79,6 +98,7 @@ module Absyn = struct
     | Unit -> string ppf "()"
     | Record r -> pp_record ppf r
     | Field_access f -> pp_field_access ppf f
+    | Match m -> pp_match ppf m
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 
@@ -185,6 +205,8 @@ module Type = struct
   and pp_generics ppf = function
     | [] -> ()
     | g -> (box @@ angles @@ comma_sep pp) ppf g
+
+  let dump ty = pf stdout "%a@." pp ty
 end
 
 (* Entry Point *)
@@ -194,3 +216,8 @@ let print_raw ppf value ty =
 let print value ty =
   print_raw stdout value ty;
   Format.pp_print_newline stdout ();
+
+and print_subst s =
+  let arrow ppf () = Fmt.pf ppf " => " in
+  let print_var ppf var = Type.pp ppf (Types.Var var) in
+  (brackets @@ comma_sep @@ pair ~sep:arrow print_var Type.pp) stdout s

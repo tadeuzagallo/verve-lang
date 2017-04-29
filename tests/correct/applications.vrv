@@ -7,7 +7,7 @@ f(f(42))
 
 fn id<T>(x: T) -> T { x }
 id<Int>(2)
-id(id)(id)(id)(id)(fn _<T>(x: T) -> T { x })(42)
+id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42)
 
 fn g(h: (Int) -> Int) -> Void {}
 g(f)

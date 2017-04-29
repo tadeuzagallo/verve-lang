@@ -1,0 +1,18 @@
+// RUN: %not %verve | %check
+
+enum Bool {
+  True
+  False
+}
+
+enum PairT<T, U> {
+  Pair(T, U)
+}
+
+match Pair(2, True) {
+  case True: x,
+} // CHECK: Failed to unify PairT<Int, Bool> with Bool
+
+match Pair(3, False) {
+  case Int(x): False,
+} // CHECK: Invalid pattern:

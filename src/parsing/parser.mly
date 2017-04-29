@@ -3,10 +3,12 @@ open Absyn
 %}
 
 /* keywords */
+%token CASE
 %token ENUM
 %token FN
 %token INTERFACE
 %token IMPLEMENTATION
+%token MATCH
 
 /* punctuation */
 %token ARROW
@@ -14,6 +16,7 @@ open Absyn
 %token COMMA
 %token DOT
 %token EQ
+%token UNDERSCORE
 %token L_ANGLE
 %token R_ANGLE
 %token L_BRACE
@@ -74,6 +77,7 @@ expr:
   | constructor { $1 }
   | atom { $1 }
   | record { $1 }
+  | match_expr { $1 }
 
 atom:
   | LCID { Var $1 }
@@ -178,3 +182,17 @@ record_field: LCID EQ expr { ($1, $3) }
 field_access: atom DOT LCID {
   Field_access { record = $1; field = $3; }
 }
+
+/* pattern matching */
+match_expr: MATCH expr body(match_case) {
+  Match { match_value = $2; cases = $3 }
+}
+
+match_case: CASE pattern COLON body_(expr) COMMA {
+  { pattern = $2; case_value = $4 }
+}
+
+pattern:
+  | UNDERSCORE { Pany }
+  | LCID { Pvar $1 }
+  | UCID option(plist(pattern)) { Pctor ($1, $2) }

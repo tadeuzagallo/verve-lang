@@ -12,6 +12,7 @@ type error =
   | Invalid_implementation of string * ty
   | Unknown_field of string * ty
   | Invalid_access of string * ty
+  | Invalid_pattern of Absyn.pattern * ty
 
 exception Error of error
 
@@ -43,3 +44,7 @@ let report_error ppf = function
   | Invalid_access (field, t) ->
     pf ppf "Not an object: Trying to access field %s of value of type %a"
       field Printer.Type.pp t
+  | Invalid_pattern (pat, ty) ->
+    pf ppf "Invalid pattern: Trying to use object of type %a as pattern %a"
+      Printer.Type.pp ty
+      Printer.Absyn.pp_pattern pat

@@ -19,7 +19,7 @@ implementation Intish<(Void) -> Int> {
 
 to_int // CHECK: to_int : forall T.*: Intish, \(T.*: Intish\) -> Int
 to_int(42) // CHECK: 42 : Int
-to_int(fn _() -> Int { 13 }) // CHECK: 13 : Int
+to_int(fn f() -> Int { 13 }) // CHECK: 13 : Int
 
 fn g<U, T: Intish>(x: T) -> Int {
   to_int(x)

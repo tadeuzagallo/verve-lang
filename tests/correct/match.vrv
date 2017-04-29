@@ -1,0 +1,50 @@
+// RUN: %verve | %check
+
+enum Wrap {
+  W(Int)
+}
+
+match W(42) {
+  case W(x): x,
+} // CHECK: 42 : Int
+
+enum Bool {
+  True
+  False
+}
+
+match True {
+  case x: x,
+} // CHECK: True : Bool
+
+enum PairT<T, U> {
+  Pair(T, U)
+}
+
+match Pair(2, True) {
+  case Pair(x, _): x,
+} // CHECK: 2 : Int
+
+match Pair(2, True) {
+  case Pair(_, y): y,
+} // CHECK: True : Bool
+
+enum List<T> {
+  Nil
+  Cons(T, List<T>)
+}
+
+enum Nat {
+  Z
+  S(Nat)
+}
+
+fn length<T>(l: List<T>) -> Nat {
+  match l {
+    case Nil: Z,
+    case Cons(_, tail): S(Z),
+  }
+}
+
+length(Nil) // CHECK: Z : forall T.*, Nat
+length(Cons(1, Nil)) // CHECK-L: S(Z) : Nat

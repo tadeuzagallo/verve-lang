@@ -159,6 +159,10 @@ let rec to_value = function
   | T.Record r -> T.Record (List.map (fun (n, t) -> (n, to_value t)) r)
   | t -> t
 
+let make_var () =
+  let name = "𝜏" in
+  T.Var { T.id = _fresh name; T.name; T.constraints = []; T.resolved_ty = None }
+
 let var_of_generic env { name; constraints } =
   let resolve n = match get_type env n with
     | T.Interface i -> i
@@ -237,23 +241,32 @@ and check_generic_application env s1 (ty_callee, generic_arguments, arguments) =
   | Some args -> args
   in
 
+  let aux arg (args, subst) =
+    let (arg, _, s2) = check_expr env arg in
+    (arg :: args), s2 >> subst
+  in
+  let arguments', s2 = List.fold_right aux arguments ([], s1) in
+
+  let ty, s3 = apply_generics env ty_callee generic_arguments s2 in
+  let ty, s4 = apply_arguments (apply s3 ty) arguments' in
+  let subst = s4 >> s3 >> s2 >> s1 in
+  (apply subst ty, env, subst)
+
+and apply_arguments callee arguments=
   let check (call, s1) argument =
-    let (ty_arg, _, s2) = check_expr env argument in
     let rec check s3 ty =
       match ty with
       | T.Arrow (t1, t2) ->
-          let s4 = unify (apply s3 t1, ty_arg) in
+          let s4 = unify (apply s3 t1, argument) in
           (t2, s4 >> s3)
       | T.TypeArrow (v1, t2) ->
           let t2', s = check s3 t2 in
           T.TypeArrow (v1, t2'), s
       | _ -> raise (Error Invalid_application)
     in
-    check (s2 >> s1) call
+    check s1 call
   in
-  let ty, s2 = apply_generics env ty_callee generic_arguments s1 in
-  let ty', s3 = List.fold_left check (apply s2 ty, s2) arguments in
-  (apply s3 ty', env, s3)
+  List.fold_left check (callee, []) arguments
 
 and check_app env ({ callee; generic_arguments; arguments } as app) =
   let (ty_callee, _, s1) = check_expr env callee in
@@ -288,6 +301,45 @@ and check_field_access env { record; field } =
   with Not_found ->
     raise (Error (Unknown_field (field, record)))
 
+and check_match env { match_value; cases } =
+  let ty, _, s1 = check_expr env match_value in
+  let var = make_var () in
+  let s2 = List.fold_left (check_case env ty var) s1 cases in
+  apply s2 var, env, s2
+
+and check_case env value_ty ret_ty s1 { pattern; case_value } =
+  let pat_ty, env', s2 = check_pattern env pattern in
+  let s3 = unify (value_ty, pat_ty) in
+  let case_ty, env'', s4 = check_exprs env' case_value in
+  let s5 = unify (ret_ty, apply (s4 >> s3 >> s2) case_ty) in
+  s5 >> s1
+
+and check_pattern env = function
+  | Pany ->
+    make_var (), env, []
+
+  | Pvar v ->
+    let var = make_var () in
+    var, extend_env env (v, var), []
+
+  | Pctor (name, ps) ->
+      match ps, get_type env name with
+      | None, t ->
+          t, env, []
+      | Some l, (T.Arrow _ as t)
+      | Some l, (T.TypeArrow _ as t) ->
+        let aux p (ps, env, subst) =
+          let (p, env', s2) = check_pattern env p in
+          (p :: ps), env', s2 >> subst
+        in
+        let patterns, env', s1 = List.fold_right aux l ([], env, []) in
+        let ty, s2 = apply_arguments t patterns in
+        let subst = s2 >> s1 in
+        apply subst ty, env', subst
+
+      | _, t ->
+        raise (Error (Invalid_pattern (Pctor (name, ps), t)))
+
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (val_void, env, [])
   | Literal l -> (check_literal l, env, [])
@@ -297,6 +349,7 @@ and check_expr env : expr -> T.ty * ty_env * subst = function
   | Ctor ctor -> check_ctor env ctor
   | Record r -> check_record env r
   | Field_access f -> check_field_access env f
+  | Match m -> check_match env m
 
 and check_exprs env exprs =
   List.fold_left

@@ -81,6 +81,16 @@ and field_access = {
   field : name;
 }
 
+and match_ = {
+  match_value : expr;
+  cases : match_case list;
+}
+
+and match_case = {
+  pattern : pattern;
+  case_value : expr list;
+}
+
 and expr =
   | Function of function_
   | Application of application
@@ -89,7 +99,13 @@ and expr =
   | Literal of literal
   | Record of (name * expr) list
   | Field_access of field_access
+  | Match of match_
   | Unit
+
+and pattern =
+  | Pany
+  | Pvar of name
+  | Pctor of name * pattern list option
 
 and decl =
   | Enum of enum
