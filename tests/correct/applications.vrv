@@ -28,28 +28,6 @@ apply(f, 42)
 apply(f)(42)
 apply(id)(apply)(id)(apply)(id)(f)(42)
 
-// testing newline rules
-
-(fn x(y: Int) -> Int {
-
-  y
-
-  y
-
-  y
-
-})(42)
-
-
-(fn x(y: Int) -> Int {
-  y
-})(42)
-
-(fn x(y: Int) -> Void {
-})(42)
-
-(fn x(y: Int) -> Void {})(42)
-
 enum Unit { Unit_ }
 
 fn apply'<T, U>(f: (T) -> U, x: T) -> U { f(x) }

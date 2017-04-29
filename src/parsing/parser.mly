@@ -23,7 +23,7 @@ open Absyn
 %token R_BRACE
 %token L_PAREN
 %token R_PAREN
-%token EOL
+%token NL_L_PAREN
 %token EOF
 
 /* tokens with semantic values */
@@ -38,35 +38,22 @@ open Absyn
 
 /* Helpers */
 
-plist(x):
-  L_PAREN separated_list(COMMA, x) R_PAREN { $2 }
+%inline angles(x): delimited(L_ANGLE, x, R_ANGLE) { $1 }
+%inline braces(x): delimited(L_BRACE, x, R_BRACE) { $1 }
+%inline parens(x): delimited(L_PAREN, x, R_PAREN) { $1 }
 
-alist(x):
-  L_ANGLE separated_list(COMMA, x) R_ANGLE { $2 }
-
-body(expr):
-  L_BRACE EOL* body_(expr) R_BRACE { $3 }
-
-body_(expr):
-  | expr { [$1] }
-  | body_eol(expr)* { $1 }
-
-body_eol(expr):
-  expr EOL+ { $1 }
-
-record_base(record_field):
-  delimited(L_BRACE, loption(separated_nonempty_list(COMMA, record_field)), R_BRACE) { $1 }
+%inline plist(x): parens(separated_list(COMMA, x)) { $1 }
+%inline alist(x): angles(separated_list(COMMA, x)) { $1 }
+%inline blist(x): braces(separated_list(COMMA, x)) { $1 }
 
 /* Entry points */
-program: EOL* decl* EOF {
-  { imports = []; exports = []; body = $2 }
+program: decl* EOF {
+  { imports = []; exports = []; body = $1 }
 }
 
 decl_start: decl EOF { $1 }
 
-decl: decl_ EOL+ { $1 }
-
-decl_:
+decl:
   | enum { $1 }
   | interface { $1 }
   | implementation { $1 }
@@ -83,11 +70,11 @@ atom:
   | LCID { Var $1 }
   | literal { Literal $1 }
   | application { $1 }
-  | L_PAREN expr R_PAREN { $2 }
+  | NL_L_PAREN expr R_PAREN { $2 }
   | field_access { $1 }
 
 /* function expressions */
-function_: FN LCID generic_parameters parameters return_type body(expr) {
+function_: FN LCID generic_parameters parameters return_type braces(list(expr)) {
   { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 }
 }
 
@@ -119,7 +106,7 @@ type_:
 
 arrow_type: plist(type_) ARROW type_ { Arrow($1, $3) }
 
-record_type: record_base(record_type_field) { RecordType $1 }
+record_type: blist(record_type_field) { RecordType $1 }
 
 record_type_field: LCID COLON type_ { ($1, $3) }
 
@@ -144,7 +131,7 @@ literal:
 int_: INT { Int $1 }
 
 /* enums */
-enum: ENUM UCID generic_parameters body(enum_item) {
+enum: ENUM UCID generic_parameters braces(nonempty_list(enum_item)) {
   Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
 }
 
@@ -159,7 +146,7 @@ constructor: UCID generic_arguments plist(expr)? {
 }
 
 /* interfaces */
-interface: INTERFACE UCID L_ANGLE generic_parameter R_ANGLE body(prototype) {
+interface: INTERFACE UCID L_ANGLE generic_parameter R_ANGLE braces(list(prototype)) {
   Interface { intf_name = $2; intf_param = $4; intf_functions = $6; }
 }
 
@@ -170,13 +157,13 @@ prototype: FN LCID generic_parameters proto_params return_type {
 proto_params: plist(type_) { $1 }
 
 /* implementations */
-implementation: IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE body(function_) {
+implementation: IMPLEMENTATION UCID L_ANGLE type_ R_ANGLE braces(list(function_)) {
   Implementation { impl_name = $2; impl_arg = $4; impl_functions = $6; impl_arg_type = None }
 }
 
 /* Records */
 
-record: record_base(record_field) { Record $1 }
+record: blist(record_field) { Record $1 }
 record_field: LCID EQ expr { ($1, $3) }
 
 field_access: atom DOT LCID {
@@ -184,11 +171,11 @@ field_access: atom DOT LCID {
 }
 
 /* pattern matching */
-match_expr: MATCH expr body(match_case) {
+match_expr: MATCH expr braces(nonempty_list(match_case)) {
   Match { match_value = $2; cases = $3 }
 }
 
-match_case: CASE pattern COLON body_(expr) COMMA {
+match_case: CASE pattern COLON nonempty_list(expr) {
   { pattern = $2; case_value = $4 }
 }
 

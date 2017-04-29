@@ -27,7 +27,12 @@ rule read = parse
 | ">" { R_ANGLE }
 | "{" { L_BRACE }
 | "}" { R_BRACE }
-| "(" { L_PAREN }
+| "(" {
+    match lexbuf.lex_start_pos with
+    | 0 -> NL_L_PAREN
+    | _ -> L_PAREN
+  }
+| newline "(" { Lexing.new_line lexbuf; NL_L_PAREN }
 | ")" { R_PAREN }
 | eof { EOF }
 
@@ -40,7 +45,7 @@ rule read = parse
 
 (* whitespace *)
 | blank { read lexbuf }
-| newline { Lexing.new_line lexbuf; EOL }
+| newline { Lexing.new_line lexbuf; read lexbuf }
 | "/*" { comment 1 lexbuf }
 | "//" { single_line_comment lexbuf }
 
@@ -48,9 +53,10 @@ and comment depth = parse
 | "/*" { comment (depth + 1) lexbuf }
 | "*/" { if depth = 1 then read lexbuf else comment (depth - 1) lexbuf }
 | eof { raise (SyntaxError "Unterminated comment") }
+| newline { Lexing.new_line lexbuf; comment depth lexbuf }
 | _ { comment depth lexbuf }
 
 and single_line_comment = parse
-| newline { Lexing.new_line lexbuf; EOL }
-| eof { EOL }
+| newline { Lexing.new_line lexbuf; read lexbuf }
+| eof { EOF }
 | _ { single_line_comment lexbuf }

@@ -5,7 +5,7 @@ enum Wrap {
 }
 
 match W(42) {
-  case W(x): x,
+  case W(x): x
 } // CHECK: 42 : Int
 
 enum Bool {
@@ -14,7 +14,7 @@ enum Bool {
 }
 
 match True {
-  case x: x,
+  case x: x
 } // CHECK: True : Bool
 
 enum PairT<T, U> {
@@ -22,11 +22,11 @@ enum PairT<T, U> {
 }
 
 match Pair(2, True) {
-  case Pair(x, _): x,
+  case Pair(x, _): x
 } // CHECK: 2 : Int
 
 match Pair(2, True) {
-  case Pair(_, y): y,
+  case Pair(_, y): y
 } // CHECK: True : Bool
 
 enum List<T> {
@@ -41,8 +41,8 @@ enum Nat {
 
 fn length<T>(l: List<T>) -> Nat {
   match l {
-    case Nil: Z,
-    case Cons(_, tail): S(Z),
+    case Nil: Z
+    case Cons(_, tail): S(Z)
   }
 }
 
