@@ -22,10 +22,15 @@ let default_env = [
   ("Void", ty_void);
 ]
 
+let rec find var = function
+  | [] -> raise Not_found
+  | (k, v) :: _ when k.T.name = var.T.name && k.T.id == var.T.id -> v
+  | _ :: rest -> find var rest
+
 let (>>) s1 s2 =
   let apply s1 s2 =
     let aux (k, v) =
-      try (k, List.assoc k s1)
+      try (k, find k s1)
       with Not_found -> (k, v)
     in List.map aux s2
   in apply s1 s2 @ s1
@@ -43,14 +48,14 @@ let rec apply s = function
   | T.Implementation i -> T.Implementation i
   | T.RigidVar var -> T.RigidVar var
   | T.Var ({ T.name; T.constraints } as var) ->
-    begin try List.assoc var s
+    begin try find var s
     with Not_found -> T.Var var
     end
   | T.Record r ->
     T.Record (List.map (fun (n, t) -> (n, apply s t)) r)
   | T.TypeArrow (v1, t2) ->
       let v1' =
-        try List.assoc v1 s
+        try find v1 s
         with Not_found -> T.Var v1
       in match v1' with
       | T.Var v -> T.TypeArrow (v, apply s t2)
