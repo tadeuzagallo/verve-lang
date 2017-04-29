@@ -12,10 +12,10 @@ let make_output value ty =
   eval [ S (Format.flush_str_formatter ()) ]
 
 let eval (tenv, s1, venv) decl =
-  let ty, tenv', s2 = Typing.check_decl tenv decl in
+  let ty, tenv', s2 = Typing_decl.check_decl tenv decl in
   let value, venv' = Interpreter.eval_decl venv decl in
-  let subst = Typing.(s2 >> s1) in
-  let ty' = Typing.(apply subst ty) in
+  let subst = Env.(s2 >> s1) in
+  let ty' = Env.(apply subst ty) in
   (tenv', subst, venv'), value, ty'
 
 let parse_and_eval state str =
@@ -62,7 +62,7 @@ let rec loop term history state =
 let main () =
   LTerm_inputrc.load () >>= fun () ->
     Lwt.catch (fun () ->
-      let state = (Typing.default_env, [], []) in
+      let state = (Env.default_env, [], []) in
       Lazy.force LTerm.stdout >>= fun term ->
         loop term (LTerm_history.create []) state
     ) (function
