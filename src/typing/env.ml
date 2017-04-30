@@ -8,6 +8,25 @@ type subst = (T.tvar * T.ty) list
 
 let extend_env env (x, t) = (x, t)::env
 
+(* Type variable helpers*)
+let _fresh_tbl = Hashtbl.create 256
+let _default_id = 1
+let _fresh name =
+  try
+    let type_id = Hashtbl.find _fresh_tbl name in
+    incr type_id;
+    !type_id
+  with Not_found ->
+    Hashtbl.add _fresh_tbl name (ref _default_id);
+    _default_id
+
+let fresh ({ T.name } as var) =
+  { var with T.id = _fresh name }
+
+let make_var () =
+  let name = "𝜏" in
+  T.Var { T.id = _fresh name; T.name; T.constraints = []; T.resolved_ty = None }
+
 (* Types of builtin types *)
 let ty_int = T.TypeCtor ("Int", [])
 let ty_type = T.TypeCtor ("Type", [])
@@ -37,31 +56,38 @@ let (>>) s1 s2 =
     in List.map aux s2
   in apply s1 s2 @ s1
 
-let rec apply s = function
-  | T.Arrow (t1, t2) ->
-      T.Arrow (apply s t1, apply s t2)
-  | T.TypeCtor (name, types) ->
-      let types' = List.map (apply s) types in
-      T.TypeCtor (name, types')
-  | T.TypeInst (name, types) ->
-      let types' = List.map (apply s) types in
-      T.TypeInst (name, types')
-  | T.Interface i -> T.Interface i
-  | T.Implementation i -> T.Implementation i
-  | T.RigidVar var -> T.RigidVar var
-  | T.Var ({ T.name; T.constraints } as var) ->
-    begin try find var s
-    with Not_found -> T.Var var
+let rec apply_type fn = function
+  | T.TypeCtor (n, ts) -> fn @@ T.TypeCtor (n, List.map (apply_type fn) ts)
+  | T.TypeInst (n, ts) -> fn @@ T.TypeInst (n, List.map (apply_type fn) ts)
+  | T.Arrow (t1, t2) -> fn @@ T.Arrow (apply_type fn t1, apply_type fn t2)
+  | T.TypeArrow (var, ty) -> fn @@ T.TypeArrow (var, (apply_type fn) ty)
+  | T.Record r -> fn @@ T.Record (List.map (fun (n, t) -> n, apply_type fn t) r)
+  | t -> fn t
+
+let to_value = apply_type @@ function
+    | T.TypeCtor (n, ts) -> T.TypeInst (n, ts)
+    | t -> t
+
+let rec loosen = apply_type @@ function
+  | T.RigidVar var -> T.Var var
+  | t -> t
+
+let rec apply s = apply_type @@ function
+  | T.Var ({ T.name; T.constraints } as var) -> begin
+      try find var s
+      with Not_found -> T.Var var
     end
-  | T.Record r ->
-    T.Record (List.map (fun (n, t) -> (n, apply s t)) r)
-  | T.TypeArrow (v1, t2) ->
+
+  | T.TypeArrow (v1, t2) -> begin
       let v1' =
         try find v1 s
         with Not_found -> T.Var v1
       in match v1' with
-      | T.Var v -> T.TypeArrow (v, apply s t2)
-      | _ -> apply s t2
+      | T.Var v -> T.TypeArrow (v, t2)
+      | _ -> t2
+    end
+
+  | t -> t
 
 let rec unify = function
   | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)
@@ -117,58 +143,17 @@ let rec unify = function
   | t1, t2 ->
       raise (Error (Unification_error (t1, t2)))
 
-let _fresh_tbl = Hashtbl.create 256
-let _default_id = 1
-let _fresh name =
-  try
-    let type_id = Hashtbl.find _fresh_tbl name in
-    incr type_id;
-    !type_id
-  with Not_found ->
-    Hashtbl.add _fresh_tbl name (ref _default_id);
-    _default_id
-
-let fresh ({ T.name } as var) =
-  { var with T.id = _fresh name }
-
-let rec instantiate s1 = function
-  | T.Arrow (t1, t2) ->
-      T.Arrow (instantiate s1 t1, instantiate s1 t2)
+let rec instantiate s1 = apply_type @@ function
   | T.TypeArrow (var, ty) ->
       let var' = fresh var in
       let s = [(var, T.Var var')] >> s1 in
       T.TypeArrow (var', instantiate s ty)
-  | T.TypeCtor (n, ts) ->
-      let ts' = List.map (instantiate s1) ts in
-      T.TypeCtor (n, ts')
-  | T.Record r ->
-      T.Record (List.map (fun (n, t) -> (n, instantiate s1 t)) r)
   | t -> apply s1 t
-
-let rec loosen = function
-  | T.Arrow (t1, t2) -> T.Arrow (loosen t1, loosen t2)
-  | T.TypeArrow (var, ty) -> T.TypeArrow (var, loosen ty)
-  | T.TypeInst (n, ts) -> T.TypeInst (n, List.map loosen ts)
-  | T.RigidVar var -> T.Var var
-  | T.Record r -> T.Record (List.map (fun (n, t) -> (n, loosen t)) r)
-  | t -> t
 
 let get_type env v =
   try instantiate [] (List.assoc v env)
   with Not_found ->
     raise (Error (Unknown_type v))
-
-let rec to_value = function
-  | T.TypeCtor (n, ts) -> T.TypeInst (n, List.map to_value ts)
-  | T.TypeInst (n, ts) -> T.TypeInst (n, List.map to_value ts)
-  | T.Arrow (t1, t2) -> T.Arrow (to_value t1, to_value t2)
-  | T.TypeArrow (var, ty) -> T.TypeArrow (var, to_value ty)
-  | T.Record r -> T.Record (List.map (fun (n, t) -> (n, to_value t)) r)
-  | t -> t
-
-let make_var () =
-  let name = "𝜏" in
-  T.Var { T.id = _fresh name; T.name; T.constraints = []; T.resolved_ty = None }
 
 let var_of_generic env { A.name; A.constraints } =
   let resolve n = match get_type env n with
