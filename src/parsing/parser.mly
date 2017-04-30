@@ -34,6 +34,9 @@ open Absyn
 %start <Absyn.program> program
 %start <Absyn.decl> decl_start
 
+%nonassoc BELOW_PAREN
+%left L_PAREN L_ANGLE
+
 %%
 
 /* Helpers */
@@ -63,17 +66,20 @@ decl:
 
 expr:
   | function_ { Function $1 }
-  | constructor { $1 }
-  | atom { $1 }
   | record { $1 }
   | match_expr { $1 }
+  | constructor { $1 }
+  | constructor_no_args %prec BELOW_PAREN { $1 }
+  | atom %prec BELOW_PAREN { $1 }
+  | NL_L_PAREN expr R_PAREN { $2 }
 
 atom:
   | LCID { Var $1 }
   | literal { Literal $1 }
-  | application { $1 }
-  | NL_L_PAREN expr R_PAREN { $2 }
   | field_access { $1 }
+  | second_application { $1 }
+  | first_application %prec BELOW_PAREN { $1 }
+  | parens(expr) { $1 }
 
 /* function expressions */
 function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(expr)) {
@@ -108,13 +114,16 @@ record_type_field: LCID COLON type_ { ($1, $3) }
 
 /* application */
 
-application:
-  | atom plist(expr) {
+%inline application(x):
+  | x plist(expr) {
     Application { callee = $1; generic_arguments = []; arguments = Some $2; generic_arguments_ty = [] }
   }
-  | atom generic_arguments_strict {
+  | x generic_arguments_strict {
     Application { callee = $1; generic_arguments = $2; arguments = None; generic_arguments_ty = [] }
   }
+
+second_application: application(first_application) { $1 }
+first_application: application(atom) { $1 }
 
 generic_arguments: loption(generic_arguments_strict) { $1 }
 
@@ -135,8 +144,12 @@ enum_item: UCID generic_parameters plist(type_)? {
   { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
 
-constructor: UCID generic_arguments plist(expr)? {
-  Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = $3 }
+%inline constructor_no_args: UCID generic_arguments {
+  Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = None }
+}
+
+%inline constructor: UCID generic_arguments plist(expr) {
+  Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = Some $3 }
 }
 
 /* interfaces */
