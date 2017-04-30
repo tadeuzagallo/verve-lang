@@ -89,6 +89,27 @@ let rec apply s = apply_type @@ function
 
   | t -> t
 
+let rec instantiate s1 = apply_type @@ function
+  | T.TypeArrow (var, ty) ->
+      let var' = fresh var in
+      let s = [(var, T.Var var')] >> s1 in
+      T.TypeArrow (var', instantiate s ty)
+  | t -> apply s1 t
+
+let get_type env v =
+  try instantiate [] (List.assoc v env)
+  with Not_found ->
+    raise (Error (Unknown_type v))
+
+let var_of_generic env { A.name; A.constraints } =
+  let resolve n = match get_type env n with
+    | T.Interface i -> i
+    | t -> raise (Error (Invalid_constraint (name, t)))
+  in
+  let intfs = List.map resolve constraints in
+  { T.id = _fresh name; T.name; T.constraints = intfs; T.resolved_ty = None }
+
+(* Unification *)
 let rec unify = function
   | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)
   when n1 = n2 ->
@@ -142,23 +163,3 @@ let rec unify = function
 
   | t1, t2 ->
       raise (Error (Unification_error (t1, t2)))
-
-let rec instantiate s1 = apply_type @@ function
-  | T.TypeArrow (var, ty) ->
-      let var' = fresh var in
-      let s = [(var, T.Var var')] >> s1 in
-      T.TypeArrow (var', instantiate s ty)
-  | t -> apply s1 t
-
-let get_type env v =
-  try instantiate [] (List.assoc v env)
-  with Not_found ->
-    raise (Error (Unknown_type v))
-
-let var_of_generic env { A.name; A.constraints } =
-  let resolve n = match get_type env n with
-    | T.Interface i -> i
-    | t -> raise (Error (Invalid_constraint (name, t)))
-  in
-  let intfs = List.map resolve constraints in
-  { T.id = _fresh name; T.name; T.constraints = intfs; T.resolved_ty = None }
