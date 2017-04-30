@@ -8,6 +8,9 @@ type value =
   | Function of A.function_
   | InterfaceFunction of string
   | Record of (string * value) list
+  | Builtin of string * builtin
+
+and builtin = (string * value) list -> value list -> (value * (string * value) list)
 
 let rec expr_of_value = function
   | Unit -> A.Unit
@@ -20,4 +23,5 @@ let rec expr_of_value = function
   | Function f -> A.Function f
   | InterfaceFunction i -> A.Var i
   | Record r -> A.Record (List.map (fun (n,v) -> (n, expr_of_value v)) r)
+  | Builtin (n, _) -> A.Var n
   | Type _ -> assert false (* can't be converted *)

@@ -41,6 +41,7 @@ let default_env = [
   ("Type", ty_type);
   ("Int", ty_int);
   ("Void", ty_void);
+  ("int_add", T.Arrow (val_int, T.Arrow (val_int, val_int)));
 ]
 
 let rec find var = function

@@ -3,8 +3,19 @@ open Absyn
 module V = Value
 module T = Types
 
-exception Unbound_variable
+exception Unbound_variable of string
 exception Runtime_error of string
+
+let int_add env = function
+  | [V.Literal (Int x); V.Literal (Int y)] ->
+    V.Literal (Int (x + y)), env
+  | _ -> assert false
+
+let add_builtin name fn env =
+  (name, V.Builtin (name, fn)) :: env
+
+let default_env = []
+  |> add_builtin "int_add" int_add
 
 let fn_to_intf = Hashtbl.create 256
 let intf_to_impls = Hashtbl.create 64
@@ -127,16 +138,21 @@ let rec eval_expr env = function
   | Literal l -> (V.Literal l, env)
   | Application { callee; generic_arguments; arguments; generic_arguments_ty } ->
       let (callee', _) = eval_expr env callee in
-      let arguments' = match arguments with
+      let arguments = match arguments with
         | None -> []
-        | Some a -> List.map (fun a -> V.expr_of_value @@ fst @@ eval_expr env a) a
+        | Some a -> List.map (fun a -> fst @@ eval_expr env a) a
       in
-      let (v, _) = eval_expr env (subst generic_arguments_ty arguments' callee') in
-      (v, env)
+      begin match callee' with
+      | V.Builtin (_, fn) -> fn env arguments
+      | _ ->
+        let arguments' = List.map V.expr_of_value arguments in
+        let (v, _) = eval_expr env (subst generic_arguments_ty arguments' callee') in
+        (v, env)
+      end
   | Var v -> begin
       try (List.assoc v env, env)
       with Not_found ->
-        raise Unbound_variable
+        raise (Unbound_variable v)
       end
   | Record r ->
     V.Record (List.map (fun (n, v) -> (n, fst @@ eval_expr env v)) r), env
@@ -213,5 +229,5 @@ and eval_decl env = function
       (V.Unit, env)
 
 let eval { body } =
-  List.fold_left (fun (_, env) node -> eval_decl env node) (V.Unit, []) body
+  List.fold_left (fun (_, env) node -> eval_decl env node) (V.Unit, default_env) body
   |> fst

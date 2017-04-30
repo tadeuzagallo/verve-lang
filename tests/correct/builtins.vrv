@@ -1,0 +1,3 @@
+// RUN: %verve | %check
+
+int_add(3, 5) // CHECK: 8 : Int
