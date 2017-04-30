@@ -6,8 +6,6 @@ f(100_000)
 f(f(42))
 
 fn id<T>(x: T) -> T { x }
-id<Int>(2)
-id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42)
 
 fn g(h: (Int) -> Int) -> Void {}
 g(f)
