@@ -70,10 +70,10 @@ and application = {
   mutable generic_arguments_ty: Types.ty list;
 }
 
-and ctor = {
+and 'a ctor = {
   ctor_name : name;
   ctor_generic_arguments : type_ list;
-  ctor_arguments : expr list option;
+  ctor_arguments : 'a list option;
 }
 
 and field_access = {
@@ -95,7 +95,7 @@ and expr =
   | Function of function_
   | Application of application
   | Var of name
-  | Ctor of ctor
+  | Ctor of expr ctor
   | Literal of literal
   | Record of (name * expr) list
   | Field_access of field_access

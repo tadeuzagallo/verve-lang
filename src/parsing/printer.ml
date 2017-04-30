@@ -61,11 +61,11 @@ module Absyn = struct
       pp callee
       (option @@ parens @@ comma_sep pp) arguments
 
-  and pp_ctor ppf { ctor_name;  ctor_generic_arguments; ctor_arguments } =
+  and pp_ctor : 'a. 'a Fmt.t -> 'a ctor Fmt.t = fun pp ppf c ->
     pf ppf "%s%a%a"
-      ctor_name
-      pp_generic_arguments ctor_generic_arguments
-      (option @@ hvbox @@ parens @@ comma_sep pp) ctor_arguments
+      c.ctor_name
+      pp_generic_arguments c.ctor_generic_arguments
+      (option @@ hvbox @@ parens @@ comma_sep pp) c.ctor_arguments
 
   and pp_field_access ppf { record; field } =
     pf ppf "%a.%s" pp record field
@@ -91,7 +91,7 @@ module Absyn = struct
 
   and pp' ppf = function
     | Function fn -> pp_fn ppf fn
-    | Ctor ctor -> pp_ctor ppf ctor
+    | Ctor ctor -> pp_ctor pp' ppf ctor
     | Application app -> pp_app ppf app
     | Var str -> string ppf str
     | Literal l -> pp_literal ppf l
@@ -152,7 +152,7 @@ module Value = struct
 
   let rec pp' ppf = function
     | Function fn -> Absyn.pp_fn ppf fn
-    | Ctor ctor -> Absyn.pp_ctor ppf ctor
+    | Ctor ctor -> Absyn.pp_ctor pp' ppf ctor
     | Literal l -> Absyn.pp_literal ppf l
     | Unit -> string ppf "()"
     | Type t -> string ppf t

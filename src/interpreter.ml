@@ -119,7 +119,11 @@ let subst generics arguments fn =
 
 let rec eval_expr env = function
   | Unit -> (V.Unit, env)
-  | Ctor c -> (V.Ctor c, env)
+  | Ctor c ->
+    let args = match c.ctor_arguments with
+      | None -> None
+      | Some args -> Some (List.map (fun e -> fst @@ eval_expr env e) args)
+    in (V.Ctor { c with ctor_arguments = args }, env)
   | Literal l -> (V.Literal l, env)
   | Application { callee; generic_arguments; arguments; generic_arguments_ty } ->
       let (callee', _) = eval_expr env callee in
@@ -173,11 +177,7 @@ and eval_pattern env pattern value =
   | Pctor (_, ps), V.Ctor { ctor_arguments } ->
     begin match ps, ctor_arguments with
     | None, None -> env
-    | Some patterns, Some args ->
-      let aux env p a =
-        let a', env' = eval_expr env a in
-        eval_pattern env' p a'
-      in List.fold_left2 aux env patterns args
+    | Some patterns, Some args -> List.fold_left2 eval_pattern env patterns args
     | _ -> assert false
     end
   | _ -> assert false

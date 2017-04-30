@@ -47,7 +47,8 @@ fn length<T>(l: List<T>) -> Nat {
 }
 
 length(Nil) // CHECK: Z : forall T.*, Nat
-length(Cons(1, Nil))
+length(Cons(1, Nil)) // CHECK-L: S(Z) : Nat
+length(Cons(1, Cons(2, Cons(3, Nil)))) // CHECK-L: S(S(S(Z))) : Nat
 
 fn add(x: Nat, y: Nat) -> Nat {
   match x {
@@ -55,4 +56,4 @@ fn add(x: Nat, y: Nat) -> Nat {
     case S(x'): S(add(x', y))
   }
 }
-add(S(S(Z)), S(S(S(Z))))
+add(S(S(Z)), S(S(S(Z)))) // CHECK-L: S(S(S(S(S(Z))))) : Nat
