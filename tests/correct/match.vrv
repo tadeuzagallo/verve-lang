@@ -42,9 +42,17 @@ enum Nat {
 fn length<T>(l: List<T>) -> Nat {
   match l {
     case Nil: Z
-    case Cons(_, tail): S(Z)
+    case Cons(_, tail): S(length(tail))
   }
 }
 
 length(Nil) // CHECK: Z : forall T.*, Nat
-length(Cons(1, Nil)) // CHECK-L: S(Z) : Nat
+length(Cons(1, Nil))
+
+fn add(x: Nat, y: Nat) -> Nat {
+  match x {
+    case Z: y
+    case S(x'): S(add(x', y))
+  }
+}
+add(S(S(Z)), S(S(S(Z))))

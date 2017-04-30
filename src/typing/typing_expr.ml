@@ -40,18 +40,18 @@ and apply_generics env ty_callee gen_args s1 =
 
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   let generics' = List.map (var_of_generic env) fn_generics in
-  let env' = List.fold_left
-    (fun env (g, v : generic * T.tvar) -> extend_env env (g.name, T.RigidVar v))
-    env (List.combine fn_generics generics')
+  let env' = List.fold_left2
+    (fun env g v -> extend_env env (g.name, T.RigidVar v))
+    env fn_generics generics'
   in
 
   let ret_type, s0 = check_type env' fn_return_type in
 
-  let (fn_type, env'', s1) = List.fold_right
+  let (fn_type, params, s1) = List.fold_right
     (fun p (t, env'', s1) ->
       let ty, s2 = check_type env' p.param_type in
       (T.Arrow (ty , t), extend_env env'' (p.param_name, ty), s2 >> s1))
-      fn_parameters (ret_type, env, s0)
+      fn_parameters (ret_type, [], s0)
   in
   let fn_type' = match fn_type with
   | T.Arrow _ -> fn_type
@@ -59,7 +59,13 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   in
   let fn_type'' = List.fold_right (fun g t -> T.TypeArrow (g, t)) generics' fn_type' in
 
-  let (ret, _, s2) = check_exprs env'' fn_body in
+  let fn_env env =
+    params @ env
+  in
+  let (ret, _, s2) = match fn_name with
+    | None -> check_exprs (fn_env env') fn_body
+    | Some n -> check_exprs (fn_env @@ extend_env env' (n, fn_type'')) fn_body
+  in
   let s3 = unify (ret, ret_type) in
   let fn_type'' = loosen @@ apply (s3 >> s2 >> s1) fn_type'' in
 
