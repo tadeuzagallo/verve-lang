@@ -28,11 +28,11 @@ rule read = parse
 | "{" { L_BRACE }
 | "}" { R_BRACE }
 | "(" {
-    match lexbuf.lex_start_pos with
-    | 0 -> NL_L_PAREN
-    | _ -> L_PAREN
+    if lexbuf.lex_last_pos = lexbuf.lex_start_p.pos_bol
+    then NL_L_PAREN
+    else L_PAREN
   }
-| newline "(" { Lexing.new_line lexbuf; NL_L_PAREN }
+| newline blank* "(" { Lexing.new_line lexbuf; NL_L_PAREN }
 | ")" { R_PAREN }
 | eof { EOF }
 
@@ -57,6 +57,6 @@ and comment depth = parse
 | _ { comment depth lexbuf }
 
 and single_line_comment = parse
-| newline { Lexing.new_line lexbuf; read lexbuf }
+| newline blank* { Lexing.new_line lexbuf; read lexbuf }
 | eof { EOF }
 | _ { single_line_comment lexbuf }

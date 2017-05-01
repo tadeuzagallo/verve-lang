@@ -1,4 +1,4 @@
-(42) // parenthesised expression on first line
+(1) // parenthesised expression on first line
 
 // RUN: %verve
 
@@ -10,13 +10,27 @@
 
   y
 
-})(42)
+})(2)
 
 
 (fn x(y: Int) -> Int {
   y
-})(42)
+})(3)
 
-(fn x(y: Int) -> Void {
-})(42)
-(fn x(y: Int) -> Int { y })(42)
+(fn x(y: Int) -> Int { y
+})(4)
+(fn x(y: Int) -> Int { y })/**/(5)
+
+(6)
+// single line comment interleaved
+(7)
+
+
+/* indentation */
+(8)
+  (9)
+
+(10) //
+// comment interleaved and indentation
+  (11)
+

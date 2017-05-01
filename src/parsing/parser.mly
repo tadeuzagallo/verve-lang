@@ -78,7 +78,9 @@ atom:
   | field_access { $1 }
   | second_application { $1 }
   | first_application %prec BELOW_PAREN { $1 }
+  (* Matched when the first expression in a sequence is wrapped in parens *)
   | parens(expr) { $1 }
+  (* Matched to break applications when there's a line break *)
   | NL_L_PAREN expr R_PAREN { $2 }
 
 /* function expressions */
