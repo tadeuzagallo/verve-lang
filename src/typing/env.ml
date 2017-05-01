@@ -111,19 +111,19 @@ let var_of_generic env { A.name; A.constraints } =
   { T.id = _fresh name; T.name; T.constraints = intfs; T.resolved_ty = None }
 
 (* Unification *)
-let rec unify = function
+let rec unify ~expected ~actual = match expected, actual with
   | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)
   when n1 = n2 ->
       let aux s t1 t2 =
-        unify (t1, t2) >> s
+        unify ~expected:t1 ~actual:t2 >> s
       in List.fold_left2 aux [] t1s t2s
 
   | T.TypeCtor _, t when t = val_type -> []
   | t, T.TypeCtor _ when t = val_type -> []
 
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
-      let s1 = unify (t11, t21) in
-      let s2 = unify (apply s1 t12, apply s1 t22) in
+      let s1 = unify ~expected:t11 ~actual:t21 in
+      let s2 = unify ~expected:(apply s1 t12) ~actual:(apply s1 t22) in
       s2 >> s1
 
   (* Order matters: Var must come before TypeArrow *)
@@ -151,15 +151,15 @@ let rec unify = function
       [ var, t ]
 
   | T.TypeArrow (_, t1), t2
-  | t2, T.TypeArrow (_, t1) ->
-      unify (t1, t2)
+  | t1, T.TypeArrow (_, t2) ->
+      unify ~expected:t1 ~actual:t2
 
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
   | T.Record r1, T.Record r2
   when List.map fst r1 = List.map fst r2 ->
     let aux s (_, t1) (_, t2) =
-      unify (t1, t2) >> s
+      unify ~expected:t1 ~actual:t2 >> s
     in List.fold_left2 aux [] r1 r2
 
   | t1, t2 ->

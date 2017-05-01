@@ -11,7 +11,7 @@ enum PairT<T, U> {
 
 match Pair(2, True) {
   case True: x
-} // CHECK: Failed to unify PairT<Int, Bool> with Bool
+} // CHECK: Failed to unify Bool with PairT<Int, Bool>
 
 match Pair(3, False) {
   case Int(x): False

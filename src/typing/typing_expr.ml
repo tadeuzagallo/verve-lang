@@ -66,7 +66,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
     | None -> check_exprs (fn_env env') fn_body
     | Some n -> check_exprs (fn_env @@ extend_env env' (n, fn_type'')) fn_body
   in
-  let s3 = unify (ret, ret_type) in
+  let s3 = unify ~expected:ret_type ~actual:ret in
   let fn_type'' = loosen @@ apply (s3 >> s2 >> s1) fn_type'' in
 
   match fn_name with
@@ -96,7 +96,7 @@ and apply_arguments callee arguments=
     let rec check s3 ty =
       match ty with
       | T.Arrow (t1, t2) ->
-          let s4 = unify (apply s3 t1, argument) in
+          let s4 = unify ~expected:(apply s3 t1) ~actual:argument in
           (t2, s4 >> s3)
       | T.TypeArrow (v1, t2) ->
           let t2', s = check s3 t2 in
@@ -148,9 +148,9 @@ and check_match env { match_value; cases } =
 
 and check_case env value_ty ret_ty s1 { pattern; case_value } =
   let pat_ty, env', s2 = check_pattern env pattern in
-  let s3 = unify (value_ty, pat_ty) in
+  let s3 = unify ~expected:pat_ty ~actual:value_ty in
   let case_ty, env'', s4 = check_exprs env' case_value in
-  let s5 = unify (ret_ty, apply (s4 >> s3 >> s2) case_ty) in
+  let s5 = unify ~expected:ret_ty ~actual:(apply (s4 >> s3 >> s2) case_ty) in
   s5 >> s1
 
 and check_pattern env = function
