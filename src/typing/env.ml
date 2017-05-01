@@ -156,11 +156,13 @@ let rec unify ~expected ~actual = match expected, actual with
 
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
 
-  | T.Record r1, T.Record r2
-  when List.map fst r1 = List.map fst r2 ->
-    let aux s (_, t1) (_, t2) =
-      unify ~expected:t1 ~actual:t2 >> s
-    in List.fold_left2 aux [] r1 r2
+  | T.Record r1, T.Record r2 ->
+    let validate s (field, t1) =
+      try
+        unify ~expected:t1 ~actual:(List.assoc field r2)  >> s
+      with Not_found ->
+        raise (Error (Unification_error (expected, actual)))
+    in List.fold_left validate [] r1
 
   | t1, t2 ->
       raise (Error (Unification_error (t1, t2)))

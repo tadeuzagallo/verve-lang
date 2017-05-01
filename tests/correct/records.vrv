@@ -22,3 +22,20 @@ f({ x = 42, y = True })
 
 /* multiple field accesses */
 ({ x = { y = { z = 42 } } }).x.y.z // CHECK: 42 : Int
+
+// SUBTYPING
+
+// Permutation:
+fn perm(x: { a: Int, b: Bool }) -> { b: Bool, a: Int } { x }
+perm({ b = True, a = 3 })
+perm({ a = 3, b = True })
+
+// Width:
+fn width(x: { a: Int }) -> {a : Int} {
+  { a = x.a, b = True }
+}
+width({a = 42, b = False})
+
+// Depth:
+fn depth(x: { a: { x: Int, y: Bool } }) -> { a: { x: Int } } { x }
+depth({a = {x = 42, y = True, z = Pair(3, False)}})
