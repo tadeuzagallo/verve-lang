@@ -1,5 +1,9 @@
 // RUN: %verve
 
+// Ints
 42
 0
 100_000_000
+
+// Strings
+"verve"

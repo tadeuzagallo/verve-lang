@@ -10,6 +10,7 @@ type type_ =
 
 type literal =
   | Int of int
+  | String of string
 
 type generic = {
   name : name;

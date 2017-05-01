@@ -30,6 +30,7 @@ open Absyn
 %token <string> LCID
 %token <string> UCID
 %token <int> INT
+%token <string> STRING
 
 %start <Absyn.program> program
 %start <Absyn.decl> decl_start
@@ -133,9 +134,8 @@ generic_arguments_strict: nonempty_alist(type_) { $1 }
 
 /* literals */
 literal:
-  | int_ { $1 }
-
-int_: INT { Int $1 }
+  | INT { Int $1 }
+  | STRING { String $1 }
 
 /* enums */
 enum: ENUM UCID generic_parameters braces(nonempty_list(enum_item)) {

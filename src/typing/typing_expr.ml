@@ -6,6 +6,7 @@ module T = Types
 
 let check_literal = function
   | Int _ -> val_int
+  | String _ -> val_string
 
 let rec check_type env : type_ -> T.ty * subst = function
   | Arrow (parameters, return_type) ->

@@ -40,8 +40,9 @@ rule read = parse
 | ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* "'"* { UCID(Lexing.lexeme lexbuf) }
 | ['a'-'z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* "'"* { LCID(Lexing.lexeme lexbuf) }
 
-(* numbers *)
+(* literals *)
 | ['0'-'9']['0'-'9' '_']* { INT(int_of_string @@ Lexing.lexeme lexbuf) }
+| '"' { string (Buffer.create 32) lexbuf }
 
 (* whitespace *)
 | blank { read lexbuf }
@@ -60,3 +61,9 @@ and single_line_comment = parse
 | newline blank* { Lexing.new_line lexbuf; read lexbuf }
 | eof { EOF }
 | _ { single_line_comment lexbuf }
+
+and string buf = parse
+| "\\\"" { Buffer.add_char buf '"'; string buf lexbuf }
+| '"' { STRING(Buffer.contents buf) }
+| (newline | eof) { raise (SyntaxError "String is not terminated") }
+| _ { Buffer.add_char buf (Lexing.lexeme_char lexbuf 0); string buf lexbuf }

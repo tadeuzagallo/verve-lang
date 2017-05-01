@@ -31,16 +31,19 @@ let make_var () =
 let ty_int = T.TypeCtor ("Int", [])
 let ty_type = T.TypeCtor ("Type", [])
 let ty_void = T.TypeCtor ("Void", [])
+let ty_string = T.TypeCtor ("String", [])
 
 (* Values of builtin types *)
 let val_int = T.TypeInst ("Int", [])
 let val_type = T.TypeInst ("Type", [])
 let val_void = T.TypeInst ("Void", [])
+let val_string = T.TypeInst ("String", [])
 
 let default_env = [
   ("Type", ty_type);
   ("Int", ty_int);
   ("Void", ty_void);
+  ("String", ty_string);
   ("int_add", T.Arrow (val_int, T.Arrow (val_int, val_int)));
 ]
 

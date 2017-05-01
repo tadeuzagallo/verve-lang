@@ -21,6 +21,7 @@ open Absyn
 module Absyn = struct
   let pp_literal ppf = function
     | Int i -> int ppf i
+    | String s -> quote string ppf s
 
   let pp_generic ppf { name; constraints } =
     string ppf name;
@@ -156,6 +157,7 @@ module Value = struct
     | Literal l -> Absyn.pp_literal ppf l
     | Unit -> string ppf "()"
     | Type t -> string ppf t
+    | Builtin (name, _) -> string ppf name
     | InterfaceFunction t -> string ppf t
     | Record r -> record '=' pp' ppf r
 
