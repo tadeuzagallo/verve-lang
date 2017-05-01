@@ -19,3 +19,6 @@ fn f<T, U>(x: {x: T, y: U}) -> PairT<T, U> {
   Pair(x.x, x.y)
 }
 f({ x = 42, y = True })
+
+/* multiple field accesses */
+({ x = { y = { z = 42 } } }).x.y.z // CHECK: 42 : Int

@@ -157,9 +157,10 @@ let rec eval_expr env = function
   | Record r ->
     V.Record (List.map (fun (n, v) -> (n, fst @@ eval_expr env v)) r), env
   | Field_access f ->
-    begin match f.record with
-      | Record fields ->
-        eval_expr env (List.assoc f.field fields)
+    let value, _ = eval_expr env f.record in
+    begin match value with
+      | V.Record fields ->
+        List.assoc f.field fields, env
       | _ -> assert false
     end
   | Match m -> eval_match env m

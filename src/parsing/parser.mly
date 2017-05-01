@@ -71,7 +71,6 @@ expr:
   | constructor { $1 }
   | constructor_no_args %prec BELOW_PAREN { $1 }
   | atom %prec BELOW_PAREN { $1 }
-  | NL_L_PAREN expr R_PAREN { $2 }
 
 atom:
   | LCID { Var $1 }
@@ -80,6 +79,7 @@ atom:
   | second_application { $1 }
   | first_application %prec BELOW_PAREN { $1 }
   | parens(expr) { $1 }
+  | NL_L_PAREN expr R_PAREN { $2 }
 
 /* function expressions */
 function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(expr)) {
