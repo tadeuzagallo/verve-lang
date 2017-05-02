@@ -92,8 +92,25 @@ and match_case = {
   case_value : expr list;
 }
 
+and binop = {
+  bin_lhs: expr;
+  bin_op : string;
+  bin_rhs : expr;
+  mutable bin_generic_arguments_ty: Types.ty list;
+}
+
+and operator = {
+  op_generics : generic list;
+  op_lhs : parameter;
+  op_name : string;
+  op_rhs : parameter;
+  op_ret_type : type_;
+  op_body : body;
+}
+
 and expr =
   | Function of function_
+  | Operator of operator
   | Application of application
   | Var of name
   | Ctor of expr ctor
@@ -101,6 +118,7 @@ and expr =
   | Record of (name * expr) list
   | Field_access of field_access
   | Match of match_
+  | Binop of binop
   | Unit
 
 and pattern =
@@ -118,4 +136,19 @@ type program = {
   imports : import list;
   exports : export list;
   body : decl list;
+}
+
+let fn_of_operator op = {
+  fn_name = Some (op.op_name);
+  fn_generics = op.op_generics;
+  fn_parameters = [ op.op_lhs; op.op_rhs ];
+  fn_return_type = op.op_ret_type;
+  fn_body = op.op_body;
+}
+
+let app_of_binop binop = {
+  callee = Var binop.bin_op;
+  generic_arguments = [];
+  arguments = Some [ binop.bin_lhs; binop.bin_rhs ];
+  generic_arguments_ty = binop.bin_generic_arguments_ty;
 }

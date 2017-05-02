@@ -15,6 +15,7 @@ rule read = parse
 | "interface" { INTERFACE }
 | "implementation" { IMPLEMENTATION }
 | "match" { MATCH }
+| "operator" { OPERATOR }
 
 (* punctuation *)
 | "->" { ARROW }
@@ -49,6 +50,9 @@ rule read = parse
 | newline { Lexing.new_line lexbuf; read lexbuf }
 | "/*" { comment 1 lexbuf }
 | "//" { single_line_comment lexbuf }
+
+(* after comment *)
+| ['/' '=' '-' '+' '!' '*' '%' '<' '>' '&' '|' '^' '~' '?']+ { OP(Lexing.lexeme lexbuf) }
 
 and comment depth = parse
 | "/*" { comment (depth + 1) lexbuf }

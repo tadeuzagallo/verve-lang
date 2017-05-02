@@ -180,6 +180,15 @@ and check_pattern env = function
       | _, t ->
         raise (Error (Invalid_pattern (Pctor (name, ps), t)))
 
+and check_operator env op =
+  check_fn env (fn_of_operator op)
+
+and check_binop env binop =
+  let app = app_of_binop binop in
+  let res = check_app env app in
+  binop.bin_generic_arguments_ty <- app.generic_arguments_ty;
+  res
+
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (val_void, env, [])
   | Literal l -> (check_literal l, env, [])
@@ -190,6 +199,8 @@ and check_expr env : expr -> T.ty * ty_env * subst = function
   | Record r -> check_record env r
   | Field_access f -> check_field_access env f
   | Match m -> check_match env m
+  | Operator o -> check_operator env o
+  | Binop b -> check_binop env b
 
 and check_exprs env exprs =
   List.fold_left

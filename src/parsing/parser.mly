@@ -9,6 +9,7 @@ open Absyn
 %token INTERFACE
 %token IMPLEMENTATION
 %token MATCH
+%token OPERATOR
 
 /* punctuation */
 %token ARROW
@@ -29,6 +30,7 @@ open Absyn
 /* tokens with semantic values */
 %token <string> LCID
 %token <string> UCID
+%token <string> OP
 %token <int> INT
 %token <string> STRING
 
@@ -36,7 +38,7 @@ open Absyn
 %start <Absyn.decl> decl_start
 
 %nonassoc BELOW_PAREN
-%left L_PAREN L_ANGLE
+%left L_PAREN L_ANGLE OP
 
 %%
 
@@ -72,6 +74,8 @@ expr:
   | constructor { $1 }
   | constructor_no_args %prec BELOW_PAREN { $1 }
   | atom %prec BELOW_PAREN { $1 }
+  | binop { $1 }
+  | operator { $1 }
 
 atom:
   | LCID { Var $1 }
@@ -190,3 +194,19 @@ pattern:
   | UNDERSCORE { Pany }
   | LCID { Pvar $1 }
   | UCID option(plist(pattern)) { Pctor ($1, $2) }
+
+/* binary operations */
+binop: expr OP expr {
+  Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
+}
+
+operator: OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(expr)) {
+    Operator {
+      op_generics = $2;
+      op_lhs = $3;
+      op_name = $4;
+      op_rhs = $5;
+      op_ret_type = $7;
+      op_body = $8;
+    }
+}
