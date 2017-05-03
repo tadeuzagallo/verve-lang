@@ -39,12 +39,18 @@ let val_type = T.TypeInst ("Type", [])
 let val_void = T.TypeInst ("Void", [])
 let val_string = T.TypeInst ("String", [])
 
+let binop ty =
+  T.Arrow (ty, T.Arrow (ty, ty))
+
 let default_env = [
   ("Type", ty_type);
   ("Int", ty_int);
   ("Void", ty_void);
   ("String", ty_string);
-  ("int_add", T.Arrow (val_int, T.Arrow (val_int, val_int)));
+  ("int_add", binop val_int);
+  ("int_sub", binop val_int);
+  ("int_mul", binop val_int);
+  ("int_div", binop val_int);
 ]
 
 let rec find var = function

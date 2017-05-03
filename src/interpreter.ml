@@ -6,16 +6,19 @@ module T = Types
 exception Unbound_variable of string
 exception Runtime_error of string
 
-let int_add env = function
+let int_op op env = function
   | [V.Literal (Int x); V.Literal (Int y)] ->
-    V.Literal (Int (x + y)), env
+    V.Literal (Int (op x y)), env
   | _ -> assert false
 
 let add_builtin name fn env =
   (name, V.Builtin (name, fn)) :: env
 
 let default_env = []
-  |> add_builtin "int_add" int_add
+  |> add_builtin "int_add" (int_op ( + ))
+  |> add_builtin "int_sub" (int_op ( - ))
+  |> add_builtin "int_mul" (int_op ( * ))
+  |> add_builtin "int_div" (int_op ( / ))
 
 let fn_to_intf = Hashtbl.create 256
 let intf_to_impls = Hashtbl.create 64

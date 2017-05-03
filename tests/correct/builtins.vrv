@@ -1,3 +1,6 @@
 // RUN: %verve | %check
 
 int_add(3, 5) // CHECK: 8 : Int
+int_sub(3, 5) // CHECK: -2 : Int
+int_mul(3, 5) // CHECK: 15 : Int
+int_div(35, 5) // CHECK: 7 : Int
