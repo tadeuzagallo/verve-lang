@@ -7,12 +7,25 @@ operator (x: Int) + (y: Int) -> Int {
 
 interface Num<T> {
   operator (T) + (T) -> T
+  operator (T) - (T) -> T
+  operator (T) * (T) -> T
+  operator (T) / (T) -> T
 }
 
 implementation Num<Int> {
   operator (x: Int) + (y: Int) -> Int {
     int_add(x, y)
   }
+  operator (x: Int) - (y: Int) -> Int {
+    int_sub(x, y)
+  }
+  operator (x: Int) * (y: Int) -> Int {
+    int_mul(x, y)
+  }
+  operator (x: Int) / (y: Int) -> Int {
+    int_div(x, y)
+  }
 }
 
 5 + 37 // CHECK: 42 : Int
+5 + 3 * 15 // TODO: Fix precedence

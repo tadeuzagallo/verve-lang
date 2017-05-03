@@ -50,16 +50,12 @@ rule read = parse
 | newline { Lexing.new_line lexbuf; read lexbuf }
 
 (* comments *)
-| '/' { comment_or_operator lexbuf }
-| (operator # ['/']) operator* { OP(Lexing.lexeme lexbuf) }
+| "/*" { comment 1 lexbuf }
+| "//" { single_line_comment lexbuf }
+| '/' (operator # ['/' '*'])* | (operator # ['/']) operator* { OP(Lexing.lexeme lexbuf) }
 
 | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 | eof { EOF }
-
-and comment_or_operator = shortest
-| "*" { comment 1 lexbuf }
-| "/" { single_line_comment lexbuf }
-| operator + { OP("/" ^ Lexing.lexeme lexbuf) }
 
 and comment depth = parse
 | "/*" { comment (depth + 1) lexbuf }
