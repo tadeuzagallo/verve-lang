@@ -100,6 +100,7 @@ module Absyn = struct
     | Record r -> pp_record ppf r
     | Field_access f -> pp_field_access ppf f
     | Match m -> pp_match ppf m
+    | Wrapped expr -> pf ppf "(%a)" pp' expr
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 

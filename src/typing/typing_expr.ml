@@ -201,6 +201,7 @@ and check_expr env : expr -> T.ty * ty_env * subst = function
   | Match m -> check_match env m
   | Operator o -> check_operator env o
   | Binop b -> check_binop env b
+  | Wrapped expr -> check_expr env expr
 
 and check_exprs env exprs =
   List.fold_left

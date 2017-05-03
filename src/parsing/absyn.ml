@@ -58,6 +58,7 @@ and attribute = {
 
 and attribute_value =
   | AttrOp of name
+  | AttrInt of int
   | Attribute of attribute
 
 and operator_prototype = {
@@ -147,6 +148,7 @@ and expr =
   | Match of match_
   | Binop of binop
   | Unit
+  | Wrapped of expr
 
 and pattern =
   | Pany

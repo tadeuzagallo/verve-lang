@@ -48,7 +48,7 @@ let run_file = with_file @@ fun file ->
       state, true
   in
   let ast = parse file in
-  let state = (Env.default_env, [], Interpreter.default_env) in
+  let state = (Env.default_env, [], Interpreter.default_env, []) in
   let _, err = List.fold_left eval (state, false) ast.Absyn.body in
   if err then exit 1
 

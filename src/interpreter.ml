@@ -63,6 +63,7 @@ let rec subst_ty ty_args = function
 let rec subst_expr ty_args args = function
   | Unit -> Unit
   | Literal l -> Literal l
+  | Wrapped expr -> subst_expr ty_args args expr
   | Var x as v -> begin
       try List.assoc x args
       with Not_found -> v
@@ -133,6 +134,7 @@ let subst generics arguments fn =
 
 let rec eval_expr env = function
   | Unit -> (V.Unit, env)
+  | Wrapped expr -> eval_expr env expr
   | Ctor c ->
     let args = match c.ctor_arguments with
       | None -> None

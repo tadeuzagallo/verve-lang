@@ -36,4 +36,9 @@ implementation Num<Int> {
 }
 
 5 + 37 // CHECK: 42 : Int
-5 + 3 * 15 // TODO: Fix precedence
+5 + 3 * 15 // CHECK: 50 : Int
+3 * 15 + 5 // CHECK: 50 : Int
+3 * (15 + 5) // CHECK: 60 : Int
+(15 + 5) * 3  // CHECK: 60 : Int
+3 * 5 / 2 // CHECK: 7 : Int
+5 / 2 * 3 // CHECK: 6 : Int

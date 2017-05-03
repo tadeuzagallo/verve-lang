@@ -13,6 +13,7 @@ type error =
   | Unknown_field of string * ty
   | Invalid_access of string * ty
   | Invalid_pattern of Absyn.pattern * ty
+  | Precedence_error of string * string
 
 exception Error of error
 
@@ -48,3 +49,5 @@ let report_error ppf = function
     pf ppf "Invalid pattern: Trying to use object of type %a as pattern %a"
       Printer.Type.pp ty
       Printer.Absyn.pp_pattern pat
+  | Precedence_error (op1, op2) ->
+    pf ppf "Precedence error: cannot mix %s and %s in the same infix expression" op1 op2

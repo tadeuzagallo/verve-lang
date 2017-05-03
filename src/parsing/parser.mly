@@ -84,10 +84,10 @@ atom:
   | field_access { $1 }
   | application { $1 }
   (* Matched when the first expression in a sequence is wrapped in parens *)
-  | parens(expr) { $1 }
+  | parens(expr) { Wrapped $1 }
   | parens(OP) { Var $1 }
   (* Matched to break applications when there's a line break *)
-  | NL_L_PAREN expr R_PAREN { $2 }
+  | NL_L_PAREN expr R_PAREN { Wrapped $2 }
   | NL_L_PAREN OP R_PAREN { Var $2 }
 
 /* function expressions */
@@ -245,3 +245,4 @@ attribute: LCID parens(attribute_value)? { { attr_name = $1; attr_value = $2 } }
 attribute_value:
   | OP { AttrOp $1 }
   | attribute { Attribute $1 }
+  | INT { AttrInt $1 }
