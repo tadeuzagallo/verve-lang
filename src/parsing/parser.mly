@@ -75,7 +75,7 @@ expr:
   | constructor_no_args %prec BELOW_PAREN { $1 }
   | atom %prec BELOW_PAREN { $1 }
   | binop { $1 }
-  | operator { $1 }
+  | operator { Operator $1 }
 
 atom:
   | LCID { Var $1 }
@@ -159,18 +159,36 @@ enum_item: UCID generic_parameters plist(type_)? {
 }
 
 /* interfaces */
-interface: INTERFACE UCID angles(generic_parameter) braces(list(prototype)) {
-  Interface { intf_name = $2; intf_param = $3; intf_functions = $4; }
+interface: INTERFACE UCID angles(generic_parameter) braces(list(interface_item)) {
+  Interface { intf_name = $2; intf_param = $3; intf_items = $4; }
 }
 
+interface_item:
+  | prototype {$1}
+  | operator_prototype {$1}
+
 prototype: FN LCID generic_parameters plist(type_) ARROW type_ {
-  { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $6 }
+  Prototype { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $6 }
+}
+
+operator_prototype: OPERATOR generic_parameters parens(type_) OP parens(type_) ARROW type_ {
+    OperatorPrototype {
+      oproto_generics = $2;
+      oproto_lhs = $3;
+      oproto_name = $4;
+      oproto_rhs = $5;
+      oproto_ret_type = $7;
+    }
 }
 
 /* implementations */
-implementation: IMPLEMENTATION UCID angles(type_) braces(list(function_)) {
-  Implementation { impl_name = $2; impl_arg = $3; impl_functions = $4; impl_arg_type = None }
+implementation: IMPLEMENTATION UCID angles(type_) braces(list(impl_item)) {
+  Implementation { impl_name = $2; impl_arg = $3; impl_items = $4; impl_arg_type = None }
 }
+
+impl_item:
+  | function_ { ImplFunction $1 }
+  | operator { ImplOperator $1 }
 
 /* Records */
 
@@ -201,7 +219,7 @@ binop: expr OP expr {
 }
 
 operator: OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(expr)) {
-    Operator {
+    {
       op_generics = $2;
       op_lhs = $3;
       op_name = $4;

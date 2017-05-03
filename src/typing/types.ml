@@ -24,5 +24,5 @@ and interface_desc = {
 and implementation_desc = {
   impl_name : string;
   impl_type: ty;
-  impl_functions : ty list;
+  impl_items : ty list;
 }

@@ -204,34 +204,35 @@ and eval_pattern env pattern value =
     end
   | _ -> assert false
 
+and eval_intf_item intf_name env = function
+  | Prototype { proto_name }
+  | OperatorPrototype { oproto_name = proto_name } ->
+    Hashtbl.add fn_to_intf proto_name intf_name;
+    (proto_name, V.InterfaceFunction proto_name)::env
+
+and eval_impl_item = function
+  | ImplOperator op ->
+    (op.op_name, fn_of_operator op)
+  | ImplFunction impl_fn ->
+    match impl_fn.fn_name with
+    | Some n -> (n, impl_fn)
+    | None -> assert false
+
 and eval_decl env = function
   | Expr expr -> eval_expr env expr
   | Enum { enum_name } -> (V.Type enum_name, env)
-  | Interface { intf_name; intf_functions } ->
-      let aux { proto_name } =
-        Hashtbl.add fn_to_intf proto_name intf_name
-      in List.iter aux intf_functions;
-      Hashtbl.add intf_to_impls intf_name (ref []);
-      let aux env { proto_name } =
-        (proto_name, V.InterfaceFunction proto_name)::env
-      in
-      let env' = List.fold_left aux env intf_functions in
-      (V.Unit, env')
+  | Interface { intf_name; intf_items } ->
+    Hashtbl.add intf_to_impls intf_name (ref []);
+    let env' = List.fold_left (eval_intf_item intf_name) env intf_items in
+    (V.Unit, env')
 
-  | Implementation { impl_name; impl_arg_type; impl_functions } ->
-      let aux impl_fn =
-        let fn_name =
-          match impl_fn.fn_name with
-          | Some n -> n
-          | None -> assert false
-        in (fn_name, impl_fn)
-      in
+  | Implementation { impl_name; impl_arg_type; impl_items } ->
       let ty = match impl_arg_type with
         | Some t -> t
         | None -> assert false
       in
       let impls = Hashtbl.find intf_to_impls impl_name in
-      impls := (ty, List.map aux impl_functions) :: !impls;
+      impls := (ty, List.map eval_impl_item impl_items) :: !impls;
       (V.Unit, env)
 
 let eval { body } =

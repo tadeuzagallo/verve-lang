@@ -37,14 +37,26 @@ type enum = {
 type interface = {
   intf_name : string;
   intf_param : generic;
-  intf_functions : prototype list;
+  intf_items : interface_item list;
 }
+
+and interface_item =
+  | Prototype of prototype
+  | OperatorPrototype of operator_prototype
 
 and prototype = {
   proto_name : string;
   proto_generics : generic list;
   proto_params : type_ list;
   proto_ret_type : type_;
+}
+
+and operator_prototype = {
+  oproto_generics : generic list;
+  oproto_lhs : type_;
+  oproto_name : string;
+  oproto_rhs : type_;
+  oproto_ret_type : type_;
 }
 
 type body = expr list
@@ -60,9 +72,13 @@ and function_ = {
 and implementation = {
   impl_name : string;
   impl_arg : type_;
-  impl_functions : function_ list;
+  impl_items : implementation_item list;
   mutable impl_arg_type : Types.ty option;
 }
+
+and implementation_item =
+  | ImplFunction of function_
+  | ImplOperator of operator
 
 and application = {
   callee: expr;
@@ -151,4 +167,11 @@ let app_of_binop binop = {
   generic_arguments = [];
   arguments = Some [ binop.bin_lhs; binop.bin_rhs ];
   generic_arguments_ty = binop.bin_generic_arguments_ty;
+}
+
+let prototype_of_op_proto op = {
+  proto_name = op.oproto_name;
+  proto_generics = op.oproto_generics;
+  proto_params = [ op.oproto_lhs; op.oproto_rhs ];
+  proto_ret_type = op.oproto_ret_type;
 }

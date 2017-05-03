@@ -6,19 +6,13 @@ operator (x: Int) + (y: Int) -> Int {
 3 + 5 // 8 : Int
 
 interface Num<T> {
-  // TODO: declare operator directly in the interface
-  fn add(T, T) -> T
+  operator (T) + (T) -> T
 }
 
 implementation Num<Int> {
-  fn add(x: Int, y: Int) -> Int {
+  operator (x: Int) + (y: Int) -> Int {
     int_add(x, y)
   }
-}
-
-// Polymorphic operators
-operator<T: Num> (x: T) + (y: T) -> T {
-  add(x, y)
 }
 
 5 + 37 // CHECK: 42 : Int

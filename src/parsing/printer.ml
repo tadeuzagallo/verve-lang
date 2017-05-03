@@ -122,17 +122,25 @@ module Absyn = struct
       (parens @@ hvbox ~indent:2 @@ comma_sep pp_type) proto.proto_params
       pp_type proto.proto_ret_type
 
-  let pp_interface ppf { intf_name; intf_param; intf_functions } =
+  let pp_intf_item ppf = function
+    | Prototype p -> pp_prototype ppf p
+    | OperatorPrototype op -> pp_prototype ppf (prototype_of_op_proto op)
+
+  let pp_interface ppf { intf_name; intf_param; intf_items } =
     pf ppf "@[<v>@[<v 2>interface %s<%a> {@ %a@]}@]@ "
       intf_name
       pp_generic intf_param
-      (list pp_prototype) intf_functions
+      (list pp_intf_item) intf_items
 
-  let pp_implementation ppf { impl_name; impl_arg; impl_functions } =
+  let pp_impl_item ppf = function
+    | ImplFunction f -> pp_fn ppf f
+    | ImplOperator op -> pp_fn ppf (fn_of_operator op)
+
+  let pp_implementation ppf { impl_name; impl_arg; impl_items } =
     pf ppf "@[<v>@[<v 2>implementation %s<%a> {@ %a@]@ }@]"
       impl_name
       pp_type impl_arg
-      (list pp_fn) impl_functions
+      (list pp_impl_item) impl_items
 
   let pp_decl ppf = function
     | Enum e -> pp_enum ppf e

@@ -27,14 +27,18 @@ and check_enum_item make item_ty (env, s1) { enum_item_name; enum_item_parameter
       let ty' = make ty in
       extend_env env (enum_item_name, ty'), s2
 
-and check_interface env { intf_name; intf_param; intf_functions } =
+and check_interface env { intf_name; intf_param; intf_items } =
   let intf_ty = T.Interface { T.intf_name; T.intf_impls = [] } in
   let env' = extend_env env (intf_name, intf_ty) in
   let generic = { name = intf_param.name; constraints =
 intf_name::intf_param.constraints } in
   let var = var_of_generic env' generic in
-  let env'' = List.fold_left (check_proto (intf_param.name, var)) env' intf_functions in
+  let env'' = List.fold_left (check_intf_item (intf_param.name, var)) env' intf_items in
   (intf_ty, env'', [])
+
+and check_intf_item pair env = function
+  | Prototype p -> check_proto pair env p
+  | OperatorPrototype op -> check_proto pair env (prototype_of_op_proto op)
 
 and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; proto_ret_type } =
   let env' = extend_env env (var_name, T.RigidVar var) in
@@ -58,10 +62,10 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
   let fn_ty'''' = T.TypeArrow (var, fn_ty''') in
   extend_env env (proto_name, fn_ty'''')
 
-and check_implementation env ({ impl_name; impl_arg; impl_functions } as impl) =
+and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let impl_arg_ty, s1 = Typing_expr.check_type env impl_arg in
   impl.impl_arg_type <- Some (impl_arg_ty);
-  let impl_desc = { T.impl_name; T.impl_type = impl_arg_ty; T.impl_functions = [] } in
+  let impl_desc = { T.impl_name; T.impl_type = impl_arg_ty; T.impl_items = [] } in
   let impl_ty = T.Implementation impl_desc in
   let intf_desc =
     match get_type env impl_name with
