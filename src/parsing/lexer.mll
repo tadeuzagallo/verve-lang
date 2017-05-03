@@ -4,8 +4,9 @@ open Parser
 exception SyntaxError of string
 }
 
-let newline = ('\013'* '\010')
-let blank = [' ' '\009' '\012']
+let blank = [' ' '\t']+
+let newline = '\r' | '\n' | "\r\n"
+let operator = ['/' '=' '-' '+' '!' '*' '%' '<' '>' '&' '|' '^' '~' '?']
 
 rule read = parse
 (* keywords *)
@@ -35,7 +36,6 @@ rule read = parse
   }
 | newline blank* "(" { Lexing.new_line lexbuf; NL_L_PAREN }
 | ")" { R_PAREN }
-| eof { EOF }
 
 (* tokens with semantic values *)
 | ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* "'"* { UCID(Lexing.lexeme lexbuf) }
@@ -43,16 +43,23 @@ rule read = parse
 
 (* literals *)
 | ['0'-'9']['0'-'9' '_']* { INT(int_of_string @@ Lexing.lexeme lexbuf) }
-| '"' { string (Buffer.create 32) lexbuf }
+| '"' { read_string (Buffer.create 32) lexbuf }
 
 (* whitespace *)
 | blank { read lexbuf }
 | newline { Lexing.new_line lexbuf; read lexbuf }
-| "/*" { comment 1 lexbuf }
-| "//" { single_line_comment lexbuf }
 
-(* after comment *)
-| ['/' '=' '-' '+' '!' '*' '%' '<' '>' '&' '|' '^' '~' '?']+ { OP(Lexing.lexeme lexbuf) }
+(* comments *)
+| '/' { comment_or_operator lexbuf }
+| (operator # ['/']) operator* { OP(Lexing.lexeme lexbuf) }
+
+| _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
+| eof { EOF }
+
+and comment_or_operator = shortest
+| "*" { comment 1 lexbuf }
+| "/" { single_line_comment lexbuf }
+| operator + { OP("/" ^ Lexing.lexeme lexbuf) }
 
 and comment depth = parse
 | "/*" { comment (depth + 1) lexbuf }
@@ -66,8 +73,19 @@ and single_line_comment = parse
 | eof { EOF }
 | _ { single_line_comment lexbuf }
 
-and string buf = parse
-| "\\\"" { Buffer.add_char buf '"'; string buf lexbuf }
-| '"' { STRING(Buffer.contents buf) }
-| (newline | eof) { raise (SyntaxError "String is not terminated") }
-| _ { Buffer.add_char buf (Lexing.lexeme_char lexbuf 0); string buf lexbuf }
+and read_string buf =
+parse
+| '"'       { STRING (Buffer.contents buf) }
+| '\\' '/'  { Buffer.add_char buf '/'; read_string buf lexbuf }
+| '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf }
+| '\\' 'b'  { Buffer.add_char buf '\b'; read_string buf lexbuf }
+| '\\' 'f'  { Buffer.add_char buf '\012'; read_string buf lexbuf }
+| '\\' 'n'  { Buffer.add_char buf '\n'; read_string buf lexbuf }
+| '\\' 'r'  { Buffer.add_char buf '\r'; read_string buf lexbuf }
+| '\\' 't'  { Buffer.add_char buf '\t'; read_string buf lexbuf }
+| [^ '"' '\\']+
+  { Buffer.add_string buf (Lexing.lexeme lexbuf);
+    read_string buf lexbuf
+  }
+| _ { raise (SyntaxError ("Illegal string character: " ^ Lexing.lexeme lexbuf)) }
+| eof { raise (SyntaxError ("String is not terminated")) }

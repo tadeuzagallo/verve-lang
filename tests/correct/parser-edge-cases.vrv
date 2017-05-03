@@ -19,7 +19,7 @@
 
 (fn x(y: Int) -> Int { y
 })(4)
-(fn x(y: Int) -> Int { y })/**/(5)
+(fn x(y: Int, z: {}) -> Int { y })/* */ /**/(5)/*/**/*/({})//({})
 
 (6)
 // single line comment interleaved
