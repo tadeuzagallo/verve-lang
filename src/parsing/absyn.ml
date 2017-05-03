@@ -51,7 +51,17 @@ and prototype = {
   proto_ret_type : type_;
 }
 
+and attribute = {
+  attr_name : name;
+  attr_value : attribute_value option;
+}
+
+and attribute_value =
+  | AttrOp of name
+  | Attribute of attribute
+
 and operator_prototype = {
+  oproto_attributes : attribute list;
   oproto_generics : generic list;
   oproto_lhs : type_;
   oproto_name : string;
@@ -59,7 +69,7 @@ and operator_prototype = {
   oproto_ret_type : type_;
 }
 
-type body = expr list
+and body = expr list
 
 and function_ = {
   fn_name : name option;
@@ -116,6 +126,7 @@ and binop = {
 }
 
 and operator = {
+  op_attributes : attribute list;
   op_generics : generic list;
   op_lhs : parameter;
   op_name : string;

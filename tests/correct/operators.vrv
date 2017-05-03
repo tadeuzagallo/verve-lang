@@ -1,4 +1,5 @@
 // RUN: %verve | %check
+
 operator (x: Int) + (y: Int) -> Int {
   int_add(x, y)
 }
@@ -6,9 +7,16 @@ operator (x: Int) + (y: Int) -> Int {
 3 + 5 // 8 : Int
 
 interface Num<T> {
+  #assoc(left)
   operator (T) + (T) -> T
+
+  #assoc(left) #prec(equal(+))
   operator (T) - (T) -> T
+
+  #assoc(left) #prec(higher(+))
   operator (T) * (T) -> T
+
+  #assoc(left) #prec(equal(*))
   operator (T) / (T) -> T
 }
 

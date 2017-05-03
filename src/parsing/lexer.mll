@@ -24,6 +24,7 @@ rule read = parse
 | "," { COMMA }
 | "." { DOT }
 | "=" { EQ }
+| "#" { HASH }
 | "_" { UNDERSCORE }
 | "<" { L_ANGLE }
 | ">" { R_ANGLE }

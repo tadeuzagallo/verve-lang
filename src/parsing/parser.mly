@@ -17,6 +17,7 @@ open Absyn
 %token COMMA
 %token DOT
 %token EQ
+%token HASH
 %token UNDERSCORE
 %token L_ANGLE
 %token R_ANGLE
@@ -81,12 +82,13 @@ atom:
   | LCID { Var $1 }
   | literal { Literal $1 }
   | field_access { $1 }
-  | second_application { $1 }
-  | first_application %prec BELOW_PAREN { $1 }
+  | application { $1 }
   (* Matched when the first expression in a sequence is wrapped in parens *)
   | parens(expr) { $1 }
+  | parens(OP) { Var $1 }
   (* Matched to break applications when there's a line break *)
   | NL_L_PAREN expr R_PAREN { $2 }
+  | NL_L_PAREN OP R_PAREN { Var $2 }
 
 /* function expressions */
 function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(expr)) {
@@ -121,7 +123,11 @@ record_type_field: LCID COLON type_ { ($1, $3) }
 
 /* application */
 
-%inline application(x):
+%inline application:
+  | second_application { $1 }
+  | first_application %prec BELOW_PAREN { $1 }
+
+%inline application_(x):
   | x plist(expr) {
     Application { callee = $1; generic_arguments = []; arguments = Some $2; generic_arguments_ty = [] }
   }
@@ -129,8 +135,8 @@ record_type_field: LCID COLON type_ { ($1, $3) }
     Application { callee = $1; generic_arguments = $2; arguments = None; generic_arguments_ty = [] }
   }
 
-second_application: application(first_application) { $1 }
-first_application: application(atom) { $1 }
+second_application: application_(first_application) { $1 }
+first_application: application_(atom) { $1 }
 
 generic_arguments: loption(generic_arguments_strict) { $1 }
 
@@ -171,13 +177,14 @@ prototype: FN LCID generic_parameters plist(type_) ARROW type_ {
   Prototype { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $6 }
 }
 
-operator_prototype: OPERATOR generic_parameters parens(type_) OP parens(type_) ARROW type_ {
+operator_prototype: attributes OPERATOR generic_parameters parens(type_) OP parens(type_) ARROW type_ {
     OperatorPrototype {
-      oproto_generics = $2;
-      oproto_lhs = $3;
-      oproto_name = $4;
-      oproto_rhs = $5;
-      oproto_ret_type = $7;
+      oproto_attributes = $1;
+      oproto_generics = $3;
+      oproto_lhs = $4;
+      oproto_name = $5;
+      oproto_rhs = $6;
+      oproto_ret_type = $8;
     }
 }
 
@@ -218,13 +225,23 @@ binop: expr OP expr {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
-operator: OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(expr)) {
+operator: attributes OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(expr)) {
     {
-      op_generics = $2;
-      op_lhs = $3;
-      op_name = $4;
-      op_rhs = $5;
-      op_ret_type = $7;
-      op_body = $8;
+      op_attributes = $1;
+      op_generics = $3;
+      op_lhs = $4;
+      op_name = $5;
+      op_rhs = $6;
+      op_ret_type = $8;
+      op_body = $9;
     }
 }
+
+/* attributes */
+attributes: list(HASH attribute { $2 }) { $1 }
+
+attribute: LCID parens(attribute_value)? { { attr_name = $1; attr_value = $2 } }
+
+attribute_value:
+  | OP { AttrOp $1 }
+  | attribute { Attribute $1 }
