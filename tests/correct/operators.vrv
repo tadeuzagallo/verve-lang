@@ -42,27 +42,3 @@ implementation Num<Int> {
 (15 + 5) * 3  // CHECK: 60 : Int
 3 * 5 / 2 // CHECK: 7 : Int
 5 / 2 * 3 // CHECK: 6 : Int
-
-enum List<T> {
-  Nil
-
-  operator (T) :: (List<T>)
-}
-
-1 :: 2 :: 3 :: Nil
-
-enum Nat {
-  Z
-  S(Nat)
-}
-
-fn length<T>(l: List<T>) -> Nat {
-  match l {
-    case Nil: Z
-    // TODO: improve the pattern matching logic to support the following:
-    /*case _ :: _ :: tail: S(S(length(tail)))*/
-    case _ :: tail: S(length(tail))
-  }
-}
-
-length(1 :: (2 :: (3 :: Nil))) // CHECK-L: S(S(S(Z))) : Nat

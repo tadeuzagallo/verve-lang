@@ -104,21 +104,11 @@ module Absyn = struct
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 
-  let pp_enum_ctor ppf { enum_ctor_name; enum_ctor_generics; enum_ctor_parameters } =
+  let pp_enum_item ppf { enum_item_name; enum_item_generics; enum_item_parameters } =
     pf ppf "%s%a%a"
-      enum_ctor_name
-      pp_generics enum_ctor_generics
-      (option @@ box @@ parens @@ comma_sep pp_type) enum_ctor_parameters
-
-  let pp_enum_op ppf op =
-    pf ppf "%a %s %a"
-      pp_type op.enum_op_lhs
-      op.enum_op_op
-      pp_type op.enum_op_rhs
-
-  let pp_enum_item ppf = function
-    | EnumCtor c -> pp_enum_ctor ppf c
-    | EnumOp o -> pp_enum_op ppf o
+      enum_item_name
+      pp_generics enum_item_generics
+      (option @@ box @@ parens @@ comma_sep pp_type) enum_item_parameters
 
   let pp_enum ppf { enum_name; enum_generics; enum_items } =
     pf ppf "@[<v>@[<v 2>enum %s%a = {@ %a@]@ }@ @]"

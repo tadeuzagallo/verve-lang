@@ -152,16 +152,8 @@ enum: ENUM UCID generic_parameters braces(nonempty_list(enum_item)) {
   Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
 }
 
-enum_item:
-  | enum_ctor { $1 }
-  | enum_op { $1 }
-
-enum_ctor: UCID generic_parameters plist(type_)? {
-  EnumCtor {
-    enum_ctor_name = $1;
-    enum_ctor_generics = $2;
-    enum_ctor_parameters = $3;
-  }
+enum_item: UCID generic_parameters plist(type_)? {
+  { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
 
 %inline constructor_no_args: UCID generic_arguments {
@@ -170,14 +162,6 @@ enum_ctor: UCID generic_parameters plist(type_)? {
 
 %inline constructor: UCID generic_arguments plist(expr) {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = Some $3 }
-}
-
-enum_op: OPERATOR parens(type_) OP parens(type_) {
-  EnumOp {
-    enum_op_lhs = $2;
-    enum_op_op = $3;
-    enum_op_rhs = $4;
-  }
 }
 
 /* interfaces */
@@ -231,14 +215,10 @@ match_case: CASE pattern COLON nonempty_list(expr) {
   { pattern = $2; case_value = $4 }
 }
 
-pattern_atom:
+pattern:
   | UNDERSCORE { Pany }
   | LCID { Pvar $1 }
   | UCID option(plist(pattern)) { Pctor ($1, $2) }
-
-pattern:
-  | pattern_atom { $1 }
-  | pattern_atom OP pattern { Pctor ($2, Some [$1; $3]) }
 
 /* binary operations */
 binop: expr OP expr {
