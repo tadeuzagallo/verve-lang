@@ -69,7 +69,7 @@ let rec naming_expr env = function
     | `Left  ->
       Binop { b2 with bin_lhs = Binop { b1 with bin_lhs = b1l'; bin_rhs = b1r' }; bin_rhs = b2r' }, env
     | `Right  ->
-      Binop { b1 with bin_lhs = b1l'; bin_rhs = Binop { b2 with bin_lhs = b1r'; bin_rhs = b2r' } }, env
+      naming_expr env (Binop { b1 with bin_lhs = b1l'; bin_rhs = Binop { b2 with bin_lhs = b1r'; bin_rhs = b2r' } })
     end
   | e -> e, env
 
@@ -84,6 +84,12 @@ let naming_intf env intf =
   let items', env' = List.fold_left aux ([], env) intf.intf_items in
   { intf with intf_items = List.rev items' }, env'
 
+let naming_enum (items, env)= function
+  | EnumCtor c -> (EnumCtor c :: items), env
+  | EnumOp op ->
+    let prec = { (default_prec op.enum_op_op) with associativity = Right } in
+    (EnumOp op :: items), extend_env env (op.enum_op_op, prec)
+
 let naming_decl env = function
   | Expr expr ->
     let expr', env' = naming_expr env expr in
@@ -91,6 +97,9 @@ let naming_decl env = function
   | Interface intf ->
     let intf', env' = naming_intf env intf in
     Interface intf', env'
+  | Enum enum ->
+    let enum_items, env' = List.fold_left naming_enum ([], env) enum.enum_items in
+    Enum { enum with enum_items = List.rev enum_items }, env'
   | decl -> decl, env
 
 let naming_decls env decls =

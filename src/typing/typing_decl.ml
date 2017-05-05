@@ -15,9 +15,20 @@ let rec check_enum env { enum_name; enum_generics; enum_items } =
   let env''', s = List.fold_left (check_enum_item make item_ty) (env'', []) enum_items in
   (enum_ty, env''', s)
 
-and check_enum_item make item_ty (env, s1) { enum_item_name; enum_item_parameters } =
-  match enum_item_parameters with
-  | None -> extend_env env (enum_item_name, make item_ty), s1
+and check_enum_item make item_ty (env, sub) = function
+  | EnumCtor c -> check_enum_ctor make item_ty (env, sub) c
+  | EnumOp o -> check_enum_op make item_ty (env, sub) o
+
+and check_enum_op make item_ty (env, sub) op =
+  check_enum_ctor make item_ty (env, sub) {
+    enum_ctor_name = op.enum_op_op;
+    enum_ctor_parameters = Some [ op.enum_op_lhs; op.enum_op_rhs ];
+    enum_ctor_generics = [];
+  }
+
+and check_enum_ctor make item_ty (env, s1) { enum_ctor_name; enum_ctor_parameters } =
+  match enum_ctor_parameters with
+  | None -> extend_env env (enum_ctor_name, make item_ty), s1
   | Some ps ->
       let aux p (enum_ty, s1) =
         let t, s2 = Typing_expr.check_type env p in
@@ -25,7 +36,7 @@ and check_enum_item make item_ty (env, s1) { enum_item_name; enum_item_parameter
       in
       let ty, s2 = List.fold_right aux ps (item_ty, s1) in
       let ty' = make ty in
-      extend_env env (enum_item_name, ty'), s2
+      extend_env env (enum_ctor_name, ty'), s2
 
 and check_interface env { intf_name; intf_param; intf_items } =
   let intf_ty = T.Interface { T.intf_name; T.intf_impls = [] } in

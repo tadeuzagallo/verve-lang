@@ -220,9 +220,35 @@ and eval_impl_item = function
     | Some n -> (n, impl_fn)
     | None -> assert false
 
+and eval_enum_item env = function
+  | EnumCtor c -> env
+  | EnumOp op ->
+    (* TODO: this is bad, and I should feel bad *)
+    snd @@ eval_expr env (Function {
+        fn_name = Some op.enum_op_op;
+        fn_generics = [];
+        fn_parameters = [{
+            param_name = "x";
+            param_type = op.enum_op_lhs;
+          }; {
+             param_name = "y";
+             param_type = op.enum_op_rhs;
+         }];
+        fn_return_type = Inst ("", []);
+        fn_body = [Ctor {
+            ctor_name = op.enum_op_op;
+            ctor_generic_arguments = [];
+            ctor_arguments = Some [
+                Var "x"; Var "y"
+            ];
+        }]
+    })
+
 and eval_decl env = function
   | Expr expr -> eval_expr env expr
-  | Enum { enum_name } -> (V.Type enum_name, env)
+  | Enum enum ->
+    let env' = List.fold_left eval_enum_item env enum.enum_items in
+    V.Type enum.enum_name, env'
   | Interface { intf_name; intf_items } ->
     Hashtbl.add intf_to_impls intf_name (ref []);
     let env' = List.fold_left (eval_intf_item intf_name) env intf_items in

@@ -22,19 +22,29 @@ type parameter = {
   param_type : type_;
 }
 
-type enum_item = {
-  enum_item_name : name;
-  enum_item_generics : generic list;
-  enum_item_parameters : type_ list option;
+type enum_item =
+  | EnumCtor of enum_ctor
+  | EnumOp of enum_op
+
+and enum_ctor = {
+  enum_ctor_name : name;
+  enum_ctor_generics : generic list;
+  enum_ctor_parameters : type_ list option;
 }
 
-type enum = {
+and enum_op = {
+  enum_op_lhs : type_;
+  enum_op_op : name;
+  enum_op_rhs : type_;
+}
+
+and enum = {
   enum_name : name;
   enum_generics : generic list; 
   enum_items : enum_item list;
 }
 
-type interface = {
+and interface = {
   intf_name : string;
   intf_param : generic;
   intf_items : interface_item list;

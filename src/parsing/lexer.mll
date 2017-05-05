@@ -6,7 +6,7 @@ exception SyntaxError of string
 
 let blank = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
-let operator = ['/' '=' '-' '+' '!' '*' '%' '<' '>' '&' '|' '^' '~' '?']
+let operator = ['/' '=' '-' '+' '!' '*' '%' '<' '>' '&' '|' '^' '~' '?' ':']
 
 rule read = parse
 (* keywords *)
