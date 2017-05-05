@@ -17,6 +17,7 @@ interface Num<T> {
   operator (T) * (T) -> T
 
   #assoc(left) #prec(equal(*))
+  #unknown // CHECK: warning: Unknown attribute: unknown
   operator (T) / (T) -> T
 }
 

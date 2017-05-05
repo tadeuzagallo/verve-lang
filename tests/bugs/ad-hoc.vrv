@@ -1,0 +1,15 @@
+// RUN: %not %verve
+interface Intish<T> {
+  fn to_int(T) -> Int
+}
+
+implementation Intish<Int> {
+  fn to_int(x: Int) -> Int { x }
+}
+
+fn g<U, T: Intish>(x: T) -> Int {
+  to_int(x)
+}
+
+g<Int>(7) // should pass
+g(7)<Int> // weird edge case, should it pass?

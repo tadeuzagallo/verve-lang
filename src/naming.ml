@@ -42,7 +42,10 @@ let prec_of_attributes env op attributes =
     | { attr_name = "prec"; attr_value = Some (Attribute { attr_name = "equal"; attr_value = Some (AttrOp op) }) } ->
       { prec with precedence = (List.assoc op env).precedence }
 
-    | _ -> prec
+    | { attr_name } ->
+      Printf.fprintf stderr "warning: Unknown attribute: %s\n" attr_name;
+      flush stderr;
+      prec
   in
   List.fold_left aux (default_prec op) attributes
 
