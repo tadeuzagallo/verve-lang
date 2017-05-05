@@ -181,7 +181,8 @@ and check_pattern env = function
         raise (Error (Invalid_pattern (Pctor (name, ps), t)))
 
 and check_operator env op =
-  check_fn env (fn_of_operator op)
+  let _, env', subst =  check_fn env (fn_of_operator op) in
+  val_void, env', subst
 
 and check_binop env binop =
   let app = app_of_binop binop in

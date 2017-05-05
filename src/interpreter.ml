@@ -169,7 +169,9 @@ let rec eval_expr env = function
       | _ -> assert false
     end
   | Match m -> eval_match env m
-  | Operator op -> eval_expr env (Function (fn_of_operator op))
+  | Operator op ->
+    let _, env' = eval_expr env (Function (fn_of_operator op)) in
+    V.Unit, env'
   | Binop bin -> eval_expr env (Application (app_of_binop bin))
   | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
       let fn' = V.Function fn in

@@ -42,3 +42,4 @@ implementation Num<Int> {
 (15 + 5) * 3  // CHECK: 60 : Int
 3 * 5 / 2 // CHECK: 7 : Int
 5 / 2 * 3 // CHECK: 6 : Int
+(+)(3, 5)
