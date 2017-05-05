@@ -90,6 +90,32 @@ module Absyn = struct
         (option @@ hvbox @@ parens @@ comma_sep pp_pattern) ps
 
 
+  and pp_attribute ppf attr =
+    let rec pp_attribute ppf attr = 
+      pf ppf "%s%a" attr.attr_name (option @@ parens pp_value) attr.attr_value
+    and pp_value ppf = function
+      | AttrOp o -> string ppf o
+      | AttrInt i -> int ppf i
+      | Attribute attr -> pp_attribute ppf attr
+    in
+    pf ppf "#%a" pp_attribute attr
+
+  and pp_operator ppf op =
+    pf ppf "@[<v>@[<v 2>%a@ operator%a (%a) %s (%a) -> %a {@ %a@]@ }@ @]"
+      (list pp_attribute) op.op_attributes
+      pp_generics op.op_generics
+      pp_param op.op_lhs
+      op.op_name
+      pp_param op.op_rhs
+      pp_type op.op_ret_type
+      (list pp) op.op_body
+
+  and pp_binop ppf op=
+    pf ppf "%a %s %a"
+      pp op.bin_lhs
+      op.bin_op
+      pp op.bin_rhs
+
   and pp' ppf = function
     | Function fn -> pp_fn ppf fn
     | Ctor ctor -> pp_ctor pp' ppf ctor
@@ -101,6 +127,8 @@ module Absyn = struct
     | Field_access f -> pp_field_access ppf f
     | Match m -> pp_match ppf m
     | Wrapped expr -> pf ppf "(%a)" pp' expr
+    | Operator op -> pp_operator ppf op
+    | Binop op -> pp_binop ppf op
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 
@@ -123,9 +151,18 @@ module Absyn = struct
       (parens @@ hvbox ~indent:2 @@ comma_sep pp_type) proto.proto_params
       pp_type proto.proto_ret_type
 
+  let pp_op_proto ppf op =
+    pf ppf "%a@ operator%a (%a) %s (%a) -> %a"
+      (list pp_attribute) op.oproto_attributes
+      pp_generics op.oproto_generics
+      pp_type op.oproto_lhs
+      op.oproto_name
+      pp_type op.oproto_rhs
+      pp_type op.oproto_ret_type
+
   let pp_intf_item ppf = function
     | Prototype p -> pp_prototype ppf p
-    | OperatorPrototype op -> pp_prototype ppf (prototype_of_op_proto op)
+    | OperatorPrototype op -> pp_op_proto ppf op
 
   let pp_interface ppf { intf_name; intf_param; intf_items } =
     pf ppf "@[<v>@[<v 2>interface %s<%a> {@ %a@]}@]@ "
@@ -135,7 +172,7 @@ module Absyn = struct
 
   let pp_impl_item ppf = function
     | ImplFunction f -> pp_fn ppf f
-    | ImplOperator op -> pp_fn ppf (fn_of_operator op)
+    | ImplOperator op -> pp_operator ppf op
 
   let pp_implementation ppf { impl_name; impl_arg; impl_items } =
     pf ppf "@[<v>@[<v 2>implementation %s<%a> {@ %a@]@ }@]"
