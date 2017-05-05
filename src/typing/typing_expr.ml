@@ -190,6 +190,10 @@ and check_binop env binop =
   binop.bin_generic_arguments_ty <- app.generic_arguments_ty;
   res
 
+and check_let env { let_var; let_value } =
+  let ty, env, sub = check_expr env let_value in
+  ty, extend_env env (let_var, ty), sub
+
 and check_expr env : expr -> T.ty * ty_env * subst = function
   | Unit -> (val_void, env, [])
   | Literal l -> (check_literal l, env, [])
@@ -203,6 +207,7 @@ and check_expr env : expr -> T.ty * ty_env * subst = function
   | Operator o -> check_operator env o
   | Binop b -> check_binop env b
   | Wrapped expr -> check_expr env expr
+  | Let l -> check_let env l
 
 and check_exprs env exprs =
   List.fold_left

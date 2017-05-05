@@ -149,6 +149,12 @@ and expr =
   | Binop of binop
   | Unit
   | Wrapped of expr
+  | Let of let_
+
+and let_ =  {
+  let_var : name;
+  let_value : expr;
+}
 
 and pattern =
   | Pany

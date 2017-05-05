@@ -132,7 +132,11 @@ let subst generics arguments fn =
   | [], _ -> List.hd body'
   | _ -> Function { fn with fn_parameters = params; fn_body = body' }
 
-let rec eval_expr env = function
+let rec eval_let env { let_var; let_value } =
+  let value, env = eval_expr env let_value in
+  value, (let_var, value) :: env
+
+and eval_expr env = function
   | Unit -> (V.Unit, env)
   | Wrapped expr -> eval_expr env expr
   | Ctor c ->
@@ -173,6 +177,7 @@ let rec eval_expr env = function
     let _, env' = eval_expr env (Function (fn_of_operator op)) in
     V.Unit, env'
   | Binop bin -> eval_expr env (Application (app_of_binop bin))
+  | Let l -> eval_let env l
   | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
       let fn' = V.Function fn in
       match fn_name with

@@ -15,6 +15,7 @@ rule read = parse
 | "fn" { FN }
 | "interface" { INTERFACE }
 | "implementation" { IMPLEMENTATION }
+| "let" { LET }
 | "match" { MATCH }
 | "operator" { OPERATOR }
 

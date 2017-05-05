@@ -116,6 +116,11 @@ module Absyn = struct
       op.bin_op
       pp op.bin_rhs
 
+  and pp_let ppf l =
+    pf ppf "let %s = %a"
+      l.let_var
+      pp l.let_value
+
   and pp' ppf = function
     | Function fn -> pp_fn ppf fn
     | Ctor ctor -> pp_ctor pp' ppf ctor
@@ -129,6 +134,7 @@ module Absyn = struct
     | Wrapped expr -> pf ppf "(%a)" pp' expr
     | Operator op -> pp_operator ppf op
     | Binop op -> pp_binop ppf op
+    | Let l -> pp_let ppf l
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 

@@ -8,6 +8,7 @@ open Absyn
 %token FN
 %token INTERFACE
 %token IMPLEMENTATION
+%token LET
 %token MATCH
 %token OPERATOR
 
@@ -77,6 +78,7 @@ expr:
   | atom %prec BELOW_PAREN { $1 }
   | binop { $1 }
   | operator { Operator $1 }
+  | let_ %prec BELOW_PAREN { $1 }
 
 atom:
   | LCID { Var $1 }
@@ -246,3 +248,11 @@ attribute_value:
   | OP { AttrOp $1 }
   | attribute { Attribute $1 }
   | INT { AttrInt $1 }
+
+/* let binding */
+%inline let_: LET LCID EQ expr {
+  Let {
+    let_var = $2;
+    let_value = $4;
+  }
+}
