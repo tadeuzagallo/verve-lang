@@ -5,6 +5,7 @@ type error =
   | Unification_error of ty * ty
   | Instance_not_found of ty * interface_desc
   | Unknown_type of string
+  | Unknown_ctor of string
   | Invalid_constraint of string * ty
   | Value_as_type of ty
   | Invalid_generic_application
@@ -26,6 +27,8 @@ let report_error ppf = function
       intf.intf_name Printer.Type.pp t
   | Unknown_type name ->
     pf ppf "Unknown type: %s" name
+  | Unknown_ctor name ->
+    pf ppf "Unknown constructor: %s" name
   | Invalid_constraint (name, ty) ->
     pf ppf "Invalid constraint on generic type %s: expected an interface but found %a"
       name Printer.Type.pp ty

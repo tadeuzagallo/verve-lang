@@ -15,4 +15,4 @@ match Pair(2, True) {
 
 match Pair(3, False) {
   case Int(x): False
-} // CHECK: Invalid pattern:
+} // CHECK: Unknown constructor: Int

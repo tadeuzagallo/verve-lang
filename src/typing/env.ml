@@ -119,6 +119,15 @@ let var_of_generic env { A.name; A.constraints } =
   let intfs = List.map resolve constraints in
   { T.id = _fresh name; T.name; T.constraints = intfs; T.resolved_ty = None }
 
+let ctor_marker = "mk#"
+let add_ctor env (name, ty) =
+  extend_env env (ctor_marker ^ name, ty)
+
+let get_ctor env name =
+  try get_type env (ctor_marker ^ name)
+  with Error (Unknown_type _) ->
+    raise (Error (Unknown_ctor name))
+
 (* Unification *)
 let rec unify ~expected ~actual = match expected, actual with
   | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)

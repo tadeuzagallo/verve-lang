@@ -26,7 +26,7 @@ apply(f, 42)
 apply(f)(42)
 apply(id)(apply)(id)(apply)(id)(f)(42)
 
-enum Unit { Unit_ }
+enum Unit { Unit }
 
 fn apply'<T, U>(f: (T) -> U, x: T) -> U { f(x) }
 fn f(x: Int) -> Int { 7 }
@@ -34,7 +34,4 @@ apply'(f, 8)
 fn g(x: Int) -> Void { }
 apply'(g, 3)
 fn h(x: Unit) -> Int { 13 }
-apply'(h, Unit_)
-
-fn f(x: Type) -> Type { x }
-f(Int)
+apply'(h, Unit)

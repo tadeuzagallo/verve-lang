@@ -118,8 +118,8 @@ and check_app env ({ callee; generic_arguments; arguments } as app) =
   ty, env', s
 
 and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
-  let (ty_ctor, _, s1) = check_expr env (Var ctor_name) in
-  check_generic_application env s1 (ty_ctor, ctor_generic_arguments, ctor_arguments)
+  let ty_ctor = get_ctor env ctor_name in
+  check_generic_application env [] (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
 and check_record env fields =
   let aux (fields, s1) (name, v) =
@@ -163,7 +163,7 @@ and check_pattern env = function
     var, extend_env env (v, var), []
 
   | Pctor (name, ps) ->
-      match ps, get_type env name with
+      match ps, get_ctor env name with
       | None, t ->
           t, env, []
       | Some l, (T.Arrow _ as t)

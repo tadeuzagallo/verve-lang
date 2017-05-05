@@ -6,4 +6,4 @@ enum Bool {
 }
 
 fn f(x: Bool) -> Bool { x }
-f(Bool) // CHECK: Failed to unify Bool with Type
+f(Bool) // CHECK: Unknown constructor: Bool

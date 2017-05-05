@@ -26,8 +26,9 @@ id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42) // CHECK: 42 : Int
 
 // enum identity
 enum Box<T> { Box(T) }
+
 fn id<T>(x: T) -> T {
-  match Box<T>(T) {
+  match Box<T>(x) {
     case Box(x): x
   }
 }

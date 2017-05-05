@@ -36,3 +36,8 @@ enum List<T> {
 Cons(2, Cons(1, Nil))
 
 fn head(x: List<Int>) -> Int { 42 }
+
+// Test enum and constructor with the same name
+enum Unit { Unit }
+fn f(x: Unit) -> Unit { Unit }
+f(Unit) // CHECK: Unit : Unit
