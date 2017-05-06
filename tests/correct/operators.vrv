@@ -44,3 +44,8 @@ implementation Num<Int> {
 3 * 5 / 2 // CHECK: 7 : Int
 5 / 2 * 3 // CHECK: 6 : Int
 (+)(3, 5)
+
+fn add<T: Num>(x: T, y: T) -> T {
+  x + y
+}
+add(3, 5)

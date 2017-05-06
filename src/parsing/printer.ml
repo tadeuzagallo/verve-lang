@@ -196,6 +196,9 @@ module Absyn = struct
     (*"@[<v>%a@ @ %a@ @ %a@]@."*)
     pf ppf "@[<v>%a@]@."
       (Fmt.list ~sep:(suffix sp sp)pp_decl) body
+
+  let dump_expr expr =
+    pf stderr "%a@." pp expr
 end
 
 (* Value Printing *)

@@ -95,6 +95,12 @@ let rec subst_expr ty_args args = function
     Record r'
   | Field_access f ->
     Field_access { f with record=subst_expr ty_args args f.record }
+  | Binop op ->
+    Binop { op with
+      bin_lhs = subst_expr ty_args args op.bin_lhs;
+      bin_rhs = subst_expr ty_args args op.bin_rhs;
+      bin_generic_arguments_ty = List.map (subst_ty ty_args) op.bin_generic_arguments_ty;
+    }
   | Match m ->
     let subst_case c =
       { c with case_value = List.map (subst_expr ty_args args) c.case_value }
@@ -115,7 +121,8 @@ let subst generics arguments fn =
           in
           let intf = Hashtbl.find fn_to_intf fn in
           let impls = Hashtbl.find intf_to_impls intf in
-          let impl = List.assoc (get_type t) !impls in
+          let t' = get_type t in
+          let impl = List.assoc t' !impls in
           (List.assoc fn impl)
         | _ -> assert false
         end
