@@ -109,6 +109,11 @@ let rec subst_expr ty_args args = function
       cases = List.map subst_case m.cases;
     }
 
+  | Let l ->
+      Let { l with
+        let_value = subst_expr ty_args args l.let_value;
+      }
+
 let subst generics arguments fn =
   let { fn_parameters; fn_body } as fn = match fn with
     | V.Function f -> f
