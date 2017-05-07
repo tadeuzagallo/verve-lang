@@ -11,10 +11,9 @@ let rec check_enum env { enum_name; enum_generics; enum_items } =
   in
   let gen, env' = List.fold_right create_var enum_generics ([], env) in
   let enum_ty = T.type_ctor (enum_name, gen) in
-  let item_ty = T.type_inst (enum_name, gen) in
   let make t = List.fold_right T.type_arrow gen t in
   let env'' = Env.add_type env' (enum_name, make enum_ty) in
-  let env''' = List.fold_left (check_enum_item make item_ty) env'' enum_items in
+  let env''' = List.fold_left (check_enum_item make enum_ty) env'' enum_items in
   enum_ty, env'''
 
 and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
@@ -57,7 +56,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
   let fn_ty = List.fold_right make_arrow proto_params ret_type in
   let fn_ty' = match T.desc fn_ty with
   | T.Arrow _ -> fn_ty
-  | _ -> T.arrow val_void fn_ty
+  | _ -> T.arrow ty_void fn_ty
   in
   let fn_ty'' = List.fold_right (fun g t -> T.type_arrow g t) generics' fn_ty' in
   let fn_ty''' = loosen fn_ty'' in
@@ -90,4 +89,4 @@ and check_decls env decls =
     (fun (_, env) node ->
       let ty, env' = check_decl env node in
       (ty, env'))
-    (val_void, env) decls
+    (ty_void, env) decls

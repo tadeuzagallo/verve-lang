@@ -41,9 +41,7 @@ let fresh t =
   match T.desc t with
   | T.Var var ->
     T.var { var with T.id = _fresh var.T.name }
-  | T.RigidVar var ->
-    T.rigid_var { var with T.id = _fresh var.T.name }
-  | _ -> assert false
+  | _ -> t
 
 let make_var () =
   let name = "𝜏" in
@@ -56,10 +54,6 @@ let ty_void = T.type_ctor ("Void", [])
 let ty_string = T.type_ctor ("String", [])
 
 (* Values of builtin types *)
-let val_int = T.type_inst ("Int", [])
-let val_type = T.type_inst ("Type", [])
-let val_void = T.type_inst ("Void", [])
-let val_string = T.type_inst ("String", [])
 
 let binop ty = T.arrow ty (T.arrow ty ty)
 
@@ -71,10 +65,10 @@ let default_env = {
     ("String", ty_string);
   ];
   values = [
-    ("int_add", binop val_int);
-    ("int_sub", binop val_int);
-    ("int_mul", binop val_int);
-    ("int_div", binop val_int);
+    ("int_add", binop ty_int);
+    ("int_sub", binop ty_int);
+    ("int_mul", binop ty_int);
+    ("int_div", binop ty_int);
   ];
   ctors = [];
 }
@@ -88,18 +82,11 @@ let map_type fn t =
   let t = T.repr t in
   let desc = match T.desc t with
   | T.TypeCtor (n, ts) -> T.TypeCtor (n, List.map fn ts)
-  | T.TypeInst (n, ts) -> T.TypeInst (n, List.map fn ts)
   | T.Arrow (t1, t2) -> T.Arrow (fn t1, fn t2)
   | T.TypeArrow (var, ty) -> T.TypeArrow (fn var, fn ty)
   | T.Record r -> T.Record (List.map (fun (n, t) -> n, fn t) r)
   | t -> t
   in T._texpr desc
-
-let rec to_value t =
-  let t = T.repr t in
-  match T.desc t with
-  | T.TypeCtor (n, ts) -> T.type_inst (n, List.map (map_type to_value) ts)
-  | _ -> map_type to_value t
 
 let loosen t =
   let rec loosen s t =
@@ -182,13 +169,10 @@ let rec unify ~expected:t1 t2 =
   match T.desc t1, T.desc t2 with
   | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> ()
 
-  | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)
+  | T.TypeCtor (n2, t2s), T.TypeCtor (n1, t1s)
   when n1 = n2 ->
       let aux t1 t2 = unify ~expected:t1 t2 in
       List.iter2 aux t1s t2s
-
-  | T.TypeCtor _, _ when t2 = val_type -> ()
-  | _, T.TypeCtor _ when t1 = val_type -> ()
 
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
       unify ~expected:t11 t21;

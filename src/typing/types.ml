@@ -8,7 +8,6 @@ and node =
 
 and ty =
   | TypeCtor of string * texpr list
-  | TypeInst of string * texpr list
   | Arrow of texpr * texpr
   | TypeArrow of texpr * texpr
   | Var of tvar
@@ -53,7 +52,6 @@ let var v = _texpr (Var v)
 let rigid_var v = _texpr (RigidVar v)
 let record r = _texpr (Record r)
 let type_ctor (n, ts) = _texpr @@ TypeCtor (n, ts)
-let type_inst (n, ts) = _texpr @@ TypeInst (n, ts)
 let interface i = _texpr @@ Interface i
 let implementation i = _texpr @@ Implementation i
 let arrow t1 t2 = _texpr @@ Arrow (t1, t2)

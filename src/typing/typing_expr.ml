@@ -5,8 +5,8 @@ open Type_error
 module T = Types
 
 let check_literal = function
-  | Int _ -> val_int
-  | String _ -> val_string
+  | Int _ -> ty_int
+  | String _ -> ty_string
 
 let rec check_type env = function
   | Arrow (parameters, return_type) ->
@@ -16,12 +16,8 @@ let rec check_type env = function
         parameters ret
       in fn_type
   | Inst (t, args) ->
-    let t = Env.find_type env t in
-    let ty = match T.desc t with
-    | T.TypeInst _ ->
-      raise (Error (Value_as_type t))
-    | _ -> to_value t
-    in apply_generics env ty args
+    let ty = instantiate (Env.find_type env t) in
+    apply_generics env ty args
   | RecordType fields ->
     let aux fields (name, t) = (name, check_type env t) :: fields in
     List.fold_left aux [] fields
@@ -55,7 +51,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   in
   let fn_type' = match (T.desc fn_type) with
   | T.Arrow _ -> fn_type
-  | _ ->  T.arrow val_void fn_type
+  | _ ->  T.arrow ty_void fn_type
   in
   let fn_type'' = List.fold_right (fun g t -> T.type_arrow g t) generics' fn_type' in
 
@@ -179,7 +175,7 @@ and check_pattern env = function
 
 and check_operator env op =
   let _, env' =  check_fn env (fn_of_operator op) in
-  val_void, env'
+  ty_void, env'
 
 and check_binop env binop =
   let app = app_of_binop binop in
@@ -192,7 +188,7 @@ and check_let env { let_var; let_value } =
   ty, Env.add_value env (let_var, ty)
 
 and check_expr env = function
-  | Unit -> (val_void, env)
+  | Unit -> (ty_void, env)
   | Literal l -> (check_literal l, env)
   | Var v -> (Env.find_value env v, env)
   | Function fn -> check_fn env fn
@@ -209,4 +205,4 @@ and check_expr env = function
 and check_exprs env exprs =
   List.fold_left
     (fun (_, env ) node -> check_expr env node)
-    (val_void, env) exprs
+    (ty_void, env) exprs

@@ -252,8 +252,6 @@ module Type = struct
     | TypeArrow (t1, t2) ->
         pf ppf "forall %a,@ %a" pp t1 pp t2
     | TypeCtor (n, ts) ->
-        string ppf "Type"
-    | TypeInst (n, ts) ->
         pf ppf "%s%a" n pp_generics ts
     | Interface i ->
         pf ppf "interface %s" i.intf_name
