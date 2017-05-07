@@ -67,18 +67,25 @@ decl:
   | enum { $1 }
   | interface { $1 }
   | implementation { $1 }
-  | expr { Expr $1 }
+  | operator { Operator $1 }
+  | stmt { Stmt $1 }
 
-expr:
-  | function_ { Function $1 }
+expr_:
   | record { $1 }
   | match_expr { $1 }
   | constructor { $1 }
   | constructor_no_args %prec BELOW_PAREN { $1 }
   | atom %prec BELOW_PAREN { $1 }
   | binop { $1 }
-  | operator { Operator $1 }
-  | let_ %prec BELOW_PAREN { $1 }
+
+expr:
+  | expr_ { $1 }
+  | function_ { Function $1 }
+
+stmt:
+  | let_ { $1 }
+  | function_ { FunctionStmt $1 }
+  | expr_ { Expr $1 }
 
 atom:
   | LCID { Var $1 }
@@ -93,7 +100,7 @@ atom:
   | NL_L_PAREN OP R_PAREN { Var $2 }
 
 /* function expressions */
-function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(expr)) {
+function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(stmt)) {
   { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $6; fn_body = $7 }
 }
 
@@ -213,7 +220,7 @@ match_expr: MATCH expr braces(nonempty_list(match_case)) {
   Match { match_value = $2; cases = $3 }
 }
 
-match_case: CASE pattern COLON nonempty_list(expr) {
+match_case: CASE pattern COLON nonempty_list(stmt) {
   { pattern = $2; case_value = $4 }
 }
 
@@ -227,7 +234,7 @@ binop: expr OP expr {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
-operator: attributes OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(expr)) {
+operator: attributes OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(stmt)) {
     {
       op_attributes = $1;
       op_generics = $3;

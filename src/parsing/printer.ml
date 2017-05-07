@@ -51,7 +51,7 @@ module Absyn = struct
       pp_generics fn_generics
       (hvbox @@ parens @@ comma_sep pp_param) fn_parameters
       pp_type fn_return_type
-      (list pp) fn_body
+      (list pp_stmt) fn_body
 
   and pp_generic_arguments ppf = function
     | [] -> ()
@@ -79,7 +79,7 @@ module Absyn = struct
   and pp_case ppf { pattern; case_value } =
     pf ppf "case %a: %a"
       pp_pattern pattern
-      (list pp) case_value
+      (list pp_stmt) case_value
 
   and pp_pattern ppf = function
     | Pany -> string ppf "_"
@@ -91,7 +91,7 @@ module Absyn = struct
 
 
   and pp_attribute ppf attr =
-    let rec pp_attribute ppf attr = 
+    let rec pp_attribute ppf attr =
       pf ppf "%s%a" attr.attr_name (option @@ parens pp_value) attr.attr_value
     and pp_value ppf = function
       | AttrOp o -> string ppf o
@@ -108,7 +108,7 @@ module Absyn = struct
       op.op_name
       pp_param op.op_rhs
       pp_type op.op_ret_type
-      (list pp) op.op_body
+      (list pp_stmt) op.op_body
 
   and pp_binop ppf op=
     pf ppf "%a %s %a"
@@ -132,11 +132,14 @@ module Absyn = struct
     | Field_access f -> pp_field_access ppf f
     | Match m -> pp_match ppf m
     | Wrapped expr -> pf ppf "(%a)" pp' expr
-    | Operator op -> pp_operator ppf op
     | Binop op -> pp_binop ppf op
-    | Let l -> pp_let ppf l
 
   and pp ppf v = (box ~indent:2 pp') ppf v
+
+  and pp_stmt ppf = function
+    | Let l -> pp_let ppf l
+    | FunctionStmt f -> pp_fn ppf f
+    | Expr e -> pp ppf e
 
   let pp_enum_item ppf { enum_item_name; enum_item_generics; enum_item_parameters } =
     pf ppf "%s%a%a"
@@ -190,7 +193,8 @@ module Absyn = struct
     | Enum e -> pp_enum ppf e
     | Interface i -> pp_interface ppf i
     | Implementation i -> pp_implementation ppf i
-    | Expr e -> pp ppf e
+    | Operator op -> pp_operator ppf op
+    | Stmt e -> pp_stmt ppf e
 
   let pp_program ppf { imports; exports; body } =
     (*"@[<v>%a@ @ %a@ @ %a@]@."*)

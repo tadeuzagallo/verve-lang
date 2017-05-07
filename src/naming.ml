@@ -50,18 +50,18 @@ let prec_of_attributes env op attributes =
   List.fold_left aux (default_prec op) attributes
 
 let compare_prec p1 p2 =
-  match compare p1.precedence p2.precedence with
-  | x when x > 0 -> `Left
-  | x when x < 0 -> `Right
-  | 0 -> match p1.associativity, p2.associativity with
-         | Left, Left -> `Left
-         | Right, Right  -> `Right
-         | _ -> raise (Error (Precedence_error (p1.op, p2.op)))
+  let c = compare p1.precedence p2.precedence in
+  if c > 0 then
+    `Left
+  else if c < 0 then
+    `Right
+  else
+    match p1.associativity, p2.associativity with
+    | Left, Left -> `Left
+    | Right, Right  -> `Right
+    | _ -> raise (Error (Precedence_error (p1.op, p2.op)))
 
 let rec naming_expr env = function
-  | Operator op ->
-    Operator op, extend_env env (op.op_name, prec_of_attributes env op.op_name op.op_attributes)
-
   | Binop ({ bin_lhs=Binop ({ bin_lhs = b1l; bin_op = b1op; bin_rhs = b1r; } as b1); bin_op = b2op; bin_rhs = b2r } as b2) ->
     let b1l', _ = naming_expr env b1l in
     let b1r', _ = naming_expr env b1r in
@@ -87,13 +87,25 @@ let naming_intf env intf =
   let items', env' = List.fold_left aux ([], env) intf.intf_items in
   { intf with intf_items = List.rev items' }, env'
 
-let naming_decl env = function
+let naming_stmt env = function
   | Expr expr ->
     let expr', env' = naming_expr env expr in
     Expr expr', env'
+
+  | stmt -> stmt, env
+
+let naming_decl env = function
+  | Stmt stmt ->
+    let stmt', env' = naming_stmt env stmt in
+    Stmt stmt', env'
+
   | Interface intf ->
     let intf', env' = naming_intf env intf in
     Interface intf', env'
+
+  | Operator op ->
+    Operator op, extend_env env (op.op_name, prec_of_attributes env op.op_name op.op_attributes)
+
   | decl -> decl, env
 
 let naming_decls env decls =

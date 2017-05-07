@@ -86,7 +86,7 @@ let rec subst_expr ty_args args = function
   | Function ({ fn_parameters; fn_body } as fn) ->
       let filter (x, _) =  not (List.exists (fun p -> p.param_name = x) fn_parameters) in
       let args' = List.filter filter args in
-      let body = List.map (subst_expr ty_args args') fn_body in
+      let body = List.map (subst_stmt ty_args args') fn_body in
       Function { fn with fn_body=body }
   | Ctor ({ ctor_arguments } as ctor) ->
       let ctor_arguments = match ctor_arguments with
@@ -109,16 +109,22 @@ let rec subst_expr ty_args args = function
     }
   | Match m ->
     let subst_case c =
-      { c with case_value = List.map (subst_expr ty_args args) c.case_value }
+      { c with case_value = List.map (subst_stmt ty_args args) c.case_value }
     in Match {
       match_value = subst_expr ty_args args m.match_value;
       cases = List.map subst_case m.cases;
     }
 
-  | Let l ->
-      Let { l with
-        let_value = subst_expr ty_args args l.let_value;
-      }
+
+and subst_stmt ty_args args = function
+  | Expr expr -> Expr (subst_expr ty_args args expr)
+  | Let l -> Let { l with
+      let_value = subst_expr ty_args args l.let_value;
+    }
+  | FunctionStmt fn ->
+    match subst_expr ty_args args (Function fn) with
+    | Function fn -> FunctionStmt fn
+    | _ -> assert false
 
 let subst generics arguments fn =
   let { fn_parameters; fn_body } as fn = match fn with
@@ -138,11 +144,11 @@ let subst generics arguments fn =
   in
   let subst, params = combine ([], []) (fn_parameters, arguments) in
   let subst_ty = combine_ty [] (fn.fn_generics, generics) in
-  let body' = List.rev_map (subst_expr subst_ty subst) fn_body in
+  let body' = List.rev_map (subst_stmt subst_ty subst) fn_body in
   match params, body' with
-  | [], [] -> Unit
+  | [], [] -> Expr Unit
   | [], _ -> List.hd body'
-  | _ -> Function { fn with fn_parameters = params; fn_body = body' }
+  | _ -> Expr (Function { fn with fn_parameters = params; fn_body = body' })
 
 let rec eval_let env { let_var; let_value } =
   let value, env = eval_expr env let_value in
@@ -167,7 +173,7 @@ and eval_expr env = function
       | V.Builtin (_, fn) -> fn env arguments
       | _ ->
         let arguments' = List.map V.expr_of_value arguments in
-        let (v, _) = eval_expr env (subst generic_arguments_ty arguments' callee') in
+        let (v, _) = eval_stmt env (subst generic_arguments_ty arguments' callee') in
         (v, env)
       end
   | Var v -> begin
@@ -185,11 +191,7 @@ and eval_expr env = function
       | _ -> assert false
     end
   | Match m -> eval_match env m
-  | Operator op ->
-    let _, env' = eval_expr env (Function (fn_of_operator op)) in
-    V.Unit, env'
   | Binop bin -> eval_expr env (Application (app_of_binop bin))
-  | Let l -> eval_let env l
   | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
       let fn' = V.Function fn in
       match fn_name with
@@ -210,7 +212,7 @@ and matched_case env value { pattern } =
 
 and eval_case env value { pattern; case_value } =
   let env' = eval_pattern env pattern value in
-  let value, _ = eval_expr env' (List.hd @@ List.rev @@ case_value) in
+  let value, _ = eval_stmt env' (List.hd @@ List.rev @@ case_value) in
   value, env
 
 and eval_pattern env pattern value =
@@ -239,13 +241,21 @@ and eval_impl_item = function
     | Some n -> (n, impl_fn)
     | None -> assert false
 
-and eval_decl env = function
+and eval_stmt env = function
   | Expr expr -> eval_expr env expr
+  | Let l -> eval_let env l
+  | FunctionStmt fn -> eval_expr env (Function fn)
+
+and eval_decl env = function
+  | Stmt stmt -> eval_stmt env stmt
   | Enum { enum_name } -> (V.Type enum_name, env)
   | Interface { intf_name; intf_items } ->
     Hashtbl.add intf_to_impls intf_name (ref []);
     let env' = List.fold_left (eval_intf_item intf_name) env intf_items in
     (V.Unit, env')
+  | Operator op ->
+    let _, env' = eval_expr env (Function (fn_of_operator op)) in
+    V.Unit, env'
 
   | Implementation { impl_name; impl_arg_type; impl_items } ->
       let ty = match impl_arg_type with

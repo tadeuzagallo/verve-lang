@@ -77,12 +77,16 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
   impl_ty
 
+and check_operator env op =
+  let ty = Typing_expr.check_fn env (fn_of_operator op) in
+  Env.ty_void, Env.add_value env (op.op_name, ty)
 
 and check_decl env = function
-  | Expr expr -> Typing_expr.check_expr env expr
+  | Stmt stmt -> Typing_expr.check_stmt env stmt
   | Enum enum -> check_enum env enum
   | Interface intf -> check_interface env intf
   | Implementation impl -> check_implementation env impl, env
+  | Operator op -> check_operator env op
 
 and check_decls env decls =
   List.fold_left

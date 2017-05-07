@@ -70,7 +70,7 @@ and operator_prototype = {
   oproto_ret_type : type_;
 }
 
-and body = expr list
+and body = stmt list
 
 and function_ = {
   fn_name : name option;
@@ -116,7 +116,7 @@ and match_ = {
 
 and match_case = {
   pattern : pattern;
-  case_value : expr list;
+  case_value : stmt list;
 }
 
 and binop = {
@@ -138,7 +138,6 @@ and operator = {
 
 and expr =
   | Function of function_
-  | Operator of operator
   | Application of application
   | Var of name
   | Ctor of expr ctor
@@ -149,7 +148,6 @@ and expr =
   | Binop of binop
   | Unit
   | Wrapped of expr
-  | Let of let_
 
 and let_ =  {
   let_var : name;
@@ -161,11 +159,17 @@ and pattern =
   | Pvar of name
   | Pctor of name * pattern list option
 
+and stmt =
+  | Let of let_
+  | FunctionStmt of function_
+  | Expr of expr
+
 and decl =
   | Enum of enum
-  | Expr of expr
+  | Stmt of stmt
   | Interface of interface
   | Implementation of implementation
+  | Operator of operator
 
 type program = {
   imports : import list;

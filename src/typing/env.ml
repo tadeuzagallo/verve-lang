@@ -101,7 +101,6 @@ let loosen t =
     | _ -> map_type (loosen s) t
   in loosen [] t
 
-
 let instantiate t =
   let rec instantiate s t =
     let t = T.repr t in
