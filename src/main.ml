@@ -1,6 +1,7 @@
 open Lexing
 open Cmdliner
 open Lwt
+open Fmt
 
 (*
  * verve fmt foo.vrv
@@ -25,7 +26,7 @@ let parse file =
   let lexbuf = Lexing.from_channel file in
   try Parser.program Lexer.read lexbuf with
   | _ ->
-    Printf.fprintf stderr "%a: syntax error at '%s'\n" print_position lexbuf (Lexing.lexeme lexbuf);
+    Printf.fprintf Pervasives.stderr "%a: syntax error at '%s'\n" print_position lexbuf (Lexing.lexeme lexbuf);
     exit (-1)
 
 (* Command functions *)
@@ -48,7 +49,7 @@ let run_file = with_file @@ fun file ->
       state, true
   in
   let ast = parse file in
-  let state = (Env.default_env, [], Interpreter.default_env, []) in
+  let state = (Env.default_env, Interpreter.default_env, []) in
   let _, err = List.fold_left eval (state, false) ast.Absyn.body in
   if err then exit 1
 
@@ -104,5 +105,5 @@ let () =
   match Term.eval_choice ~err:Format.str_formatter run cmds with
   | `Error `Parse -> Term.(exit @@ eval run)
   | `Error _ ->
-    Printf.fprintf stderr "%s" (Format.flush_str_formatter ())
+    Printf.fprintf Pervasives.stderr "%s" (Format.flush_str_formatter ())
   | status -> Term.exit status

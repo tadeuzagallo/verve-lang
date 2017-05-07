@@ -39,25 +39,31 @@ let rec combine_ty subst = function
   | _, _ ->
       List.rev subst
 
-let rec subst_ty ty_args = function
+let rec subst_ty ty_args t = match T.desc t with
   | T.Arrow (t1, t2) ->
-      T.Arrow (subst_ty ty_args t1, subst_ty ty_args t2)
+      T._texpr @@ T.Arrow (subst_ty ty_args t1, subst_ty ty_args t2)
   | T.TypeCtor (name, types) ->
       let types' = List.map (subst_ty ty_args) types in
-      T.TypeCtor (name, types')
+      T._texpr @@ T.TypeCtor (name, types')
   | (T.RigidVar { T.name } as var)
   | (T.Var { T.name } as var) ->
       begin try List.assoc name ty_args
-      with Not_found -> var
+      with Not_found -> T._texpr var
       end
   | T.TypeArrow (v1, t2) ->
-      let ty_args' = List.remove_assoc v1.T.name ty_args in
-      T.TypeArrow (v1, subst_ty ty_args' t2)
+    let ty_args =
+      match (T.desc v1) with
+      | T.Var { T.name }
+      | T.RigidVar { T.name } ->
+        List.remove_assoc name ty_args
+      | _ -> ty_args
+    in
+    subst_ty ty_args t2
   | T.Record r ->
     let aux (n, t) =
       (n, subst_ty ty_args t)
-    in T.Record (List.map aux r)
-  | t -> t
+    in T._texpr @@ T.Record (List.map aux r)
+  | t -> T._texpr t
 
 
 let rec subst_expr ty_args args = function
@@ -120,20 +126,14 @@ let subst generics arguments fn =
     | V.InterfaceFunction fn ->
         begin match generics with
         | [t] ->
-          let rec get_type = function
-            | T.Var { T.resolved_ty = (Some t) } -> get_type t
-            | t -> t
-          in
           let intf = Hashtbl.find fn_to_intf fn in
           let impls = Hashtbl.find intf_to_impls intf in
-          let t' = get_type t in
-          let impl = List.assoc t' !impls in
+          let impl = List.assoc (T.repr t) !impls in
           (List.assoc fn impl)
         | _ -> assert false
         end
     | v ->
-        Printer.Value.pp Format.err_formatter v;
-        print_newline ();
+        Printer.Value.dump v;
         assert false
   in
   let subst, params = combine ([], []) (fn_parameters, arguments) in

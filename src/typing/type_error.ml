@@ -2,18 +2,18 @@ open Types
 open Fmt
 
 type error =
-  | Unification_error of ty * ty
-  | Instance_not_found of ty * interface_desc
+  | Unification_error of texpr * texpr
+  | Instance_not_found of texpr * interface_desc
   | Unknown_type of string
   | Unknown_ctor of string
-  | Invalid_constraint of string * ty
-  | Value_as_type of ty
+  | Invalid_constraint of string * texpr
+  | Value_as_type of texpr
   | Invalid_generic_application
   | Invalid_application
-  | Invalid_implementation of string * ty
-  | Unknown_field of string * ty
-  | Invalid_access of string * ty
-  | Invalid_pattern of Absyn.pattern * ty
+  | Invalid_implementation of string * texpr
+  | Unknown_field of string * texpr
+  | Invalid_access of string * texpr
+  | Invalid_pattern of Absyn.pattern * texpr
   | Precedence_error of string * string
 
 exception Error of error

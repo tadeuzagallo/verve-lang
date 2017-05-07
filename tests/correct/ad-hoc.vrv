@@ -25,7 +25,7 @@ fn g<U, T: Intish>(x: T) -> Int {
   to_int(x)
 }
 
-g(7) // CHECK: 7 : forall U.*, Int
+g(7) // CHECK: 7 : Int
 
 fn f<T: Intish>(x: T) -> Int {
   g(x)

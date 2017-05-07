@@ -84,7 +84,7 @@ and implementation = {
   impl_name : string;
   impl_arg : type_;
   impl_items : implementation_item list;
-  mutable impl_arg_type : Types.ty option;
+  mutable impl_arg_type : Types.texpr option;
 }
 
 and implementation_item =
@@ -95,7 +95,7 @@ and application = {
   callee: expr;
   generic_arguments: type_ list;
   arguments: expr list option;
-  mutable generic_arguments_ty: Types.ty list;
+  mutable generic_arguments_ty: Types.texpr list;
 }
 
 and 'a ctor = {
@@ -123,7 +123,7 @@ and binop = {
   bin_lhs: expr;
   bin_op : string;
   bin_rhs : expr;
-  mutable bin_generic_arguments_ty: Types.ty list;
+  mutable bin_generic_arguments_ty: Types.texpr list;
 }
 
 and operator = {

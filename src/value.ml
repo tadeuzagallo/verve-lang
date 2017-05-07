@@ -1,16 +1,16 @@
 module A = Absyn
 
-type value =
+type t =
   | Unit
   | Literal of A.literal
-  | Ctor of value A.ctor
+  | Ctor of t A.ctor
   | Type of string
   | Function of A.function_
   | InterfaceFunction of string
-  | Record of (string * value) list
+  | Record of (string * t) list
   | Builtin of string * builtin
 
-and builtin = (string * value) list -> value list -> (value * (string * value) list)
+and builtin = (string * t) list -> t list -> (t * (string * t) list)
 
 let rec expr_of_value = function
   | Unit -> A.Unit

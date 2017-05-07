@@ -3,12 +3,17 @@ open Type_error
 module A = Absyn
 module T = Types
 
-type ty_env = (A.name * T.ty) list
-type subst = (T.tvar * T.ty) list
+type t = (A.name * T.texpr) list
 
-let extend_env env (x, t) = (x, t)::env
+let empty = []
+let extend env (x, t) = (x, t)::env
+let merge e1 e2 = e1 @ e2
 
 (* Type variable helpers*)
+
+let link_ty t1 t2 =
+  (T.repr t1).T.texpr <- T.Link t2
+
 let _fresh_tbl = Hashtbl.create 256
 let _default_id = 1
 let _fresh name =
@@ -20,27 +25,31 @@ let _fresh name =
     Hashtbl.add _fresh_tbl name (ref _default_id);
     _default_id
 
-let fresh ({ T.name } as var) =
-  { var with T.id = _fresh name }
+let fresh t =
+  match T.desc t with
+  | T.Var var ->
+    T.var { var with T.id = _fresh var.T.name }
+  | T.RigidVar var ->
+    T.rigid_var { var with T.id = _fresh var.T.name }
+  | _ -> assert false
 
 let make_var () =
   let name = "𝜏" in
-  T.Var { T.id = _fresh name; T.name; T.constraints = []; T.resolved_ty = None }
+  T.var { T.id = _fresh name; T.name; T.constraints = []; }
 
 (* Types of builtin types *)
-let ty_int = T.TypeCtor ("Int", [])
-let ty_type = T.TypeCtor ("Type", [])
-let ty_void = T.TypeCtor ("Void", [])
-let ty_string = T.TypeCtor ("String", [])
+let ty_int = T.type_ctor ("Int", [])
+let ty_type = T.type_ctor ("Type", [])
+let ty_void = T.type_ctor ("Void", [])
+let ty_string = T.type_ctor ("String", [])
 
 (* Values of builtin types *)
-let val_int = T.TypeInst ("Int", [])
-let val_type = T.TypeInst ("Type", [])
-let val_void = T.TypeInst ("Void", [])
-let val_string = T.TypeInst ("String", [])
+let val_int = T.type_inst ("Int", [])
+let val_type = T.type_inst ("Type", [])
+let val_void = T.type_inst ("Void", [])
+let val_string = T.type_inst ("String", [])
 
-let binop ty =
-  T.Arrow (ty, T.Arrow (ty, ty))
+let binop ty = T.arrow ty (T.arrow ty ty)
 
 let default_env = [
   ("Type", ty_type);
@@ -58,70 +67,67 @@ let rec find var = function
   | (k, v) :: _ when k.T.name = var.T.name && k.T.id == var.T.id -> v
   | _ :: rest -> find var rest
 
-let (>>) s1 s2 =
-  let apply s1 s2 =
-    let aux (k, v) =
-      try (k, find k s1)
-      with Not_found -> (k, v)
-    in List.map aux s2
-  in apply s1 s2 @ s1
-
-let rec apply_type fn = function
-  | T.TypeCtor (n, ts) -> fn @@ T.TypeCtor (n, List.map (apply_type fn) ts)
-  | T.TypeInst (n, ts) -> fn @@ T.TypeInst (n, List.map (apply_type fn) ts)
-  | T.Arrow (t1, t2) -> fn @@ T.Arrow (apply_type fn t1, apply_type fn t2)
-  | T.TypeArrow (var, ty) -> fn @@ T.TypeArrow (var, (apply_type fn) ty)
-  | T.Record r -> fn @@ T.Record (List.map (fun (n, t) -> n, apply_type fn t) r)
-  | t -> fn t
-
-let to_value = apply_type @@ function
-    | T.TypeCtor (n, ts) -> T.TypeInst (n, ts)
-    | t -> t
-
-let rec loosen = apply_type @@ function
-  | T.RigidVar var -> T.Var var
+let map_type fn t =
+  let t = T.repr t in
+  let desc = match T.desc t with
+  | T.TypeCtor (n, ts) -> T.TypeCtor (n, List.map fn ts)
+  | T.TypeInst (n, ts) -> T.TypeInst (n, List.map fn ts)
+  | T.Arrow (t1, t2) -> T.Arrow (fn t1, fn t2)
+  | T.TypeArrow (var, ty) -> T.TypeArrow (fn var, fn ty)
+  | T.Record r -> T.Record (List.map (fun (n, t) -> n, fn t) r)
   | t -> t
+  in T._texpr desc
 
-let rec apply s = apply_type @@ function
-  | T.Var ({ T.name; T.constraints } as var) -> begin
-      try find var s
-      with Not_found -> T.Var var
-    end
+let rec to_value t =
+  let t = T.repr t in
+  match T.desc t with
+  | T.TypeCtor (n, ts) -> T.type_inst (n, List.map (map_type to_value) ts)
+  | _ -> map_type to_value t
 
-  | T.TypeArrow (v1, t2) -> begin
-      let v1' =
-        try find v1 s
-        with Not_found -> T.Var v1
-      in match v1' with
-      | T.Var v -> T.TypeArrow (v, t2)
-      | _ -> t2
-    end
+let loosen t =
+  let rec loosen s t =
+    let t = T.repr t in
+    try List.assoc t s with Not_found ->
+    match T.desc t with
+    | T.RigidVar var -> T.var var
+    | T.TypeArrow (var, ty) ->
+      let var' = loosen s var in
+      let ty' = loosen ((var, var') :: s) ty in
+      T.type_arrow var' ty'
+    | _ -> map_type (loosen s) t
+  in loosen [] t
 
-  | t -> t
 
-let rec instantiate s1 = apply_type @@ function
-  | T.TypeArrow (var, ty) ->
+let instantiate t =
+  let rec instantiate s t =
+    let t = T.repr t in
+    try List.assoc t s with Not_found ->
+    match T.desc t with
+    | T.TypeArrow (var, ty) ->
       let var' = fresh var in
-      let s = [(var, T.Var var')] >> s1 in
-      T.TypeArrow (var', instantiate s ty)
-  | t -> apply s1 t
+      let ty' = instantiate ((var, var') :: s) ty in
+      T.type_arrow var' ty'
+    | _ -> map_type (instantiate s) t
+  in instantiate [] t
 
 let get_type env v =
-  try instantiate [] (List.assoc v env)
+  try instantiate (List.assoc v env);
   with Not_found ->
     raise (Error (Unknown_type v))
 
 let var_of_generic env { A.name; A.constraints } =
-  let resolve n = match get_type env n with
+  let resolve n =
+    let t = get_type env n in
+    match T.desc t with
     | T.Interface i -> i
-    | t -> raise (Error (Invalid_constraint (name, t)))
+    | _ -> raise (Error (Invalid_constraint (name, t)))
   in
   let intfs = List.map resolve constraints in
-  { T.id = _fresh name; T.name; T.constraints = intfs; T.resolved_ty = None }
+  { T.id = _fresh name; T.name; T.constraints = intfs; }
 
 let ctor_marker = "mk#"
 let add_ctor env (name, ty) =
-  extend_env env (ctor_marker ^ name, ty)
+  extend env (ctor_marker ^ name, ty)
 
 let get_ctor env name =
   try get_type env (ctor_marker ^ name)
@@ -129,58 +135,64 @@ let get_ctor env name =
     raise (Error (Unknown_ctor name))
 
 (* Unification *)
-let rec unify ~expected ~actual = match expected, actual with
+
+let check_implementations t intf_desc =
+  match T.desc t with
+  | T.Var var
+  | T.RigidVar var ->
+      if not (List.mem intf_desc var.T.constraints) then
+        raise (Error (Instance_not_found (t, intf_desc)))
+  | _ ->
+      if not (List.mem_assoc t intf_desc.T.intf_impls) then
+        raise (Error (Instance_not_found (t, intf_desc)))
+
+let rec unify ~expected:t1 t2 =
+  let t1 = T.repr t1 in
+  let t2 = T.repr t2 in
+  if t1 == t2 then () else
+  match T.desc t1, T.desc t2 with
+  | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> ()
+
   | T.TypeInst (n2, t2s), T.TypeInst (n1, t1s)
   when n1 = n2 ->
-      let aux s t1 t2 =
-        unify ~expected:t1 ~actual:t2 >> s
-      in List.fold_left2 aux [] t1s t2s
+      let aux t1 t2 = unify ~expected:t1 t2 in
+      List.iter2 aux t1s t2s
 
-  | T.TypeCtor _, t when t = val_type -> []
-  | t, T.TypeCtor _ when t = val_type -> []
+  | T.TypeCtor _, _ when t2 = val_type -> ()
+  | _, T.TypeCtor _ when t1 = val_type -> ()
 
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
-      let s1 = unify ~expected:t11 ~actual:t21 in
-      let s2 = unify ~expected:(apply s1 t12) ~actual:(apply s1 t22) in
-      s2 >> s1
+      unify ~expected:t11 t21;
+      unify ~expected:t12 t22
 
   (* Order matters: Var must come before TypeArrow *)
-  | T.Var ({ T.constraints = cs1 } as var1),
+  | T.Var { T.constraints = cs1 },
     T.Var ({ T.constraints = cs2 } as var2) ->
-      let aux c1 c2 = String.compare c1.T.intf_name c2.T.intf_name in
-      let ty = T.Var { var2 with T.constraints = List.sort_uniq aux (cs1 @ cs2)} in
-      var1.T.resolved_ty <- Some ty;
-      [(var1, ty)]
+      (*let aux c1 c2 = String.compare c1.T.intf_name c2.T.intf_name in*)
+      (*let ty = T.var { var2 with T.constraints = List.sort_uniq aux (cs1 @ cs2)} in*)
+      link_ty t1 t2
 
-  | T.Var ({ T.constraints } as var), t
-  | t, T.Var ({ T.constraints } as var) ->
-      let impls intf_desc =
-        match t with
-        | T.Var var
-        | T.RigidVar var ->
-            if not (List.mem intf_desc var.T.constraints) then
-              raise (Error (Instance_not_found (t, intf_desc)))
-        | t ->
-            if not (List.mem_assoc t intf_desc.T.intf_impls) then
-              raise (Error (Instance_not_found (t, intf_desc)))
-      in
-      List.iter impls constraints;
-      var.T.resolved_ty <- Some t;
-      [ var, t ]
+  | T.Var { T.constraints }, _ ->
+      List.iter (check_implementations t2) constraints;
+      link_ty t1 t2
 
-  | T.TypeArrow (_, t1), t2
-  | t1, T.TypeArrow (_, t2) ->
-      unify ~expected:t1 ~actual:t2
+  | _, T.Var { T.constraints } ->
+      List.iter (check_implementations t1) constraints;
+      link_ty t2 t1
 
-  | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> []
+  | T.TypeArrow (_, t1), _ ->
+      unify ~expected:t1 t2
+
+  | _, T.TypeArrow (_, t2) ->
+      unify ~expected:t1 t2
 
   | T.Record r1, T.Record r2 ->
-    let validate s (field, t1) =
+    let validate (field, t1') =
       try
-        unify ~expected:t1 ~actual:(List.assoc field r2)  >> s
+        unify ~expected:t1' (List.assoc field r2)
       with Not_found ->
-        raise (Error (Unification_error (expected, actual)))
-    in List.fold_left validate [] r1
+        raise (Error (Unification_error (t1, t2)))
+    in List.iter validate r1
 
-  | t1, t2 ->
-      raise (Error (Unification_error (t1, t2)))
+  | _, _ ->
+    raise (Error (Unification_error (t1, t2)))
