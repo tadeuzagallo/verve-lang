@@ -10,11 +10,9 @@ let check_literal = function
 
 let rec check_type env = function
   | Arrow (parameters, return_type) ->
-      let ret = check_type env return_type in
-      let fn_type = List.fold_right
-        (fun p t -> let ty_p = check_type env p in T.arrow ty_p t)
-        parameters ret
-      in fn_type
+    let ret = check_type env return_type in
+    let params = List.map (check_type env) parameters in
+    List.fold_right T.arrow params ret
   | Inst (t, args) ->
     let ty = instantiate (Env.find_type env t) in
     apply_generics env ty args
@@ -34,49 +32,6 @@ and apply_generics env ty_callee gen_args =
   in
   List.fold_left check_type ty_callee gen_args'
 
-let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-  let generics' = List.map (fun v -> T.rigid_var @@ var_of_generic env v) fn_generics in
-  let env' = List.fold_left2
-    (fun env g v -> Env.add_type env (g.name, v))
-    env fn_generics generics'
-  in
-
-  let ret_type = check_type env' fn_return_type in
-
-  let fn_type, params = List.fold_right
-    (fun p (t, env'') ->
-      let ty = check_type env' p.param_type in
-      (T.arrow ty t, Env.add_value env'' (p.param_name, ty)))
-      fn_parameters (ret_type, Env.empty)
-  in
-  let fn_type' = match (T.desc fn_type) with
-  | T.Arrow _ -> fn_type
-  | _ ->  T.arrow ty_void fn_type
-  in
-  let fn_type'' = List.fold_right T.type_arrow generics' fn_type' in
-
-  let fn_env env =
-    Env.merge params env
-  in
-  let (ret, _) = match fn_name with
-    | None -> check_stmts (fn_env env') fn_body
-    | Some n -> check_stmts (fn_env @@ Env.add_value env' (n, fn_type'')) fn_body
-  in
-  unify ~expected:ret_type ret;
-  loosen fn_type''
-
-and check_generic_application env (ty_callee, generic_arguments, arguments) =
-  let arguments = match arguments with
-  | None -> []
-  | Some [] -> [Unit]
-  | Some args -> args
-  in
-
-  let arguments' = List.map (check_expr env) arguments in
-
-  let ty = apply_generics env ty_callee generic_arguments in
-  apply_arguments ty arguments'
-
 and apply_arguments callee arguments =
   let check call argument =
     let rec check ty =
@@ -92,9 +47,45 @@ and apply_arguments callee arguments =
   in
   List.fold_left check callee arguments
 
+let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
+  let generics = List.map (fun g -> T.rigid_var (var_of_generic env g)) fn_generics in
+  let generic_names = List.map (fun g -> g.name) fn_generics in
+  let env = List.fold_left Env.add_type env (List.combine generic_names generics) in
+
+  let param_names = List.map (fun p -> p.param_name) fn_parameters in
+  let param_types = List.map (fun p -> check_type env p.param_type) fn_parameters in
+
+  let ret_type = check_type env fn_return_type in
+  let fn_type = match fn_parameters with
+    | [] ->  T.arrow ty_void ret_type
+    | _ -> List.fold_right T.arrow param_types ret_type
+  in
+  let fn_type = List.fold_right T.type_arrow generics fn_type in
+
+  let env = match fn_name with
+    | None -> env
+    | Some n -> Env.add_value env (n, fn_type)
+  in
+  let env = List.fold_left Env.add_value env (List.combine param_names param_types) in
+  let ret, _ = check_stmts env fn_body in
+  unify ~expected:ret_type ret;
+  loosen fn_type
+
+and run_application env (ty_callee, generic_arguments, arguments) =
+  let arguments = match arguments with
+  | None -> []
+  | Some [] -> [Unit]
+  | Some args -> args
+  in
+
+  let arguments' = List.map (check_expr env) arguments in
+  let ty = apply_generics env ty_callee generic_arguments in
+  apply_arguments ty arguments'
+
+
 and check_app env ({ callee; generic_arguments; arguments } as app) =
   let ty_callee = check_expr env callee in
-  let ty = check_generic_application env (ty_callee, generic_arguments, arguments) in
+  let ty = run_application env (ty_callee, generic_arguments, arguments) in
   let rec aux acc t =
     match T.desc t with
     | T.TypeArrow (var, t) ->
@@ -105,7 +96,7 @@ and check_app env ({ callee; generic_arguments; arguments } as app) =
 
 and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   let ty_ctor = Env.find_ctor env ctor_name in
-  check_generic_application env (ty_ctor, ctor_generic_arguments, ctor_arguments)
+  run_application env (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
 and check_record env fields =
   let keys, values = List.split fields in
