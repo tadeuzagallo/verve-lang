@@ -16,7 +16,7 @@ let rec check_type env = function
         parameters ret
       in fn_type
   | Inst (t, args) ->
-    let t = get_type env t in
+    let t = Env.find_type env t in
     let ty = match T.desc t with
     | T.TypeInst _ ->
       raise (Error (Value_as_type t))
@@ -41,7 +41,7 @@ and apply_generics env ty_callee gen_args =
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   let generics' = List.map (fun v -> T.rigid_var @@ var_of_generic env v) fn_generics in
   let env' = List.fold_left2
-    (fun env g v -> extend env (g.name, v))
+    (fun env g v -> Env.add_type env (g.name, v))
     env fn_generics generics'
   in
 
@@ -50,7 +50,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   let fn_type, params = List.fold_right
     (fun p (t, env'') ->
       let ty = check_type env' p.param_type in
-      (T.arrow ty t, extend env'' (p.param_name, ty)))
+      (T.arrow ty t, Env.add_value env'' (p.param_name, ty)))
       fn_parameters (ret_type, Env.empty)
   in
   let fn_type' = match (T.desc fn_type) with
@@ -64,13 +64,13 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   in
   let (ret, _) = match fn_name with
     | None -> check_exprs (fn_env env') fn_body
-    | Some n -> check_exprs (fn_env @@ extend env' (n, fn_type'')) fn_body
+    | Some n -> check_exprs (fn_env @@ Env.add_value env' (n, fn_type'')) fn_body
   in
   unify ~expected:ret_type ret;
   let fn_type'' = loosen fn_type'' in
 
   match fn_name with
-  | Some n -> (fn_type'', extend env (n, fn_type''))
+  | Some n -> (fn_type'', Env.add_value env (n, fn_type''))
   | None -> (fn_type'', env)
 
 and check_generic_application env (ty_callee, generic_arguments, arguments) =
@@ -116,7 +116,7 @@ and check_app env ({ callee; generic_arguments; arguments } as app) =
   ty
 
 and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
-  let ty_ctor = get_ctor env ctor_name in
+  let ty_ctor = Env.find_ctor env ctor_name in
   check_generic_application env (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
 and check_record env fields =
@@ -157,10 +157,10 @@ and check_pattern env = function
 
   | Pvar v ->
     let var = make_var () in
-    var, extend env (v, var)
+    var, Env.add_value env (v, var)
 
   | Pctor (name, ps) ->
-      let t = get_ctor env name in
+      let t = Env.find_ctor env name in
       match ps, T.desc t with
       | None, _ ->
           t, env
@@ -189,12 +189,12 @@ and check_binop env binop =
 
 and check_let env { let_var; let_value } =
   let ty, env = check_expr env let_value in
-  ty, extend env (let_var, ty)
+  ty, Env.add_value env (let_var, ty)
 
 and check_expr env = function
   | Unit -> (val_void, env)
   | Literal l -> (check_literal l, env)
-  | Var v -> (get_type env v, env)
+  | Var v -> (Env.find_value env v, env)
   | Function fn -> check_fn env fn
   | Application app -> check_app env app, env
   | Ctor ctor -> check_ctor env ctor, env

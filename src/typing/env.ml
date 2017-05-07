@@ -3,11 +3,23 @@ open Type_error
 module A = Absyn
 module T = Types
 
-type t = (A.name * T.texpr) list
+type t = {
+  types: (A.name * T.texpr) list;
+  values: (A.name * T.texpr) list;
+  ctors: (A.name * T.texpr) list;
+}
 
-let empty = []
+let empty = {
+  types = [];
+  values = [];
+  ctors = [];
+}
 let extend env (x, t) = (x, t)::env
-let merge e1 e2 = e1 @ e2
+let merge e1 e2 = {
+  types = e1.types @ e2.types;
+  values = e1.values @ e2.values;
+  ctors = e1.ctors @ e2.ctors;
+}
 
 (* Type variable helpers*)
 
@@ -51,16 +63,21 @@ let val_string = T.type_inst ("String", [])
 
 let binop ty = T.arrow ty (T.arrow ty ty)
 
-let default_env = [
-  ("Type", ty_type);
-  ("Int", ty_int);
-  ("Void", ty_void);
-  ("String", ty_string);
-  ("int_add", binop val_int);
-  ("int_sub", binop val_int);
-  ("int_mul", binop val_int);
-  ("int_div", binop val_int);
-]
+let default_env = {
+  types  = [
+    ("Type", ty_type);
+    ("Int", ty_int);
+    ("Void", ty_void);
+    ("String", ty_string);
+  ];
+  values = [
+    ("int_add", binop val_int);
+    ("int_sub", binop val_int);
+    ("int_mul", binop val_int);
+    ("int_div", binop val_int);
+  ];
+  ctors = [];
+}
 
 let rec find var = function
   | [] -> raise Not_found
@@ -110,29 +127,41 @@ let instantiate t =
     | _ -> map_type (instantiate s) t
   in instantiate [] t
 
-let get_type env v =
-  try instantiate (List.assoc v env);
+(* getters and setters *)
+let add_type env (name, ty) =
+  { env with types = extend env.types (name, ty) }
+
+let find_type env v =
+  try List.assoc v env.types
   with Not_found ->
     raise (Error (Unknown_type v))
 
+let add_ctor env (name, ctor) =
+  { env with ctors = extend env.ctors (name, ctor) }
+
+let find_ctor env name =
+  try instantiate (List.assoc name env.ctors)
+  with Not_found ->
+    raise (Error (Unknown_ctor name))
+
+let add_value env (name, value) =
+  { env with values = extend env.values (name, value) }
+
+let find_value env name =
+  try instantiate (List.assoc name env.values)
+  with Not_found ->
+    raise (Error (Unknown_value name))
+
+
 let var_of_generic env { A.name; A.constraints } =
   let resolve n =
-    let t = get_type env n in
+    let t = find_type env n in
     match T.desc t with
     | T.Interface i -> i
     | _ -> raise (Error (Invalid_constraint (name, t)))
   in
   let intfs = List.map resolve constraints in
   { T.id = _fresh name; T.name; T.constraints = intfs; }
-
-let ctor_marker = "mk#"
-let add_ctor env (name, ty) =
-  extend env (ctor_marker ^ name, ty)
-
-let get_ctor env name =
-  try get_type env (ctor_marker ^ name)
-  with Error (Unknown_type _) ->
-    raise (Error (Unknown_ctor name))
 
 (* Unification *)
 

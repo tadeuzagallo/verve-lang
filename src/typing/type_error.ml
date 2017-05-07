@@ -6,6 +6,7 @@ type error =
   | Instance_not_found of texpr * interface_desc
   | Unknown_type of string
   | Unknown_ctor of string
+  | Unknown_value of string
   | Invalid_constraint of string * texpr
   | Value_as_type of texpr
   | Invalid_generic_application
@@ -29,6 +30,8 @@ let report_error ppf = function
     pf ppf "Unknown type: %s" name
   | Unknown_ctor name ->
     pf ppf "Unknown constructor: %s" name
+  | Unknown_value name ->
+    pf ppf "Unknown variable: %s" name
   | Invalid_constraint (name, ty) ->
     pf ppf "Invalid constraint on generic type %s: expected an interface but found %a"
       name Printer.Type.pp ty

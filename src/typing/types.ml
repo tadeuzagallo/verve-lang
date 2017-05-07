@@ -58,4 +58,3 @@ let interface i = _texpr @@ Interface i
 let implementation i = _texpr @@ Implementation i
 let arrow t1 t2 = _texpr @@ Arrow (t1, t2)
 let type_arrow t1 t2 = _texpr @@ TypeArrow (t1, t2)
-
