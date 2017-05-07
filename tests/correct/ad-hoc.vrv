@@ -4,9 +4,6 @@ interface Intish<T> {
   fn to_int(T) -> Int
 }
 
-// Intish => type_ list ref
-// to_int<T: Intish>(x : T) -> Int
-
 implementation Intish<Int> {
   fn to_int(x: Int) -> Int { x }
 }

@@ -13,3 +13,8 @@ fn g<U, T: Intish>(x: T) -> Int {
 
 g<Int>(7) // should pass
 g(7)<Int> // weird edge case, should it pass?
+
+fn f<T: Intish>(f: (T) -> Int, x: T) -> Int {
+  f(x)
+}
+f(to_int, 4)

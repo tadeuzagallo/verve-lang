@@ -138,7 +138,6 @@ let find_value env name =
   with Not_found ->
     raise (Error (Unknown_value name))
 
-
 let var_of_generic env { A.name; A.constraints } =
   let resolve n =
     let t = find_type env n in
@@ -178,12 +177,6 @@ let rec unify ~expected:t1 t2 =
       unify ~expected:t12 t22
 
   (* Order matters: Var must come before TypeArrow *)
-  | T.Var { T.constraints = cs1 },
-    T.Var ({ T.constraints = cs2 } as var2) ->
-      (*let aux c1 c2 = String.compare c1.T.intf_name c2.T.intf_name in*)
-      (*let ty = T.var { var2 with T.constraints = List.sort_uniq aux (cs1 @ cs2)} in*)
-      link_ty t1 t2
-
   | T.Var { T.constraints }, _ ->
       List.iter (check_implementations t2) constraints;
       link_ty t1 t2
