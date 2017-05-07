@@ -114,7 +114,7 @@ let instantiate t =
   in instantiate [] t
 
 (* getters and setters *)
-let add_type env (name, ty) =
+let add_type env name ty =
   { env with types = extend env.types (name, ty) }
 
 let find_type env v =
@@ -122,7 +122,7 @@ let find_type env v =
   with Not_found ->
     raise (Error (Unknown_type v))
 
-let add_ctor env (name, ctor) =
+let add_ctor env name ctor =
   { env with ctors = extend env.ctors (name, ctor) }
 
 let find_ctor env name =
@@ -130,7 +130,7 @@ let find_ctor env name =
   with Not_found ->
     raise (Error (Unknown_ctor name))
 
-let add_value env (name, value) =
+let add_value env name value =
   { env with values = extend env.values (name, value) }
 
 let find_value env name =

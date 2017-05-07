@@ -50,7 +50,7 @@ and apply_arguments callee arguments =
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   let generics = List.map (fun g -> T.rigid_var (var_of_generic env g)) fn_generics in
   let generic_names = List.map (fun g -> g.name) fn_generics in
-  let env = List.fold_left Env.add_type env (List.combine generic_names generics) in
+  let env = List.fold_left2 Env.add_type env generic_names generics in
 
   let param_names = List.map (fun p -> p.param_name) fn_parameters in
   let param_types = List.map (fun p -> check_type env p.param_type) fn_parameters in
@@ -64,9 +64,9 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
 
   let env = match fn_name with
     | None -> env
-    | Some n -> Env.add_value env (n, fn_type)
+    | Some n -> Env.add_value env n fn_type
   in
-  let env = List.fold_left Env.add_value env (List.combine param_names param_types) in
+  let env = List.fold_left2 Env.add_value env param_names param_types in
   let ret, _ = check_stmts env fn_body in
   unify ~expected:ret_type ret;
   loosen fn_type
@@ -81,7 +81,6 @@ and run_application env (ty_callee, generic_arguments, arguments) =
   let arguments' = List.map (check_expr env) arguments in
   let ty = apply_generics env ty_callee generic_arguments in
   apply_arguments ty arguments'
-
 
 and check_app env ({ callee; generic_arguments; arguments } as app) =
   let ty_callee = check_expr env callee in
@@ -131,7 +130,7 @@ and check_pattern env = function
 
   | Pvar v ->
     let var = make_var () in
-    var, Env.add_value env (v, var)
+    var, Env.add_value env v var
 
   | Pctor (name, ps) ->
       let t = Env.find_ctor env name in
@@ -173,7 +172,7 @@ and check_expr env = function
 (* Statements *)
 and check_let env { let_var; let_value } =
   let ty = check_expr env let_value in
-  ty, Env.add_value env (let_var, ty)
+  ty, Env.add_value env let_var ty
 
 and check_fn_stmt env fn =
   let ty = check_fn env fn in
@@ -181,7 +180,7 @@ and check_fn_stmt env fn =
     | Some n -> n
     | None -> assert false
   in
-  ty, Env.add_value env (name, ty)
+  ty, Env.add_value env name ty
 
 and check_stmt env = function
   | Let let_ -> check_let env let_

@@ -7,18 +7,18 @@ module T = Types
 let rec check_enum env { enum_name; enum_generics; enum_items } =
   let create_var g (vars, env) =
     let var = T.var @@ var_of_generic env g in
-    (var :: vars, Env.add_type env (g.name, var))
+    (var :: vars, Env.add_type env g.name var)
   in
   let gen, env' = List.fold_right create_var enum_generics ([], env) in
   let enum_ty = T.type_ctor (enum_name, gen) in
   let make t = List.fold_right T.type_arrow gen t in
-  let env'' = Env.add_type env' (enum_name, make enum_ty) in
+  let env'' = Env.add_type env' enum_name (make enum_ty) in
   let env''' = List.fold_left (check_enum_item make enum_ty) env'' enum_items in
   enum_ty, env'''
 
 and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
   match enum_item_parameters with
-  | None -> Env.add_ctor env (enum_item_name, make item_ty)
+  | None -> Env.add_ctor env enum_item_name (make item_ty)
   | Some ps ->
       let aux p enum_ty =
         let t = Typing_expr.check_type env p in
@@ -26,11 +26,11 @@ and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
       in
       let ty = List.fold_right aux ps item_ty in
       let ty' = make ty in
-      add_ctor env (enum_item_name, ty')
+      add_ctor env enum_item_name ty'
 
 and check_interface env { intf_name; intf_param; intf_items } =
   let intf_ty = T.interface { T.intf_name; T.intf_impls = [] } in
-  let env' = Env.add_type env (intf_name, intf_ty) in
+  let env' = Env.add_type env intf_name intf_ty in
   let generic = { name = intf_param.name; constraints =
 intf_name::intf_param.constraints } in
   let var = T.var @@ var_of_generic env' generic in
@@ -42,10 +42,10 @@ and check_intf_item pair env = function
   | OperatorPrototype op -> check_proto pair env (prototype_of_op_proto op)
 
 and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; proto_ret_type } =
-  let env' = Env.add_type env (var_name, var) in
+  let env' = Env.add_type env var_name var in
   let generics' = List.map (fun  v -> T.rigid_var @@ var_of_generic env v) proto_generics in
   let env' = List.fold_left
-      (fun env (g, v) -> Env.add_type env (g.name, v))
+      (fun env (g, v) -> Env.add_type env g.name v)
       env' (List.combine proto_generics generics')
   in
   let ret_type = Typing_expr.check_type env' proto_ret_type in
@@ -61,7 +61,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
   let fn_ty'' = List.fold_right (fun g t -> T.type_arrow g t) generics' fn_ty' in
   let fn_ty''' = loosen fn_ty'' in
   let fn_ty'''' = T.type_arrow var fn_ty''' in
-  Env.add_value env (proto_name, fn_ty'''')
+  Env.add_value env proto_name fn_ty''''
 
 and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let impl_arg_ty = Typing_expr.check_type env impl_arg in
@@ -79,7 +79,7 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
 
 and check_operator env op =
   let ty = Typing_expr.check_fn env (fn_of_operator op) in
-  Env.ty_void, Env.add_value env (op.op_name, ty)
+  Env.ty_void, Env.add_value env op.op_name ty
 
 and check_decl env = function
   | Stmt stmt -> Typing_expr.check_stmt env stmt
