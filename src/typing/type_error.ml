@@ -1,21 +1,23 @@
 open Types
 open Fmt
 
+module A = Absyn
+
 type error =
   | Unification_error of texpr * texpr
   | Instance_not_found of texpr * interface_desc
-  | Unknown_type of string
-  | Unknown_ctor of string
-  | Unknown_value of string
-  | Invalid_constraint of string * texpr
+  | Unknown_type of A.name
+  | Unknown_ctor of A.name
+  | Unknown_value of A.name
+  | Invalid_constraint of A.name * texpr
   | Value_as_type of texpr
   | Invalid_generic_application
   | Invalid_application
-  | Invalid_implementation of string * texpr
-  | Unknown_field of string * texpr
-  | Invalid_access of string * texpr
-  | Invalid_pattern of Absyn.pattern * texpr
-  | Precedence_error of string * string
+  | Invalid_implementation of A.name * texpr
+  | Unknown_field of A.name * texpr
+  | Invalid_access of A.name * texpr
+  | Invalid_pattern of A.pattern * texpr
+  | Precedence_error of A.name * A.name
 
 exception Error of error
 
@@ -27,14 +29,14 @@ let report_error ppf = function
     pf ppf "No instance of %s found for type %a"
       intf.intf_name Printer.Type.pp t
   | Unknown_type name ->
-    pf ppf "Unknown type: %s" name
+    pf ppf "Unknown type: %s" name.A.str
   | Unknown_ctor name ->
-    pf ppf "Unknown constructor: %s" name
+    pf ppf "Unknown constructor: %s" name.A.str
   | Unknown_value name ->
-    pf ppf "Unknown variable: %s" name
+    pf ppf "Unknown variable: %s" name.A.str
   | Invalid_constraint (name, ty) ->
     pf ppf "Invalid constraint on generic type %s: expected an interface but found %a"
-      name Printer.Type.pp ty
+      name.A.str Printer.Type.pp ty
   | Value_as_type t ->
     pf ppf "Expected a Type, but found %a"
       Printer.Type.pp t
@@ -44,16 +46,16 @@ let report_error ppf = function
     pf ppf "Invalid application: applied to too many arguments"
   | Invalid_implementation (name, t) ->
     pf ppf "Trying to implement %s for %a, but %s is not an interface"
-      name Printer.Type.pp t name
+      name.A.str Printer.Type.pp t name.A.str
   | Unknown_field (field, record) ->
     pf ppf "Trying to access unknown property %s of object of type %a"
-      field Printer.Type.pp record
+      field.A.str Printer.Type.pp record
   | Invalid_access (field, t) ->
     pf ppf "Not an object: Trying to access field %s of value of type %a"
-      field Printer.Type.pp t
+      field.A.str Printer.Type.pp t
   | Invalid_pattern (pat, ty) ->
     pf ppf "Invalid pattern: Trying to use object of type %a as pattern %a"
       Printer.Type.pp ty
       Printer.Absyn.pp_pattern pat
   | Precedence_error (op1, op2) ->
-    pf ppf "Precedence error: cannot mix %s and %s in the same infix expression" op1 op2
+    pf ppf "Precedence error: cannot mix %s and %s in the same infix expression" op1.A.str op2.A.str

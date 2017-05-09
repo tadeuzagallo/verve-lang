@@ -10,7 +10,7 @@ let rec check_enum env { enum_name; enum_generics; enum_items } =
     (var :: vars, Env.add_type env g.name var)
   in
   let gen, env' = List.fold_right create_var enum_generics ([], env) in
-  let enum_ty = T.type_ctor (enum_name, gen) in
+  let enum_ty = T.type_ctor (enum_name.str, gen) in
   let make t = List.fold_right T.type_arrow gen t in
   let env'' = Env.add_type env' enum_name (make enum_ty) in
   let env''' = List.fold_left (check_enum_item make enum_ty) env'' enum_items in
@@ -29,7 +29,7 @@ and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
       add_ctor env enum_item_name ty'
 
 and check_interface env { intf_name; intf_param; intf_items } =
-  let intf_ty = T.interface { T.intf_name; T.intf_impls = [] } in
+  let intf_ty = T.interface { T.intf_name = intf_name.str; T.intf_impls = [] } in
   let env' = Env.add_type env intf_name intf_ty in
   let generic = { name = intf_param.name; constraints =
 intf_name::intf_param.constraints } in
@@ -66,7 +66,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
 and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let impl_arg_ty = Typing_expr.check_type env impl_arg in
   impl.impl_arg_type <- Some (impl_arg_ty);
-  let impl_desc = { T.impl_name; T.impl_type = impl_arg_ty; T.impl_items = [] } in
+  let impl_desc = { T.impl_name = impl_name.str; T.impl_type = impl_arg_ty; T.impl_items = [] } in
   let impl_ty = T.implementation impl_desc in
   let intf_desc =
     let t = Env.find_type env impl_name in
@@ -81,7 +81,8 @@ and check_operator env op =
   let ty = Typing_expr.check_fn env (fn_of_operator op) in
   Env.ty_void, Env.add_value env op.op_name ty
 
-and check_decl env = function
+and check_decl env decl =
+  match decl.decl_desc with
   | Stmt stmt -> Typing_expr.check_stmt env stmt
   | Enum enum -> check_enum env enum
   | Interface intf -> check_interface env intf

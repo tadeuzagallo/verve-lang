@@ -1,9 +1,22 @@
-type name = string
-
 type import
 type export
 
-type type_ =
+type location = {
+  loc_start : Lexing.position;
+  loc_end : Lexing.position;
+}
+
+type name = {
+  str : string;
+  loc : location;
+}
+
+type type_ = {
+  type_desc : type_desc;
+  type_loc : location;
+}
+
+and type_desc =
   | Arrow of type_ list * type_
   | Inst of name * type_ list
   | RecordType of (name * type_) list
@@ -30,12 +43,12 @@ type enum_item = {
 
 type enum = {
   enum_name : name;
-  enum_generics : generic list; 
+  enum_generics : generic list;
   enum_items : enum_item list;
 }
 
 type interface = {
-  intf_name : string;
+  intf_name : name;
   intf_param : generic;
   intf_items : interface_item list;
 }
@@ -45,7 +58,7 @@ and interface_item =
   | OperatorPrototype of operator_prototype
 
 and prototype = {
-  proto_name : string;
+  proto_name : name;
   proto_generics : generic list;
   proto_params : type_ list;
   proto_ret_type : type_;
@@ -65,7 +78,7 @@ and operator_prototype = {
   oproto_attributes : attribute list;
   oproto_generics : generic list;
   oproto_lhs : type_;
-  oproto_name : string;
+  oproto_name : name;
   oproto_rhs : type_;
   oproto_ret_type : type_;
 }
@@ -81,7 +94,7 @@ and function_ = {
 }
 
 and implementation = {
-  impl_name : string;
+  impl_name : name;
   impl_arg : type_;
   impl_items : implementation_item list;
   mutable impl_arg_type : Types.texpr option;
@@ -121,7 +134,7 @@ and match_case = {
 
 and binop = {
   bin_lhs: expr;
-  bin_op : string;
+  bin_op : name;
   bin_rhs : expr;
   mutable bin_generic_arguments_ty: Types.texpr list;
 }
@@ -130,13 +143,18 @@ and operator = {
   op_attributes : attribute list;
   op_generics : generic list;
   op_lhs : parameter;
-  op_name : string;
+  op_name : name;
   op_rhs : parameter;
   op_ret_type : type_;
   op_body : body;
 }
 
-and expr =
+and expr = {
+  expr_desc : expr_desc;
+  expr_loc : location;
+}
+
+and expr_desc =
   | Function of function_
   | Application of application
   | Var of name
@@ -154,17 +172,29 @@ and let_ =  {
   let_value : expr;
 }
 
-and pattern =
+and pattern = {
+  pat_desc : pattern_desc;
+  pat_loc : location;
+}
+and pattern_desc =
   | Pany
   | Pvar of name
   | Pctor of name * pattern list option
 
-and stmt =
+and stmt = {
+  stmt_desc : stmt_desc;
+  stmt_loc : location;
+}
+and stmt_desc =
   | Let of let_
   | FunctionStmt of function_
   | Expr of expr
 
-and decl =
+and decl = {
+  decl_desc : decl_desc;
+  decl_loc : location;
+}
+and decl_desc =
   | Enum of enum
   | Stmt of stmt
   | Interface of interface
@@ -177,6 +207,10 @@ type program = {
   body : decl list;
 }
 
+let dummy_loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos }
+
+let mk_name str = { loc = dummy_loc; str }
+
 let fn_of_operator op = {
   fn_name = Some (op.op_name);
   fn_generics = op.op_generics;
@@ -186,7 +220,7 @@ let fn_of_operator op = {
 }
 
 let app_of_binop binop = {
-  callee = Var binop.bin_op;
+  callee = { expr_desc = Var binop.bin_op; expr_loc = binop.bin_op.loc };
   generic_arguments = [];
   arguments = Some [ binop.bin_lhs; binop.bin_rhs ];
   generic_arguments_ty = binop.bin_generic_arguments_ty;

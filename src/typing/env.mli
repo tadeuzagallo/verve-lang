@@ -10,14 +10,14 @@ val ty_void : Types.texpr
 
 val unify : expected: Types.texpr -> Types.texpr -> unit
 
-val add_type : t -> string -> Types.texpr -> t
-val find_type : t -> string -> Types.texpr
+val add_type : t -> Absyn.name -> Types.texpr -> t
+val find_type : t -> Absyn.name -> Types.texpr
 
-val add_value : t -> string -> Types.texpr -> t
-val find_value : t -> string -> Types.texpr
+val add_value : t -> Absyn.name -> Types.texpr -> t
+val find_value : t -> Absyn.name -> Types.texpr
 
-val add_ctor : t -> string -> Types.texpr -> t
-val find_ctor : t -> string -> Types.texpr
+val add_ctor : t -> Absyn.name -> Types.texpr -> t
+val find_ctor : t -> Absyn.name -> Types.texpr
 
 val loosen : Types.texpr -> Types.texpr
 

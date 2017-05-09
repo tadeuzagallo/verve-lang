@@ -3,16 +3,25 @@ open Absyn
 module V = Value
 module T = Types
 
-exception Unbound_variable of string
+exception Unbound_variable of name
 exception Runtime_error of string
 
 let int_op op env = function
   | [V.Literal (Int x); V.Literal (Int y)] ->
-    V.Literal (Int (op x y)), env
+    V.Literal (Int (op x y))
   | _ -> assert false
 
+let extend_env env name value =
+  (name, value) :: env
+
+let extend_name env name value =
+  extend_env env name.str value
+
+let find_name name env =
+  List.assoc name.str env
+
 let add_builtin name fn env =
-  (name, V.Builtin (name, fn)) :: env
+  extend_env env name (V.Builtin (name, fn))
 
 let default_env = []
   |> add_builtin "int_add" (int_op ( + ))
@@ -25,7 +34,7 @@ let intf_to_impls = Hashtbl.create 64
 
 let rec combine (subst, params) : parameter list * expr list -> 'a * 'b = function
   | x::xs, y::ys ->
-      combine ((x.param_name,y)::subst, params) (xs, ys)
+      combine ((x.param_name.str, y)::subst, params) (xs, ys)
   | x::xs, [] ->
       combine (subst, x::params) (xs, [])
   | [], [] ->
@@ -35,7 +44,7 @@ let rec combine (subst, params) : parameter list * expr list -> 'a * 'b = functi
 
 let rec combine_ty subst = function
   | x::xs, y::ys ->
-      combine_ty ((x.name, y)::subst) (xs, ys)
+      combine_ty ((x.name.str, y)::subst) (xs, ys)
   | _, _ ->
       List.rev subst
 
@@ -66,12 +75,13 @@ let rec subst_ty ty_args t = match T.desc t with
   | t -> T._texpr t
 
 
-let rec subst_expr ty_args args = function
+let rec subst_expr ty_args args expr : expr =
+  let desc = match expr.expr_desc with
   | Unit -> Unit
   | Literal l -> Literal l
-  | Wrapped expr -> subst_expr ty_args args expr
+  | Wrapped expr -> (subst_expr ty_args args expr).expr_desc
   | Var x as v -> begin
-      try List.assoc x args
+      try (find_name x args).expr_desc
       with Not_found -> v
   end
   | Application ({ callee; arguments; generic_arguments_ty } as app) ->
@@ -84,7 +94,7 @@ let rec subst_expr ty_args args = function
       Application { app with callee; arguments; generic_arguments_ty }
 
   | Function ({ fn_parameters; fn_body } as fn) ->
-      let filter (x, _) =  not (List.exists (fun p -> p.param_name = x) fn_parameters) in
+      let filter (x, _) =  not (List.exists (fun p -> p.param_name.str = x) fn_parameters) in
       let args' = List.filter filter args in
       let body = List.map (subst_stmt ty_args args') fn_body in
       Function { fn with fn_body=body }
@@ -114,17 +124,21 @@ let rec subst_expr ty_args args = function
       match_value = subst_expr ty_args args m.match_value;
       cases = List.map subst_case m.cases;
     }
+  in { expr with expr_desc = desc }
 
 
-and subst_stmt ty_args args = function
+and subst_stmt ty_args args stmt =
+  let desc = match stmt.stmt_desc with
   | Expr expr -> Expr (subst_expr ty_args args expr)
   | Let l -> Let { l with
       let_value = subst_expr ty_args args l.let_value;
     }
   | FunctionStmt fn ->
-    match subst_expr ty_args args (Function fn) with
-    | Function fn -> FunctionStmt fn
+    let expr = { expr_loc = stmt.stmt_loc; expr_desc = Function fn } in
+    match subst_expr ty_args args expr with
+    | { expr_desc = Function fn } -> FunctionStmt fn
     | _ -> assert false
+  in { stmt with stmt_desc = desc }
 
 let subst generics arguments fn =
   let { fn_parameters; fn_body } as fn = match fn with
@@ -145,66 +159,63 @@ let subst generics arguments fn =
   let subst, params = combine ([], []) (fn_parameters, arguments) in
   let subst_ty = combine_ty [] (fn.fn_generics, generics) in
   let body' = List.rev_map (subst_stmt subst_ty subst) fn_body in
-  match params, body' with
-  | [], [] -> Expr Unit
-  | [], _ -> List.hd body'
-  | _ -> Expr (Function { fn with fn_parameters = params; fn_body = body' })
+  let stmt_desc = match params, body' with
+  | [], [] -> Expr { expr_loc = dummy_loc; expr_desc = Unit }
+  | [], _ -> (List.hd body').stmt_desc
+  | _ -> Expr { expr_loc = dummy_loc; expr_desc = Function { fn with fn_parameters = params; fn_body = body' } }
+  in { stmt_loc = dummy_loc; stmt_desc }
 
 let rec eval_let env { let_var; let_value } =
-  let value, env = eval_expr env let_value in
-  value, (let_var, value) :: env
+  let value = eval_expr env let_value in
+  value, extend_name env let_var value
 
-and eval_expr env = function
-  | Unit -> (V.Unit, env)
+and eval_expr env expr =
+  match expr.expr_desc with
+  | Unit -> V.Unit
   | Wrapped expr -> eval_expr env expr
   | Ctor c ->
     let args = match c.ctor_arguments with
       | None -> None
-      | Some args -> Some (List.map (fun e -> fst @@ eval_expr env e) args)
-    in (V.Ctor { c with ctor_arguments = args }, env)
-  | Literal l -> (V.Literal l, env)
+      | Some args -> Some (List.map (eval_expr env) args)
+    in V.Ctor { c with ctor_arguments = args }
+  | Literal l -> V.Literal l
   | Application { callee; generic_arguments; arguments; generic_arguments_ty } ->
-      let (callee', _) = eval_expr env callee in
+      let callee' = eval_expr env callee in
       let arguments = match arguments with
         | None -> []
-        | Some a -> List.map (fun a -> fst @@ eval_expr env a) a
+        | Some a -> List.map (eval_expr env) a
       in
       begin match callee' with
       | V.Builtin (_, fn) -> fn env arguments
       | _ ->
         let arguments' = List.map V.expr_of_value arguments in
-        let (v, _) = eval_stmt env (subst generic_arguments_ty arguments' callee') in
-        (v, env)
+        fst @@ eval_stmt env (subst generic_arguments_ty arguments' callee')
       end
   | Var v -> begin
-      try (List.assoc v env, env)
+      try find_name v env
       with Not_found ->
         raise (Unbound_variable v)
       end
   | Record r ->
-    V.Record (List.map (fun (n, v) -> (n, fst @@ eval_expr env v)) r), env
+    V.Record (List.map (fun (n, v) -> (n.str, eval_expr env v)) r)
   | Field_access f ->
-    let value, _ = eval_expr env f.record in
+    let value = eval_expr env f.record in
     begin match value with
       | V.Record fields ->
-        List.assoc f.field fields, env
+        find_name f.field fields
       | _ -> assert false
     end
   | Match m -> eval_match env m
-  | Binop bin -> eval_expr env (Application (app_of_binop bin))
-  | Function ({ fn_name; fn_parameters; fn_body } as fn) ->
-      let fn' = V.Function fn in
-      match fn_name with
-      | Some n -> (fn', (n, fn')::env)
-      | None -> (fn', env)
+  | Binop bin -> eval_expr env ({ expr_loc = expr.expr_loc; expr_desc = Application (app_of_binop bin) })
+  | Function ({ fn_name; fn_parameters; fn_body } as fn) -> V.Function fn
 
 and eval_match env { match_value; cases } =
-  let v, _ = eval_expr env match_value in
+  let v = eval_expr env match_value in
   let matched_case = List.find (matched_case env v) cases in
   eval_case env v matched_case
 
 and matched_case env value { pattern } =
-  match pattern, value with
+  match pattern.pat_desc, value with
   | Pany, _ -> true
   | Pvar _, _ -> true
   | Pctor (name, _), V.Ctor { ctor_name } when name = ctor_name -> true
@@ -213,12 +224,12 @@ and matched_case env value { pattern } =
 and eval_case env value { pattern; case_value } =
   let env' = eval_pattern env pattern value in
   let value, _ = eval_stmt env' (List.hd @@ List.rev @@ case_value) in
-  value, env
+  value
 
 and eval_pattern env pattern value =
-  match pattern, value with
+  match pattern.pat_desc, value with
   | Pany, _ -> env
-  | Pvar x, v -> (x, v) :: env
+  | Pvar x, v -> extend_name env x v
   | Pctor (_, ps), V.Ctor { ctor_arguments } ->
     begin match ps, ctor_arguments with
     | None, None -> env
@@ -230,39 +241,45 @@ and eval_pattern env pattern value =
 and eval_intf_item intf_name env = function
   | Prototype { proto_name }
   | OperatorPrototype { oproto_name = proto_name } ->
-    Hashtbl.add fn_to_intf proto_name intf_name;
-    (proto_name, V.InterfaceFunction proto_name)::env
+    Hashtbl.add fn_to_intf proto_name.str intf_name.str;
+    extend_name env proto_name (V.InterfaceFunction proto_name.str)
 
 and eval_impl_item = function
   | ImplOperator op ->
-    (op.op_name, fn_of_operator op)
+    (op.op_name.str, fn_of_operator op)
   | ImplFunction impl_fn ->
     match impl_fn.fn_name with
-    | Some n -> (n, impl_fn)
+    | Some n -> (n.str, impl_fn)
     | None -> assert false
 
-and eval_stmt env = function
-  | Expr expr -> eval_expr env expr
+and eval_stmt env stmt =
+  match stmt.stmt_desc with
+  | Expr expr -> eval_expr env expr, env
   | Let l -> eval_let env l
-  | FunctionStmt fn -> eval_expr env (Function fn)
+  | FunctionStmt fn ->
+    let fn' = eval_expr env { expr_loc = stmt.stmt_loc; expr_desc = (Function fn) } in
+    match fn.fn_name with
+    | Some name -> fn', extend_name env name fn'
+    | None -> assert false
 
-and eval_decl env = function
+and eval_decl env decl =
+  match decl.decl_desc with
   | Stmt stmt -> eval_stmt env stmt
-  | Enum { enum_name } -> (V.Type enum_name, env)
+  | Enum { enum_name } -> (V.Type enum_name.str, env)
   | Interface { intf_name; intf_items } ->
-    Hashtbl.add intf_to_impls intf_name (ref []);
+    Hashtbl.add intf_to_impls intf_name.str (ref []);
     let env' = List.fold_left (eval_intf_item intf_name) env intf_items in
     (V.Unit, env')
   | Operator op ->
-    let _, env' = eval_expr env (Function (fn_of_operator op)) in
-    V.Unit, env'
+    let value = eval_expr env ({ expr_loc = dummy_loc; expr_desc = Function (fn_of_operator op) }) in
+    V.Unit, extend_name env op.op_name value
 
   | Implementation { impl_name; impl_arg_type; impl_items } ->
       let ty = match impl_arg_type with
         | Some t -> t
         | None -> assert false
       in
-      let impls = Hashtbl.find intf_to_impls impl_name in
+      let impls = Hashtbl.find intf_to_impls impl_name.str in
       impls := (ty, List.map eval_impl_item impl_items) :: !impls;
       (V.Unit, env)
 

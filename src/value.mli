@@ -10,6 +10,6 @@ type t =
   | Record of (string * t) list
   | Builtin of string * builtin
 
-and builtin = (string * t) list -> t list -> (t * (string * t) list)
+and builtin = (string * t) list -> t list -> t
 
 val expr_of_value : t -> A.expr

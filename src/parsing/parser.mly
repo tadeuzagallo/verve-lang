@@ -1,5 +1,15 @@
 %{
 open Absyn
+open Parsing
+
+let mk_loc () = { loc_start = symbol_start_pos(); loc_end = symbol_end_pos() }
+let mk_name str = { str; loc = mk_loc() }
+let mk_expr d = { expr_desc = d; expr_loc = mk_loc() }
+let mk_type d = { type_desc = d; type_loc = mk_loc() }
+let mk_pat d = { pat_desc = d; pat_loc = mk_loc() }
+let mk_stmt d = { stmt_desc = d; stmt_loc = mk_loc() }
+let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
+
 %}
 
 /* keywords */
@@ -63,64 +73,70 @@ program: decl* EOF {
 decl_start: decl EOF { $1 }
 
 /* high-level structures */
-decl:
+decl: decl_desc { mk_decl $1 }
+decl_desc:
   | enum { $1 }
   | interface { $1 }
   | implementation { $1 }
   | operator { Operator $1 }
   | stmt { Stmt $1 }
 
+stmt: stmt_desc { mk_stmt $1 }
+stmt_desc:
+  | let_ { $1 }
+  | function_ { FunctionStmt $1 }
+  | expr_ { Expr (mk_expr $1) }
+
+expr: expr_desc { mk_expr $1 }
+expr_desc:
+  | function_ { Function $1 }
+  | expr_ { $1 }
+
 expr_:
   | record { $1 }
   | match_expr { $1 }
   | constructor { $1 }
   | constructor_no_args %prec BELOW_PAREN { $1 }
-  | atom %prec BELOW_PAREN { $1 }
+  | atom_desc %prec BELOW_PAREN { $1 }
   | binop { $1 }
 
-expr:
-  | expr_ { $1 }
-  | function_ { Function $1 }
-
-stmt:
-  | let_ { $1 }
-  | function_ { FunctionStmt $1 }
-  | expr_ { Expr $1 }
-
-atom:
-  | LCID { Var $1 }
+%inline atom: atom_desc { mk_expr $1 }
+atom_desc:
+  | lcid { Var $1 }
   | literal { Literal $1 }
   | field_access { $1 }
   | application { $1 }
   (* Matched when the first expression in a sequence is wrapped in parens *)
   | parens(expr) { Wrapped $1 }
-  | parens(OP) { Var $1 }
+  | parens(op) { Var $1 }
   (* Matched to break applications when there's a line break *)
   | NL_L_PAREN expr R_PAREN { Wrapped $2 }
-  | NL_L_PAREN OP R_PAREN { Var $2 }
+  | NL_L_PAREN op R_PAREN { Var $2 }
 
 /* function expressions */
-function_: FN LCID generic_parameters plist(parameter) ARROW type_ braces(list(stmt)) {
-  { fn_name = Some $2; fn_generics = $3; fn_parameters = $4; fn_return_type = $6; fn_body = $7 }
+function_: FN lcid generic_parameters plist(parameter) ARROW type_ braces(list(stmt)) {
+  { fn_name = Some ($2); fn_generics = $3; fn_parameters = $4; fn_return_type = $6; fn_body = $7 }
 }
 
 generic_parameters: loption(nonempty_alist(generic_parameter)) { $1 }
 
-generic_parameter: UCID loption(COLON quantifiers { $2 }) {
+generic_parameter: ucid loption(COLON quantifiers { $2 }) {
   { name = $1; constraints = $2 }
 }
 
 quantifiers:
-  | UCID { [$1] }
-  | plist(UCID) { $1 }
+  | ucid { [$1] }
+  | plist(ucid) { $1 }
 
-parameter: LCID COLON type_ {
+parameter: lcid COLON type_ {
   { param_name = $1; param_type = $3 }
 }
 
 /* types */
-type_:
-  | UCID generic_arguments { Inst ($1, $2) }
+type_: type_desc { mk_type $1 }
+
+type_desc:
+  | ucid generic_arguments { Inst ($1, $2) }
   | arrow_type { $1 }
   | record_type { $1 }
 
@@ -128,13 +144,13 @@ arrow_type: plist(type_) ARROW type_ { Arrow($1, $3) }
 
 record_type: blist(record_type_field) { RecordType $1 }
 
-record_type_field: LCID COLON type_ { ($1, $3) }
+record_type_field: lcid COLON type_ { ($1, $3) }
 
 /* application */
 
 %inline application:
   | second_application { $1 }
-  | first_application %prec BELOW_PAREN { $1 }
+  | first_application_desc %prec BELOW_PAREN { $1 }
 
 %inline application_(x):
   | x plist(expr) {
@@ -145,7 +161,9 @@ record_type_field: LCID COLON type_ { ($1, $3) }
   }
 
 second_application: application_(first_application) { $1 }
-first_application: application_(atom) { $1 }
+
+%inline first_application: first_application_desc { mk_expr $1 }
+first_application_desc: application_(atom) { $1 }
 
 generic_arguments: loption(generic_arguments_strict) { $1 }
 
@@ -157,24 +175,24 @@ literal:
   | STRING { String $1 }
 
 /* enums */
-enum: ENUM UCID generic_parameters braces(nonempty_list(enum_item)) {
+enum: ENUM ucid generic_parameters braces(nonempty_list(enum_item)) {
   Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
 }
 
-enum_item: UCID generic_parameters plist(type_)? {
+enum_item: ucid generic_parameters plist(type_)? {
   { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
 
-%inline constructor_no_args: UCID generic_arguments {
+%inline constructor_no_args: ucid generic_arguments {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = None }
 }
 
-%inline constructor: UCID generic_arguments plist(expr) {
+%inline constructor: ucid generic_arguments plist(expr) {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = Some $3 }
 }
 
 /* interfaces */
-interface: INTERFACE UCID angles(generic_parameter) braces(list(interface_item)) {
+interface: INTERFACE ucid angles(generic_parameter) braces(list(interface_item)) {
   Interface { intf_name = $2; intf_param = $3; intf_items = $4; }
 }
 
@@ -182,11 +200,16 @@ interface_item:
   | prototype {$1}
   | operator_prototype {$1}
 
-prototype: FN LCID generic_parameters plist(type_) ARROW type_ {
-  Prototype { proto_name = $2; proto_generics = $3; proto_params = $4; proto_ret_type = $6 }
+prototype: FN lcid generic_parameters plist(type_) ARROW type_ {
+  Prototype {
+    proto_name = $2;
+    proto_generics = $3;
+    proto_params = $4;
+    proto_ret_type = $6
+  }
 }
 
-operator_prototype: attributes OPERATOR generic_parameters parens(type_) OP parens(type_) ARROW type_ {
+operator_prototype: attributes OPERATOR generic_parameters parens(type_) op parens(type_) ARROW type_ {
     OperatorPrototype {
       oproto_attributes = $1;
       oproto_generics = $3;
@@ -198,7 +221,7 @@ operator_prototype: attributes OPERATOR generic_parameters parens(type_) OP pare
 }
 
 /* implementations */
-implementation: IMPLEMENTATION UCID angles(type_) braces(list(impl_item)) {
+implementation: IMPLEMENTATION ucid angles(type_) braces(list(impl_item)) {
   Implementation { impl_name = $2; impl_arg = $3; impl_items = $4; impl_arg_type = None }
 }
 
@@ -209,9 +232,9 @@ impl_item:
 /* Records */
 
 record: blist(record_field) { Record $1 }
-record_field: LCID EQ expr { ($1, $3) }
+record_field: lcid EQ expr { ($1, $3) }
 
-field_access: atom DOT LCID {
+field_access: atom DOT lcid {
   Field_access { record = $1; field = $3; }
 }
 
@@ -224,17 +247,18 @@ match_case: CASE pattern COLON nonempty_list(stmt) {
   { pattern = $2; case_value = $4 }
 }
 
-pattern:
+pattern: pattern_desc { mk_pat $1 }
+pattern_desc:
   | UNDERSCORE { Pany }
-  | LCID { Pvar $1 }
-  | UCID option(plist(pattern)) { Pctor ($1, $2) }
+  | lcid { Pvar ($1) }
+  | ucid option(plist(pattern)) { Pctor ($1, $2) }
 
 /* binary operations */
-binop: expr OP expr {
+binop: expr op expr {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
-operator: attributes OPERATOR generic_parameters parens(parameter) OP parens(parameter) ARROW type_ braces(list(stmt)) {
+operator: attributes OPERATOR generic_parameters parens(parameter) op parens(parameter) ARROW type_ braces(list(stmt)) {
     {
       op_attributes = $1;
       op_generics = $3;
@@ -249,17 +273,22 @@ operator: attributes OPERATOR generic_parameters parens(parameter) OP parens(par
 /* attributes */
 attributes: list(HASH attribute { $2 }) { $1 }
 
-attribute: LCID parens(attribute_value)? { { attr_name = $1; attr_value = $2 } }
+attribute: lcid parens(attribute_value)? { { attr_name = $1; attr_value = $2 } }
 
 attribute_value:
-  | OP { AttrOp $1 }
+  | op { AttrOp $1 }
   | attribute { Attribute $1 }
   | INT { AttrInt $1 }
 
 /* let binding */
-%inline let_: LET LCID EQ expr {
+%inline let_: LET lcid EQ expr {
   Let {
     let_var = $2;
     let_value = $4;
   }
 }
+
+/* names */
+%inline op: OP { mk_name $1 }
+lcid: LCID { mk_name $1 }
+ucid: UCID { mk_name $1 }

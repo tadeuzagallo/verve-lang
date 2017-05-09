@@ -4,11 +4,18 @@ open Type_error
 
 module T = Types
 
+let map_record fn fields =
+  let aux (key, value) =
+    (key.str, fn value)
+  in
+  List.map aux fields
+
 let check_literal = function
   | Int _ -> ty_int
   | String _ -> ty_string
 
-let rec check_type env = function
+let rec check_type env ty =
+  match ty.type_desc with
   | Arrow (parameters, return_type) ->
     let ret = check_type env return_type in
     let params = List.map (check_type env) parameters in
@@ -17,9 +24,7 @@ let rec check_type env = function
     let ty = instantiate (Env.find_type env t) in
     apply_generics env ty args
   | RecordType fields ->
-    let keys, types = List.split fields in
-    let types = List.map (check_type env) types in
-    T.record (List.combine keys types)
+    T.record (map_record (check_type env) fields)
 
 and apply_generics env ty_callee gen_args =
   let gen_args' = List.map (check_type env) gen_args in
@@ -74,7 +79,7 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
 and run_application env (ty_callee, generic_arguments, arguments) =
   let arguments = match arguments with
   | None -> []
-  | Some [] -> [Unit]
+  | Some [] -> [{ expr_loc = dummy_loc; expr_desc = Unit }]
   | Some args -> args
   in
 
@@ -98,9 +103,7 @@ and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   run_application env (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
 and check_record env fields =
-  let keys, values = List.split fields in
-  let values = List.map (check_expr env) values in
-  T.record (List.combine keys values)
+  T.record (map_record (check_expr env) fields)
 
 and check_field_access env { record; field } =
   let record = check_expr env record in
@@ -109,7 +112,7 @@ and check_field_access env { record; field } =
     | _ -> raise (Error (Invalid_access (field, record)))
   in
   try
-    List.assoc field fields
+    List.assoc field.str fields
   with Not_found ->
     raise (Error (Unknown_field (field, record)))
 
@@ -125,7 +128,8 @@ and check_case env value_ty ret_ty { pattern; case_value } =
   let case_ty, _ = check_stmts env' case_value in
   unify ~expected:ret_ty case_ty
 
-and check_pattern env = function
+and check_pattern env pat =
+  match pat.pat_desc with
   | Pany -> make_var (), env
 
   | Pvar v ->
@@ -148,7 +152,7 @@ and check_pattern env = function
         ty, env'
 
       | _, _ ->
-        raise (Error (Invalid_pattern (Pctor (name, ps), t)))
+        raise (Error (Invalid_pattern (pat, t)))
 
 and check_binop env binop =
   let app = app_of_binop binop in
@@ -156,7 +160,8 @@ and check_binop env binop =
   binop.bin_generic_arguments_ty <- app.generic_arguments_ty;
   res
 
-and check_expr env = function
+and check_expr env expr =
+  match expr.expr_desc with
   | Unit -> ty_void
   | Literal l -> check_literal l
   | Var v -> Env.find_value env v
@@ -182,7 +187,8 @@ and check_fn_stmt env fn =
   in
   ty, Env.add_value env name ty
 
-and check_stmt env = function
+and check_stmt env stmt =
+  match stmt.stmt_desc with
   | Let let_ -> check_let env let_
   | FunctionStmt fn -> check_fn_stmt env fn
   | Expr expr -> check_expr env expr, env

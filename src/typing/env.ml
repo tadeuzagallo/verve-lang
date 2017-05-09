@@ -4,9 +4,9 @@ module A = Absyn
 module T = Types
 
 type t = {
-  types: (A.name * T.texpr) list;
-  values: (A.name * T.texpr) list;
-  ctors: (A.name * T.texpr) list;
+  types: (string * T.texpr) list;
+  values: (string * T.texpr) list;
+  ctors: (string * T.texpr) list;
 }
 
 let empty = {
@@ -115,26 +115,26 @@ let instantiate t =
 
 (* getters and setters *)
 let add_type env name ty =
-  { env with types = extend env.types (name, ty) }
+  { env with types = extend env.types (name.A.str, ty) }
 
 let find_type env v =
-  try List.assoc v env.types
+  try List.assoc v.A.str env.types
   with Not_found ->
     raise (Error (Unknown_type v))
 
 let add_ctor env name ctor =
-  { env with ctors = extend env.ctors (name, ctor) }
+  { env with ctors = extend env.ctors (name.A.str, ctor) }
 
 let find_ctor env name =
-  try instantiate (List.assoc name env.ctors)
+  try instantiate (List.assoc name.A.str env.ctors)
   with Not_found ->
     raise (Error (Unknown_ctor name))
 
 let add_value env name value =
-  { env with values = extend env.values (name, value) }
+  { env with values = extend env.values (name.A.str, value) }
 
 let find_value env name =
-  try instantiate (List.assoc name env.values)
+  try instantiate (List.assoc name.A.str env.values)
   with Not_found ->
     raise (Error (Unknown_value name))
 
@@ -146,7 +146,7 @@ let var_of_generic env { A.name; A.constraints } =
     | _ -> raise (Error (Invalid_constraint (name, t)))
   in
   let intfs = List.map resolve constraints in
-  { T.id = _fresh name; T.name; T.constraints = intfs; }
+  { T.id = _fresh name.A.str; T.name = name.A.str; T.constraints = intfs; }
 
 (* Unification *)
 
