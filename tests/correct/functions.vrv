@@ -10,16 +10,16 @@ fn g<T: (U, V)>(x : T) -> T { x }
 fn g<T: (U, V), U>(x: (T) -> U) -> (T) -> U { x }
 
 fn g<U, T>(x : T) -> T { x }
-fn g<U, T: U>(x : T) -> T { x }
-fn g<U, T: (U, V)>(x : T) -> T { x }
+fn g<U, T: V>(x : T) -> T { x }
+fn g<X, T: (U, V)>(x : T) -> T { x }
 
 fn g<U: V, T>(x : T) -> T { x }
-fn g<U: V, T: U>(x : T) -> T { x }
-fn g<U: V, T: (U, V)>(x : T) -> T { x }
+fn g<U: V, T: V>(x : T) -> T { x }
+fn g<X: V, T: (U, V)>(x : T) -> T { x }
 
 fn g<U: (U, V), T>(x : T) -> T { x }
-fn g<U: (U, V), T: U>(x : T) -> T { x }
-fn g<U: (U, V), T: (U, V)>(x : T) -> T { x }
+fn g<U: (U, V), T: V>(x : T) -> T { x }
+fn g<U: (U, V), T: (V, V)>(x : T) -> T { x }
 
 fn f<T>(x: T) -> T { x }
 fn f<T, U>(x: T, y: U) -> T { x }

@@ -81,16 +81,18 @@ and check_operator env op =
   let ty = Typing_expr.check_fn env (fn_of_operator op) in
   Env.ty_void, Env.add_value env op.op_name ty
 
-and check_type_alias env name ty =
-  let ty' = Typing_expr.check_type env ty in
-  Env.ty_type, Env.add_type env name ty'
+and check_type_alias env ta =
+  let generics, env' = Typing_expr.check_generics env ta.ta_generics in
+  let ty = Typing_expr.check_type env' ta.ta_type in
+  let ty = List.fold_right T.type_arrow generics ty in
+  Env.ty_type, Env.add_type env ta.ta_name ty
 
 and check_decl env decl =
   match decl.decl_desc with
   | Stmt stmt -> Typing_expr.check_stmt env stmt
   | Enum enum -> check_enum env enum
   | Interface intf -> check_interface env intf
-  | TypeAlias (name, ty) -> check_type_alias env name ty
+  | TypeAlias ta -> check_type_alias env ta
   | Implementation impl -> check_implementation env impl, env
   | Operator op -> check_operator env op
 

@@ -198,9 +198,15 @@ and decl_desc =
   | Enum of enum
   | Stmt of stmt
   | Interface of interface
-  | TypeAlias of name * type_
+  | TypeAlias of type_alias
   | Implementation of implementation
   | Operator of operator
+
+and type_alias = {
+  ta_name : name;
+  ta_generics : generic list;
+  ta_type : type_;
+}
 
 type program = {
   imports : import list;

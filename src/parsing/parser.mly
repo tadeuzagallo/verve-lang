@@ -296,6 +296,10 @@ lcid: LCID { mk_name $1 }
 ucid: UCID { mk_name $1 }
 
 /* type alias */
-type_alias: TYPE ucid EQ type_ {
-    TypeAlias ($2, $4)
+type_alias: TYPE ucid generic_parameters EQ type_ {
+  TypeAlias {
+    ta_name = $2;
+    ta_generics = $3;
+    ta_type = $5;
+  }
 }

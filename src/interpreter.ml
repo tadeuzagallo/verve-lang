@@ -266,7 +266,7 @@ and eval_decl env decl =
   match decl.decl_desc with
   | Stmt stmt -> eval_stmt env stmt
   | Enum { enum_name } -> (V.Type enum_name.str, env)
-  | TypeAlias (name, _) -> (V.Type name.str, env)
+  | TypeAlias { ta_name } -> (V.Type ta_name.str, env)
   | Interface { intf_name; intf_items } ->
     Hashtbl.add intf_to_impls intf_name.str (ref []);
     let env' = List.fold_left (eval_intf_item intf_name) env intf_items in

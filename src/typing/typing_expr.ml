@@ -52,10 +52,16 @@ and apply_arguments callee arguments =
   in
   List.fold_left check callee arguments
 
+let check_generics ?(var=T.var) env generics =
+  let aux (acc, env) g =
+    let v = var (var_of_generic env g) in
+    (v :: acc, Env.add_type env g.name v)
+  in
+  let generics, env = List.fold_left aux ([], env) generics in
+  List.rev generics, env
+
 let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-  let generics = List.map (fun g -> T.rigid_var (var_of_generic env g)) fn_generics in
-  let generic_names = List.map (fun g -> g.name) fn_generics in
-  let env = List.fold_left2 Env.add_type env generic_names generics in
+  let generics, env = check_generics ~var:T.rigid_var env fn_generics in
 
   let param_names = List.map (fun p -> p.param_name) fn_parameters in
   let param_types = List.map (fun p -> check_type env p.param_type) fn_parameters in
