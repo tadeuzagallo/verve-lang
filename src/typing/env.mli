@@ -7,6 +7,7 @@ val merge : t -> t -> t
 val ty_int : Types.texpr
 val ty_string : Types.texpr
 val ty_void : Types.texpr
+val ty_type : Types.texpr
 
 val unify : expected: Types.texpr -> Types.texpr -> unit
 

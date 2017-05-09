@@ -21,6 +21,7 @@ let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
 %token LET
 %token MATCH
 %token OPERATOR
+%token TYPE
 
 /* punctuation */
 %token ARROW
@@ -78,6 +79,7 @@ decl_desc:
   | enum { $1 }
   | interface { $1 }
   | implementation { $1 }
+  | type_alias { $1 }
   | operator { Operator $1 }
   | stmt { Stmt $1 }
 
@@ -292,3 +294,8 @@ attribute_value:
 %inline op: OP { mk_name $1 }
 lcid: LCID { mk_name $1 }
 ucid: UCID { mk_name $1 }
+
+/* type alias */
+type_alias: TYPE ucid EQ type_ {
+    TypeAlias ($2, $4)
+}

@@ -198,6 +198,7 @@ and decl_desc =
   | Enum of enum
   | Stmt of stmt
   | Interface of interface
+  | TypeAlias of name * type_
   | Implementation of implementation
   | Operator of operator
 

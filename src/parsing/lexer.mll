@@ -18,6 +18,7 @@ rule read = parse
 | "let" { LET }
 | "match" { MATCH }
 | "operator" { OPERATOR }
+| "type" { TYPE }
 
 (* punctuation *)
 | "->" { ARROW }
