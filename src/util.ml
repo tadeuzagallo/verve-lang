@@ -27,7 +27,6 @@ let eval_decl ~print (env, has_error) decl =
     env', has_error
   with Type_error.Error e ->
     Type_error.report_error Format.err_formatter e;
-    Format.pp_print_newline Format.err_formatter ();
     env, true
 
 let rec eval_file ?(print=true) ?(state=(default_env, false)) = with_file @@ fun (file, input) ->
@@ -35,9 +34,38 @@ let rec eval_file ?(print=true) ?(state=(default_env, false)) = with_file @@ fun
   let state = List.fold_left (import file) state ast.Absyn.imports in
   List.fold_left (eval_decl ~print) state ast.Absyn.body
 
-and import file state import =
-  let filename = resolve_import file import.Absyn.i_module in
-  eval_file ~print:false ~state filename
+and import file ((tenv,_,_), _ as state) import =
+  try
+    let filename = resolve_import file import.Absyn.i_module in
+    let ((tenv', venv, nenv), has_error) = eval_file ~print:false ~state filename in
+    let tenv' = match import.Absyn.i_items with
+      | None -> tenv'
+      | Some items -> Env.merge tenv (import_filter tenv' items)
+    in
+    ((tenv', venv, nenv), has_error)
+  with Type_error.Error e ->
+    Type_error.report_error Format.err_formatter e;
+    let (st, _) = state in (st, true)
+
+and import_filter tenv items =
+  let add_ctors env = function
+    | None -> env
+    | Some names ->
+      let aux env name =
+        let ctor = Env.find_ctor tenv name in
+        Env.add_ctor env name ctor
+      in List.fold_left aux env names
+  in
+  let aux env = function
+    | Absyn.ImportValue v ->
+      let value = Env.find_value tenv v in
+      Env.add_value env v value
+    | Absyn.ImportType (t, ctors) ->
+      let ty = Env.find_type tenv t in
+      let env' = Env.add_type env t ty in
+      add_ctors env' ctors
+  in
+  List.fold_left aux Env.empty items
 
 and resolve_import file mod_ =
   let parts = List.map (fun n -> n.Absyn.str) mod_ in

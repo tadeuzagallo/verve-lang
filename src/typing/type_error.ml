@@ -21,7 +21,7 @@ type error =
 
 exception Error of error
 
-let report_error ppf = function
+let report_error' ppf = function
   | Unification_error (t1, t2) ->
     pf ppf "Failed to unify %a with %a"
       Printer.Type.pp t1 Printer.Type.pp t2
@@ -59,3 +59,7 @@ let report_error ppf = function
       Printer.Absyn.pp_pattern pat
   | Precedence_error (op1, op2) ->
     pf ppf "Precedence error: cannot mix %s and %s in the same infix expression" op1.A.str op2.A.str
+
+let report_error ppf err =
+  report_error' ppf err;
+  Format.pp_print_newline ppf ()
