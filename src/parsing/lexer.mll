@@ -19,6 +19,9 @@ rule read = parse
 | "match" { MATCH }
 | "operator" { OPERATOR }
 | "type" { TYPE }
+| "global" { GLOBAL }
+| "import" { IMPORT }
+| "as" { AS }
 
 (* punctuation *)
 | "->" { ARROW }

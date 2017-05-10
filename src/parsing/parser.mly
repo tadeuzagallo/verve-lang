@@ -22,6 +22,9 @@ let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
 %token MATCH
 %token OPERATOR
 %token TYPE
+%token GLOBAL
+%token IMPORT
+%token AS
 
 /* punctuation */
 %token ARROW
@@ -51,7 +54,7 @@ let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
 %start <Absyn.decl> decl_start
 
 %nonassoc BELOW_PAREN
-%left L_PAREN L_ANGLE OP
+%left L_PAREN L_ANGLE L_BRACE OP
 
 %%
 
@@ -67,8 +70,8 @@ let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
 %inline nonempty_alist(x): angles(separated_nonempty_list(COMMA, x)) { $1 }
 
 /* Entry points */
-program: decl* EOF {
-  { imports = []; exports = []; body = $1 }
+program: import* decl* EOF {
+  { imports = $1; exports = []; body = $2 }
 }
 
 decl_start: decl EOF { $1 }
@@ -303,3 +306,32 @@ type_alias: TYPE ucid generic_parameters EQ type_ {
     ta_type = $5;
   }
 }
+
+/* imports */
+import:
+  | GLOBAL IMPORT import_name import_items {{
+    i_loc = mk_loc();
+    i_global = true;
+    i_module = $3;
+    i_alias = None;
+    i_items = $4;
+  }}
+  | IMPORT import_name alias? import_items {{
+    i_loc = mk_loc();
+    i_global = false;
+    i_module = $2;
+    i_alias = $3;
+    i_items = $4;
+  }}
+
+import_name: separated_nonempty_list(DOT, ucid) { $1 }
+
+alias: AS ucid { $2 }
+
+import_items:
+  | %prec BELOW_PAREN { None }
+  | blist(import_item) { Some $1 }
+
+import_item:
+  | lcid { ImportValue $1 }
+  | ucid plist(ucid)? { ImportType ($1, $2) }

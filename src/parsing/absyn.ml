@@ -1,4 +1,3 @@
-type import
 type export
 
 type location = {
@@ -201,6 +200,18 @@ and decl_desc =
   | TypeAlias of type_alias
   | Implementation of implementation
   | Operator of operator
+
+and import = {
+  i_loc : location;
+  i_global : bool;
+  i_module : name list;
+  i_alias : name option;
+  i_items : import_item list option
+}
+
+and import_item =
+  | ImportValue of name
+  | ImportType of name * name list option
 
 and type_alias = {
   ta_name : name;

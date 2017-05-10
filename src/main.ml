@@ -13,7 +13,7 @@ open Fmt
 (* Helper functions *)
 let with_file fn file =
   let in_ch = open_in file in
-  let ret = fn in_ch in
+  let ret = fn (file, in_ch) in
   close_in in_ch;
   ret
 
@@ -30,27 +30,40 @@ let parse file =
     exit (-1)
 
 (* Command functions *)
-let run_fmt = with_file @@ fun file ->
-  let ast = parse file in
+let run_fmt = with_file @@ fun (_, input) ->
+  let ast = parse input in
   Printer.Absyn.pp_program Format.std_formatter ast
 
 let run_compile = ()
 
 let run_dump_ast = ()
 
-let run_file = with_file @@ fun file ->
+let rec eval_file ~state ~print = with_file @@ fun (file, input) ->
   let eval (state, has_error) decl = try
       let state', value, ty = Repl.eval state decl in
-      Printer.print value ty;
+      if print then Printer.print value ty;
       state', has_error
     with Type_error.Error e ->
       Type_error.report_error Format.err_formatter e;
       Format.pp_print_newline Format.err_formatter ();
       state, true
   in
-  let ast = parse file in
-  let state = (Env.default_env, Interpreter.default_env, []) in
-  let _, err = List.fold_left eval (state, false) ast.Absyn.body in
+  let ast = parse input in
+  let state = List.fold_left (import file) state ast.Absyn.imports in
+  List.fold_left eval state ast.Absyn.body
+
+and import file state import =
+  let filename = resolve_import file import.Absyn.i_module in
+  eval_file ~state ~print:false filename
+
+and resolve_import file mod_ =
+  let parts = List.map (fun n -> n.Absyn.str) mod_ in
+  let modname = String.concat Filename.dir_sep parts ^ ".vrv" in
+  Filename.concat (Filename.dirname file) modname
+
+let run_file file =
+  let env = (Env.default_env, Interpreter.default_env, []) in
+  let _, err = eval_file ~state:(env, false) ~print:true file in
   if err then exit 1
 
 let run_repl () =

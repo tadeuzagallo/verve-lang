@@ -1,0 +1,12 @@
+// RUN: %verve | %check
+
+global import Enum
+
+True // CHECK-L: True : Bool
+False // CHECK-L: False : Bool
+
+/*import Enum*/
+/*import Enum as E*/
+/*import Enum { Bool(True, False) }*/
+/*import Enum as E { Bool(True, False) }*/
+/*global import Enum { Bool(True, False) }*/
