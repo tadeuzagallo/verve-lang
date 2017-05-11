@@ -1,0 +1,8 @@
+// RUN: %not %verve | %check
+
+enum List<T> {
+  Nil
+  Cons(T, List<T>)
+}
+
+fn f(x: List) -> List { x } // CHECK-L: Invalid generic application: not applied to enough arguments

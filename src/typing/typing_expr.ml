@@ -22,7 +22,11 @@ let rec check_type env ty =
     List.fold_right T.arrow params ret
   | Inst (t, args) ->
     let ty = instantiate (Env.find_type env t) in
-    apply_generics env ty args
+    let ty = apply_generics env ty args in
+    begin match T.desc ty with
+    | T.TypeArrow _ -> raise (Error Invalid_generic_application_few)
+    | _ -> ty
+    end
   | RecordType fields ->
     T.record (map_record (check_type env) fields)
 

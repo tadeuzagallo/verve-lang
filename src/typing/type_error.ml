@@ -13,6 +13,7 @@ type error =
   | Invalid_constraint of A.name * texpr
   | Value_as_type of texpr
   | Invalid_generic_application
+  | Invalid_generic_application_few
   | Invalid_application
   | Invalid_implementation of A.qualified_name * texpr
   | Unknown_field of A.name * texpr
@@ -45,6 +46,8 @@ let report_error' ppf = function
       Printer.Type.pp t
   | Invalid_generic_application ->
     pf ppf "Invalid generic application: applied to too many types"
+  | Invalid_generic_application_few ->
+    pf ppf "Invalid generic application: not applied to enough arguments"
   | Invalid_application ->
     pf ppf "Invalid application: applied to too many arguments"
   | Invalid_implementation (name, t) ->
