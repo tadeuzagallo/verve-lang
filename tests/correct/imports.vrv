@@ -3,6 +3,12 @@
 global import Enum
 global import Match { Nat(Z) }
 
+import Enum
+import Enum as E
+
+import Match { Nat(Z) }
+import Match as M { Nat(Z) }
+
 True // CHECK-L: True : Bool
 False // CHECK-L: False : Bool
 
@@ -10,7 +16,12 @@ fn f(x: Nat) -> Void { } // CHECK-L: (Nat) -> Void
 Z // CHECK-L: Z : Nat
 S // CHECK-L: Unknown constructor: S
 
-/*import Enum as E*/
-/*import Enum { Bool(True, False) }*/
-/*import Enum as E { Bool(True, False) }*/
-/*global import Enum { Bool(True, False) }*/
+Enum.True // CHECK-L: Enum.True : Bool
+
+E.True // CHECK-L: E.True : Bool
+
+Match.Z // CHECK-L: Match.Z : Nat
+Match.S // CHECK-L: Unknown constructor: Match.S
+
+M.Z // CHECK-L: M.Z : Nat
+M.S // CHECK-L: Unknown constructor: M.S

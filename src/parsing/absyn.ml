@@ -10,6 +10,8 @@ type name = {
   loc : location;
 }
 
+type qualified_name = name list
+
 type type_ = {
   type_desc : type_desc;
   type_loc : location;
@@ -17,7 +19,7 @@ type type_ = {
 
 and type_desc =
   | Arrow of type_ list * type_
-  | Inst of name * type_ list
+  | Inst of qualified_name * type_ list
   | RecordType of (name * type_) list
 
 type literal =
@@ -26,7 +28,7 @@ type literal =
 
 type generic = {
   name : name;
-  constraints : name list;
+  constraints : qualified_name list;
 }
 
 type parameter = {
@@ -93,7 +95,7 @@ and function_ = {
 }
 
 and implementation = {
-  impl_name : name;
+  impl_name : qualified_name;
   impl_arg : type_;
   impl_items : implementation_item list;
   mutable impl_arg_type : Types.texpr option;
@@ -111,7 +113,7 @@ and application = {
 }
 
 and 'a ctor = {
-  ctor_name : name;
+  ctor_name : qualified_name;
   ctor_generic_arguments : type_ list;
   ctor_arguments : 'a list option;
 }
@@ -156,7 +158,7 @@ and expr = {
 and expr_desc =
   | Function of function_
   | Application of application
-  | Var of name
+  | Var of qualified_name
   | Ctor of expr ctor
   | Literal of literal
   | Record of (name * expr) list
@@ -178,7 +180,7 @@ and pattern = {
 and pattern_desc =
   | Pany
   | Pvar of name
-  | Pctor of name * pattern list option
+  | Pctor of qualified_name * pattern list option
 
 and stmt = {
   stmt_desc : stmt_desc;
@@ -228,6 +230,7 @@ type program = {
 let dummy_loc = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos }
 
 let mk_name str = { loc = dummy_loc; str }
+let mk_qualified_name str = List.map mk_name str
 
 let fn_of_operator op = {
   fn_name = Some (op.op_name);
@@ -238,7 +241,7 @@ let fn_of_operator op = {
 }
 
 let app_of_binop binop = {
-  callee = { expr_desc = Var binop.bin_op; expr_loc = binop.bin_op.loc };
+  callee = { expr_desc = Var [binop.bin_op]; expr_loc = binop.bin_op.loc };
   generic_arguments = [];
   arguments = Some [ binop.bin_lhs; binop.bin_rhs ];
   generic_arguments_ty = binop.bin_generic_arguments_ty;

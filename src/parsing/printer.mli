@@ -2,6 +2,7 @@ val print : Value.t -> Types.texpr -> unit
 val print_raw : Format.formatter -> Value.t -> Types.texpr -> unit
 
 module Absyn : sig
+  val pp_qualified_name : Absyn.qualified_name Fmt.t
   val pp_pattern : Absyn.pattern Fmt.t
   val pp_program : Absyn.program Fmt.t
 end

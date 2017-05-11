@@ -31,8 +31,7 @@ and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
 and check_interface env { intf_name; intf_param; intf_items } =
   let intf_ty = T.interface { T.intf_name = intf_name.str; T.intf_impls = [] } in
   let env' = Env.add_type env intf_name intf_ty in
-  let generic = { name = intf_param.name; constraints =
-intf_name::intf_param.constraints } in
+  let generic = { name = intf_param.name; constraints = [intf_name]::intf_param.constraints } in
   let var = T.var @@ var_of_generic env' generic in
   let env'' = List.fold_left (check_intf_item (intf_param.name, var)) env' intf_items in
   intf_ty, env''
@@ -66,7 +65,8 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
 and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let impl_arg_ty = Typing_expr.check_type env impl_arg in
   impl.impl_arg_type <- Some (impl_arg_ty);
-  let impl_desc = { T.impl_name = impl_name.str; T.impl_type = impl_arg_ty; T.impl_items = [] } in
+  let impl_name' = List.map (fun g -> g.str) impl_name in
+  let impl_desc = { T.impl_name = impl_name'; T.impl_type = impl_arg_ty; T.impl_items = [] } in
   let impl_ty = T.implementation impl_desc in
   let intf_desc =
     let t = Env.find_type env impl_name in

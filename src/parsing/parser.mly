@@ -107,16 +107,16 @@ expr_:
 
 %inline atom: atom_desc { mk_expr $1 }
 atom_desc:
-  | lcid { Var $1 }
+  | lcid_name { Var $1 }
   | literal { Literal $1 }
   | field_access { $1 }
   | application { $1 }
   (* Matched when the first expression in a sequence is wrapped in parens *)
   | parens(expr) { Wrapped $1 }
-  | parens(op) { Var $1 }
+  | parens(op) { Var [$1] }
   (* Matched to break applications when there's a line break *)
   | NL_L_PAREN expr R_PAREN { Wrapped $2 }
-  | NL_L_PAREN op R_PAREN { Var $2 }
+  | NL_L_PAREN op R_PAREN { Var [$2] }
 
 /* function expressions */
 function_: FN lcid generic_parameters plist(parameter) ARROW type_ braces(list(stmt)) {
@@ -130,8 +130,8 @@ generic_parameter: ucid loption(COLON quantifiers { $2 }) {
 }
 
 quantifiers:
-  | ucid { [$1] }
-  | plist(ucid) { $1 }
+  | ucid_name { [$1] }
+  | plist(ucid_name) { $1 }
 
 parameter: lcid COLON type_ {
   { param_name = $1; param_type = $3 }
@@ -141,7 +141,7 @@ parameter: lcid COLON type_ {
 type_: type_desc { mk_type $1 }
 
 type_desc:
-  | ucid generic_arguments { Inst ($1, $2) }
+  | ucid_name generic_arguments { Inst ($1, $2) }
   | arrow_type { $1 }
   | record_type { $1 }
 
@@ -188,11 +188,11 @@ enum_item: ucid generic_parameters plist(type_)? {
   { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
 
-%inline constructor_no_args: ucid generic_arguments {
+%inline constructor_no_args: ucid_name generic_arguments {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = None }
 }
 
-%inline constructor: ucid generic_arguments plist(expr) {
+%inline constructor: ucid_name generic_arguments plist(expr) {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = Some $3 }
 }
 
@@ -226,7 +226,7 @@ operator_prototype: attributes OPERATOR generic_parameters parens(type_) op pare
 }
 
 /* implementations */
-implementation: IMPLEMENTATION ucid angles(type_) braces(list(impl_item)) {
+implementation: IMPLEMENTATION ucid_name angles(type_) braces(list(impl_item)) {
   Implementation { impl_name = $2; impl_arg = $3; impl_items = $4; impl_arg_type = None }
 }
 
@@ -256,7 +256,7 @@ pattern: pattern_desc { mk_pat $1 }
 pattern_desc:
   | UNDERSCORE { Pany }
   | lcid { Pvar ($1) }
-  | ucid option(plist(pattern)) { Pctor ($1, $2) }
+  | ucid_name option(plist(pattern)) { Pctor ($1, $2) }
 
 /* binary operations */
 binop: expr op expr {
@@ -298,6 +298,14 @@ attribute_value:
 lcid: LCID { mk_name $1 }
 ucid: UCID { mk_name $1 }
 
+ucid_name:
+  | ucid_name DOT ucid { $1 @ [$3] }
+  | ucid { [$1] }
+
+lcid_name:
+  | ucid_name DOT lcid { $1 @ [$3] }
+  | lcid { [$1] }
+
 /* type alias */
 type_alias: TYPE ucid generic_parameters EQ type_ {
   TypeAlias {
@@ -309,22 +317,20 @@ type_alias: TYPE ucid generic_parameters EQ type_ {
 
 /* imports */
 import:
-  | GLOBAL IMPORT import_name import_items {{
+  | GLOBAL IMPORT ucid_name import_items {{
     i_loc = mk_loc();
     i_global = true;
     i_module = $3;
     i_alias = None;
     i_items = $4;
   }}
-  | IMPORT import_name alias? import_items {{
+  | IMPORT ucid_name alias? import_items {{
     i_loc = mk_loc();
     i_global = false;
     i_module = $2;
     i_alias = $3;
     i_items = $4;
   }}
-
-import_name: separated_nonempty_list(DOT, ucid) { $1 }
 
 alias: AS ucid { $2 }
 

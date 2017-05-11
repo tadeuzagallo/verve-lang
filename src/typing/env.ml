@@ -7,18 +7,21 @@ type t = {
   types: (string * T.texpr) list;
   values: (string * T.texpr) list;
   ctors: (string * T.texpr) list;
+  modules: (string * t) list;
 }
 
 let empty = {
   types = [];
   values = [];
   ctors = [];
+  modules = [];
 }
 let extend env (x, t) = (x, t)::env
 let merge e1 e2 = {
   types = e1.types @ e2.types;
   values = e1.values @ e2.values;
   ctors = e1.ctors @ e2.ctors;
+  modules = e1.modules @ e2.modules;
 }
 
 (* Type variable helpers*)
@@ -71,6 +74,7 @@ let default_env = {
     ("int_div", binop ty_int);
   ];
   ctors = [];
+  modules = [];
 }
 
 let rec find var = function
@@ -114,11 +118,27 @@ let instantiate t =
   in instantiate [] t
 
 (* getters and setters *)
+let rec find name env proj =
+  match name with
+  | [] -> assert false
+  | [x] -> List.assoc x.A.str (proj env)
+  | x :: y :: rest ->
+    let env' = find_module env x in
+    find (y :: rest) env' proj
+
+and find_module env name =
+  try List.assoc name.A.str env.modules
+  with Not_found ->
+    raise (Error (Unknown_module name))
+
+let add_module env name mod_ =
+  { env with modules = extend env.modules (name.A.str, mod_) }
+
 let add_type env name ty =
   { env with types = extend env.types (name.A.str, ty) }
 
 let find_type env v =
-  try List.assoc v.A.str env.types
+  try find v env (fun env -> env.types)
   with Not_found ->
     raise (Error (Unknown_type v))
 
@@ -126,7 +146,7 @@ let add_ctor env name ctor =
   { env with ctors = extend env.ctors (name.A.str, ctor) }
 
 let find_ctor env name =
-  try instantiate (List.assoc name.A.str env.ctors)
+  try instantiate (find name env (fun env -> env.ctors))
   with Not_found ->
     raise (Error (Unknown_ctor name))
 
@@ -134,7 +154,7 @@ let add_value env name value =
   { env with values = extend env.values (name.A.str, value) }
 
 let find_value env name =
-  try instantiate (List.assoc name.A.str env.values)
+  try instantiate (find name env (fun env -> env.values))
   with Not_found ->
     raise (Error (Unknown_value name))
 

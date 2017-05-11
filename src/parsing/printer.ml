@@ -11,6 +11,10 @@ let comma_sep pp_v ppf v =
   let sep ppf () = pf ppf ",@ " in
   Fmt.list ~sep pp_v ppf v
 
+let dot_sep pp ppf v =
+  let sep ppf () = char ppf '.' in
+  Fmt.list ~sep pp ppf v
+
 let pp_name ppf name = string ppf name.Absyn.str
 
 let print_record sep pp_field pp_value  ppf fields =
@@ -21,6 +25,8 @@ let print_record sep pp_field pp_value  ppf fields =
 open Absyn
 
 module Absyn = struct
+  let pp_qualified_name ppf name = dot_sep pp_name ppf name
+
   let pp_literal ppf = function
     | Int i -> int ppf i
     | String s -> quote string ppf s
@@ -29,9 +35,9 @@ module Absyn = struct
     pp_name ppf name;
     match constraints with
     | [] -> ()
-    | [ x ] -> pf ppf "@,: %s" x.str
+    | [ x ] -> pf ppf "@,: %a" pp_qualified_name x
     | constraints' ->
-      pf ppf "@,: %a" (box @@ parens @@ comma_sep pp_name) constraints'
+      pf ppf "@,: %a" (box @@ parens @@ comma_sep pp_qualified_name) constraints'
 
   let pp_generics ppf = function
     | [] -> ()
@@ -40,7 +46,7 @@ module Absyn = struct
   let rec pp_type ppf ty =
     match ty.type_desc with
     | Arrow (ps, r) -> pf ppf "%a -> %a" (parens @@ comma_sep pp_type) ps pp_type r
-    | Inst (n, ts) -> pf ppf "%a%a" pp_name n pp_generic_arguments ts
+    | Inst (n, ts) -> pf ppf "%a%a" pp_qualified_name n pp_generic_arguments ts
     | RecordType fields -> print_record ':' pp_name pp_type ppf fields
 
   and pp_param ppf { param_name; param_type } =
@@ -67,7 +73,7 @@ module Absyn = struct
 
   and pp_ctor : 'a. 'a Fmt.t -> 'a ctor Fmt.t = fun pp ppf c ->
     pf ppf "%a%a%a"
-      pp_name c.ctor_name
+      pp_qualified_name c.ctor_name
       pp_generic_arguments c.ctor_generic_arguments
       (option @@ hvbox @@ parens @@ comma_sep pp) c.ctor_arguments
 
@@ -90,7 +96,7 @@ module Absyn = struct
     | Pvar v -> pp_name ppf v
     | Pctor (n, ps) ->
       pf ppf "%a%a"
-        pp_name n
+        pp_qualified_name n
         (option @@ hvbox @@ parens @@ comma_sep pp_pattern) ps
 
 
@@ -130,7 +136,7 @@ module Absyn = struct
     | Function fn -> pp_fn ppf fn
     | Ctor ctor -> pp_ctor pp' ppf ctor
     | Application app -> pp_app ppf app
-    | Var str -> pp_name ppf str
+    | Var str -> pp_qualified_name ppf str
     | Literal l -> pp_literal ppf l
     | Unit -> string ppf "()"
     | Record r -> pp_record ppf r
@@ -191,7 +197,7 @@ module Absyn = struct
 
   let pp_implementation ppf { impl_name; impl_arg; impl_items } =
     pf ppf "@[<v>@[<v 2>implementation %a<%a> {@ %a@]@ }@]"
-      pp_name impl_name
+      pp_qualified_name impl_name
       pp_type impl_arg
       (list pp_impl_item) impl_items
 
@@ -267,7 +273,7 @@ module Type = struct
     | Interface i ->
         pf ppf "interface %s" i.intf_name
     | Implementation i ->
-        pf ppf "implementation %s<%a>" i.impl_name pp i.impl_type
+        pf ppf "implementation %a<%a>" (dot_sep string) i.impl_name pp i.impl_type
     | Record r -> print_record ':' string pp ppf r
   and pp ppf v = (box ~indent:2 pp') ppf v
 

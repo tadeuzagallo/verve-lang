@@ -1,5 +1,7 @@
 open Lexing
 
+module A = Absyn
+
 let default_env = (Env.default_env, Interpreter.default_env, [])
 
 let with_file fn file =
@@ -38,34 +40,40 @@ and import file ((tenv,_,_), _ as state) import =
   try
     let filename = resolve_import file import.Absyn.i_module in
     let ((tenv', venv, nenv), has_error) = eval_file ~print:false ~state filename in
-    let tenv' = match import.Absyn.i_items with
-      | None -> tenv'
-      | Some items -> Env.merge tenv (import_filter tenv' items)
-    in
+    let filtered = import_filter tenv' import.Absyn.i_items in
+    let tenv' = alias tenv filtered import in
     ((tenv', venv, nenv), has_error)
   with Type_error.Error e ->
     Type_error.report_error Format.err_formatter e;
     let (st, _) = state in (st, true)
 
-and import_filter tenv items =
-  let add_ctors env = function
-    | None -> env
-    | Some names ->
-      let aux env name =
-        let ctor = Env.find_ctor tenv name in
-        Env.add_ctor env name ctor
-      in List.fold_left aux env names
-  in
-  let aux env = function
-    | Absyn.ImportValue v ->
-      let value = Env.find_value tenv v in
-      Env.add_value env v value
-    | Absyn.ImportType (t, ctors) ->
-      let ty = Env.find_type tenv t in
-      let env' = Env.add_type env t ty in
-      add_ctors env' ctors
-  in
-  List.fold_left aux Env.empty items
+and alias tenv tenv' import =
+  if import.A.i_global then Env.merge tenv' tenv else
+  match import.A.i_alias with
+    | None -> Env.add_module tenv (List.hd @@ List.rev import.A.i_module) tenv'
+    | Some name -> Env.add_module tenv name tenv'
+
+and import_filter tenv = function
+  | None -> tenv
+  | Some items ->
+    let add_ctors env = function
+      | None -> env
+      | Some names ->
+        let aux env name =
+          let ctor = Env.find_ctor tenv [name] in
+          Env.add_ctor env name ctor
+        in List.fold_left aux env names
+    in
+    let aux env = function
+      | Absyn.ImportValue v ->
+        let value = Env.find_value tenv [v] in
+        Env.add_value env v value
+      | Absyn.ImportType (t, ctors) ->
+        let ty = Env.find_type tenv [t] in
+        let env' = Env.add_type env t ty in
+        add_ctors env' ctors
+    in
+    List.fold_left aux Env.empty items
 
 and resolve_import file mod_ =
   let parts = List.map (fun n -> n.Absyn.str) mod_ in

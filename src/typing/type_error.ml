@@ -6,14 +6,15 @@ module A = Absyn
 type error =
   | Unification_error of texpr * texpr
   | Instance_not_found of texpr * interface_desc
-  | Unknown_type of A.name
-  | Unknown_ctor of A.name
-  | Unknown_value of A.name
+  | Unknown_type of A.qualified_name
+  | Unknown_ctor of A.qualified_name
+  | Unknown_value of A.qualified_name
+  | Unknown_module of A.name
   | Invalid_constraint of A.name * texpr
   | Value_as_type of texpr
   | Invalid_generic_application
   | Invalid_application
-  | Invalid_implementation of A.name * texpr
+  | Invalid_implementation of A.qualified_name * texpr
   | Unknown_field of A.name * texpr
   | Invalid_access of A.name * texpr
   | Invalid_pattern of A.pattern * texpr
@@ -29,11 +30,13 @@ let report_error' ppf = function
     pf ppf "No instance of %s found for type %a"
       intf.intf_name Printer.Type.pp t
   | Unknown_type name ->
-    pf ppf "Unknown type: %s" name.A.str
+    pf ppf "Unknown type: %a" Printer.Absyn.pp_qualified_name name
   | Unknown_ctor name ->
-    pf ppf "Unknown constructor: %s" name.A.str
+    pf ppf "Unknown constructor: %a" Printer.Absyn.pp_qualified_name name
   | Unknown_value name ->
-    pf ppf "Unknown variable: %s" name.A.str
+    pf ppf "Unknown variable: %a" Printer.Absyn.pp_qualified_name name
+  | Unknown_module name ->
+    pf ppf "Unknown module: %s" name.A.str
   | Invalid_constraint (name, ty) ->
     pf ppf "Invalid constraint on generic type %s: expected an interface but found %a"
       name.A.str Printer.Type.pp ty
@@ -45,8 +48,10 @@ let report_error' ppf = function
   | Invalid_application ->
     pf ppf "Invalid application: applied to too many arguments"
   | Invalid_implementation (name, t) ->
-    pf ppf "Trying to implement %s for %a, but %s is not an interface"
-      name.A.str Printer.Type.pp t name.A.str
+    pf ppf "Trying to implement %a for %a, but %a is not an interface"
+      Printer.Absyn.pp_qualified_name name
+      Printer.Type.pp t
+      Printer.Absyn.pp_qualified_name name
   | Unknown_field (field, record) ->
     pf ppf "Trying to access unknown property %s of object of type %a"
       field.A.str Printer.Type.pp record

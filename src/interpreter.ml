@@ -3,7 +3,7 @@ open Absyn
 module V = Value
 module T = Types
 
-exception Unbound_variable of name
+exception Unbound_variable of qualified_name
 exception Runtime_error of string
 
 let int_op op env = function
@@ -17,8 +17,10 @@ let extend_env env name value =
 let extend_name env name value =
   extend_env env name.str value
 
+let last name = List.nth name (List.length name - 1)
+
 let find_name name env =
-  List.assoc name.str env
+  List.assoc (last name).str env
 
 let add_builtin name fn env =
   extend_env env name (V.Builtin (name, fn))
@@ -202,7 +204,7 @@ and eval_expr env expr =
     let value = eval_expr env f.record in
     begin match value with
       | V.Record fields ->
-        find_name f.field fields
+        find_name [f.field] fields
       | _ -> assert false
     end
   | Match m -> eval_match env m
@@ -280,7 +282,7 @@ and eval_decl env decl =
         | Some t -> t
         | None -> assert false
       in
-      let impls = Hashtbl.find intf_to_impls impl_name.str in
+      let impls = Hashtbl.find intf_to_impls (last impl_name).str in
       impls := (ty, List.map eval_impl_item impl_items) :: !impls;
       (V.Unit, env)
 

@@ -28,7 +28,7 @@ and interface_desc = {
 }
 
 and implementation_desc = {
-  impl_name : string;
+  impl_name : string list;
   impl_type: texpr;
   impl_items : texpr list;
 }
