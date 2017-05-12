@@ -47,7 +47,10 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
       (fun env (g, v) -> Env.add_type env g.name v)
       env' (List.combine proto_generics generics')
   in
-  let ret_type = Typing_expr.check_type env' proto_ret_type in
+  let ret_type = match proto_ret_type with
+    | None -> Env.ty_void
+    | Some t -> Typing_expr.check_type env' t
+  in
   let make_arrow param t =
     let param_ty = Typing_expr.check_type env' param in
     T.arrow param_ty t

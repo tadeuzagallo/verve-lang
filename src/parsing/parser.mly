@@ -122,9 +122,11 @@ atom_desc:
   | NL_L_PAREN op R_PAREN { Var [$2] }
 
 /* function expressions */
-function_: FN lcid generic_parameters plist(parameter) ARROW type_ braces(list(stmt)) {
-  { fn_name = Some ($2); fn_generics = $3; fn_parameters = $4; fn_return_type = $6; fn_body = $7 }
+function_: FN lcid generic_parameters plist(parameter) return_type braces(list(stmt)) {
+  { fn_name = Some ($2); fn_generics = $3; fn_parameters = $4; fn_return_type = $5; fn_body = $6 }
 }
+
+return_type: option(ARROW type_ { $2 }) { $1 }
 
 generic_parameters: loption(nonempty_alist(generic_parameter)) { $1 }
 
@@ -208,23 +210,23 @@ interface_item:
   | prototype {$1}
   | operator_prototype {$1}
 
-prototype: FN lcid generic_parameters plist(type_) ARROW type_ {
+prototype: FN lcid generic_parameters plist(type_) return_type {
   Prototype {
     proto_name = $2;
     proto_generics = $3;
     proto_params = $4;
-    proto_ret_type = $6
+    proto_ret_type = $5;
   }
 }
 
-operator_prototype: attributes OPERATOR generic_parameters parens(type_) op parens(type_) ARROW type_ {
+operator_prototype: attributes OPERATOR generic_parameters parens(type_) op parens(type_) return_type {
     OperatorPrototype {
       oproto_attributes = $1;
       oproto_generics = $3;
       oproto_lhs = $4;
       oproto_name = $5;
       oproto_rhs = $6;
-      oproto_ret_type = $8;
+      oproto_ret_type = $7;
     }
 }
 
@@ -266,15 +268,15 @@ binop: expr op expr {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
-operator: attributes OPERATOR generic_parameters parens(parameter) op parens(parameter) ARROW type_ braces(list(stmt)) {
+operator: attributes OPERATOR generic_parameters parens(parameter) op parens(parameter) return_type braces(list(stmt)) {
     {
       op_attributes = $1;
       op_generics = $3;
       op_lhs = $4;
       op_name = $5;
       op_rhs = $6;
-      op_ret_type = $8;
-      op_body = $9;
+      op_ret_type = $7;
+      op_body = $8;
     }
 }
 

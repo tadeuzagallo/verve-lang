@@ -54,12 +54,16 @@ module Absyn = struct
 
   and pp_record ppf fields = print_record '=' pp_name pp ppf fields
 
+  and pp_ret_type ppf = function
+    | None -> ()
+    | Some t -> pp_type ppf t
+
   and pp_fn ppf { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
-    pf ppf "@[<v>@[<v 2>fn %a%a%a -> %a {@ %a@]@ }@]"
+    pf ppf "@[<v>@[<v 2>fn %a%a%a %a {@ %a@]@ }@]"
       (option pp_name) fn_name
       pp_generics fn_generics
       (hvbox @@ parens @@ comma_sep pp_param) fn_parameters
-      pp_type fn_return_type
+      pp_ret_type fn_return_type
       (list pp_stmt) fn_body
 
   and pp_generic_arguments ppf = function
@@ -117,7 +121,7 @@ module Absyn = struct
       pp_param op.op_lhs
       pp_name op.op_name
       pp_param op.op_rhs
-      pp_type op.op_ret_type
+      pp_ret_type op.op_ret_type
       (list pp_stmt) op.op_body
 
   and pp_binop ppf op=
@@ -170,7 +174,7 @@ module Absyn = struct
       pp_name proto.proto_name
       pp_generics proto.proto_generics
       (parens @@ hvbox ~indent:2 @@ comma_sep pp_type) proto.proto_params
-      pp_type proto.proto_ret_type
+      pp_ret_type proto.proto_ret_type
 
   let pp_op_proto ppf op =
     pf ppf "%a@ operator%a (%a) %a (%a) -> %a"
@@ -179,7 +183,7 @@ module Absyn = struct
       pp_type op.oproto_lhs
       pp_name op.oproto_name
       pp_type op.oproto_rhs
-      pp_type op.oproto_ret_type
+      pp_ret_type op.oproto_ret_type
 
   let pp_intf_item ppf = function
     | Prototype p -> pp_prototype ppf p

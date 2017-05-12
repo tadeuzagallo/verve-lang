@@ -7,7 +7,7 @@ f(f(42))
 
 fn id<T>(x: T) -> T { x }
 
-fn g(h: (Int) -> Int) -> Void {}
+fn g(h: (Int) -> Int) {}
 g(f)
 g(id)
 g(fn x(x: Int) -> Int { x })
@@ -31,7 +31,7 @@ enum Unit { Unit }
 fn apply'<T, U>(f: (T) -> U, x: T) -> U { f(x) }
 fn f(x: Int) -> Int { 7 }
 apply'(f, 8)
-fn g(x: Int) -> Void { }
+fn g(x: Int) { }
 apply'(g, 3)
 fn h(x: Unit) -> Int { 13 }
 apply'(h, Unit)

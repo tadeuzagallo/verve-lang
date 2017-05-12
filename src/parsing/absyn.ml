@@ -62,7 +62,7 @@ and prototype = {
   proto_name : name;
   proto_generics : generic list;
   proto_params : type_ list;
-  proto_ret_type : type_;
+  proto_ret_type : type_ option;
 }
 
 and attribute = {
@@ -81,7 +81,7 @@ and operator_prototype = {
   oproto_lhs : type_;
   oproto_name : name;
   oproto_rhs : type_;
-  oproto_ret_type : type_;
+  oproto_ret_type : type_ option;
 }
 
 and body = stmt list
@@ -90,7 +90,7 @@ and function_ = {
   fn_name : name option;
   fn_generics : generic list;
   fn_parameters : parameter list;
-  fn_return_type : type_;
+  fn_return_type : type_ option;
   fn_body: body;
 }
 
@@ -146,7 +146,7 @@ and operator = {
   op_lhs : parameter;
   op_name : name;
   op_rhs : parameter;
-  op_ret_type : type_;
+  op_ret_type : type_ option;
   op_body : body;
 }
 

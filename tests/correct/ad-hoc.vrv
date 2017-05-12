@@ -8,7 +8,7 @@ implementation Intish<Int> {
   fn to_int(x: Int) -> Int { x }
 }
 
-implementation Intish<(Void) -> Int> {
+implementation Intish<() -> Int> {
   fn to_int(f : () -> Int) -> Int {
     f()
   }

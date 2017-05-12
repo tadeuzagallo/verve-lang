@@ -12,7 +12,7 @@ import Match as M { Nat(Z) }
 True // CHECK-L: True : Bool
 False // CHECK-L: False : Bool
 
-fn f(x: Nat) -> Void { } // CHECK-L: (Nat) -> Void
+fn f(x: Nat) { } // CHECK-L: (Nat) -> Void
 Z // CHECK-L: Z : Nat
 S // CHECK-L: Unknown constructor: S
 

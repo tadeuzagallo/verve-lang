@@ -65,7 +65,6 @@ let default_env = {
   types  = [
     ("Type", ty_type);
     ("Int", ty_int);
-    ("Void", ty_void);
     ("String", ty_string);
     ("Bool", ty_bool);
   ];

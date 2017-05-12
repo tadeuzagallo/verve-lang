@@ -6,4 +6,4 @@ id //CHECK-L: forall T₂, (T₂) -> T₂
 
 // type substitution
 id<Int>
-id<Void>
+id<Bool>

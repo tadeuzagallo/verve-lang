@@ -18,7 +18,10 @@ let rec check_type env ty =
   match ty.type_desc with
   | Arrow (parameters, return_type) ->
     let ret = check_type env return_type in
-    let params = List.map (check_type env) parameters in
+    let params = match parameters with
+      | [] -> [Env.ty_void]
+      | p -> List.map (check_type env) p
+    in
     List.fold_right T.arrow params ret
   | Inst (t, args) ->
     let ty = instantiate (Env.find_type env t) in
@@ -70,7 +73,10 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
   let param_names = List.map (fun p -> p.param_name) fn_parameters in
   let param_types = List.map (fun p -> check_type env p.param_type) fn_parameters in
 
-  let ret_type = check_type env fn_return_type in
+  let ret_type = match fn_return_type with
+    | None -> Env.ty_void
+    | Some t -> check_type env t
+  in
   let fn_type = match fn_parameters with
     | [] ->  T.arrow ty_void ret_type
     | _ -> List.fold_right T.arrow param_types ret_type

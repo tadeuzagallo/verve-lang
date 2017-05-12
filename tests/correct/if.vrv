@@ -1,6 +1,6 @@
 // RUN: %verve | %check
 
-fn ignore<T>(x: T) -> Void {}
+fn ignore<T>(x: T) {}
 
 fn true() -> Bool { True }
 fn false() -> Bool { False }

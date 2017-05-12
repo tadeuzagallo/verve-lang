@@ -4,7 +4,7 @@ enum Bool {
   False
 }
 
-fn pair<T, U>(x: T, y: U) -> Void { }
+fn pair<T, U>(x: T, y: U) { }
 pair<Int, Bool>(4, True)
 
 enum Pair<T, U> { Pair(T, U) }
