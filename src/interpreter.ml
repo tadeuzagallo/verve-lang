@@ -210,6 +210,21 @@ and eval_expr env expr =
   | Match m -> eval_match env m
   | Binop bin -> eval_expr env ({ expr_loc = expr.expr_loc; expr_desc = Application (app_of_binop bin) })
   | Function ({ fn_name; fn_parameters; fn_body } as fn) -> V.Function fn
+  | If if_ -> eval_if env if_
+
+and eval_if env if_ =
+  let v = eval_expr env if_.if_cond in
+  match v with
+  | V.Ctor { ctor_name= [{ str = "True" }] } ->
+    fst (eval_stmts env if_.if_conseq)
+  | V.Ctor { ctor_name= [{ str = "False" }] } ->
+    eval_else env if_.if_alt
+  | _ -> assert false
+
+and eval_else env = function
+  | None -> V.Unit
+  | Some (ElseIf if_) -> eval_if env if_
+  | Some (ElseBlock block) -> fst (eval_stmts env block)
 
 and eval_match env { match_value; cases } =
   let v = eval_expr env match_value in
@@ -263,6 +278,9 @@ and eval_stmt env stmt =
     match fn.fn_name with
     | Some name -> fn', extend_name env name fn'
     | None -> assert false
+
+and eval_stmts env stmts =
+  List.fold_left (fun (_, env) stmt -> eval_stmt env stmt) (V.Unit, env) stmts
 
 and eval_decl env decl =
   match decl.decl_desc with

@@ -170,6 +170,21 @@ and check_binop env binop =
   binop.bin_generic_arguments_ty <- app.generic_arguments_ty;
   res
 
+and check_if env if_ =
+  let ty_cond = check_expr env if_.if_cond in
+  unify ~expected:Env.ty_bool ty_cond;
+
+  let ty_conseq, _ = check_stmts env if_.if_conseq in
+  let ty_alt = check_else env if_.if_alt in
+  unify ~expected:ty_conseq ty_alt;
+
+  ty_conseq
+
+and check_else env = function
+  | None -> Env.ty_void
+  | Some (ElseIf if_) -> check_if env if_
+  | Some (ElseBlock block) -> fst (check_stmts env block)
+
 and check_expr env expr =
   match expr.expr_desc with
   | Unit -> ty_void
@@ -183,6 +198,7 @@ and check_expr env expr =
   | Match m -> check_match env m
   | Binop b -> check_binop env b
   | Wrapped expr -> check_expr env expr
+  | If if_ -> check_if env if_
 
 (* Statements *)
 and check_let env { let_var; let_value } =

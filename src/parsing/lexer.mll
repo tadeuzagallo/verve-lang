@@ -22,6 +22,8 @@ rule read = parse
 | "global" { GLOBAL }
 | "import" { IMPORT }
 | "as" { AS }
+| "if" { IF }
+| "else" { ELSE }
 
 (* punctuation *)
 | "->" { ARROW }

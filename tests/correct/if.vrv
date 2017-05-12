@@ -1,0 +1,32 @@
+// RUN: %verve | %check
+
+fn ignore<T>(x: T) -> Void {}
+
+fn true() -> Bool { True }
+fn false() -> Bool { False }
+
+if True {
+  ignore (42) // CHECK-L: () : Void
+}
+
+if false() {
+  42
+} else {
+  13 // CHECK-L: 13 : Int
+}
+
+if true() {
+  42 // CHECK-L: 42 : Int
+} else {
+  13
+}
+
+if false() {
+  1
+} else if false() {
+  2
+} else if true() {
+  3 // CHECK-L: 3 : Int
+} else {
+  4
+}

@@ -6,6 +6,7 @@ val merge : t -> t -> t
 
 val ty_int : Types.texpr
 val ty_string : Types.texpr
+val ty_bool : Types.texpr
 val ty_void : Types.texpr
 val ty_type : Types.texpr
 

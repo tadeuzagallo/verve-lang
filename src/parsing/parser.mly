@@ -25,6 +25,8 @@ let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
 %token GLOBAL
 %token IMPORT
 %token AS
+%token IF
+%token ELSE
 
 /* punctuation */
 %token ARROW
@@ -98,6 +100,7 @@ expr_desc:
   | expr_ { $1 }
 
 expr_:
+  | if_ { If $1 }
   | record { $1 }
   | match_expr { $1 }
   | constructor { $1 }
@@ -341,3 +344,16 @@ import_items:
 import_item:
   | lcid { ImportValue $1 }
   | ucid plist(ucid)? { ImportType ($1, $2) }
+
+/* if */
+if_: IF expr braces(list(stmt)) option(else_) {{
+  if_cond = $2;
+  if_conseq = $3;
+  if_alt = $4;
+}}
+
+else_: ELSE else_value { $2 }
+
+else_value:
+  | if_ { ElseIf $1 }
+  | braces(list(stmt)) { ElseBlock $1 }

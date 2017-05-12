@@ -165,8 +165,19 @@ and expr_desc =
   | Field_access of field_access
   | Match of match_
   | Binop of binop
+  | If of if_
   | Unit
   | Wrapped of expr
+
+and if_ = {
+  if_cond : expr;
+  if_conseq : body;
+  if_alt : else_ option;
+}
+
+and else_ =
+  | ElseIf of if_
+  | ElseBlock of body
 
 and let_ =  {
   let_var : name;

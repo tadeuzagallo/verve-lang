@@ -52,6 +52,7 @@ let make_var () =
 
 (* Types of builtin types *)
 let ty_int = T.type_ctor ("Int", [])
+let ty_bool = T.type_ctor ("Bool", [])
 let ty_type = T.type_ctor ("Type", [])
 let ty_void = T.type_ctor ("Void", [])
 let ty_string = T.type_ctor ("String", [])
@@ -66,6 +67,7 @@ let default_env = {
     ("Int", ty_int);
     ("Void", ty_void);
     ("String", ty_string);
+    ("Bool", ty_bool);
   ];
   values = [
     ("int_add", binop ty_int);
@@ -73,7 +75,10 @@ let default_env = {
     ("int_mul", binop ty_int);
     ("int_div", binop ty_int);
   ];
-  ctors = [];
+  ctors = [
+    ("True", ty_bool);
+    ("False", ty_bool);
+  ];
   modules = [];
 }
 
