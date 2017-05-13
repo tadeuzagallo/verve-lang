@@ -1,5 +1,6 @@
 "parsing": include
 "typing": include
+"interpreter": include
 
 true: use_menhir, explain, debug, warn_a, annot, bin_annot
 

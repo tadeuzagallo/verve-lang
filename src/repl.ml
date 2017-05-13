@@ -14,7 +14,7 @@ let make_output value ty =
 let eval (tenv, venv, nenv) decl =
   let decl', nenv' = Naming.naming_decl nenv decl in
   let ty, tenv' = Typing_decl.check_decl tenv decl' in
-  let value, venv' = Interpreter.eval_decl venv decl' in
+  let value, venv' = Eval.decl venv decl' in
   (tenv', venv', nenv'), value, ty
 
 let parse_and_eval state str =
@@ -61,7 +61,7 @@ let rec loop term history state =
 let main () =
   LTerm_inputrc.load () >>= fun () ->
     Lwt.catch (fun () ->
-      let state = (Env.default_env, Interpreter.default_env, []) in
+      let state = (Env.default_env, Rt_env.default_env, []) in
       Lazy.force LTerm.stdout >>= fun term ->
         loop term (LTerm_history.create []) state
     ) (function

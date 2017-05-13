@@ -2,7 +2,7 @@ open Lexing
 
 module A = Absyn
 
-let default_env = (Env.default_env, Interpreter.default_env, [])
+let default_env = (Env.default_env, Rt_env.default_env, [])
 
 let with_file fn file =
   let in_ch = open_in file in
