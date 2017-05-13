@@ -18,4 +18,4 @@ implementation Intish<Bool> {
   fn to_bool(x: Bool) -> Bool { x } // CHECK-L: Implementing function to_bool but it's not part of the interface Intish
 }
 
-implementation Intish<Bool> {}
+implementation Intish<Bool> {} // CHECK-L: Function to_int missing from implementation of Intish

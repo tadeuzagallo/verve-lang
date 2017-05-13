@@ -81,15 +81,25 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
     | _ -> raise (Error (Invalid_implementation (impl_name, t)))
   in
   intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
-  List.iter (check_impl_item intf_desc env) impl_items;
+  let names = List.fold_left (check_impl_item intf_desc env) [] impl_items in
+  check_missing_impls names intf_desc;
   impl_ty
 
-and check_impl_item intf env = function
+and check_missing_impls names intf =
+  let aux (fn_name, _) =
+    if not (List.exists (fun n -> n.str = fn_name) names) then
+      raise (Error (Missing_implementation (intf.T.intf_name, fn_name)))
+  in
+  List.iter aux intf.T.intf_items
+
+and check_impl_item intf env names = function
   | ImplFunction fn ->
     let name = match fn.fn_name with Some n -> n | None -> assert false in
-    check_matches_intf env name intf (Typing_expr.check_fn env fn)
+    check_matches_intf env name intf (Typing_expr.check_fn env fn);
+    name :: names
   | ImplOperator op ->
-    check_matches_intf env op.op_name intf (fst @@ check_operator env op)
+    check_matches_intf env op.op_name intf (fst @@ check_operator env op);
+    op.op_name :: names
 
 and check_matches_intf env name intf ty =
   let ty' =

@@ -21,6 +21,7 @@ type error =
   | Invalid_pattern of A.pattern * texpr
   | Precedence_error of A.name * A.name
   | Extraneous_implementation of string * A.name
+  | Missing_implementation of string * string
 
 exception Error of error
 
@@ -72,6 +73,8 @@ let report_error' ppf = function
     pf ppf "Implementing function %a but it's not part of the interface %s"
       Printer.pp_name fn_name
       intf_name
+  | Missing_implementation (intf_name, fn_name) ->
+    pf ppf "Function %s missing from implementation of %s" fn_name intf_name
 
 let report_error ppf err =
   report_error' ppf err;
