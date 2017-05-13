@@ -29,18 +29,21 @@ and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
       add_ctor env enum_item_name ty'
 
 and check_interface env { intf_name; intf_param; intf_items } =
-  let intf_ty = T.interface { T.intf_name = intf_name.str; T.intf_impls = [] } in
+  let intf_desc = { T.intf_name = intf_name.str; T.intf_items = []; T.intf_impls = [] } in
+  let intf_ty = T.interface intf_desc in
   let env' = Env.add_type env intf_name intf_ty in
   let generic = { name = intf_param.name; constraints = [intf_name]::intf_param.constraints } in
   let var = T.var @@ var_of_generic env' generic in
-  let env'' = List.fold_left (check_intf_item (intf_param.name, var)) env' intf_items in
+
+  let fns, env'' = List.fold_left (check_intf_item (intf_param.name, var)) ([], env') intf_items in
+  intf_desc.T.intf_items <- fns;
   intf_ty, env''
 
-and check_intf_item pair env = function
-  | Prototype p -> check_proto pair env p
-  | OperatorPrototype op -> check_proto pair env (prototype_of_op_proto op)
+and check_intf_item pair (fns, env) = function
+  | Prototype p -> check_proto pair (fns, env) p
+  | OperatorPrototype op -> check_proto pair (fns, env) (prototype_of_op_proto op)
 
-and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; proto_ret_type } =
+and check_proto (var_name, var) (fns, env) { proto_name; proto_generics; proto_params; proto_ret_type } =
   let env' = Env.add_type env var_name var in
   let generics' = List.map (fun  v -> T.rigid_var @@ var_of_generic env v) proto_generics in
   let env' = List.fold_left
@@ -63,7 +66,7 @@ and check_proto (var_name, var) env { proto_name; proto_generics; proto_params; 
   let fn_ty'' = List.fold_right (fun g t -> T.type_arrow g t) generics' fn_ty' in
   let fn_ty''' = loosen fn_ty'' in
   let fn_ty'''' = T.type_arrow var fn_ty''' in
-  Env.add_value env proto_name fn_ty''''
+  (proto_name.str, fn_ty'''')::fns, Env.add_value env proto_name fn_ty''''
 
 and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let impl_arg_ty = Typing_expr.check_type env impl_arg in
@@ -78,11 +81,23 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
     | _ -> raise (Error (Invalid_implementation (impl_name, t)))
   in
   intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
+  List.iter (check_impl_item intf_desc env) impl_items;
   impl_ty
+
+and check_impl_item intf env = function
+  | ImplFunction fn ->
+    let name = match fn.fn_name with Some n -> n | None -> assert false in
+    check_matches_intf env name intf (Typing_expr.check_fn env fn)
+  | ImplOperator op ->
+    check_matches_intf env op.op_name intf (fst @@ check_operator env op)
+
+and check_matches_intf env name intf ty =
+  let ty' = List.assoc name.str intf.T.intf_items in
+  unify ~expected:(Env.instantiate ty') ty
 
 and check_operator env op =
   let ty = Typing_expr.check_fn env (fn_of_operator op) in
-  Env.ty_void, Env.add_value env op.op_name ty
+  ty, Env.add_value env op.op_name ty
 
 and check_type_alias env ta =
   let generics, env' = Typing_expr.check_generics env ta.ta_generics in

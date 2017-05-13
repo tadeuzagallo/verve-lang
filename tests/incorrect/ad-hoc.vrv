@@ -7,3 +7,9 @@ interface Intish<T> {
 fn g'<T>(x: T) -> Int {
   to_int(x) // CHECK: No instance of Intish found for type 'T.*
 }
+
+implementation Intish<Int> {
+  fn to_int(x: Int) -> Bool {
+    True // CHECK-L: Failed to unify Int with Bool
+  }
+}

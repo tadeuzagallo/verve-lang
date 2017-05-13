@@ -24,6 +24,7 @@ and tvar = {
 
 and interface_desc = {
   intf_name : string;
+  mutable intf_items : (string * texpr) list;
   mutable intf_impls : (texpr * implementation_desc) list;
 }
 

@@ -81,9 +81,12 @@ let default_env = {
   modules = [];
 }
 
+let eq_var k var =
+  k.T.name = var.T.name && k.T.id = var.T.id
+
 let rec find var = function
   | [] -> raise Not_found
-  | (k, v) :: _ when k.T.name = var.T.name && k.T.id == var.T.id -> v
+  | (k, v) :: _ when eq_var k var -> v
   | _ :: rest -> find var rest
 
 let map_type fn t =
@@ -174,23 +177,41 @@ let var_of_generic env { A.name; A.constraints } =
 
 (* Unification *)
 
+let rec eq_type t1 t2 =
+  let t1 = T.desc t1 and t2 = T.desc t2 in
+  if t1 == t2 then true else
+  match t1, t2 with
+  | T.Var v1, T.Var v2
+  | T.RigidVar v1, T.RigidVar v2
+  -> eq_var v1 v2
+
+  | T.Arrow (t11, t12), T.Arrow(t21, t22)
+  | T.TypeArrow (t11, t12), T.TypeArrow(t21, t22)
+  -> eq_type t11 t21 && eq_type t12 t22
+
+  | T.TypeCtor (n1, t1s), T.TypeCtor (n2, t2s)
+  when String.equal n1 n2 && List.length t1s = List.length t2s ->
+    List.for_all2 eq_type t1s t2s
+
+  | _ -> false
+
 let check_implementations t intf_desc =
   match T.desc t with
   | T.Var var
   | T.RigidVar var ->
-      if not (List.mem intf_desc var.T.constraints) then
-        raise (Error (Instance_not_found (t, intf_desc)))
+    if not (List.mem intf_desc var.T.constraints) then
+      raise (Error (Instance_not_found (t, intf_desc)))
   | _ ->
-      if not (List.mem_assoc t intf_desc.T.intf_impls) then
-        raise (Error (Instance_not_found (t, intf_desc)))
+    let aux (t', _) = eq_type t t' in
+    if not (List.exists aux intf_desc.T.intf_impls) then
+      raise (Error (Instance_not_found (t, intf_desc)))
 
 let rec unify ~expected:t1 t2 =
   let t1 = T.repr t1 in
   let t2 = T.repr t2 in
-  if t1 == t2 then () else
-  match T.desc t1, T.desc t2 with
-  | T.RigidVar v1, T.RigidVar v2 when v1 = v2 -> ()
+  if eq_type t1 t2 then () else
 
+  match T.desc t1, T.desc t2 with
   | T.TypeCtor (n2, t2s), T.TypeCtor (n1, t1s)
   when n1 = n2 ->
       let aux t1 t2 = unify ~expected:t1 t2 in

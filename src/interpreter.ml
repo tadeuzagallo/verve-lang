@@ -150,7 +150,7 @@ let subst generics arguments fn =
         | [t] ->
           let intf = Hashtbl.find fn_to_intf fn in
           let impls = Hashtbl.find intf_to_impls intf in
-          let impl = List.assoc (T.repr t) !impls in
+          let impl = List.find (fun (t', _) -> Env.eq_type (T.repr t) t') !impls |> snd in
           (List.assoc fn impl)
         | _ -> assert false
         end
