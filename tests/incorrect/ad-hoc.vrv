@@ -13,3 +13,9 @@ implementation Intish<Int> {
     True // CHECK-L: Failed to unify Int with Bool
   }
 }
+
+implementation Intish<Bool> {
+  fn to_bool(x: Bool) -> Bool { x } // CHECK-L: Implementing function to_bool but it's not part of the interface Intish
+}
+
+implementation Intish<Bool> {}

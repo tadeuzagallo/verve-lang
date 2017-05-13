@@ -20,6 +20,7 @@ type error =
   | Invalid_access of A.name * texpr
   | Invalid_pattern of A.pattern * texpr
   | Precedence_error of A.name * A.name
+  | Extraneous_implementation of string * A.name
 
 exception Error of error
 
@@ -67,6 +68,10 @@ let report_error' ppf = function
       Printer.Absyn.pp_pattern pat
   | Precedence_error (op1, op2) ->
     pf ppf "Precedence error: cannot mix %s and %s in the same infix expression" op1.A.str op2.A.str
+  | Extraneous_implementation (intf_name, fn_name) ->
+    pf ppf "Implementing function %a but it's not part of the interface %s"
+      Printer.pp_name fn_name
+      intf_name
 
 let report_error ppf err =
   report_error' ppf err;

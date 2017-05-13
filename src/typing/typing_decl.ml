@@ -92,7 +92,10 @@ and check_impl_item intf env = function
     check_matches_intf env op.op_name intf (fst @@ check_operator env op)
 
 and check_matches_intf env name intf ty =
-  let ty' = List.assoc name.str intf.T.intf_items in
+  let ty' =
+    try List.assoc name.str intf.T.intf_items
+    with Not_found -> raise (Error (Extraneous_implementation (intf.T.intf_name, name)))
+  in
   unify ~expected:(Env.instantiate ty') ty
 
 and check_operator env op =
