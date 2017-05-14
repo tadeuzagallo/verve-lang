@@ -1,0 +1,13 @@
+// RUN: %verve | %check
+
+fn g(x: Int) -> Int {
+  let x = 42
+  x
+}
+g(3) // CHECK: 42 : Int
+
+fn g(x: Int) -> Int {
+  let y = 42
+  x
+}
+g(3) // CHECK: 3 : Int

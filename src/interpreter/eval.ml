@@ -28,7 +28,7 @@ and expr env e =
       | V.Builtin (_, fn) -> fn env arguments
       | _ ->
         let arguments' = List.map V.expr_of_value arguments in
-        fst @@ stmt env (Subst.subst generic_arguments_ty arguments' callee')
+        fst @@ stmts env (Subst.subst generic_arguments_ty arguments' callee')
       end
   | Var v -> begin
       try Rt_env.find_name v env
