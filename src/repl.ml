@@ -51,6 +51,11 @@ let rec loop term history state =
           Type_error.report_error Format.str_formatter e;
           let err = LTerm_text.eval [S (Format.flush_str_formatter ())] in
           LTerm.fprintls term err >>= fun () -> return state
+
+        | Runtime_error.Error e ->
+          Runtime_error.report_error Format.str_formatter e;
+          let err = LTerm_text.eval [S (Format.flush_str_formatter ())] in
+          LTerm.fprintls term err >>= fun () -> return state
         | exn -> Lwt.fail exn)
     >>= fun state ->
       LTerm_history.add history command;

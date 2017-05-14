@@ -27,8 +27,12 @@ let eval_decl ~print (env, has_error) decl =
     let env', value, ty = Repl.eval env decl in
     if print then Printer.print value ty;
     env', has_error
-  with Type_error.Error e ->
+  with
+  | Type_error.Error e ->
     Type_error.report_error Format.err_formatter e;
+    env, true
+  | Runtime_error.Error e ->
+    Runtime_error.report_error Format.err_formatter e;
     env, true
 
 let rec eval_file ?(print=true) ?(state=(default_env, false)) = with_file @@ fun (file, input) ->
