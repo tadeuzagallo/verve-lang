@@ -1,9 +1,11 @@
 S src
 S src/parsing
 S src/typing
+S src/interpreter
 
 B src/_build
 B src/_build/parsing
 B src/_build/typing
+B src/_build/interpreter
 
 PKG MenhirLib fmt cmdliner lwt lambda-term
