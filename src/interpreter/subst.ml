@@ -100,10 +100,17 @@ let rec subst_expr env expr =
   | Field_access f -> mk_expr (Field_access (subst_field_access env f))
   | Binop op -> mk_expr (Binop (subst_binop env op))
   | Match m -> mk_expr (Match (subst_match env m))
+  | If i -> mk_expr (If (subst_if env i))
 
 and subst_var env var expr =
   try S_env.find_expr var env
   with Not_found -> expr
+
+and subst_app env app =
+  let callee = subst_expr env app.callee in
+  let arguments = (option @@ list subst_expr) env app.arguments in
+  let generic_arguments_ty = List.map (subst_ty env) app.generic_arguments_ty in
+  { app with callee; arguments; generic_arguments_ty }
 
 and subst_fn env fn =
   let param_names = List.map (fun p -> p.param_name) fn.fn_parameters in
@@ -144,11 +151,15 @@ and subst_case env c =
   let case_value, _ = subst_stmts env c.case_value in
   { c with case_value }
 
-and subst_app env app =
-  let callee = subst_expr env app.callee in
-  let arguments = (option @@ list subst_expr) env app.arguments in
-  let generic_arguments_ty = List.map (subst_ty env) app.generic_arguments_ty in
-  { app with callee; arguments; generic_arguments_ty }
+and subst_if env if_ =
+  let if_cond = subst_expr env if_.if_cond in
+  let if_conseq, _ = subst_stmts env if_.if_conseq in
+  let if_alt = option subst_else env if_.if_alt in
+  { if_cond; if_conseq; if_alt }
+
+and subst_else env = function
+  | ElseIf if_ -> ElseIf (subst_if env if_)
+  | ElseBlock b -> ElseBlock(fst @@ subst_stmts env b)
 
 (* Stmt *)
 and subst_stmts env stmts =
