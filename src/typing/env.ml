@@ -84,6 +84,27 @@ let default_env = {
 let eq_var k var =
   k.T.name = var.T.name && k.T.id = var.T.id
 
+let rec eq_type t1 t2 =
+  let t1 = T.desc t1 and t2 = T.desc t2 in
+  if t1 == t2 then true else
+  match t1, t2 with
+  | T.Var v1, T.Var v2
+  | T.RigidVar v1, T.RigidVar v2
+  -> eq_var v1 v2
+
+  | T.Arrow (t11, t12), T.Arrow(t21, t22)
+  | T.TypeArrow (t11, t12), T.TypeArrow(t21, t22)
+  -> eq_type t11 t21 && eq_type t12 t22
+
+  | T.TypeCtor (n1, t1s), T.TypeCtor (n2, t2s)
+  when String.equal n1 n2 && List.length t1s = List.length t2s ->
+    List.for_all2 eq_type t1s t2s
+
+  | _ -> false
+
+let assoc_ty t s =
+  List.find (fun (t', _) -> eq_type t t') s |> snd
+
 let rec find var = function
   | [] -> raise Not_found
   | (k, v) :: _ when eq_var k var -> v
@@ -102,7 +123,7 @@ let map_type fn t =
 let loosen t =
   let rec loosen s t =
     let t = T.repr t in
-    try List.assoc t s with Not_found ->
+    try assoc_ty t s with Not_found ->
     match T.desc t with
     | T.RigidVar var -> T.var var
     | T.TypeArrow (var, ty) ->
@@ -115,7 +136,7 @@ let loosen t =
 let instantiate t =
   let rec instantiate s t =
     let t = T.repr t in
-    try List.assoc t s with Not_found ->
+    try assoc_ty t s with Not_found ->
     match T.desc t with
     | T.TypeArrow (var, ty) ->
       let var' = fresh var in
@@ -176,24 +197,6 @@ let var_of_generic env { A.name; A.constraints } =
   { T.id = _fresh name.A.str; T.name = name.A.str; T.constraints = intfs; }
 
 (* Unification *)
-
-let rec eq_type t1 t2 =
-  let t1 = T.desc t1 and t2 = T.desc t2 in
-  if t1 == t2 then true else
-  match t1, t2 with
-  | T.Var v1, T.Var v2
-  | T.RigidVar v1, T.RigidVar v2
-  -> eq_var v1 v2
-
-  | T.Arrow (t11, t12), T.Arrow(t21, t22)
-  | T.TypeArrow (t11, t12), T.TypeArrow(t21, t22)
-  -> eq_type t11 t21 && eq_type t12 t22
-
-  | T.TypeCtor (n1, t1s), T.TypeCtor (n2, t2s)
-  when String.equal n1 n2 && List.length t1s = List.length t2s ->
-    List.for_all2 eq_type t1s t2s
-
-  | _ -> false
 
 let check_implementations t intf_desc =
   match T.desc t with
