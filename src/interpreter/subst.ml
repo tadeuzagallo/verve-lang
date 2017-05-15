@@ -59,22 +59,22 @@ let rec combine_ty subst = function
 
 (* Types *)
 let rec subst_ty env t =
+  let t = T.repr t in
   match T.desc t with
   | T.Arrow (t1, t2) ->
       T._texpr @@ T.Arrow (subst_ty env t1, subst_ty env t2)
   | T.TypeCtor (name, types) ->
       let types' = List.map (subst_ty env) types in
       T._texpr @@ T.TypeCtor (name, types')
-  | (T.RigidVar { T.name } as var)
-  | (T.Var { T.name } as var) ->
+  | T.RigidVar { T.name }
+  | T.Var { T.name } ->
       begin try S_env.find_type name env
-      with Not_found -> T._texpr var
+      with Not_found -> t
       end
   | T.TypeArrow (v1, t2) ->
     let env =
       match (T.desc v1) with
-      | T.Var { T.name }
-      | T.RigidVar { T.name } ->
+      | T.Var { T.name } ->
         S_env.remove_type name env
       | _ -> env
     in
@@ -201,10 +201,11 @@ let fn_of_value generics = function
   | V.Function f -> f
   | V.InterfaceFunction fn ->
       begin match generics with
-      | [t] ->
+      | t::_ ->
         let intf = Hashtbl.find Rt_env.fn_to_intf fn in
         let impls = Hashtbl.find Rt_env.intf_to_impls intf in
-        let impl = List.find (fun (t', _) -> Env.eq_type (T.repr t) t') !impls |> snd in
+        let t = T.clean_type (T.repr t) in
+        let impl = Env.assoc_ty t !impls in
         (List.assoc fn impl)
       | _ -> assert false
       end

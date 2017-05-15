@@ -57,3 +57,29 @@ let interface i = _texpr @@ Interface i
 let implementation i = _texpr @@ Implementation i
 let arrow t1 t2 = _texpr @@ Arrow (t1, t2)
 let type_arrow t1 t2 = _texpr @@ TypeArrow (t1, t2)
+
+let rec clean_type' used t =
+  let t = repr t in
+  match desc t with
+  | TypeCtor (n, ts) ->
+    let aux (acc, used) t = let t, used = clean_type' used t in (t::acc), used in
+    let ts, used = List.fold_left aux ([], used) ts in
+    type_ctor (n, List.rev ts), used
+  | Arrow (t1, t2) ->
+    let t1, used = clean_type' used t1 in
+    let t2, used = clean_type' used t2 in
+    arrow t1 t2, used
+  | TypeArrow (var, ty) ->
+    let ty, used = clean_type' used ty in
+    if List.mem var used then
+      type_arrow var ty, used
+    else
+      clean_type' used ty
+  | Record r ->
+    let aux (acc, used) (n, t) = let t, used = clean_type' used t in ((n, t)::acc), used in
+    let fields, env = List.fold_left aux ([], used) r in
+    record (List.rev fields), env
+  | Var _ | RigidVar _ -> t, t :: used
+  | _ -> t, used
+
+let clean_type t = clean_type' [] t |> fst

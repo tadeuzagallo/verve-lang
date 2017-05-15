@@ -261,7 +261,7 @@ module Type = struct
     | cs -> pf ppf "@,: %a" (box @@ parens @@ comma_sep pp_intf_name) cs
 
   let rec pp' ppf t =
-    match desc t with
+    match desc (clean_type t) with
     | Var { id; name; constraints } ->
         pf ppf "%s%s%a" name (subscript_of_number id) pp_constraints constraints
     | RigidVar v ->

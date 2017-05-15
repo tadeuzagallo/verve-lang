@@ -145,6 +145,35 @@ let instantiate t =
     | _ -> map_type (instantiate s) t
   in instantiate [] t
 
+let constrain' generics t =
+  let rec constrain used t =
+    let t = T.repr t in
+    match T.desc t with
+    | T.TypeArrow (var, ty) ->
+      constrain used ty
+    | T.Arrow (t1, t2) ->
+      let used' = constrain used t1 in
+      constrain used' t2
+    | T.TypeCtor (n, ts) ->
+      List.fold_left constrain  used ts
+    | T.Record r ->
+      List.fold_left (fun used (_, t) -> constrain used t) used r
+    | T.Var _
+    | T.RigidVar _ ->
+      if List.mem t generics && not (List.mem t used) then
+        (t :: used)
+      else used
+    | _ -> used
+  in
+  match T.desc t with
+  | T.TypeArrow _
+  | T.Arrow _ -> constrain [] t
+  | _ -> []
+
+(* Lift constrained variables to type arrows *)
+let constrain generics t =
+  List.fold_right T.type_arrow (constrain' generics t) t
+
 (* getters and setters *)
 let rec find name env proj =
   match name with
@@ -205,6 +234,7 @@ let check_implementations t intf_desc =
     if not (List.mem intf_desc var.T.constraints) then
       raise (Error (Instance_not_found (t, intf_desc)))
   | _ ->
+    let t = T.clean_type t in
     let aux (t', _) = eq_type t t' in
     if not (List.exists aux intf_desc.T.intf_impls) then
       raise (Error (Instance_not_found (t, intf_desc)))

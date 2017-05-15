@@ -52,7 +52,7 @@ and apply_arguments callee arguments =
         unify ~expected:t1 argument;
         t2
       | T.TypeArrow (v1, t2) ->
-        check t2
+        T.type_arrow v1 (check t2)
       | _ -> raise (Error Invalid_application)
     in
     check call
@@ -87,7 +87,8 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
     | None -> env
     | Some n -> Env.add_value env n fn_type
   in
-  let env = List.fold_left2 Env.add_value env param_names param_types in
+  let aux env name p = Env.add_value env name (Env.constrain generics p) in
+  let env = List.fold_left2 aux env param_names param_types in
   let ret, _ = check_stmts env fn_body in
   unify ~expected:ret_type ret;
   loosen fn_type
