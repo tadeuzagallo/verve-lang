@@ -8,6 +8,12 @@ implementation Intish<Int> {
   fn to_int(x: Int) -> Int { x }
 }
 
+implementation Intish<Bool> {
+  fn to_int(x: Bool) -> Int {
+    if x { 1 } else { 0 }
+  }
+}
+
 implementation Intish<() -> Int> {
   fn to_int(f : () -> Int) -> Int {
     f()
@@ -53,3 +59,67 @@ fn id<T>(x: T) -> T { x }
 
 id<Int>(read()) // CHECK: 17 : Int
 id<Bool>(read()) // CHECK: True : Bool
+
+// (ideally) exhaustive check of use cases 
+
+"direct"
+to_int(4) // CHECK-L: 4 : Int
+to_int(False) // CHECK-L: 0 : Int
+
+"within a function"
+fn f<T: Intish>(x: T) -> Int {
+  to_int(x)
+}
+f(4) // CHECK-L: 4 : Int
+f(True) // CHECK-L: 1 : Int
+
+"as monomorphic identity"
+fn f(f: (Int) -> Int) -> (Int) -> Int {
+  f
+}
+f(to_int)(5) // CHECK-L: 5 : Int
+let x = f(to_int) // CHECK-L: (Int) -> Int
+x(5) // CHECK-L: 5 : Int
+
+"through monomorphic apply"
+fn g(f: (Int) -> Int, x: Int) -> Int {
+  f(x)
+}
+g(to_int, 5) // CHECK-L: 5 : Int
+g(to_int)(5) // CHECK-L: 5 : Int
+let x = g(to_int) // CHECK-L: (Int) -> Int
+x(5) // CHECK-L: 5 : Int
+
+"as polymorphic identity"
+fn f<T: Intish>(f: (T) -> Int) -> (T) -> Int {
+  f
+}
+f(to_int)(5) // CHECK-L: 5 : Int
+
+// TODO: this should be `forall T, T -> Int` (the printer incorrectly erased the forall)
+let x = f(to_int) // CHECK: \(T.*: Intish\) -> Int
+x(5) // CHECK-L: 5 : Int
+x(True) // CHECK-L: 1 : Int
+x<Int>(5) // CHECK-L: 5 : Int
+
+"through polymorphic apply"
+fn app<T: Intish>(f: (T) -> Int, x: T) -> Int {
+  f(x)
+}
+app(to_int, 42) // CHECK-L: 42 : Int
+app(to_int)(42) // CHECK-L: 42 : Int
+let x = app(to_int) // CHECK: \(T.*: Intish\) -> Int
+x(42) // CHECK-L: 42 : Int
+x(True) // CHECK-L: 1 : Int
+x<Int>(42) // CHECK-L: 42 : Int
+
+"multiple constrained variables"
+fn add<T: Intish, U: Intish>(x: T, y: U) -> Int {
+  int_add(to_int(x), to_int(y))
+}
+add(True, 42) // CHECK-L: 43 : Int
+add(True)(42) // CHECK-L: 43 : Int
+let x = add(True) // CHECK: forall U.*, \(U.*: Intish\) -> Int
+x(42) // CHECK-L: 43 : Int
+x(True) // CHECK-L: 2 : Int
+x<Bool>(False) // CHECK-L: 1 : Int
