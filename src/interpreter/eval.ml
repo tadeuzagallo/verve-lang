@@ -40,9 +40,15 @@ and eval_app env app =
       fst @@ stmts env (Subst.subst app.generic_arguments_ty arguments callee)
 
 and eval_var env var =
-  try Rt_env.find_name var env
-  with Not_found ->
-    error (Unbound_variable var)
+  let value =
+    try Rt_env.find_name var.var_name env
+    with Not_found ->
+      error (Unbound_variable var.var_name)
+  in
+  match value, var.var_type with
+  | V.InterfaceFunction (fn, None), t :: _ ->
+    V.InterfaceFunction (fn, Some t)
+  | t, _ -> t
 
 and eval_record env record =
   let record = List.map (fun (n, v) -> (n.str, expr env v)) record in
@@ -134,7 +140,7 @@ and eval_intf_item intf_name env = function
   | Prototype { proto_name }
   | OperatorPrototype { oproto_name = proto_name } ->
     Hashtbl.add Rt_env.fn_to_intf proto_name.str intf_name.str;
-    Rt_env.extend_name env proto_name (V.InterfaceFunction proto_name.str)
+    Rt_env.extend_name env proto_name (V.InterfaceFunction (proto_name.str, None))
 
 and eval_operator env op =
   let value = expr env ({ expr_loc = dummy_loc; expr_desc = Function (fn_of_operator op) }) in

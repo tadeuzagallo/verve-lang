@@ -103,8 +103,10 @@ let rec subst_expr env expr =
   | If i -> mk_expr (If (subst_if env i))
 
 and subst_var env var expr =
-  try S_env.find_expr var env
-  with Not_found -> expr
+  try
+    subst_expr env (S_env.find_expr var.var_name env)
+  with Not_found ->
+    { expr with expr_desc = Var { var with var_type = List.map (subst_ty env) var.var_type } }
 
 and subst_app env app =
   let callee = subst_expr env app.callee in
@@ -197,18 +199,21 @@ and subst_fn_stmt env fn =
 
 (* entry point *)
 
+let find_implementation fn t =
+  let t = T.clean_type (T.repr t) in
+  let intf = Hashtbl.find Rt_env.fn_to_intf fn in
+  let impls = Hashtbl.find Rt_env.intf_to_impls intf in
+  let _, impl = List.find (fun (t', _) -> Env.eq_type t t') !impls in
+  List.assoc fn impl
+
 let fn_of_value generics = function
   | V.Function f -> f
-  | V.InterfaceFunction fn ->
-      begin match generics with
-      | t::_ ->
-        let intf = Hashtbl.find Rt_env.fn_to_intf fn in
-        let impls = Hashtbl.find Rt_env.intf_to_impls intf in
-        let t = T.clean_type (T.repr t) in
-        let impl = Env.assoc_ty t !impls in
-        (List.assoc fn impl)
+  | V.InterfaceFunction (fn, t) ->
+    begin match t, generics with
+      | _, t :: _ -> find_implementation fn t
+      | Some t, _ -> find_implementation fn t
       | _ -> assert false
-      end
+    end
   | v ->
       Printer.Value.dump v;
       assert false

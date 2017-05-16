@@ -158,7 +158,7 @@ and expr = {
 and expr_desc =
   | Function of function_
   | Application of application
-  | Var of qualified_name
+  | Var of var
   | Ctor of expr ctor
   | Literal of literal
   | Record of (name * expr) list
@@ -168,6 +168,11 @@ and expr_desc =
   | If of if_
   | Unit
   | Wrapped of expr
+
+and var = {
+  var_name : qualified_name;
+  mutable var_type : Types.texpr list;
+}
 
 and if_ = {
   if_cond : expr;
@@ -252,7 +257,7 @@ let fn_of_operator op = {
 }
 
 let app_of_binop binop = {
-  callee = { expr_desc = Var [binop.bin_op]; expr_loc = binop.bin_op.loc };
+  callee = { expr_desc = Var { var_name = [binop.bin_op]; var_type = [] }; expr_loc = binop.bin_op.loc };
   generic_arguments = [];
   arguments = Some [ binop.bin_lhs; binop.bin_rhs ];
   generic_arguments_ty = binop.bin_generic_arguments_ty;

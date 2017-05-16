@@ -140,7 +140,7 @@ module Absyn = struct
     | Function fn -> pp_fn ppf fn
     | Ctor ctor -> pp_ctor pp' ppf ctor
     | Application app -> pp_app ppf app
-    | Var str -> pp_qualified_name ppf str
+    | Var var -> pp_qualified_name ppf var.var_name
     | Literal l -> pp_literal ppf l
     | Unit -> string ppf "()"
     | Record r -> pp_record ppf r
@@ -234,7 +234,7 @@ module Value = struct
     | Unit -> string ppf "()"
     | Type t -> string ppf t
     | Builtin (name, _) -> string ppf name
-    | InterfaceFunction t -> string ppf t
+    | InterfaceFunction (t, _) -> string ppf t
     | Record r -> print_record '=' string pp' ppf r
 
   and pp ppf v = (box ~indent:2 pp') ppf v

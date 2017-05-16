@@ -6,7 +6,7 @@ type t =
   | Ctor of t A.ctor
   | Type of string
   | Function of A.function_
-  | InterfaceFunction of string
+  | InterfaceFunction of string * Types.texpr option
   | Record of (string * t) list
   | Builtin of string * builtin
 

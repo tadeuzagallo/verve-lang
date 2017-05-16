@@ -30,34 +30,33 @@ f(4)
 fn f(f: (Int) -> Int) -> (Int) -> Int {
   f
 }
-f(to_int, 5)
-/*f(to_int)(5)*/
-/*let x = f(to_int)*/
-/*x(5)*/
+f(to_int)(5)
+let x = f(to_int)
+x(5)
 
 // through monomorphic apply
 fn g(f: (Int) -> Int, x: Int) -> Int {
   f(x)
 }
-/*g(to_int, 5)*/
-/*g(to_int)(5)*/
-/*let x = g(to_int)*/
-/*x(5)*/
+g(to_int, 5)
+g(to_int)(5)
+let x = g(to_int)
+x(5)
 
 // through polymorphic apply
 fn app<T: Intish>(f: (T) -> Int, x: T) -> Int {
   f(x)
 }
 app(to_int, 42)
-/*app(to_int)(42)*/
-/*let x = app(to_int)*/
-/*x(42)*/
+app(to_int)(42)
+let x = app(to_int)
+x(42) // CHECK-L: Not_found
 
 // Multiple dictionaries
 fn add<T: Intish, U: Intish>(x: T, y: U) -> Int {
   int_add(to_int(x), to_int(y))
 }
 add(True, 42)
-/*add(True)(42)*/
-/*let x = add(True)*/
-/*x(42)*/
+add(True)(42)
+let x = add(True)
+x(42)

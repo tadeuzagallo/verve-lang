@@ -192,11 +192,22 @@ and check_else env = function
   | Some (ElseIf if_) -> check_if env if_
   | Some (ElseBlock block) -> fst (check_stmts env block)
 
+and check_var env var =
+  let t = Env.find_value env var.var_name in
+  let rec aux ts t =
+    match T.desc t with
+    | T.TypeArrow (t1, t2) ->
+      aux (t1 :: ts) t2
+    | _ -> List.rev ts
+  in
+  var.var_type <- aux [] t;
+  t
+
 and check_expr env expr =
   match expr.expr_desc with
   | Unit -> ty_void
   | Literal l -> check_literal l
-  | Var v -> Env.find_value env v
+  | Var var -> check_var env var
   | Function fn -> check_fn env fn
   | Application app -> check_app env app
   | Ctor ctor -> check_ctor env ctor

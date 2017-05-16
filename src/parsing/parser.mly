@@ -9,6 +9,7 @@ let mk_type d = { type_desc = d; type_loc = mk_loc() }
 let mk_pat d = { pat_desc = d; pat_loc = mk_loc() }
 let mk_stmt d = { stmt_desc = d; stmt_loc = mk_loc() }
 let mk_decl d = { decl_desc = d; decl_loc = mk_loc() }
+let mk_var v = Var { var_name = v; var_type = [] }
 
 %}
 
@@ -110,16 +111,16 @@ expr_:
 
 %inline atom: atom_desc { mk_expr $1 }
 atom_desc:
-  | lcid_name { Var $1 }
+  | lcid_name { mk_var $1 }
   | literal { Literal $1 }
   | field_access { $1 }
   | application { $1 }
   (* Matched when the first expression in a sequence is wrapped in parens *)
   | parens(expr) { Wrapped $1 }
-  | parens(op) { Var [$1] }
+  | parens(op) { mk_var [$1] }
   (* Matched to break applications when there's a line break *)
   | NL_L_PAREN expr R_PAREN { Wrapped $2 }
-  | NL_L_PAREN op R_PAREN { Var [$2] }
+  | NL_L_PAREN op R_PAREN { mk_var [$2] }
 
 /* function expressions */
 function_: FN lcid generic_parameters plist(parameter) return_type braces(list(stmt)) {
