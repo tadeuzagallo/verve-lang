@@ -95,9 +95,7 @@ fn f<T: Intish>(f: (T) -> Int) -> (T) -> Int {
   f
 }
 f(to_int)(5) // CHECK-L: 5 : Int
-
-// TODO: this should be `forall T, T -> Int` (the printer incorrectly erased the forall)
-let x = f(to_int) // CHECK: \(T.*: Intish\) -> Int
+let x = f(to_int) // CHECK: forall T.*, \(T.*: Intish\) -> Int
 x(5) // CHECK-L: 5 : Int
 x(True) // CHECK-L: 1 : Int
 x<Int>(5) // CHECK-L: 5 : Int
@@ -108,7 +106,7 @@ fn app<T: Intish>(f: (T) -> Int, x: T) -> Int {
 }
 app(to_int, 42) // CHECK-L: 42 : Int
 app(to_int)(42) // CHECK-L: 42 : Int
-let x = app(to_int) // CHECK: \(T.*: Intish\) -> Int
+let x = app(to_int) // CHECK: forall T.*, \(T.*: Intish\) -> Int
 x(42) // CHECK-L: 42 : Int
 x(True) // CHECK-L: 1 : Int
 x<Int>(42) // CHECK-L: 42 : Int

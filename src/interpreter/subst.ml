@@ -203,7 +203,7 @@ let find_implementation fn t =
   let t = T.clean_type (T.repr t) in
   let intf = Hashtbl.find Rt_env.fn_to_intf fn in
   let impls = Hashtbl.find Rt_env.intf_to_impls intf in
-  let _, impl = List.find (fun (t', _) -> Env.eq_type t t') !impls in
+  let _, impl = List.find (fun (t', _) -> T.eq_type t t') !impls in
   List.assoc fn impl
 
 let fn_of_value generics = function

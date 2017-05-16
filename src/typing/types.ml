@@ -58,6 +58,27 @@ let implementation i = _texpr @@ Implementation i
 let arrow t1 t2 = _texpr @@ Arrow (t1, t2)
 let type_arrow t1 t2 = _texpr @@ TypeArrow (t1, t2)
 
+let eq_var k var =
+  k.name = var.name && k.id = var.id
+
+let rec eq_type t1 t2 =
+  let t1 = desc t1 and t2 = desc t2 in
+  if t1 == t2 then true else
+  match t1, t2 with
+  | Var v1, Var v2
+  | RigidVar v1, RigidVar v2
+  -> eq_var v1 v2
+
+  | Arrow (t11, t12), Arrow(t21, t22)
+  | TypeArrow (t11, t12), TypeArrow(t21, t22)
+  -> eq_type t11 t21 && eq_type t12 t22
+
+  | TypeCtor (n1, t1s), TypeCtor (n2, t2s)
+  when String.equal n1 n2 && List.length t1s = List.length t2s ->
+    List.for_all2 eq_type t1s t2s
+
+  | _ -> false
+
 let rec clean_type' used t =
   let t = repr t in
   match desc t with
@@ -71,7 +92,7 @@ let rec clean_type' used t =
     arrow t1 t2, used
   | TypeArrow (var, ty) ->
     let ty, used = clean_type' used ty in
-    if List.mem var used then
+    if List.exists (eq_type var) used then
       type_arrow var ty, used
     else
       clean_type' used ty

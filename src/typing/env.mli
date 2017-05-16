@@ -11,7 +11,6 @@ val ty_void : Types.texpr
 val ty_type : Types.texpr
 
 val assoc_ty : Types.texpr -> (Types.texpr * 'a) list -> 'a
-val eq_type : Types.texpr -> Types.texpr -> bool
 val unify : expected: Types.texpr -> Types.texpr -> unit
 
 val add_type : t -> Absyn.name -> Types.texpr -> t
