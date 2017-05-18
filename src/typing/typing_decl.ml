@@ -9,24 +9,26 @@ let rec check_enum env { enum_name; enum_generics; enum_items } =
     let var = T.var @@ var_of_generic env g in
     (var :: vars, Env.add_type env g.name var)
   in
-  let gen, env' = List.fold_right create_var enum_generics ([], env) in
+  let gen, env_internal = List.fold_right create_var enum_generics ([], env) in
   let enum_ty = T.type_ctor (enum_name.str, gen) in
   let make t = List.fold_right T.type_arrow gen t in
-  let env'' = Env.add_type env' enum_name (make enum_ty) in
-  let env''' = List.fold_left (check_enum_item make enum_ty) env'' enum_items in
-  enum_ty, env'''
+  let external_ty = make enum_ty in
+  let env_internal = Env.add_type env_internal enum_name external_ty in
+  let env_external = Env.add_type env enum_name external_ty in
+  let env_external = List.fold_left (check_enum_item env_internal make enum_ty) env_external enum_items in
+  enum_ty, env_external
 
-and check_enum_item make item_ty env { enum_item_name; enum_item_parameters } =
+and check_enum_item env_internal make item_ty env_external { enum_item_name; enum_item_parameters } =
   match enum_item_parameters with
-  | None -> Env.add_ctor env enum_item_name (make item_ty)
+  | None -> Env.add_ctor env_external enum_item_name (make item_ty)
   | Some ps ->
       let aux p enum_ty =
-        let t = Typing_expr.check_type env p in
+        let t = Typing_expr.check_type env_internal p in
         T.arrow t enum_ty
       in
       let ty = List.fold_right aux ps item_ty in
       let ty' = make ty in
-      add_ctor env enum_item_name ty'
+      Env.add_ctor env_external enum_item_name ty'
 
 and check_interface env { intf_name; intf_param; intf_items } =
   let intf_desc = { T.intf_name = intf_name.str; T.intf_items = []; T.intf_impls = [] } in

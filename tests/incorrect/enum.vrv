@@ -6,3 +6,5 @@ enum List<T> {
 }
 
 fn f(x: List) -> List { x } // CHECK-L: Invalid generic application: not applied to enough arguments
+
+fn f(x: T) -> T { x } // CHECK-L: Unknown type: T
