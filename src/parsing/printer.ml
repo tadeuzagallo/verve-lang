@@ -228,14 +228,16 @@ module Value = struct
   open Value
 
   let rec pp' ppf = function
-    | Function fn -> Absyn.pp_fn ppf fn
+    | Function fn -> pf ppf "<function>"
     | Ctor ctor -> Absyn.pp_ctor pp' ppf ctor
     | Literal l -> Absyn.pp_literal ppf l
+    | Class (name, _) -> pf ppf "<class>"
     | Unit -> string ppf "()"
     | Type t -> string ppf t
     | Builtin (name, _) -> string ppf name
     | InterfaceFunction (t, _) -> string ppf t
     | Record r -> print_record '=' string pp' ppf r
+    | Object (c, _, _) -> pf ppf "<instance of %s>" c
 
   and pp ppf v = (box ~indent:2 pp') ppf v
 
@@ -278,7 +280,10 @@ module Type = struct
         pf ppf "interface %s" i.intf_name
     | Implementation i ->
         pf ppf "implementation %a<%a>" (dot_sep string) i.impl_name pp i.impl_type
-    | Record r -> print_record ':' string pp ppf r
+    | Record r ->
+      print_record ':' string pp ppf r
+    | Class { cls_name } ->
+      string ppf cls_name
   and pp ppf v = (box ~indent:2 pp') ppf v
 
   and pp_generics ppf = function

@@ -1,6 +1,7 @@
 val print : Value.t -> Types.texpr -> unit
 val print_raw : Format.formatter -> Value.t -> Types.texpr -> unit
 val pp_name : Absyn.name Fmt.t
+val comma_sep : 'a Fmt.t -> 'a list Fmt.t
 
 module Absyn : sig
   val pp_qualified_name : Absyn.qualified_name Fmt.t

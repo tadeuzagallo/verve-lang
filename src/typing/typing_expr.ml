@@ -119,6 +119,28 @@ and check_ctor env { ctor_name; ctor_generic_arguments; ctor_arguments } =
   let ty_ctor = Env.find_ctor env ctor_name in
   run_application env (ty_ctor, ctor_generic_arguments, ctor_arguments)
 
+and check_class_ctor env cc =
+  let aux props (p, e) =
+    let ty = check_expr env e in
+    try
+      let expected = List.assoc p.str props in
+      unify ~expected ty;
+      List.remove_assoc p.str props
+    with Not_found ->
+      raise (Error (Unknown_property p))
+  in
+  let t = Env.find_type env cc.cc_name in
+  match T.desc t with
+  | T.Class cls ->
+    let missing = List.fold_left aux cls.T.cls_props cc.cc_record in
+    begin match missing with
+    | [] -> t
+    | _ ->
+      let m = List.map fst missing in
+      raise (Error (Missing_properties m))
+    end
+  | _ -> raise (Error (Constructor_not_class cc.cc_name))
+
 and check_record env fields =
   T.record (map_record (check_expr env) fields)
 
@@ -126,8 +148,12 @@ and check_field_access env { record; field } =
   let record = check_expr env record in
   let fields = match T.desc record with
     | T.Record r -> r
+    | T.Class { T.cls_props } -> cls_props
     | _ -> raise (Error (Invalid_access (field, record)))
   in
+  get_record_field record fields field
+
+and get_record_field record fields field =
   try
     List.assoc field.str fields
   with Not_found ->
@@ -203,6 +229,23 @@ and check_var env var =
   var.var_type <- aux [] t;
   t
 
+and check_method_call env mc =
+  let obj = check_expr env mc.mc_object in
+  match T.desc obj with
+  | T.Class c ->
+      let fn =
+        try
+          List.assoc mc.mc_method.str c.T.cls_fns
+        with Not_found ->
+          raise (Error (Unknown_method (mc.mc_method, c.T.cls_name)))
+      in
+      run_application env (fn, [], Some mc.mc_args)
+  | T.Record c ->
+    let fn = get_record_field obj c mc.mc_method in
+    run_application env (fn, [], Some mc.mc_args)
+  | _ ->
+    raise (Error (Callee_not_object (obj, mc.mc_method)))
+
 and check_expr env expr =
   match expr.expr_desc with
   | Unit -> ty_void
@@ -211,12 +254,14 @@ and check_expr env expr =
   | Function fn -> check_fn env fn
   | Application app -> check_app env app
   | Ctor ctor -> check_ctor env ctor
+  | ClassCtor ctor -> check_class_ctor env ctor
   | Record r -> check_record env r
   | Field_access f -> check_field_access env f
   | Match m -> check_match env m
   | Binop b -> check_binop env b
   | Wrapped expr -> check_expr env expr
   | If if_ -> check_if env if_
+  | MethodCall mc -> check_method_call env mc
 
 (* Statements *)
 and check_let env { let_var; let_value } =

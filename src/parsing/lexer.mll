@@ -24,6 +24,7 @@ rule read = parse
 | "as" { AS }
 | "if" { IF }
 | "else" { ELSE }
+| "class" { CLASS }
 
 (* punctuation *)
 | "->" { ARROW }

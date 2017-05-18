@@ -15,6 +15,7 @@ and ty =
   | Interface of interface_desc
   | Implementation of implementation_desc
   | Record of (string * texpr) list
+  | Class of class_desc
 
 and tvar = {
   id : int;
@@ -32,6 +33,12 @@ and implementation_desc = {
   impl_name : string list;
   impl_type: texpr;
   impl_items : texpr list;
+}
+
+and class_desc = {
+  cls_name : string;
+  cls_props : (string * texpr) list;
+  mutable cls_fns : (string * texpr) list;
 }
 
 let _texpr d = { texpr = Desc d }
@@ -57,6 +64,7 @@ let interface i = _texpr @@ Interface i
 let implementation i = _texpr @@ Implementation i
 let arrow t1 t2 = _texpr @@ Arrow (t1, t2)
 let type_arrow t1 t2 = _texpr @@ TypeArrow (t1, t2)
+let class_ c = _texpr @@ Class c
 
 let eq_var k var =
   k.name = var.name && k.id = var.id

@@ -12,6 +12,7 @@ let rec expr env e =
   | Literal l -> V.Literal l
   | Wrapped e -> expr env e
   | Ctor c -> eval_ctor env c
+  | ClassCtor c -> eval_class_ctor env c
   | Application app -> eval_app env app
   | Var v -> eval_var env v
   | Record r -> eval_record env r
@@ -20,6 +21,7 @@ let rec expr env e =
   | Binop bin -> expr env ({ expr_loc = e.expr_loc; expr_desc = Application (app_of_binop bin) })
   | Function fn -> V.Function fn
   | If if_ -> eval_if env if_
+  | MethodCall mc -> eval_method_call env mc
 
 and eval_ctor env c =
   let args = match c.ctor_arguments with
@@ -27,17 +29,28 @@ and eval_ctor env c =
     | Some args -> Some (List.map (expr env) args)
   in V.Ctor { c with ctor_arguments = args }
 
+and eval_class_ctor env cc =
+  let aux (n, v) = (n.str, expr env v) in
+  let props = List.map aux cc.cc_record in
+  match Rt_env.find_name cc.cc_name env with
+  | V.Class (c, fns) -> V.Object (c, fns, props)
+  | _ -> assert false
+
 and eval_app env app =
   let callee = expr env app.callee in
   let arguments = match app.arguments with
     | None -> []
-    | Some a -> List.map (expr env) a
+    | Some a -> a
   in
+  run_app env callee app.generic_arguments_ty arguments
+
+and run_app env callee generic_args arguments =
+  let arguments = List.map (expr env) arguments in
   match callee with
     | V.Builtin (_, fn) -> fn env arguments
     | _ ->
       let arguments = List.map V.expr_of_value arguments in
-      fst @@ stmts env (Subst.subst app.generic_arguments_ty arguments callee)
+      fst @@ stmts env (Subst.subst generic_args arguments callee)
 
 and eval_var env var =
   let value =
@@ -58,6 +71,7 @@ and eval_field_access env fa =
   let value = expr env fa.record in
   match value with
   | V.Record fields -> List.assoc fa.field.str fields
+  | V.Object (_, _, fields) -> List.assoc fa.field.str fields
   | _ -> assert false
 
 and eval_if env if_ =
@@ -103,6 +117,19 @@ and eval_pattern env pat value =
     end
   | _ -> assert false
 
+and eval_method_call env mc =
+  let obj = expr env mc.mc_object in
+  match obj with
+  | V.Object (_, fns, _) ->
+    let fn = List.assoc mc.mc_method.str fns in
+    let env' = Rt_env.extend_env env "this" obj in
+    run_app env' (V.Function fn) [] mc.mc_args
+  | V.Record fields ->
+    let fn = List.assoc mc.mc_method.str fields in
+    run_app env fn [] mc.mc_args
+  | _ -> assert false
+
+
 (* Stmt *)
 and stmts env stmts =
   List.fold_left (fun (_, env) s -> stmt env s) (V.Unit, env) stmts
@@ -130,6 +157,7 @@ and decl env decl =
   | Interface intf -> eval_intf env intf
   | Operator op -> eval_operator env op
   | Implementation impl -> eval_impl env impl
+  | Class c -> eval_class env c
 
 and eval_intf env intf =
   Hashtbl.add Rt_env.intf_to_impls intf.intf_name.str (ref []);
@@ -162,3 +190,13 @@ and eval_impl_item = function
     match impl_fn.fn_name with
     | Some n -> (n.str, impl_fn)
     | None -> assert false
+
+and eval_class env cls =
+  let aux fn = match fn.fn_name with
+    | None -> assert false
+    | Some n -> (n.str, fn)
+  in
+  let fns = List.map aux cls.class_fns in
+  let value = V.Class (cls.class_name.str, fns) in
+  let env = Rt_env.extend_name env cls.class_name value in
+  value, env

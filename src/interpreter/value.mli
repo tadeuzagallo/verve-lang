@@ -9,6 +9,8 @@ type t =
   | InterfaceFunction of string * Types.texpr option
   | Record of (string * t) list
   | Builtin of string * builtin
+  | Class of string * (string * A.function_) list
+  | Object of string * (string * A.function_) list * (string * t) list
 
 and builtin = (string * t) list -> t list -> t
 

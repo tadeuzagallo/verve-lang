@@ -28,6 +28,7 @@ let mk_var v = Var { var_name = v; var_type = [] }
 %token AS
 %token IF
 %token ELSE
+%token CLASS
 
 /* punctuation */
 %token ARROW
@@ -55,6 +56,9 @@ let mk_var v = Var { var_name = v; var_type = [] }
 
 %start <Absyn.program> program
 %start <Absyn.decl> decl_start
+
+%nonassoc EMPTY_CTOR
+%nonassoc CTOR_NO_ARGS
 
 %nonassoc BELOW_PAREN
 %left L_PAREN L_ANGLE L_BRACE OP
@@ -86,6 +90,7 @@ decl_desc:
   | interface { $1 }
   | implementation { $1 }
   | type_alias { $1 }
+  | class_ { $1 }
   | operator { Operator $1 }
   | stmt { Stmt $1 }
 
@@ -93,27 +98,32 @@ stmt: stmt_desc { mk_stmt $1 }
 stmt_desc:
   | let_ { $1 }
   | function_ { FunctionStmt $1 }
-  | expr_ { Expr (mk_expr $1) }
+  | expr_desc_ { Expr (mk_expr $1) }
 
 expr: expr_desc { mk_expr $1 }
 expr_desc:
   | function_ { Function $1 }
-  | expr_ { $1 }
+  | expr_desc_ { $1 }
 
-expr_:
-  | if_ { If $1 }
-  | record { $1 }
-  | match_expr { $1 }
+expr_desc_:
+  | class_constructor { $1 }
+  | expr_desc__ { $1 }
+
+expr__: expr_desc__ { mk_expr $1 }
+expr_desc__:
   | constructor { $1 }
-  | constructor_no_args %prec BELOW_PAREN { $1 }
-  | atom_desc %prec BELOW_PAREN { $1 }
+  | record { Record $1 }
+  | match_expr { $1 }
+  | if_ { If $1 }
   | binop { $1 }
+  | atom_desc %prec BELOW_PAREN { $1 }
 
 %inline atom: atom_desc { mk_expr $1 }
 atom_desc:
   | lcid_name { mk_var $1 }
   | literal { Literal $1 }
-  | field_access { $1 }
+  | method_call { $1 }
+  | field_access %prec BELOW_PAREN { $1 }
   | application { $1 }
   (* Matched when the first expression in a sequence is wrapped in parens *)
   | parens(expr) { Wrapped $1 }
@@ -194,13 +204,27 @@ enum_item: ucid generic_parameters plist(type_)? {
   { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
 
-%inline constructor_no_args: ucid_name generic_arguments {
+%inline empty_constructor: ucid_name {
+  Ctor { ctor_name = $1; ctor_generic_arguments = []; ctor_arguments = None }
+}
+
+%inline constructor_no_args: ucid_name generic_arguments_strict {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = None }
 }
 
-%inline constructor: ucid_name generic_arguments plist(expr) {
+%inline constructor_args: ucid_name plist(expr) {
+    Ctor { ctor_name = $1; ctor_generic_arguments = []; ctor_arguments = Some $2 }
+}
+
+%inline constructor_full: ucid_name generic_arguments_strict plist(expr) {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = Some $3 }
 }
+
+%inline constructor:
+  | empty_constructor %prec EMPTY_CTOR { $1 }
+  | constructor_no_args %prec CTOR_NO_ARGS { $1 }
+  | constructor_args { $1 }
+  | constructor_full { $1 }
 
 /* interfaces */
 interface: INTERFACE ucid angles(generic_parameter) braces(list(interface_item)) {
@@ -242,15 +266,15 @@ impl_item:
 
 /* Records */
 
-record: blist(record_field) { Record $1 }
+%inline record: blist(record_field) { $1 }
 record_field: lcid EQ expr { ($1, $3) }
 
-field_access: atom DOT lcid {
+%inline field_access: atom DOT lcid {
   Field_access { record = $1; field = $3; }
 }
 
 /* pattern matching */
-match_expr: MATCH expr braces(nonempty_list(match_case)) {
+match_expr: MATCH expr__ braces(nonempty_list(match_case)) {
   Match { match_value = $2; cases = $3 }
 }
 
@@ -265,7 +289,7 @@ pattern_desc:
   | ucid_name option(plist(pattern)) { Pctor ($1, $2) }
 
 /* binary operations */
-binop: expr op expr {
+binop: expr__ op expr__ {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
@@ -349,7 +373,7 @@ import_item:
   | ucid plist(ucid)? { ImportType ($1, $2) }
 
 /* if */
-if_: IF expr braces(list(stmt)) option(else_) {{
+if_: IF expr__ braces(list(stmt)) option(else_) {{
   if_cond = $2;
   if_conseq = $3;
   if_alt = $4;
@@ -360,3 +384,35 @@ else_: ELSE else_value { $2 }
 else_value:
   | if_ { ElseIf $1 }
   | braces(list(stmt)) { ElseBlock $1 }
+
+/* classes */
+
+class_: CLASS ucid braces(class_body) {
+  Class {
+    class_name = $2;
+    class_props = fst $3;
+    class_fns = snd $3;
+  }
+}
+
+class_body: class_prop* function_* { ($1, $2) }
+
+class_prop: LET lcid COLON type_ {{
+  cp_name = $2;
+  cp_type = $4;
+}}
+
+%inline class_constructor: ucid_name record {
+  ClassCtor {
+    cc_name = $1;
+    cc_record = $2;
+  }
+}
+
+%inline method_call: atom DOT lcid plist(expr) {
+  MethodCall {
+    mc_object = $1;
+    mc_method = $3;
+    mc_args = $4;
+  }
+}

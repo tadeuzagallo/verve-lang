@@ -101,6 +101,8 @@ let rec subst_expr env expr =
   | Binop op -> mk_expr (Binop (subst_binop env op))
   | Match m -> mk_expr (Match (subst_match env m))
   | If i -> mk_expr (If (subst_if env i))
+  | ClassCtor cc -> mk_expr (ClassCtor (subst_class_ctor env cc))
+  | MethodCall mc -> mk_expr (MethodCall (subst_method_call env mc))
 
 and subst_var env var expr =
   try
@@ -162,6 +164,16 @@ and subst_if env if_ =
 and subst_else env = function
   | ElseIf if_ -> ElseIf (subst_if env if_)
   | ElseBlock b -> ElseBlock(fst @@ subst_stmts env b)
+
+and subst_class_ctor env cc =
+  let aux env (n, e) = (n, subst_expr env e) in
+  let cc_record = (list aux) env cc.cc_record in
+  { cc with cc_record }
+
+and subst_method_call env mc =
+  let mc_object = subst_expr env mc.mc_object in
+  let mc_args = (list subst_expr) env mc.mc_args in
+  { mc with mc_object; mc_args }
 
 (* Stmt *)
 and subst_stmts env stmts =

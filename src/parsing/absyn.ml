@@ -168,6 +168,19 @@ and expr_desc =
   | If of if_
   | Unit
   | Wrapped of expr
+  | ClassCtor of class_ctor
+  | MethodCall of method_call
+
+and method_call = {
+  mc_object : expr;
+  mc_method : name;
+  mc_args : expr list;
+}
+
+and class_ctor = {
+  cc_name : qualified_name;
+  cc_record : (name * expr) list;
+}
 
 and var = {
   var_name : qualified_name;
@@ -217,7 +230,19 @@ and decl_desc =
   | Interface of interface
   | TypeAlias of type_alias
   | Implementation of implementation
+  | Class of class_
   | Operator of operator
+
+and class_ = {
+  class_name : name;
+  class_props : class_prop list;
+  class_fns : function_ list;
+}
+
+and class_prop = {
+  cp_name : name;
+  cp_type : type_;
+}
 
 and import = {
   i_loc : location;

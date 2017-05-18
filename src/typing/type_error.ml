@@ -22,6 +22,11 @@ type error =
   | Precedence_error of A.name * A.name
   | Extraneous_implementation of string * A.name
   | Missing_implementation of string * string
+  | Unknown_property of A.name
+  | Unknown_method of A.name * string
+  | Missing_properties of string list
+  | Constructor_not_class of A.qualified_name
+  | Callee_not_object of texpr * A.name
 
 exception Error of error
 
@@ -75,6 +80,16 @@ let report_error' ppf = function
       intf_name
   | Missing_implementation (intf_name, fn_name) ->
     pf ppf "Function %s missing from implementation of %s" fn_name intf_name
+  | Unknown_property p ->
+    pf ppf "Unknown property: %a" Printer.pp_name p
+  | Unknown_method (m, c) ->
+    pf ppf "Trying to access unknown method %a in object of type %s" Printer.pp_name m c
+  | Missing_properties ps ->
+    pf ppf "Missing properties: %a" (Printer.comma_sep string) ps
+  | Constructor_not_class c ->
+    pf ppf "Trying to instantiate %a, but it's not a class" Printer.Absyn.pp_qualified_name c
+  | Callee_not_object (obj, method_)  ->
+    pf ppf "Trying to call method %a of non-object of type %a" Printer.pp_name method_ Printer.Type.pp obj
 
 let report_error ppf err =
   report_error' ppf err;

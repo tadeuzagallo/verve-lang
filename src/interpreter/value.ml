@@ -9,6 +9,8 @@ type t =
   | InterfaceFunction of string * Types.texpr option
   | Record of (string * t) list
   | Builtin of string * builtin
+  | Class of string * (string * A.function_) list
+  | Object of string * (string * A.function_) list * (string * t) list
 
 and builtin = (string * t) list -> t list -> t
 
@@ -26,4 +28,8 @@ let rec expr_of_value value =
   | Record r -> A.Record (List.map (fun (n,v) -> (A.mk_name n, expr_of_value v)) r)
   | Builtin (n, _) ->  A.Var { A.var_name = A.mk_qualified_name [n]; A.var_type = [] }
   | Type _ -> assert false (* can't be converted *)
+  | Object (cls, _, props) ->
+    let aux (s, v) = (A.mk_name s, expr_of_value v) in
+    let props = List.map aux props in
+    A.ClassCtor { A.cc_name = A.mk_qualified_name [cls]; A.cc_record = props }
   in { A.expr_loc = A.dummy_loc; A.expr_desc }

@@ -118,6 +118,22 @@ and check_type_alias env ta =
   let ty = List.fold_right T.type_arrow generics ty in
   Env.ty_type, Env.add_type env ta.ta_name ty
 
+and check_class env cls =
+  let cls_name = cls.class_name.str in
+  let aux { cp_name=n; cp_type=e} = (n.str, Typing_expr.check_type env e) in
+  let cls_props = List.map aux cls.class_props in
+  let cls_desc = { T.cls_name; T.cls_props; T.cls_fns=[] } in
+  let ty = T.class_ cls_desc in
+  let env' = Env.add_value env (mk_name "this") ty in
+  let aux fn =
+    match fn.fn_name with
+    | None -> assert false
+    | Some n ->
+      cls_desc.T.cls_fns <- (n.str, Typing_expr.check_fn env' fn) :: cls_desc.T.cls_fns
+  in
+  List.iter aux cls.class_fns;
+  ty, Env.add_type env cls.class_name ty
+
 and check_decl env decl =
   match decl.decl_desc with
   | Stmt stmt -> Typing_expr.check_stmt env stmt
@@ -125,6 +141,7 @@ and check_decl env decl =
   | Interface intf -> check_interface env intf
   | TypeAlias ta -> check_type_alias env ta
   | Implementation impl -> check_implementation env impl, env
+  | Class c -> check_class env c
   | Operator op -> check_operator env op
 
 and check_decls env decls =
