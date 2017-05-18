@@ -7,7 +7,7 @@ class Square {
   }
 }
 
-let x = Square { side = 10 }
+let x = Square { side: 10 }
 x.side // CHECK-L: 10 : Int
 x.area() // CHECK-L: 100 : Int
 
@@ -37,18 +37,18 @@ class Stack<T> {
   }
 
   fn push(x: T) -> Stack<T> {
-    Stack<T> { _stack = Cons(x, this._stack) }
+    Stack<T> { _stack: Cons(x, this._stack) }
   }
 
   fn pop() -> Stack<T> {
     match this._stack {
       case Cons(_, tail):
-        Stack<T> { _stack = tail }
+        Stack<T> { _stack: tail }
     }
   }
 }
 
-let s = Stack<Int> { _stack = Cons(42, Nil) }
+let s = Stack<Int> { _stack: Cons(42, Nil) }
 s._stack // CHECK: 42.* List<Int>
 s.peek()
 let s = s.push(13).push(7)

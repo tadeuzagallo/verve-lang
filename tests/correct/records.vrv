@@ -1,12 +1,12 @@
 // RUN: %verve | %check
 
-{ x = 1 } // CHECK: {x = 1} : {x : Int}
+{ x: 1 } // CHECK: {x = 1} : {x : Int}
 
 fn f(x: { x: Int }) -> Int { 42 } // CHECK: : \({x : Int}\) -> Int
-f({ x = 1 }) // CHECK: 42 : Int
+f({ x: 1 }) // CHECK: 42 : Int
 
 fn f(x: { x: Int }) -> Int { x.x }
-f({ x = 1 }) // CHECK: 1 : Int
+f({ x: 1 }) // CHECK: 1 : Int
 
 enum PairT<T, U> {
   Pair(T, U)
@@ -18,24 +18,24 @@ enum Bool {
 fn f<T, U>(x: {x: T, y: U}) -> PairT<T, U> {
   Pair(x.x, x.y)
 }
-f({ x = 42, y = True })
+f({ x: 42, y: True })
 
 /* multiple field accesses */
-({ x = { y = { z = 42 } } }).x.y.z // CHECK: 42 : Int
+({ x: { y: { z: 42 } } }).x.y.z // CHECK: 42 : Int
 
 // SUBTYPING
 
 // Permutation:
 fn perm(x: { a: Int, b: Bool }) -> { b: Bool, a: Int } { x }
-perm({ b = True, a = 3 })
-perm({ a = 3, b = True })
+perm({ b: True, a: 3 })
+perm({ a: 3, b: True })
 
 // Width:
 fn width(x: { a: Int }) -> {a : Int} {
-  { a = x.a, b = True }
+  { a: x.a, b: True }
 }
-width({a = 42, b = False})
+width({a: 42, b: False})
 
 // Depth:
 fn depth(x: { a: { x: Int, y: Bool } }) -> { a: { x: Int } } { x }
-depth({a = {x = 42, y = True, z = Pair(3, False)}})
+depth({a: {x: 42, y: True, z: Pair(3, False)}})

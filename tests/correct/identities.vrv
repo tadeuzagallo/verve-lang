@@ -16,7 +16,7 @@ id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42) // CHECK: 42 : Int
 
 // record identity
 fn id<T>(x: T) -> T {
-  ({ x = x }).x
+  ({ x: x }).x
 }
 
 id(id) // CHECK: forall T.*, \(T.*\) -> T.*

@@ -267,7 +267,7 @@ impl_item:
 /* Records */
 
 %inline record: blist(record_field) { $1 }
-record_field: lcid EQ expr { ($1, $3) }
+record_field: lcid COLON expr { ($1, $3) }
 
 %inline field_access: atom DOT lcid {
   Field_access { record = $1; field = $3; }
