@@ -57,3 +57,16 @@ fn add(x: Nat, y: Nat) -> Nat {
   }
 }
 add(S(S(Z)), S(S(S(Z)))) // CHECK-L: S(S(S(S(S(Z))))) : Nat
+
+fn half(x: Nat) -> Nat {
+  match x {
+    case S(S(y)): S(half(y))
+    case S(Z): Z
+    case Z: Z
+  }
+}
+half(Z) // CHECK-L: Z : Nat
+half(S(Z)) // CHECK-L: Z : Nat
+half(S(S(Z))) // CHECK-L: S(Z) : Nat
+half(S(S(S(Z)))) // CHECK-L: S(Z) : Nat
+half(S(S(S(S(Z))))) // CHECK-L: S(S(Z)) : Nat

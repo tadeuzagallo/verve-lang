@@ -94,10 +94,15 @@ and eval_match env { match_value; cases } =
   eval_case env v matched_case
 
 and matched_case env value { pattern } =
+  matched_case2 env value pattern
+
+and matched_case2 env value pattern =
   match pattern.pat_desc, value with
   | Pany, _ -> true
   | Pvar _, _ -> true
-  | Pctor (name, _), V.Ctor { ctor_name } when name = ctor_name -> true
+  | Pctor (name, None), V.Ctor { ctor_name; ctor_arguments = None } when name = ctor_name -> true
+  | Pctor (name, Some ps), V.Ctor { ctor_name; ctor_arguments=(Some args) } when name = ctor_name ->
+    List.for_all2 (matched_case2 env) args ps
   | _ -> false
 
 and eval_case env value p =
