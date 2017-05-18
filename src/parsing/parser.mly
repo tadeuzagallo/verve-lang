@@ -387,11 +387,12 @@ else_value:
 
 /* classes */
 
-class_: CLASS ucid braces(class_body) {
+class_: CLASS ucid generic_parameters braces(class_body) {
   Class {
     class_name = $2;
-    class_props = fst $3;
-    class_fns = snd $3;
+    class_generics = $3;
+    class_props = fst $4;
+    class_fns = snd $4;
   }
 }
 
@@ -402,12 +403,25 @@ class_prop: LET lcid COLON type_ {{
   cp_type = $4;
 }}
 
-%inline class_constructor: ucid_name record {
+%inline class_constructor_no_gen: ucid_name record {
   ClassCtor {
     cc_name = $1;
+    cc_generics = [];
     cc_record = $2;
   }
 }
+
+%inline class_constructor_full: ucid_name generic_arguments_strict record {
+  ClassCtor {
+    cc_name = $1;
+    cc_generics = $2;
+    cc_record = $3;
+  }
+}
+
+%inline class_constructor:
+  | class_constructor_no_gen { $1 }
+  | class_constructor_full { $1 }
 
 %inline method_call: atom DOT lcid plist(expr) {
   MethodCall {

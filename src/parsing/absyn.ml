@@ -179,6 +179,7 @@ and method_call = {
 
 and class_ctor = {
   cc_name : qualified_name;
+  cc_generics : type_ list;
   cc_record : (name * expr) list;
 }
 
@@ -235,6 +236,7 @@ and decl_desc =
 
 and class_ = {
   class_name : name;
+  class_generics : generic list;
   class_props : class_prop list;
   class_fns : function_ list;
 }

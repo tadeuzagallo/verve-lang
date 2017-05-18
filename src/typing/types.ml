@@ -37,8 +37,9 @@ and implementation_desc = {
 
 and class_desc = {
   cls_name : string;
+  cls_generics : texpr list;
   cls_props : (string * texpr) list;
-  mutable cls_fns : (string * texpr) list;
+  cls_fns : (string * texpr) list ref;
 }
 
 let _texpr d = { texpr = Desc d }
@@ -84,6 +85,9 @@ let rec eq_type t1 t2 =
   | TypeCtor (n1, t1s), TypeCtor (n2, t2s)
   when String.equal n1 n2 && List.length t1s = List.length t2s ->
     List.for_all2 eq_type t1s t2s
+  | Class c1, Class c2
+  when c1.cls_name = c2.cls_name && List.length c1.cls_generics = List.length c2.cls_generics ->
+    List.for_all2 eq_type c1.cls_generics c2.cls_generics
 
   | _ -> false
 
@@ -94,6 +98,10 @@ let rec clean_type' used t =
     let aux (acc, used) t = let t, used = clean_type' used t in (t::acc), used in
     let ts, used = List.fold_left aux ([], used) ts in
     type_ctor (n, List.rev ts), used
+  | Class c ->
+    let aux (acc, used) t = let t, used = clean_type' used t in (t::acc), used in
+    let cls_generics, used = List.fold_left aux ([], used) c.cls_generics in
+    class_ { c with cls_generics }, used
   | Arrow (t1, t2) ->
     let t1, used = clean_type' used t1 in
     let t2, used = clean_type' used t2 in

@@ -23,3 +23,46 @@ implementation Shape<Square> {
 }
 
 area(x) // CHECK-L: 100 : Int
+
+// Polymorphic classes
+enum List<U> { Nil Cons(U, List<U>) }
+
+class Stack<T> {
+  let _stack : List<T>
+
+  fn peek() -> T {
+    match this._stack {
+      case Cons(x, _): x
+    }
+  }
+
+  fn push(x: T) -> Stack<T> {
+    Stack<T> { _stack = Cons(x, this._stack) }
+  }
+
+  fn pop() -> Stack<T> {
+    match this._stack {
+      case Cons(_, tail):
+        Stack<T> { _stack = tail }
+    }
+  }
+}
+
+let s = Stack<Int> { _stack = Cons(42, Nil) }
+s._stack // CHECK: 42.* List<Int>
+s.peek()
+let s = s.push(13).push(7)
+s._stack // CHECK: 7.*13.*42
+s.peek() // CHECK-L: 7 : Int
+let s = s.pop()
+s.peek() // CHECK-L: 13 : Int
+
+// TODO: Inline implementation of interfaces
+/*class Rectangle : Shape {*/
+  /*let width : Int*/
+  /*let height : Int*/
+
+  /*fn area() -> Int {*/
+    /*int_mul(this.width, this.height)*/
+  /*}*/
+/*}*/

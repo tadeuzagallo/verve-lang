@@ -129,7 +129,8 @@ and check_class_ctor env cc =
     with Not_found ->
       raise (Error (Unknown_property p))
   in
-  let t = Env.find_type env cc.cc_name in
+  let t = instantiate (Env.find_type env cc.cc_name) in
+  let t = apply_generics env t cc.cc_generics in
   match T.desc t with
   | T.Class cls ->
     let missing = List.fold_left aux cls.T.cls_props cc.cc_record in
@@ -235,7 +236,7 @@ and check_method_call env mc =
   | T.Class c ->
       let fn =
         try
-          List.assoc mc.mc_method.str c.T.cls_fns
+          List.assoc mc.mc_method.str !(c.T.cls_fns)
         with Not_found ->
           raise (Error (Unknown_method (mc.mc_method, c.T.cls_name)))
       in

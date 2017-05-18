@@ -282,8 +282,8 @@ module Type = struct
         pf ppf "implementation %a<%a>" (dot_sep string) i.impl_name pp i.impl_type
     | Record r ->
       print_record ':' string pp ppf r
-    | Class { cls_name } ->
-      string ppf cls_name
+    | Class { cls_name; cls_generics } ->
+      pf ppf "%s%a" cls_name pp_generics cls_generics
   and pp ppf v = (box ~indent:2 pp') ppf v
 
   and pp_generics ppf = function

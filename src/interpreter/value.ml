@@ -31,5 +31,5 @@ let rec expr_of_value value =
   | Object (cls, _, props) ->
     let aux (s, v) = (A.mk_name s, expr_of_value v) in
     let props = List.map aux props in
-    A.ClassCtor { A.cc_name = A.mk_qualified_name [cls]; A.cc_record = props }
+    A.ClassCtor { A.cc_name = A.mk_qualified_name [cls]; A.cc_record = props; cc_generics = [] }
   in { A.expr_loc = A.dummy_loc; A.expr_desc }

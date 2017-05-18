@@ -96,6 +96,16 @@ let map_type fn t =
   | T.Arrow (t1, t2) -> T.Arrow (fn t1, fn t2)
   | T.TypeArrow (var, ty) -> T.TypeArrow (fn var, fn ty)
   | T.Record r -> T.Record (List.map (fun (n, t) -> n, fn t) r)
+  | T.Class c ->
+    let aux (n, e) = (n, fn e) in
+    let fns = !(c.T.cls_fns) in
+    (* avoid infinitely recursing *)
+    c.T.cls_fns := [];
+    c.T.cls_fns := List.map aux fns;
+    T.Class { c with
+              T.cls_generics = List.map fn c.T.cls_generics;
+              T.cls_props = List.map aux c.T.cls_props;
+            }
   | t -> t
   in T._texpr desc
 

@@ -73,7 +73,6 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   impl.impl_arg_type <- Some (impl_arg_ty);
   let impl_name' = List.map (fun g -> g.str) impl_name in
   let impl_desc = { T.impl_name = impl_name'; T.impl_type = impl_arg_ty; T.impl_items = [] } in
-  let impl_ty = T.implementation impl_desc in
   let intf_desc =
     let t = Env.find_type env impl_name in
     match T.desc t with
@@ -83,7 +82,7 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
   let names = List.fold_left (check_impl_item intf_desc env) [] impl_items in
   check_missing_impls names intf_desc;
-  impl_ty
+  T.implementation impl_desc
 
 and check_missing_impls names intf =
   let aux (fn_name, _) =
@@ -119,20 +118,26 @@ and check_type_alias env ta =
   Env.ty_type, Env.add_type env ta.ta_name ty
 
 and check_class env cls =
+  let generics, env' = Typing_expr.check_generics ~var:T.rigid_var env cls.class_generics in
   let cls_name = cls.class_name.str in
-  let aux { cp_name=n; cp_type=e} = (n.str, Typing_expr.check_type env e) in
+  let aux cp = (cp.cp_name.str, Typing_expr.check_type env' cp.cp_type) in
   let cls_props = List.map aux cls.class_props in
-  let cls_desc = { T.cls_name; T.cls_props; T.cls_fns=[] } in
+  let cls_desc = { T.cls_name; T.cls_props; T.cls_fns = ref []; T.cls_generics = generics } in
   let ty = T.class_ cls_desc in
-  let env' = Env.add_value env (mk_name "this") ty in
+  let env' = Env.add_value env' (mk_name "this") ty in
+
+  let ty' = List.fold_right T.type_arrow generics ty in
+  let env' = Env.add_type env' cls.class_name ty' in
+
   let aux fn =
     match fn.fn_name with
     | None -> assert false
     | Some n ->
-      cls_desc.T.cls_fns <- (n.str, Typing_expr.check_fn env' fn) :: cls_desc.T.cls_fns
+      cls_desc.T.cls_fns := (n.str, Typing_expr.check_fn env' fn) :: !(cls_desc.T.cls_fns)
   in
   List.iter aux cls.class_fns;
-  ty, Env.add_type env cls.class_name ty
+  let ty' = loosen ty' in
+  ty', Env.add_type env cls.class_name (loosen ty')
 
 and check_decl env decl =
   match decl.decl_desc with
