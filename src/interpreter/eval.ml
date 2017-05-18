@@ -107,7 +107,7 @@ and matched_case2 env value pattern =
 
 and eval_case env value p =
   let env' = eval_pattern env p.pattern value in
-  let value, _ = stmt env' (List.hd @@ List.rev @@ p.case_value) in
+  let value, _ = stmts env' p.case_value in
   value
 
 and eval_pattern env pat value =
@@ -117,7 +117,8 @@ and eval_pattern env pat value =
   | Pctor (_, ps), V.Ctor { ctor_arguments } ->
     begin match ps, ctor_arguments with
     | None, None -> env
-    | Some patterns, Some args -> List.fold_left2 eval_pattern env patterns args
+    | Some patterns, Some args ->
+      List.fold_left2 eval_pattern env patterns args
     | _ -> assert false
     end
   | _ -> assert false

@@ -53,16 +53,16 @@ length(Cons(1, Cons(2, Cons(3, Nil)))) // CHECK-L: S(S(S(Z))) : Nat
 fn add(x: Nat, y: Nat) -> Nat {
   match x {
     case Z: y
-    case S(x'): S(add(x', y))
+    case S(x): S(add(x, y))
   }
 }
 add(S(S(Z)), S(S(S(Z)))) // CHECK-L: S(S(S(S(S(Z))))) : Nat
 
 fn half(x: Nat) -> Nat {
   match x {
-    case S(S(y)): S(half(y))
+    case S(S(x)): S(half(x))
     case S(Z): Z
-    case Z: Z
+    case x: x
   }
 }
 half(Z) // CHECK-L: Z : Nat

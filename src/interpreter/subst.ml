@@ -152,8 +152,17 @@ and subst_match env m =
   { match_value; cases }
 
 and subst_case env c =
-  let case_value, _ = subst_stmts env c.case_value in
+  let env' = subst_pattern env c.pattern in
+  let case_value, _ = subst_stmts env' c.case_value in
   { c with case_value }
+
+and subst_pattern env pat =
+  match pat.pat_desc with
+  | Pany -> env
+  | Pvar v -> S_env.remove_exprs [v] env
+  | Pctor (_, None) -> env
+  | Pctor (_, Some ps) ->
+    List.fold_left subst_pattern env ps
 
 and subst_if env if_ =
   let if_cond = subst_expr env if_.if_cond in
