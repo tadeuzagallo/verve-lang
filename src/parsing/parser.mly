@@ -74,6 +74,7 @@ let mk_var v = Var { var_name = v; var_type = [] }
 %inline plist(x): parens(separated_list(COMMA, x)) { $1 }
 %inline blist(x): braces(separated_list(COMMA, x)) { $1 }
 
+%inline nonempty_plist(x): parens(separated_nonempty_list(COMMA, x)) { $1 }
 %inline nonempty_alist(x): angles(separated_nonempty_list(COMMA, x)) { $1 }
 
 /* Entry points */
@@ -107,10 +108,6 @@ expr_desc:
 
 expr_desc_:
   | class_constructor { $1 }
-  | expr_desc__ { $1 }
-
-expr__: expr_desc__ { mk_expr $1 }
-expr_desc__:
   | constructor { $1 }
   | record { Record $1 }
   | match_expr { $1 }
@@ -200,7 +197,7 @@ enum: ENUM ucid generic_parameters braces(nonempty_list(enum_item)) {
   Enum { enum_name = $2; enum_generics = $3; enum_items = $4 }
 }
 
-enum_item: ucid generic_parameters plist(type_)? {
+enum_item: ucid generic_parameters nonempty_plist(type_)? {
   { enum_item_name = $1; enum_item_generics = $2; enum_item_parameters = $3; }
 }
 
@@ -212,11 +209,11 @@ enum_item: ucid generic_parameters plist(type_)? {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = None }
 }
 
-%inline constructor_args: ucid_name plist(expr) {
+%inline constructor_args: ucid_name nonempty_plist(expr) {
     Ctor { ctor_name = $1; ctor_generic_arguments = []; ctor_arguments = Some $2 }
 }
 
-%inline constructor_full: ucid_name generic_arguments_strict plist(expr) {
+%inline constructor_full: ucid_name generic_arguments_strict nonempty_plist(expr) {
   Ctor { ctor_name = $1; ctor_generic_arguments = $2; ctor_arguments = Some $3 }
 }
 
@@ -274,7 +271,7 @@ record_field: lcid COLON expr { ($1, $3) }
 }
 
 /* pattern matching */
-match_expr: MATCH expr__ braces(nonempty_list(match_case)) {
+match_expr: MATCH expr braces(nonempty_list(match_case)) {
   Match { match_value = $2; cases = $3 }
 }
 
@@ -289,7 +286,7 @@ pattern_desc:
   | ucid_name option(plist(pattern)) { Pctor ($1, $2) }
 
 /* binary operations */
-binop: expr__ op expr__ {
+binop: expr op expr {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
@@ -373,7 +370,7 @@ import_item:
   | ucid plist(ucid)? { ImportType ($1, $2) }
 
 /* if */
-if_: IF expr__ braces(list(stmt)) option(else_) {{
+if_: IF expr braces(list(stmt)) option(else_) {{
   if_cond = $2;
   if_conseq = $3;
   if_alt = $4;
@@ -403,7 +400,7 @@ class_prop: LET lcid COLON type_ {{
   cp_type = $4;
 }}
 
-%inline class_constructor_no_gen: ucid_name record {
+%inline class_constructor_no_gen: ucid_name plist(record_field) {
   ClassCtor {
     cc_name = $1;
     cc_generics = [];
@@ -411,7 +408,7 @@ class_prop: LET lcid COLON type_ {{
   }
 }
 
-%inline class_constructor_full: ucid_name generic_arguments_strict record {
+%inline class_constructor_full: ucid_name generic_arguments_strict plist(record_field) {
   ClassCtor {
     cc_name = $1;
     cc_generics = $2;

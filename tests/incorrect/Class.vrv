@@ -4,10 +4,10 @@ class S {
   let x : Int
 }
 
-S {} // CHECK-L: Missing properties: x
-S { x: 0, y: 10 } // CHECK-L: Unknown property: y
+S() // CHECK-L: Missing properties: x
+S(x: 0, y: 10) // CHECK-L: Unknown property: y
 
-let s = S { x: 10 }
+let s = S(x: 10)
 s.y // CHECK-L: Trying to access unknown property y of object of type S
 
 s.x() // CHECK-L: Trying to access unknown method x in object of type S
