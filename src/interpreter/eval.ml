@@ -68,11 +68,29 @@ and eval_record env record =
   V.Record record
 
 and eval_field_access env fa =
-  let value = expr env fa.record in
+  eval_field_access2 env fa.record fa.field
+
+and eval_field_access2 env record field =
+  let value = expr env record in
   match value with
-  | V.Record fields -> List.assoc fa.field.str fields
-  | V.Object (_, _, fields) -> List.assoc fa.field.str fields
-  | _ -> assert false
+  | V.Record fields
+  | V.Object (_, _, fields) ->
+    List.assoc field.str fields
+  | _ -> raise Not_found
+
+and eval_ufcs env obj field =
+  let fn = Rt_env.find_name [field] env in
+  let obj = V.expr_of_value (expr env obj) in
+  let v = run_app env fn [] [obj] in
+  match v with
+  | V.Function _ -> v
+  | _ -> V.Function {
+      fn_name = None;
+      fn_generics = [];
+      fn_parameters = [];
+      fn_return_type = None;
+      fn_body = [{stmt_desc = Expr (V.expr_of_value v); stmt_loc = dummy_loc}];
+    }
 
 and eval_if env if_ =
   let v = expr env if_.if_cond in
@@ -124,17 +142,11 @@ and eval_pattern env pat value =
   | _ -> assert false
 
 and eval_method_call env mc =
-  let obj = expr env mc.mc_object in
-  match obj with
-  | V.Object (_, fns, _) ->
-    let fn = List.assoc mc.mc_method.str fns in
-    let env' = Rt_env.extend_env env "this" obj in
-    run_app env' (V.Function fn) [] mc.mc_args
-  | V.Record fields ->
-    let fn = List.assoc mc.mc_method.str fields in
-    run_app env fn [] mc.mc_args
-  | _ -> assert false
-
+  let fn =
+    try eval_field_access2 env mc.mc_object mc.mc_method
+    with _ -> eval_ufcs env mc.mc_object mc.mc_method
+  in
+  run_app env fn [] mc.mc_args
 
 (* Stmt *)
 and stmts env stmts =
@@ -198,11 +210,23 @@ and eval_impl_item = function
     | None -> assert false
 
 and eval_class env cls =
-  let aux fn = match fn.fn_name with
+  let aux env fn = match fn.fn_name with
     | None -> assert false
-    | Some n -> (n.str, fn)
+    | Some n ->
+      let this = {
+        param_name = mk_name "this";
+        param_type = {
+          type_desc = Inst (mk_qualified_name ["Self"], []);
+          type_loc = dummy_loc;
+        }
+      } in
+      let fn = {
+        fn with fn_parameters = this :: fn.fn_parameters
+      }
+      in
+      Rt_env.extend_name env n (V.Function fn)
   in
-  let fns = List.map aux cls.class_fns in
-  let value = V.Class (cls.class_name.str, fns) in
+  let value = V.Class (cls.class_name.str, []) in
   let env = Rt_env.extend_name env cls.class_name value in
+  let env = List.fold_left aux env cls.class_fns in
   value, env

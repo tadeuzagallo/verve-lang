@@ -53,7 +53,8 @@ and apply_arguments callee arguments =
         t2
       | T.TypeArrow (v1, t2) ->
         T.type_arrow v1 (check t2)
-      | _ -> raise (Error Invalid_application)
+      | _ ->
+        raise (Error Invalid_application)
     in
     check call
   in
@@ -67,7 +68,7 @@ let check_generics ?(var=T.var) env generics =
   let generics, env = List.fold_left aux ([], env) generics in
   List.rev generics, env
 
-let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
+let rec check_fn env ?(make_arrow=true) { fn_name; fn_generics; fn_parameters; fn_return_type; fn_body } =
   let generics, env = check_generics ~var:T.rigid_var env fn_generics in
 
   let param_names = List.map (fun p -> p.param_name) fn_parameters in
@@ -77,8 +78,8 @@ let rec check_fn env { fn_name; fn_generics; fn_parameters; fn_return_type; fn_b
     | None -> Env.ty_void
     | Some t -> check_type env t
   in
-  let fn_type = match fn_parameters with
-    | [] ->  T.arrow ty_void ret_type
+  let fn_type = match make_arrow, fn_parameters with
+    | true, [] ->  T.arrow ty_void ret_type
     | _ -> List.fold_right T.arrow param_types ret_type
   in
   let fn_type = List.fold_right T.type_arrow generics fn_type in
@@ -131,7 +132,7 @@ and check_class_ctor env cc =
   in
   let t = instantiate (Env.find_type env cc.cc_name) in
   let t = apply_generics env t cc.cc_generics in
-  match T.desc t with
+  match T.desc (T.concrete_type t) with
   | T.Class cls ->
     let missing = List.fold_left aux cls.T.cls_props cc.cc_record in
     begin match missing with
@@ -146,19 +147,38 @@ and check_record env fields =
   T.record (map_record (check_expr env) fields)
 
 and check_field_access env { record; field } =
-  let record = check_expr env record in
-  let fields = match T.desc record with
-    | T.Record r -> r
-    | T.Class { T.cls_props } -> cls_props
-    | _ -> raise (Error (Invalid_access (field, record)))
-  in
-  get_record_field record fields field
+  check_field_access2 env record field
 
-and get_record_field record fields field =
-  try
-    List.assoc field.str fields
-  with Not_found ->
-    raise (Error (Unknown_field (field, record)))
+and check_field_access2 env record field =
+  let obj = check_expr env record in
+  let t = T.concrete_type obj in
+  match T.desc t with
+    | T.Record fields
+    | T.Class { T.cls_props=fields } -> begin
+        try
+          (* TODO: ambiguity error *)
+          List.assoc field.str fields
+        with Not_found ->
+          raise (Error (Unknown_field (field, t)))
+    end
+    | _ -> raise (Error (Invalid_access (field, t)))
+
+and check_method_call env mc =
+  let fn =
+    try check_field_access2 env mc.mc_object mc.mc_method
+    with _ -> check_ufcs env mc.mc_object mc.mc_method
+  in run_application env (fn, [], Some mc.mc_args)
+
+and check_ufcs env obj field =
+  let fn = Env.find_value env [field] in
+  let obj = check_expr env obj in
+  let t = apply_arguments fn [obj] in
+  let rec get_t t =
+    match T.desc t with
+      | T.Arrow _ -> t
+      | T.TypeArrow (t1, t2) -> T.type_arrow t1 (get_t t2)
+      | _ -> T.arrow Env.ty_void t
+  in get_t t
 
 and check_match env { match_value; cases } =
   let ty = check_expr env match_value in
@@ -229,23 +249,6 @@ and check_var env var =
   in
   var.var_type <- aux [] t;
   t
-
-and check_method_call env mc =
-  let obj = check_expr env mc.mc_object in
-  match T.desc obj with
-  | T.Class c ->
-      let fn =
-        try
-          List.assoc mc.mc_method.str !(c.T.cls_fns)
-        with Not_found ->
-          raise (Error (Unknown_method (mc.mc_method, c.T.cls_name)))
-      in
-      run_application env (fn, [], Some mc.mc_args)
-  | T.Record c ->
-    let fn = get_record_field obj c mc.mc_method in
-    run_application env (fn, [], Some mc.mc_args)
-  | _ ->
-    raise (Error (Callee_not_object (obj, mc.mc_method)))
 
 and check_expr env expr =
   match expr.expr_desc with

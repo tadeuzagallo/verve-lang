@@ -234,8 +234,9 @@ let rec unify ~expected:t1 t2 =
   if T.eq_type t1 t2 then () else
 
   match T.desc t1, T.desc t2 with
+  | T.Class {T.cls_name=n1; cls_generics=t1s}, T.Class {T.cls_name=n2; cls_generics=t2s}
   | T.TypeCtor (n2, t2s), T.TypeCtor (n1, t1s)
-  when n1 = n2 ->
+  when n1 = n2 && List.length t1s = List.length t2s ->
       let aux t1 t2 = unify ~expected:t1 t2 in
       List.iter2 aux t1s t2s
 

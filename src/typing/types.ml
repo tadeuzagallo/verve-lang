@@ -120,3 +120,9 @@ let rec clean_type' used t =
   | _ -> t, used
 
 let clean_type t = clean_type' [] t |> fst
+
+let rec concrete_type t =
+  let t = repr t in
+  match desc t with
+  | TypeArrow (_, t2) -> concrete_type t2
+  | _ -> t
