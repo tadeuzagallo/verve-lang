@@ -125,9 +125,9 @@ and check_class env cls =
   let aux cp = (cp.cp_name.str, Typing_expr.check_type env_internal cp.cp_type) in
   let cls_props = List.map aux cls.class_props in
   let cls_desc = { T.cls_name; T.cls_props; T.cls_fns = ref []; T.cls_generics = generics } in
-  let ty = T.class_ cls_desc in
-  let env_internal = Env.add_value env_internal (mk_name "this") ty in
-  let ty = List.fold_right T.type_arrow generics ty in
+  let ty' = T.class_ cls_desc in
+  let env_internal = Env.add_value env_internal (mk_name "this") ty' in
+  let ty = List.fold_right T.type_arrow generics ty' in
   let env_internal = Env.add_type env_internal cls.class_name ty in
 
   let aux (env_internal, env_external) fn =
@@ -135,14 +135,14 @@ and check_class env cls =
     | None -> assert false
     | Some n ->
       let t = Typing_expr.check_fn ~make_arrow:false env_internal fn in
-      let t = T.arrow ty t in
+      let t = T.arrow ty' t in
       let t = List.fold_right T.type_arrow generics t in
       let t = loosen t in
       (Env.add_value env_internal n t, Env.add_value env_external n t)
   in
   let (_, env_external) = List.fold_left aux (env_internal, env) cls.class_fns in
   let ty = loosen ty in
-  ty, Env.add_type env_external cls.class_name ty
+  ty, Env.add_type env_external cls.class_name (loosen ty)
 
 and check_decl env decl =
   match decl.decl_desc with

@@ -26,7 +26,7 @@ implementation Shape<Square> {
   }
 }
 
-x.area() // CHECK-L: 100 : Int
+area(x) // CHECK-L: 100 : Int
 
 // Polymorphic classes
 enum List<U> {
