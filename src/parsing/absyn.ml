@@ -175,6 +175,7 @@ and method_call = {
   mc_object : expr;
   mc_method : name;
   mc_args : expr list;
+  mutable mc_ty_args: Types.texpr list;
 }
 
 and class_ctor = {

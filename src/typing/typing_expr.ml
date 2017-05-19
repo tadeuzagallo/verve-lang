@@ -166,17 +166,19 @@ and check_field_access2 env record field =
 and check_method_call env mc =
   let fn =
     try check_field_access2 env mc.mc_object mc.mc_method
-    with _ -> check_ufcs env mc.mc_object mc.mc_method
+    with _ -> check_ufcs env mc
   in run_application env (fn, [], Some mc.mc_args)
 
-and check_ufcs env obj field =
-  let fn = Env.find_value env [field] in
-  let obj = check_expr env obj in
+and check_ufcs env mc =
+  let fn = Env.find_value env [mc.mc_method] in
+  let obj = check_expr env mc.mc_object in
   let t = apply_arguments fn [obj] in
   let rec get_t t =
     match T.desc t with
       | T.Arrow _ -> t
-      | T.TypeArrow (t1, t2) -> T.type_arrow t1 (get_t t2)
+      | T.TypeArrow (t1, t2) ->
+        mc.mc_ty_args <- mc.mc_ty_args @ [t1];
+        T.type_arrow t1 (get_t t2)
       | _ -> T.arrow Env.ty_void t
   in get_t t
 

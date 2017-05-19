@@ -78,10 +78,10 @@ and eval_field_access2 env record field =
     List.assoc field.str fields
   | _ -> raise Not_found
 
-and eval_ufcs env obj field =
-  let fn = Rt_env.find_name [field] env in
-  let obj = V.expr_of_value (expr env obj) in
-  let v = run_app env fn [] [obj] in
+and eval_ufcs env mc =
+  let fn = Rt_env.find_name [mc.mc_method] env in
+  let obj = V.expr_of_value (expr env mc.mc_object) in
+  let v = run_app env fn mc.mc_ty_args [obj] in
   match v with
   | V.Function _ -> v
   | _ -> V.Function {
@@ -144,7 +144,7 @@ and eval_pattern env pat value =
 and eval_method_call env mc =
   let fn =
     try eval_field_access2 env mc.mc_object mc.mc_method
-    with _ -> eval_ufcs env mc.mc_object mc.mc_method
+    with _ -> eval_ufcs env mc
   in
   run_app env fn [] mc.mc_args
 

@@ -425,5 +425,6 @@ class_prop: LET lcid COLON type_ {{
     mc_object = $1;
     mc_method = $3;
     mc_args = $4;
+    mc_ty_args = [];
   }
 }
