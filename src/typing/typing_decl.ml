@@ -82,7 +82,7 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
     | _ -> raise (Error (Invalid_implementation (impl_name, t)))
   in
   intf_desc.T.intf_impls <- (impl_arg_ty, impl_desc) :: intf_desc.T.intf_impls;
-  let names = List.fold_left (check_impl_item intf_desc env) [] impl_items in
+  let names = List.fold_left (check_impl_item intf_desc impl_arg_ty env) [] impl_items in
   check_missing_impls names intf_desc;
   T.implementation impl_desc
 
@@ -93,21 +93,21 @@ and check_missing_impls names intf =
   in
   List.iter aux intf.T.intf_items
 
-and check_impl_item intf env names = function
+and check_impl_item intf impl_ty env names = function
   | ImplFunction fn ->
     let name = match fn.fn_name with Some n -> n | None -> assert false in
-    check_matches_intf env name intf (Typing_expr.check_fn env fn);
+    check_matches_intf env name intf impl_ty (Typing_expr.check_fn env fn);
     name :: names
   | ImplOperator op ->
-    check_matches_intf env op.op_name intf (fst @@ check_operator env op);
+    check_matches_intf env op.op_name intf impl_ty (fst @@ check_operator env op);
     op.op_name :: names
 
-and check_matches_intf env name intf ty =
+and check_matches_intf env name intf impl_ty ty =
   let ty' =
     try List.assoc name.str intf.T.intf_items
     with Not_found -> raise (Error (Extraneous_implementation (intf.T.intf_name, name)))
   in
-  unify ~expected:(Env.instantiate ty') ty
+  unify ~expected:(Env.instantiate ty') (T.type_arrow impl_ty ty)
 
 and check_operator env op =
   let ty = Typing_expr.check_fn env (fn_of_operator op) in

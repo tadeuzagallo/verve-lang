@@ -240,6 +240,7 @@ let rec unify ~expected:t1 t2 =
       let aux t1 t2 = unify ~expected:t1 t2 in
       List.iter2 aux t1s t2s
 
+  | T.TypeArrow (t11, t12), T.TypeArrow (t21, t22)
   | T.Arrow (t11, t12), T.Arrow (t21, t22) ->
       unify ~expected:t11 t21;
       unify ~expected:t12 t22
