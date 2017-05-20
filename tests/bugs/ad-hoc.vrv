@@ -1,0 +1,27 @@
+// RUN: %verve
+interface Intish<T> {
+  fn to_int(T) -> Int
+}
+
+implementation Intish<Int> {
+  fn to_int(x: Int) -> Int { x }
+}
+
+implementation Intish<Bool> {
+  fn to_int(x: Bool) -> Int {
+    if x { 1 } else { 0 }
+  }
+}
+
+
+interface Math<T: Intish> {
+  fn add(T, T) -> Int
+}
+
+implementation Math<Bool> {
+  fn add(x: Bool, y: Bool) -> Int { 0 }
+}
+
+implementation Math<Int> {
+  fn add(x: Bool, y: Bool) -> Int { 0 }
+}
