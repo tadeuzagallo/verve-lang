@@ -72,6 +72,7 @@ and check_proto (var_name, var) (fns, env) { proto_name; proto_generics; proto_p
 
 and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let impl_arg_ty = Typing_expr.check_type env impl_arg in
+  check_impl_ty impl_name impl_arg_ty;
   impl.impl_arg_type <- Some (impl_arg_ty);
   let impl_name' = List.map (fun g -> g.str) impl_name in
   let impl_desc = { T.impl_name = impl_name'; T.impl_type = impl_arg_ty; T.impl_items = [] } in
@@ -85,6 +86,13 @@ and check_implementation env ({ impl_name; impl_arg; impl_items } as impl) =
   let names = List.fold_left (check_impl_item intf_desc impl_arg_ty env) [] impl_items in
   check_missing_impls names intf_desc;
   T.implementation impl_desc
+
+and check_impl_ty intf t =
+  match T.desc t with
+  | T.TypeCtor (_, [])
+  | T.Class _ -> ()
+  | _ ->
+    raise (Error (Invalid_implementation_type (intf, t)))
 
 and check_missing_impls names intf =
   let aux (fn_name, _) =

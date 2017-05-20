@@ -42,3 +42,12 @@ implementation Math<Int> {
   // CHECK-L: Failed to unify Int with Bool
   fn add(x: Bool, y: Bool) -> Int { 0 }
 }
+
+enum Maybe<T> {
+  None
+  Some(T)
+}
+
+// CHECK-L: Trying to implement Intish for Maybe<Int>, but Maybe<Int> should be a simple type, class or enum (monomorphic)
+implementation Intish< Maybe<Int> > {
+}

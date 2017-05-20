@@ -16,6 +16,7 @@ type error =
   | Invalid_generic_application_few
   | Invalid_application
   | Invalid_implementation of A.qualified_name * texpr
+  | Invalid_implementation_type of A.qualified_name * texpr
   | Unknown_field of A.name * texpr
   | Invalid_access of A.name * texpr
   | Invalid_pattern of A.pattern * texpr
@@ -62,6 +63,11 @@ let report_error' ppf = function
       Printer.Absyn.pp_qualified_name name
       Printer.Type.pp t
       Printer.Absyn.pp_qualified_name name
+  | Invalid_implementation_type (name, t) ->
+    pf ppf "Trying to implement %a for %a, but %a should be a simple type, class or enum (monomorphic)"
+      Printer.Absyn.pp_qualified_name name
+      Printer.Type.pp t
+      Printer.Type.pp t
   | Unknown_field (field, record) ->
     pf ppf "Trying to access unknown property %s of object of type %a"
       field.A.str Printer.Type.pp record
