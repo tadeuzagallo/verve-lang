@@ -61,7 +61,13 @@ rule read = parse
 (* comments *)
 | "/*" { comment 1 lexbuf }
 | "//" { single_line_comment lexbuf }
-| '/' (operator # ['/' '*'])* | (operator # ['/']) operator* { OP(Lexing.lexeme lexbuf) }
+
+(* operators *)
+| '/'
+| '/' (operator # ['/' '*']) operator*
+| '>' (operator # ['>']) operator*
+| (operator # ['/' '>']) operator*
+{ OP(Lexing.lexeme lexbuf) }
 
 | _ { raise (SyntaxError ("Unexpected char: " ^ Lexing.lexeme lexbuf)) }
 | eof { EOF }

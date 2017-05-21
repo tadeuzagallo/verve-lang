@@ -34,3 +34,7 @@
 // comment interleaved and indentation
   (11)
 
+
+enum Box<T> { Box(T) }
+
+fn f(x: Box<Box<Box<Box<Int>>>>) { }

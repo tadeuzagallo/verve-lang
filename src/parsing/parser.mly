@@ -61,7 +61,7 @@ let mk_var v = Var { var_name = v; var_type = [] }
 %nonassoc CTOR_NO_ARGS
 
 %nonassoc BELOW_PAREN
-%left L_PAREN L_ANGLE L_BRACE OP
+%left L_PAREN L_ANGLE L_BRACE R_ANGLE OP
 
 %%
 
@@ -286,7 +286,7 @@ pattern_desc:
   | ucid_name option(plist(pattern)) { Pctor ($1, $2) }
 
 /* binary operations */
-binop: expr op expr {
+binop: expr op expr %prec R_ANGLE {
   Binop { bin_lhs = $1; bin_op = $2; bin_rhs = $3; bin_generic_arguments_ty = [] }
 }
 
@@ -321,7 +321,10 @@ attribute_value:
 }
 
 /* names */
-%inline op: OP { mk_name $1 }
+%inline op:
+  | OP { mk_name $1 }
+  | R_ANGLE+ { mk_name (String.make (List.length $1) '>') }
+
 lcid: LCID { mk_name $1 }
 ucid: UCID { mk_name $1 }
 
