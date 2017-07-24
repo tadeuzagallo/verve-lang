@@ -49,3 +49,15 @@ fn add<T: Num>(x: T, y: T) -> T {
   x + y
 }
 add(3, 5)
+
+operator (x: Int) < (y: Int) -> Bool { False }
+
+fn a<T>(x: T) -> T { x }
+
+3 < {x: 5}.x
+
+a<Int>(4)
+a<Int>
+
+a<() -> Int>(fn x() -> Int { 3 })
+4 < (4)
