@@ -1,0 +1,34 @@
+name:                verve
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/tadeuzagallo/verve-lang#readme
+license:             MIT
+license-file:        LICENSE
+author:              Tadeu Zagallo
+maintainer:          tadeuzagallo@gmail
+copyright:           2017 Tadeu Zagallo
+category:            programming-language
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-incomplete-record-updates -fwarn-identities
+  exposed-modules:     Parser
+                       Absyn
+                       Lexer
+  build-depends:       base >= 4.7 && < 5, parsec
+  default-language:    Haskell2010
+
+executable verve
+  hs-source-dirs: app
+  main-is:        Main.hs
+  ghc-options:    -Wall -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-incomplete-record-updates -fwarn-identities
+  build-depends:  base >= 4.7 && < 5, verve
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/githubuser/verve

@@ -1,5 +1,4 @@
 _build
-*.native
-*.byte
 verve
 Output
+.stack-work
