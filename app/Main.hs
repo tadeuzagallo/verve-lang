@@ -9,7 +9,7 @@ main = do
   result <- parseFile file
   case result of
     Left err -> print err
-    Right absyn ->
-      case eval absyn of
-        Left err -> print err
-        Right value -> print value
+    Right absyn -> print absyn
+      {-case eval absyn of-}
+        {-Left err -> print err-}
+        {-Right value -> print value-}

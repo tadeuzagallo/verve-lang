@@ -19,13 +19,21 @@ p_program = p_expr <* eof
 p_expr :: Parser Expr
 p_expr = do
   lhs <- p_lhs
-  p_rhs lhs <|> return lhs
+  p_rhs lhs
 
 p_lhs :: Parser Expr
-p_lhs = p_literal >>= return . Literal
+p_lhs = choice [p_literal >>= return . Literal, identifier >>= return . Ident]
 
 p_rhs :: Expr -> Parser Expr
-p_rhs lhs = do
+p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
+
+p_app :: Expr -> Parser Expr
+p_app callee = do
+  args <- parens $ commaSep p_expr
+  return $ App {callee, args}
+
+p_binop :: Expr -> Parser Expr
+p_binop lhs = do
   op <- try operator
   rhs <- p_expr
   return $ BinOp {lhs, op, rhs}
