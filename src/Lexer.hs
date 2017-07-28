@@ -1,8 +1,12 @@
-module Lexer (integer
+module Lexer ( integer -- Literals
              , float
              , stringLiteral
              , charLiteral
-             -- puctuation
+             -- Keywords
+             , identifier
+             , reserved
+             , operator
+             -- Delimiters
              , parens
              , braces
              ) where
@@ -19,6 +23,7 @@ float = Token.float lexer
 stringLiteral = Token.stringLiteral lexer
 charLiteral = Token.charLiteral lexer
 
+-- Delimiters
 parens = Token.parens lexer
 braces = Token.braces lexer
 
