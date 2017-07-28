@@ -1,3 +1,4 @@
+import Interpreter
 import Parser
 
 import System.Environment (getArgs)
@@ -8,4 +9,7 @@ main = do
   result <- parseFile file
   case result of
     Left err -> print err
-    Right absyn -> print absyn
+    Right absyn ->
+      case eval absyn of
+        Left err -> print err
+        Right value -> print value

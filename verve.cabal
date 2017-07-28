@@ -19,6 +19,7 @@ library
   exposed-modules:     Parser
                        Absyn
                        Lexer
+                       Interpreter
   build-depends:       base >= 4.7 && < 5, parsec
   default-language:    Haskell2010
 
