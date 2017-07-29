@@ -5,17 +5,22 @@ module TypeChecker
 
 import Absyn
 
+import Control.Monad (when)
 import Data.List (intercalate)
 import Text.Printf (printf)
 
-data TypeError =
-  UnknownVariable String
+data TypeError
+  = UnknownVariable String
+  | ArityMismatch
+  | TypeError { expected :: Type
+              , actual :: Type }
   deriving (Show)
 
 data Type
   = Con String
   | Arr [Type]
         Type
+  deriving (Eq)
 
 int :: Type
 int = Con "Int"
@@ -39,6 +44,8 @@ instance Show Type where
 
 type InferResult = Either TypeError Type
 
+type CheckResult = Either TypeError ()
+
 newtype Ctx =
   Ctx [(Name, Type)]
 
@@ -58,6 +65,27 @@ i_expr ctx (Ident i) =
   case getType i ctx of
     Nothing -> Left $ UnknownVariable i
     Just t -> return t
+i_expr ctx (App fn args) = do
+  tyFn <- i_expr ctx fn
+  case tyFn of
+    Arr tyArgs tyRet -> i_app ctx args tyArgs tyRet
+    _ -> Left ArityMismatch
+
+i_app :: Ctx -> [Expr] -> [Type] -> Type -> InferResult
+i_app _ [] [] tyRet = return tyRet
+i_app _ [] tyArgs tyRet = return $ Arr tyArgs tyRet
+i_app ctx args [] tyRet =
+  case tyRet of
+    Arr tyArgs tyRet' -> i_app ctx args tyArgs tyRet'
+    _ -> Left ArityMismatch
+i_app ctx (arg:args) (tyArg:tyArgs) tyRet = do
+  c_expr ctx arg tyArg
+  i_app ctx args tyArgs tyRet
+
+c_expr :: Ctx -> Expr -> Type -> CheckResult
+c_expr ctx expr ty = do
+  tyExpr <- i_expr ctx expr
+  when (tyExpr /= ty) (Left $ TypeError ty tyExpr)
 
 i_lit :: Literal -> InferResult
 i_lit (Integer _) = return int
