@@ -25,7 +25,7 @@ data Value
 
 instance Show Value where
   show (VLit v) = show v
-  show (VLam v) = "<function>"
+  show (VLam _) = "<function>"
   show Void = ""
 
 builtins :: [(String, Value)]

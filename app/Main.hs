@@ -1,7 +1,9 @@
 import Interpreter
 import Parser
+import TypeChecker
 
 import System.Environment (getArgs)
+import Text.Printf (printf)
 
 main :: IO ()
 main = do
@@ -10,6 +12,9 @@ main = do
   case result of
     Left err -> print err
     Right absyn ->
-      case eval absyn of
+      case infer absyn of
         Left err -> print err
-        Right value -> print value
+        Right ty ->
+          case eval absyn of
+            Left err -> print err
+            Right value -> printf "%s : %s\n" (show value) (show ty)
