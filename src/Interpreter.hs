@@ -34,7 +34,7 @@ builtins =
     , VLam
         (\(Env {locals = (VLit (Integer a)):(VLit (Integer b)):_}) ->
            return . VLit . Integer $ a + b))
-  , ( "print"
+  , ( "int_print"
     , VLam
         (\(Env {locals = v:_}) ->
            case unsafePerformIO (print v) of
