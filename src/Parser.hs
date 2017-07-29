@@ -41,8 +41,11 @@ p_binop lhs = do
 p_literal :: Parser Literal
 p_literal =
   choice
-    [ integer >>= return . Integer
-    , float >>= return . Float
-    , charLiteral >>= return . Char
-    , stringLiteral >>= return . String
-    ]
+    [p_number, charLiteral >>= return . Char, stringLiteral >>= return . String]
+
+p_number :: Parser Literal
+p_number = do
+  number <- naturalOrFloat
+  case number of
+    Left int -> return $ Integer int
+    Right float -> return $ Float float

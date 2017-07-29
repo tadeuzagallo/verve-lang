@@ -1,7 +1,6 @@
 module Lexer
   -- Literals
-  ( integer
-  , float
+  ( naturalOrFloat
   , stringLiteral
   , charLiteral
   -- Keywords
@@ -23,9 +22,7 @@ import qualified Text.Parsec.Token as Token
 lexer = Token.makeTokenParser javaStyle
 
 -- Literals
-integer = Token.integer lexer
-
-float = Token.float lexer
+naturalOrFloat = Token.naturalOrFloat lexer
 
 stringLiteral = Token.stringLiteral lexer
 
