@@ -28,12 +28,12 @@ type InferResultT = Either TypeError
 type CheckResult = Either TypeError ()
 
 newtype Ctx =
-  Ctx [(Name, Type)]
+  Ctx [(String, Type)]
 
-getType :: Name -> Ctx -> Maybe Type
+getType :: String -> Ctx -> Maybe Type
 getType n (Ctx ctx) = lookup n ctx
 
-addType :: Ctx -> (Name, Type) -> Ctx
+addType :: Ctx -> (String, Type) -> Ctx
 addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
 
 defaultCtx :: Ctx
@@ -61,7 +61,7 @@ i_fn ctx fn =
 
 i_expr :: Ctx -> Expr -> InferResult
 i_expr _ (Literal lit) = i_lit lit
-i_expr ctx (Ident i) =
+i_expr ctx (Ident (Global i)) =
   case getType i ctx of
     Nothing -> Left $ UnknownVariable i
     Just t -> return t

@@ -75,7 +75,8 @@ e_fn _ fn = do
 
 e_expr :: Env -> Expr -> EvalResult
 e_expr _ (Literal s) = return $ VLit s
-e_expr env (Ident id) =
+e_expr env (Ident (Local id)) = return $ locals env !! id
+e_expr env (Ident (Global id)) =
   case lookup id (globals env) of
     Nothing -> Left $ UnknownVariable id
     Just val -> return val

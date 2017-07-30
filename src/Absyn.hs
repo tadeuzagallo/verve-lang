@@ -2,7 +2,10 @@ module Absyn where
 
 import Types
 
-type Name = String
+data Name
+  = Global String
+  | Local Int
+  deriving (Show)
 
 data Module = Module
   { stmts :: [Stmt]
@@ -13,14 +16,14 @@ data Stmt
   | Expr Expr
 
 data Function = Function
-  { name :: Name
+  { name :: String
   , params :: [TypedName]
   , retType :: Type
   , body :: [Stmt]
   }
 
 data TypedName =
-  TypedName Name
+  TypedName String
             Type
 
 data Expr
@@ -29,7 +32,7 @@ data Expr
   | App { callee :: Expr
         , args :: [Expr] }
   | BinOp { lhs :: Expr
-          , op :: Name
+          , op :: String
           , rhs :: Expr }
   deriving (Show)
 
