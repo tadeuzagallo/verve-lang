@@ -41,4 +41,9 @@ data Literal
   | Float Double
   | Char Char
   | String String
-  deriving (Show)
+
+instance Show Literal where
+  show (Integer i) = show i
+  show (Float i) = show i
+  show (Char i) = show i
+  show (String i) = show i

@@ -6,8 +6,6 @@ import Absyn
 import Types
 
 import Control.Monad (foldM, when)
-import Data.List (intercalate)
-import Text.Printf (printf)
 
 data TypeError
   = UnknownVariable String
@@ -15,11 +13,6 @@ data TypeError
   | TypeError { expected :: Type
               , actual :: Type }
   deriving (Show)
-
-instance Show Type where
-  show (Con t) = t
-  show (Arr t1 t2) =
-    printf "(%s) -> %s" (intercalate ", " $ map show t1) (show t2)
 
 type InferResult = Either TypeError Type
 
