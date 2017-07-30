@@ -23,7 +23,7 @@ data RuntimeError
 
 data Value
   = VLit Literal
-  | VLam (Env -> EvalResult)
+  | VLam (Value -> EvalResult)
   | Void
 
 instance Show Value where
@@ -35,11 +35,12 @@ builtins :: [(String, Value)]
 builtins =
   [ ( "int_add"
     , VLam
-        (\(Env {locals = (VLit (Integer a)):(VLit (Integer b)):_}) ->
-           return . VLit . Integer $ a + b))
+        (\(VLit (Integer a)) ->
+           return . VLam $ \(VLit (Integer b)) ->
+             return . VLit . Integer $ a + b))
   , ( "int_print"
     , VLam
-        (\(Env {locals = v:_}) ->
+        (\v ->
            case unsafePerformIO (print v) of
              () -> return Void))
   ]
@@ -70,8 +71,18 @@ e_stmt env (FnStmt fn) = do
   return (addGlobal env (name fn, val), val)
 
 e_fn :: Env -> Function -> EvalResult
-e_fn _ fn = do
-  return . VLam $ \env -> e_stmts env (body fn)
+e_fn env fn = do
+  wrap env (params fn)
+  where
+    wrap :: Env -> [TypedName] -> EvalResult
+    wrap env [] = e_stmts env (body fn)
+    wrap env (param:params) =
+      return . VLam $ \v -> wrap (addLocals env [v]) params
+  {-let body' = e_expr env (body fn)-}
+  {-foldM wrap body' (params fn)-}
+  {-where-}
+    {-wrap :: (Env, Value) -> TypedName -> EvalResult-}
+    {-wrap lam _ = return . VLam $ \v -> e_stmts (addLocals env [v]) (body fn)-}
 
 e_expr :: Env -> Expr -> EvalResult
 e_expr _ (Literal s) = return $ VLit s
@@ -81,8 +92,9 @@ e_expr env (Ident (Global id)) =
     Nothing -> Left $ UnknownVariable id
     Just val -> return val
 e_expr env (App fn args) = do
-  args' <- mapM (e_expr env) args
-  VLam f <- e_expr env fn
-  let env' = addLocals env args'
-  f env'
+  fn' <- e_expr env fn
+  foldM app fn' args
+  where
+    app :: Value -> Expr -> EvalResult
+    app (VLam fn) arg = e_expr env arg >>= fn
 e_expr _ _ = Left Unsupported
