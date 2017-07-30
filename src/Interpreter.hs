@@ -48,7 +48,7 @@ defaultEnv :: Env
 defaultEnv = Env {globals = builtins, locals = []}
 
 addLocals :: Env -> [Value] -> Env
-addLocals env locals' = env {locals = locals' ++ (locals env)}
+addLocals env locals' = env {locals = reverse locals' ++ (locals env)}
 
 addGlobal :: Env -> (String, Value) -> Env
 addGlobal env (n, val) = env {globals = (n, val) : (globals env)}

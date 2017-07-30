@@ -27,24 +27,38 @@ type InferResultT = Either TypeError
 
 type CheckResult = Either TypeError ()
 
-newtype Ctx =
+data Ctx =
   Ctx [(String, Type)]
+      [Type]
 
-getType :: String -> Ctx -> Maybe Type
-getType n (Ctx ctx) = lookup n ctx
+getGlobal :: String -> Ctx -> Maybe Type
+getGlobal n (Ctx globals _) = lookup n globals
 
-addType :: Ctx -> (String, Type) -> Ctx
-addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
+addGlobal :: Ctx -> (String, Type) -> Ctx
+addGlobal (Ctx globals locals) (n, ty) = Ctx ((n, ty) : globals) locals
+
+getLocal :: Int -> Ctx -> Type
+getLocal i (Ctx _ locals) = locals !! i
+
+addLocals :: Ctx -> [Type] -> Ctx
+addLocals (Ctx globals locals) types = Ctx globals (reverse types ++ locals)
 
 defaultCtx :: Ctx
 defaultCtx =
-  Ctx [("int_print", Arr [int] void), ("int_add", Arr [int, int] int)]
+  Ctx [("int_print", Arr [int] void), ("int_add", Arr [int, int] int)] []
 
 infer :: Module -> InferResult
-infer mod = do
-  (_, ty) <-
-    foldM (\(ctx, _) stmt -> i_stmt ctx stmt) (defaultCtx, void) (stmts mod)
+infer mod = i_stmts defaultCtx (stmts mod)
+
+i_stmts :: Ctx -> [Stmt] -> InferResult
+i_stmts ctx stmts = do
+  (_, ty) <- foldM (\(ctx, _) stmt -> i_stmt ctx stmt) (ctx, void) stmts
   return ty
+
+c_stmts :: Ctx -> [Stmt] -> Type -> CheckResult
+c_stmts ctx stmts ty = do
+  actualTy <- i_stmts ctx stmts
+  when (actualTy /= ty) (Left $ TypeError ty actualTy)
 
 i_stmt :: Ctx -> Stmt -> InferResultT (Ctx, Type)
 i_stmt ctx (Expr expr) = do
@@ -52,19 +66,22 @@ i_stmt ctx (Expr expr) = do
   return (ctx, ty)
 i_stmt ctx (FnStmt fn) = do
   ty <- i_fn ctx fn
-  return (addType ctx (name fn, ty), ty)
+  return (addGlobal ctx (name fn, ty), ty)
 
 i_fn :: Ctx -> Function -> InferResult
-i_fn ctx fn =
+i_fn ctx fn = do
   let tyArgs = map (\(TypedName _ ty) -> ty) (params fn)
-  in return $ Arr tyArgs (retType fn)
+  let ty = Arr tyArgs (retType fn)
+  c_stmts (addLocals ctx tyArgs) (body fn) (retType fn)
+  return ty
 
 i_expr :: Ctx -> Expr -> InferResult
 i_expr _ (Literal lit) = i_lit lit
 i_expr ctx (Ident (Global i)) =
-  case getType i ctx of
+  case getGlobal i ctx of
     Nothing -> Left $ UnknownVariable i
     Just t -> return t
+i_expr ctx (Ident (Local i)) = return $ getLocal i ctx
 i_expr ctx (App fn args) = do
   tyFn <- i_expr ctx fn
   case tyFn of
