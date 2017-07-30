@@ -75,14 +75,15 @@ e_fn env fn = do
   wrap env (params fn)
   where
     wrap :: Env -> [TypedName] -> EvalResult
-    wrap env [] = e_stmts env (body fn)
+    wrap env [] = core
     wrap env (param:params) =
       return . VLam $ \v -> wrap (addLocals env [v]) params
-  {-let body' = e_expr env (body fn)-}
-  {-foldM wrap body' (params fn)-}
-  {-where-}
-    {-wrap :: (Env, Value) -> TypedName -> EvalResult-}
-    {-wrap lam _ = return . VLam $ \v -> e_stmts (addLocals env [v]) (body fn)-}
+    core :: EvalResult
+    core =
+      let b = e_stmts env (body fn)
+      in case params fn of
+           [] -> return . VLam $ \_ -> b
+           _ -> b
 
 e_expr :: Env -> Expr -> EvalResult
 e_expr _ (Literal s) = return $ VLit s
@@ -91,6 +92,8 @@ e_expr env (Ident (Global id)) =
   case lookup id (globals env) of
     Nothing -> Left $ UnknownVariable id
     Just val -> return val
+e_expr env VoidExpr = return Void
+e_expr env (App fn []) = e_expr env (App fn [VoidExpr])
 e_expr env (App fn args) = do
   fn' <- e_expr env fn
   foldM app fn' args

@@ -15,7 +15,7 @@ module Lexer
   , commaSep
   ) where
 
-import Text.Parsec (sepEndBy, sepEndBy1)
+import Text.Parsec (sepEndBy)
 import Text.Parsec.Language (javaStyle)
 
 import qualified Text.Parsec.Token as Token

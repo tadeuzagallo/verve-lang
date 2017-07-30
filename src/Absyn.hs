@@ -29,6 +29,7 @@ data TypedName =
 data Expr
   = Literal Literal
   | Ident Name
+  | VoidExpr -- workaround, this can't be expressed in source code
   | App { callee :: Expr
         , args :: [Expr] }
   | BinOp { lhs :: Expr

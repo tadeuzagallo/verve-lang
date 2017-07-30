@@ -63,7 +63,10 @@ i_stmt ctx (FnStmt fn) = do
 
 i_fn :: Ctx -> Function -> InferResult
 i_fn ctx fn = do
-  let tyArgs = map (\(TypedName _ ty) -> ty) (params fn)
+  let tyArgs =
+        case (params fn) of
+          [] -> [void]
+          p -> map (\(TypedName _ ty) -> ty) p
   let ty = Arr tyArgs (retType fn)
   c_stmts (addLocals ctx tyArgs) (body fn) (retType fn)
   return ty
@@ -75,11 +78,11 @@ i_expr ctx (Ident (Global i)) =
     Nothing -> Left $ UnknownVariable i
     Just t -> return t
 i_expr ctx (Ident (Local i)) = return $ getLocal i ctx
+i_expr ctx VoidExpr = return void
+i_expr ctx (App fn []) = i_expr ctx (App fn [VoidExpr])
 i_expr ctx (App fn args) = do
   tyFn <- i_expr ctx fn
-  case tyFn of
-    Arr tyArgs tyRet -> i_app ctx args tyArgs tyRet
-    _ -> Left ArityMismatch
+  i_app ctx args [] tyFn
 
 i_app :: Ctx -> [Expr] -> [Type] -> Type -> InferResult
 i_app _ [] [] tyRet = return tyRet

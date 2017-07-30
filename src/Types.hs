@@ -18,6 +18,8 @@ data Type
 
 instance Show Type where
   show (Con t) = t
+  show (Arr [v] t2)
+    | v == void = show (Arr [] t2)
   show (Arr t1 t2) =
     printf "(%s) -> %s" (intercalate ", " $ map show t1) (show t2)
 
