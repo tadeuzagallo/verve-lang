@@ -1,11 +1,11 @@
 module TypeChecker
   ( infer
-  , Type
   ) where
 
 import Absyn
+import Types
 
-import Control.Monad (when)
+import Control.Monad (foldM, when)
 import Data.List (intercalate)
 import Text.Printf (printf)
 
@@ -16,33 +16,14 @@ data TypeError
               , actual :: Type }
   deriving (Show)
 
-data Type
-  = Con String
-  | Arr [Type]
-        Type
-  deriving (Eq)
-
-int :: Type
-int = Con "Int"
-
-float :: Type
-float = Con "Float"
-
-char :: Type
-char = Con "Char"
-
-string :: Type
-string = Con "String"
-
-void :: Type
-void = Con "Void"
-
 instance Show Type where
   show (Con t) = t
   show (Arr t1 t2) =
     printf "(%s) -> %s" (intercalate ", " $ map show t1) (show t2)
 
 type InferResult = Either TypeError Type
+
+type InferResultT = Either TypeError
 
 type CheckResult = Either TypeError ()
 
@@ -52,12 +33,31 @@ newtype Ctx =
 getType :: Name -> Ctx -> Maybe Type
 getType n (Ctx ctx) = lookup n ctx
 
+addType :: Ctx -> (Name, Type) -> Ctx
+addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
+
 defaultCtx :: Ctx
 defaultCtx =
   Ctx [("int_print", Arr [int] void), ("int_add", Arr [int, int] int)]
 
-infer :: Expr -> InferResult
-infer expr = i_expr defaultCtx expr
+infer :: Module -> InferResult
+infer mod = do
+  (_, ty) <-
+    foldM (\(ctx, _) stmt -> i_stmt ctx stmt) (defaultCtx, void) (stmts mod)
+  return ty
+
+i_stmt :: Ctx -> Stmt -> InferResultT (Ctx, Type)
+i_stmt ctx (Expr expr) = do
+  ty <- i_expr ctx expr
+  return (ctx, ty)
+i_stmt ctx (FnStmt fn) = do
+  ty <- i_fn ctx fn
+  return (addType ctx (name fn, ty), ty)
+
+i_fn :: Ctx -> Function -> InferResult
+i_fn ctx fn =
+  let tyArgs = map (\(TypedName _ ty) -> ty) (params fn)
+  in return $ Arr tyArgs (retType fn)
 
 i_expr :: Ctx -> Expr -> InferResult
 i_expr _ (Literal lit) = i_lit lit

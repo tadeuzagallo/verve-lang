@@ -7,6 +7,7 @@ module Lexer
   , identifier
   , reserved
   , operator
+  , symbol
   -- Delimiters
   , parens
   , braces
@@ -41,6 +42,8 @@ identifier = Token.identifier lexer
 reserved = Token.reserved lexer
 
 operator = Token.operator lexer
+
+symbol = Token.symbol lexer
 
 -- Utils
 commaSep = flip sepEndBy comma

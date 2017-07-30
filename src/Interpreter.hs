@@ -4,9 +4,12 @@ module Interpreter
 
 import Absyn
 
+import Control.Monad (foldM)
 import System.IO.Unsafe (unsafePerformIO)
 
-type EvalResult = Either RuntimeError Value
+type EvalResultT = Either RuntimeError
+
+type EvalResult = EvalResultT Value
 
 data Env = Env
   { globals :: [(String, Value)]
@@ -26,7 +29,7 @@ data Value
 instance Show Value where
   show (VLit v) = show v
   show (VLam _) = "<function>"
-  show Void = ""
+  show Void = "()"
 
 builtins :: [(String, Value)]
 builtins =
@@ -47,8 +50,28 @@ defaultEnv = Env {globals = builtins, locals = []}
 addLocals :: Env -> [Value] -> Env
 addLocals env locals' = env {locals = locals' ++ (locals env)}
 
-eval :: Expr -> EvalResult
-eval = e_expr defaultEnv
+addGlobal :: Env -> (String, Value) -> Env
+addGlobal env (n, val) = env {globals = (n, val) : (globals env)}
+
+eval :: Module -> EvalResult
+eval mod = e_stmts defaultEnv (stmts mod)
+
+e_stmts :: Env -> [Stmt] -> EvalResult
+e_stmts env stmts = do
+  (_, val) <- foldM (\(env, _) stmt -> e_stmt env stmt) (env, Void) stmts
+  return val
+
+e_stmt :: Env -> Stmt -> EvalResultT (Env, Value)
+e_stmt env (Expr expr) = do
+  val <- e_expr env expr
+  return (env, val)
+e_stmt env (FnStmt fn) = do
+  val <- e_fn env fn
+  return (addGlobal env (name fn, val), val)
+
+e_fn :: Env -> Function -> EvalResult
+e_fn _ fn = do
+  return . VLam $ \env -> e_stmts env (body fn)
 
 e_expr :: Env -> Expr -> EvalResult
 e_expr _ (Literal s) = return $ VLit s

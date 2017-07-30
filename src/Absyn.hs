@@ -1,6 +1,27 @@
 module Absyn where
 
+import Types
+
 type Name = String
+
+data Module = Module
+  { stmts :: [Stmt]
+  }
+
+data Stmt
+  = FnStmt Function
+  | Expr Expr
+
+data Function = Function
+  { name :: Name
+  , params :: [TypedName]
+  , retType :: Type
+  , body :: [Stmt]
+  }
+
+data TypedName =
+  TypedName Name
+            Type
 
 data Expr
   = Literal Literal
