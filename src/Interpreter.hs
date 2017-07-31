@@ -75,11 +75,11 @@ e_fn env fn = do
   wrap env (params fn)
   where
     wrap :: Env -> [TypedName] -> EvalResult
-    wrap env [] = body'
+    wrap env [] = body' env
     wrap env (param:params) =
       return . VLam $ \v -> wrap (addLocals env [v]) params
-    body' :: EvalResult
-    body' =
+    body' :: Env -> EvalResult
+    body' env =
       let b = e_stmts env (body fn)
       in case params fn of
            [] -> return . VLam $ \_ -> b
