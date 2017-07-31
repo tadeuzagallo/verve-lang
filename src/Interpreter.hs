@@ -1,5 +1,8 @@
 module Interpreter
   ( eval
+  , evalStmt
+  , Env
+  , defaultEnv
   ) where
 
 import Absyn
@@ -56,6 +59,9 @@ addGlobal env (n, val) = env {globals = (n, val) : (globals env)}
 
 eval :: Module -> EvalResult
 eval mod = e_stmts defaultEnv (stmts mod)
+
+evalStmt :: Env -> Stmt -> EvalResultT (Env, Value)
+evalStmt = e_stmt
 
 e_stmts :: Env -> [Stmt] -> EvalResult
 e_stmts env stmts = do

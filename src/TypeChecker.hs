@@ -1,5 +1,8 @@
 module TypeChecker
   ( infer
+  , inferStmt
+  , Ctx
+  , defaultCtx
   ) where
 
 import Absyn
@@ -42,6 +45,9 @@ defaultCtx =
 
 infer :: Module -> InferResult
 infer mod = i_stmts defaultCtx (stmts mod)
+
+inferStmt :: Ctx -> Stmt -> InferResultT (Ctx, Type)
+inferStmt = i_stmt
 
 i_stmts :: Ctx -> [Stmt] -> InferResult
 i_stmts ctx stmts = do

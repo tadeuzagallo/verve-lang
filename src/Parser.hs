@@ -2,6 +2,7 @@
 
 module Parser
   ( parseFile
+  , parseStmt
   ) where
 
 import Absyn
@@ -10,7 +11,7 @@ import Types
 
 import Data.List (elemIndex)
 import Text.Parsec
-       (ParseError, (<|>), choice, eof, many, option, try)
+       (ParseError, (<|>), choice, eof, many, option, parse, try)
 import Text.Parsec.String (Parser, parseFromFile)
 
 type Ctx = [String]
@@ -27,6 +28,9 @@ type ParserT a = Ctx -> Parser a
 
 parseFile :: String -> IO (Either ParseError Module)
 parseFile = parseFromFile p_module
+
+parseStmt :: String -> String -> Either ParseError Stmt
+parseStmt = parse (p_stmt emptyCtx <* eof)
 
 p_module :: Parser Module
 p_module = Module <$> (many (p_stmt emptyCtx) <* eof)
