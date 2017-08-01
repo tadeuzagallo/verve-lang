@@ -1,7 +1,10 @@
+import Absyn (Module)
+import Error
 import Interpreter
 import Parser
 import TypeChecker
 
+import Control.Monad.IO.Class (liftIO)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Environment (getArgs)
@@ -22,33 +25,33 @@ repl = runInputT defaultSettings $ loop (defaultCtx, defaultEnv)
       minput <- getInputLine "> "
       case minput of
         Nothing -> return ()
-        Just "" -> do
-          outputStrLn ""
-          loop (ctx, env)
         Just "quit" -> return ()
-        Just input -> do
-          let result = parseStmt "(stdin)" input
-          case result of
-            Left err -> outputStrLn $ show err
-            Right stmt ->
-              case inferStmt ctx stmt of
-                Left err -> outputStrLn $ show err
-                Right (ctx', ty) ->
-                  case evalStmt env stmt of
-                    Left err -> outputStrLn $ show err
-                    Right (env', val) -> do
-                      outputStrLn $ printf "%s : %s" (show val) (show ty)
-                      loop (ctx', env')
+        Just "" -> outputStrLn "" >> loop (ctx, env)
+        Just input ->
+          case result ctx env input of
+            Left err -> do
+              liftIO $ report err
+              loop (ctx, env)
+            Right (ctx', env', output) ->
+              outputStrLn output >> loop (ctx', env')
+    result :: Ctx -> Env -> String -> Either Error (Ctx, Env, String)
+    result ctx env input = do
+      stmt <- parseStmt "(stdin)" input
+      (ctx', ty) <- inferStmt ctx stmt
+      (env', val) <- evalStmt env stmt
+      let output = printf "%s : %s" (show val) (show ty)
+      return (ctx', env', output)
 
 runFile :: String -> IO ()
 runFile file = do
   result <- parseFile file
-  case result of
-    Left err -> print err
-    Right absyn ->
-      case infer absyn of
-        Left err -> print err
-        Right ty ->
-          case eval absyn of
-            Left err -> print err
-            Right value -> printf "%s : %s\n" (show value) (show ty)
+  -- TODO: add this as `Error::runError`
+  either report putStrLn (run result)
+  where
+    run :: (Either Error Module) -> Either Error String
+    run result = do
+      absyn <- result
+      ty <- infer absyn
+      val <- eval absyn
+      -- TODO: move this printing into it's own function
+      return $ printf "%s : %s" (show val) (show ty)

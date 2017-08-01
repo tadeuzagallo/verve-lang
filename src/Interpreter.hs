@@ -3,14 +3,17 @@ module Interpreter
   , evalStmt
   , Env
   , defaultEnv
+  , RuntimeError
   ) where
 
 import Absyn
+import Error
 
 import Control.Monad (foldM)
 import System.IO.Unsafe (unsafePerformIO)
+import Text.Printf (printf)
 
-type EvalResultT = Either RuntimeError
+type EvalResultT = Either Error
 
 type EvalResult = EvalResultT Value
 
@@ -23,6 +26,9 @@ data RuntimeError
   = Unsupported
   | UnknownVariable String
   deriving (Show)
+
+instance ErrorT RuntimeError where
+  kind _ = "RuntimeError"
 
 data Value
   = VLit Literal
@@ -96,7 +102,7 @@ e_expr _ (Literal s) = return $ VLit s
 e_expr env (Ident (Local id)) = return $ locals env !! id
 e_expr env (Ident (Global id)) =
   case lookup id (globals env) of
-    Nothing -> Left $ UnknownVariable id
+    Nothing -> mkError $ UnknownVariable id
     Just val -> return val
 e_expr env VoidExpr = return Void
 e_expr env (App fn []) = e_expr env (App fn [VoidExpr])
@@ -106,4 +112,4 @@ e_expr env (App fn args) = do
   where
     app :: Value -> Expr -> EvalResult
     app (VLam fn) arg = e_expr env arg >>= fn
-e_expr _ _ = Left Unsupported
+e_expr _ _ = mkError Unsupported

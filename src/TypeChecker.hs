@@ -3,12 +3,15 @@ module TypeChecker
   , inferStmt
   , Ctx
   , defaultCtx
+  , TypeError
   ) where
 
 import Absyn
+import Error
 import Types
 
 import Control.Monad (foldM, when)
+import Text.Printf (printf)
 
 data TypeError
   = UnknownVariable String
@@ -17,11 +20,14 @@ data TypeError
               , actual :: Type }
   deriving (Show)
 
-type InferResult = Either TypeError Type
+instance ErrorT TypeError where
+  kind _ = "TypeError"
 
-type InferResultT = Either TypeError
+type Result = Either Error
 
-type CheckResult = Either TypeError ()
+type InferResult = Result Type
+
+type CheckResult = Result ()
 
 data Ctx =
   Ctx [(String, Type)]
@@ -46,7 +52,7 @@ defaultCtx =
 infer :: Module -> InferResult
 infer mod = i_stmts defaultCtx (stmts mod)
 
-inferStmt :: Ctx -> Stmt -> InferResultT (Ctx, Type)
+inferStmt :: Ctx -> Stmt -> Result (Ctx, Type)
 inferStmt = i_stmt
 
 i_stmts :: Ctx -> [Stmt] -> InferResult
@@ -57,9 +63,9 @@ i_stmts ctx stmts = do
 c_stmts :: Ctx -> [Stmt] -> Type -> CheckResult
 c_stmts ctx stmts ty = do
   actualTy <- i_stmts ctx stmts
-  when (actualTy /= ty) (Left $ TypeError ty actualTy)
+  when (actualTy /= ty) (mkError $ TypeError ty actualTy)
 
-i_stmt :: Ctx -> Stmt -> InferResultT (Ctx, Type)
+i_stmt :: Ctx -> Stmt -> Result (Ctx, Type)
 i_stmt ctx (Expr expr) = do
   ty <- i_expr ctx expr
   return (ctx, ty)
@@ -81,7 +87,7 @@ i_expr :: Ctx -> Expr -> InferResult
 i_expr _ (Literal lit) = i_lit lit
 i_expr ctx (Ident (Global i)) =
   case getGlobal i ctx of
-    Nothing -> Left $ UnknownVariable i
+    Nothing -> mkError $ UnknownVariable i
     Just t -> return t
 i_expr ctx (Ident (Local i)) = return $ getLocal i ctx
 i_expr ctx VoidExpr = return void
@@ -96,7 +102,7 @@ i_app _ [] tyArgs tyRet = return $ Arr tyArgs tyRet
 i_app ctx args [] tyRet =
   case tyRet of
     Arr tyArgs tyRet' -> i_app ctx args tyArgs tyRet'
-    _ -> Left ArityMismatch
+    _ -> mkError ArityMismatch
 i_app ctx (arg:args) (tyArg:tyArgs) tyRet = do
   c_expr ctx arg tyArg
   i_app ctx args tyArgs tyRet
@@ -104,7 +110,7 @@ i_app ctx (arg:args) (tyArg:tyArgs) tyRet = do
 c_expr :: Ctx -> Expr -> Type -> CheckResult
 c_expr ctx expr ty = do
   tyExpr <- i_expr ctx expr
-  when (tyExpr /= ty) (Left $ TypeError ty tyExpr)
+  when (tyExpr /= ty) (mkError $ TypeError ty tyExpr)
 
 i_lit :: Literal -> InferResult
 i_lit (Integer _) = return int

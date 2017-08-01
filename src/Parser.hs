@@ -6,6 +6,7 @@ module Parser
   ) where
 
 import Absyn
+import Error
 import Lexer
 import Types
 
@@ -13,6 +14,10 @@ import Data.List (elemIndex)
 import Text.Parsec
        (ParseError, (<|>), choice, eof, many, option, parse, try)
 import Text.Parsec.String (Parser, parseFromFile)
+import Text.Printf (printf)
+
+instance ErrorT ParseError where
+  kind _ = "ParseError"
 
 type Ctx = [String]
 
@@ -26,11 +31,16 @@ addParams ctx params =
 
 type ParserT a = Ctx -> Parser a
 
-parseFile :: String -> IO (Either ParseError Module)
-parseFile = parseFromFile p_module
+parseFile :: String -> IO (Either Error Module)
+parseFile file = do
+  result <- parseFromFile p_module file
+  return $ either (Left . Error) Right result
 
-parseStmt :: String -> String -> Either ParseError Stmt
-parseStmt = parse (p_stmt emptyCtx <* eof)
+parseStmt :: String -> String -> Either Error Stmt
+parseStmt file source =
+  let result = parse (p_stmt emptyCtx <* eof) file source
+      --  TODO: add this lift to the Error module
+  in either (Left . Error) Right result
 
 p_module :: Parser Module
 p_module = Module <$> (many (p_stmt emptyCtx) <* eof)
