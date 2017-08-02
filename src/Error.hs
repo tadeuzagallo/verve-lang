@@ -4,6 +4,7 @@ module Error
   ( Error(..)
   , ErrorT(..)
   , mkError
+  , liftError
   ) where
 
 import Text.Printf (printf)
@@ -25,3 +26,7 @@ instance ErrorT Error where
 
 mkError :: (ErrorT a) => a -> Either Error b
 mkError a = Left (Error a)
+
+liftError :: (ErrorT a) => Either a b -> Either Error b
+liftError (Left a) = Left (Error a)
+liftError (Right b) = Right b

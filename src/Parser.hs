@@ -37,10 +37,7 @@ parseFile file = do
   return $ either (Left . Error) Right result
 
 parseStmt :: String -> String -> Either Error Stmt
-parseStmt file source =
-  let result = parse (p_stmt emptyCtx <* eof) file source
-      --  TODO: add this lift to the Error module
-  in either (Left . Error) Right result
+parseStmt file source = liftError $ parse (p_stmt emptyCtx <* eof) file source
 
 p_module :: Parser Module
 p_module = Module <$> (many (p_stmt emptyCtx) <* eof)
