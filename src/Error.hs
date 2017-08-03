@@ -3,6 +3,7 @@
 module Error
   ( Error(..)
   , ErrorT(..)
+  , Result
   , mkError
   , liftError
   ) where
@@ -17,6 +18,8 @@ class (Show a) =>
 
 data Error where
   Error :: (ErrorT a) => a -> Error
+
+type Result = Either Error
 
 instance Show Error where
   show (Error a) = show a

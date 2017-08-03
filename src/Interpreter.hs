@@ -7,28 +7,21 @@ module Interpreter
   ) where
 
 import qualified Absyn as A
-       (Expr, Function, Module, Stmt, TypedName)
+       (Expr, Function, Module, Stmt)
 import Absyn
-       hiding (Expr(), Function(), Module(), Stmt(), TypedName())
+       hiding (Expr(), Function(), Module(), Stmt())
 import Error
 
 import Control.Monad (foldM)
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Printf (printf)
 
 type EvalResultT = Either Error
-
 type EvalResult = EvalResultT Value
 
 type Module = A.Module String
-
 type Stmt = A.Stmt String
-
 type Expr = A.Expr String
-
 type Function = A.Function String
-
-type TypedName = A.TypedName String
 
 data Env =
   Env [(String, Value)]
@@ -100,7 +93,7 @@ e_fn env fn = do
   where
     wrap :: Env -> [TypedName] -> EvalResult
     wrap env [] = body' env
-    wrap env (TypedName n _:params) =
+    wrap env ((n, _):params) =
       return . VLam $ \v -> wrap (addValue env (n, v)) params
     body' :: Env -> EvalResult
     body' env =

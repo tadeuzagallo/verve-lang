@@ -37,7 +37,7 @@ repl = runInputT defaultSettings $ loop (defaultCtx, defaultEnv)
     result :: Ctx -> Env -> String -> Either Error (Ctx, Env, String)
     result ctx env input = do
       stmt <- parseStmt "(stdin)" input
-      (ctx', ty) <- inferStmt ctx stmt
+      (ctx', _, ty) <- inferStmt ctx stmt
       (env', val) <- evalStmt env stmt
       let output = printf "%s : %s" (show val) (show ty)
       return (ctx', env', output)
@@ -51,7 +51,7 @@ runFile file = do
     run :: (Either Error (Module String)) -> Either Error String
     run result = do
       absyn <- result
-      ty <- infer absyn
+      (_, ty) <- infer absyn
       val <- eval absyn
       -- TODO: move this printing into it's own function
       return $ printf "%s : %s" (show val) (show ty)

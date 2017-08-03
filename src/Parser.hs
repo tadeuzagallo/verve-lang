@@ -6,9 +6,9 @@ module Parser
   ) where
 
 import qualified Absyn as A
-       (Expr, Function, Module, Stmt, TypedName)
+       (Expr, Function, Module, Stmt)
 import Absyn
-       hiding (Expr(), Function(), Module(), Stmt(), TypedName())
+       hiding (Expr(), Function(), Module(), Stmt())
 import Error
 import Lexer
 import Types
@@ -20,14 +20,9 @@ import Text.Parsec.String (Parser, parseFromFile)
 import Text.Printf (printf)
 
 type Module = A.Module String
-
 type Stmt = A.Stmt String
-
 type Expr = A.Expr String
-
 type Function = A.Function String
-
-type TypedName = A.TypedName String
 
 instance ErrorT ParseError where
   kind _ = "ParseError"
@@ -60,7 +55,7 @@ p_typedName = do
   name <- identifier
   symbol ":"
   ty <- p_type
-  return $ TypedName name ty
+  return (name, ty)
 
 p_retType :: Parser Type
 p_retType = do

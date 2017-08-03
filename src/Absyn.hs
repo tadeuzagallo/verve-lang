@@ -4,6 +4,8 @@ import Types
 
 type Name = String
 
+data Id = Id Name Type
+
 data Module a = Module
   { stmts :: [Stmt a]
   }
@@ -13,15 +15,13 @@ data Stmt a
   | Expr (Expr a)
 
 data Function a = Function
-  { name :: String
-  , params :: [TypedName a]
+  { name :: a
+  , params :: [TypedName]
   , retType :: Type
   , body :: [Stmt a]
   }
 
-data TypedName a =
-  TypedName a
-            Type
+type TypedName = (Name, Type)
 
 data Expr a
   = Literal Literal
