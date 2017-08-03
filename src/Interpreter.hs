@@ -6,7 +6,10 @@ module Interpreter
   , RuntimeError
   ) where
 
+import qualified Absyn as A
+       (Expr, Function, Module, Stmt, TypedName)
 import Absyn
+       hiding (Expr(), Function(), Module(), Stmt(), TypedName())
 import Error
 
 import Control.Monad (foldM)
@@ -17,10 +20,19 @@ type EvalResultT = Either Error
 
 type EvalResult = EvalResultT Value
 
-data Env = Env
-  { globals :: [(String, Value)]
-  , locals :: [Value]
-  } deriving (Show)
+type Module = A.Module String
+
+type Stmt = A.Stmt String
+
+type Expr = A.Expr String
+
+type Function = A.Function String
+
+type TypedName = A.TypedName String
+
+data Env =
+  Env [(String, Value)]
+  deriving (Show)
 
 data RuntimeError
   = Unsupported
@@ -55,13 +67,13 @@ builtins =
   ]
 
 defaultEnv :: Env
-defaultEnv = Env {globals = builtins, locals = []}
+defaultEnv = Env builtins
 
-addLocals :: Env -> [Value] -> Env
-addLocals env locals' = env {locals = reverse locals' ++ (locals env)}
+addValue :: Env -> (String, Value) -> Env
+addValue (Env env) (n, val) = Env ((n, val) : env)
 
-addGlobal :: Env -> (String, Value) -> Env
-addGlobal env (n, val) = env {globals = (n, val) : (globals env)}
+getValue :: String -> Env -> Maybe Value
+getValue key (Env env) = lookup key env
 
 eval :: Module -> EvalResult
 eval mod = e_stmts defaultEnv (stmts mod)
@@ -80,7 +92,7 @@ e_stmt env (Expr expr) = do
   return (env, val)
 e_stmt env (FnStmt fn) = do
   val <- e_fn env fn
-  return (addGlobal env (name fn, val), val)
+  return (addValue env (name fn, val), val)
 
 e_fn :: Env -> Function -> EvalResult
 e_fn env fn = do
@@ -88,8 +100,8 @@ e_fn env fn = do
   where
     wrap :: Env -> [TypedName] -> EvalResult
     wrap env [] = body' env
-    wrap env (param:params) =
-      return . VLam $ \v -> wrap (addLocals env [v]) params
+    wrap env (TypedName n _:params) =
+      return . VLam $ \v -> wrap (addValue env (n, v)) params
     body' :: Env -> EvalResult
     body' env =
       let b = e_stmts env (body fn)
@@ -99,9 +111,8 @@ e_fn env fn = do
 
 e_expr :: Env -> Expr -> EvalResult
 e_expr _ (Literal s) = return $ VLit s
-e_expr env (Ident (Local id)) = return $ locals env !! id
-e_expr env (Ident (Global id)) =
-  case lookup id (globals env) of
+e_expr env (Ident id) =
+  case getValue id env of
     Nothing -> mkError $ UnknownVariable id
     Just val -> return val
 e_expr env VoidExpr = return Void

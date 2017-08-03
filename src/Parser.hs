@@ -5,7 +5,10 @@ module Parser
   , parseStmt
   ) where
 
+import qualified Absyn as A
+       (Expr, Function, Module, Stmt, TypedName)
 import Absyn
+       hiding (Expr(), Function(), Module(), Stmt(), TypedName())
 import Error
 import Lexer
 import Types
@@ -16,20 +19,18 @@ import Text.Parsec
 import Text.Parsec.String (Parser, parseFromFile)
 import Text.Printf (printf)
 
+type Module = A.Module String
+
+type Stmt = A.Stmt String
+
+type Expr = A.Expr String
+
+type Function = A.Function String
+
+type TypedName = A.TypedName String
+
 instance ErrorT ParseError where
   kind _ = "ParseError"
-
-type Ctx = [String]
-
-emptyCtx :: Ctx
-emptyCtx = []
-
-addParams :: Ctx -> [TypedName] -> Ctx
-addParams ctx params =
-  let paramNames = map (\(TypedName n _) -> n) params
-  in reverse paramNames ++ ctx
-
-type ParserT a = Ctx -> Parser a
 
 parseFile :: String -> IO (Either Error Module)
 parseFile file = do
@@ -37,22 +38,21 @@ parseFile file = do
   return $ either (Left . Error) Right result
 
 parseStmt :: String -> String -> Either Error Stmt
-parseStmt file source = liftError $ parse (p_stmt emptyCtx <* eof) file source
+parseStmt file source = liftError $ parse (p_stmt <* eof) file source
 
 p_module :: Parser Module
-p_module = Module <$> (many (p_stmt emptyCtx) <* eof)
+p_module = Module <$> (many p_stmt <* eof)
 
-p_stmt :: ParserT Stmt
-p_stmt ctx =
-  choice [p_function ctx >>= return . FnStmt, p_expr ctx >>= return . Expr]
+p_stmt :: Parser Stmt
+p_stmt = choice [p_function >>= return . FnStmt, p_expr >>= return . Expr]
 
-p_function :: ParserT Function
-p_function ctx = do
+p_function :: Parser Function
+p_function = do
   reserved "fn"
   name <- identifier
   params <- parens $ commaSep p_typedName
   retType <- option void p_retType
-  body <- braces . many $ p_stmt (addParams ctx params)
+  body <- braces . many $ p_stmt
   return $ Function {name, params, retType, body}
 
 p_typedName :: Parser TypedName
@@ -76,28 +76,24 @@ p_typeArrow = do
   retType <- p_type
   return $ Arr tyArgs retType
 
-p_expr :: ParserT Expr
-p_expr ctx = do
-  lhs <- p_lhs ctx
-  p_rhs ctx lhs
+p_expr :: Parser Expr
+p_expr = p_lhs >>= p_rhs
 
-p_lhs :: ParserT Expr
-p_lhs ctx =
-  choice [p_literal >>= return . Literal, p_name ctx >>= return . Ident]
+p_lhs :: Parser Expr
+p_lhs = choice [p_literal >>= return . Literal, p_name >>= return . Ident]
 
-p_rhs :: Ctx -> Expr -> Parser Expr
-p_rhs ctx lhs =
-  (choice [p_app ctx lhs, p_binop ctx lhs] >>= p_rhs ctx) <|> return lhs
+p_rhs :: Expr -> Parser Expr
+p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
-p_app :: Ctx -> Expr -> Parser Expr
-p_app ctx callee = do
-  args <- parens $ commaSep (p_expr ctx)
+p_app :: Expr -> Parser Expr
+p_app callee = do
+  args <- parens $ commaSep p_expr
   return $ App {callee, args}
 
-p_binop :: Ctx -> Expr -> Parser Expr
-p_binop ctx lhs = do
+p_binop :: Expr -> Parser Expr
+p_binop lhs = do
   op <- try operator
-  rhs <- p_expr ctx
+  rhs <- p_expr
   return $ BinOp {lhs, op, rhs}
 
 p_literal :: Parser Literal
@@ -112,10 +108,5 @@ p_number = do
     Left int -> return $ Integer int
     Right float -> return $ Float float
 
-p_name :: ParserT Name
-p_name ctx = do
-  ident <- identifier
-  return $
-    case elemIndex ident ctx of
-      Nothing -> Global ident
-      Just i -> Local i
+p_name :: Parser Name
+p_name = identifier

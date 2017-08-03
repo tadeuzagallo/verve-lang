@@ -6,12 +6,25 @@ module TypeChecker
   , TypeError
   ) where
 
+import qualified Absyn as A
+       (Expr, Function, Module, Stmt, TypedName)
 import Absyn
+       hiding (Expr(), Function(), Module(), Stmt(), TypedName())
 import Error
 import Types
 
 import Control.Monad (foldM, when)
 import Text.Printf (printf)
+
+type Module = A.Module String
+
+type Stmt = A.Stmt String
+
+type Expr = A.Expr String
+
+type Function = A.Function String
+
+type TypedName = A.TypedName String
 
 data TypeError
   = UnknownVariable String
@@ -31,23 +44,16 @@ type CheckResult = Result ()
 
 data Ctx =
   Ctx [(String, Type)]
-      [Type]
 
-getGlobal :: String -> Ctx -> Maybe Type
-getGlobal n (Ctx globals _) = lookup n globals
+getType :: String -> Ctx -> Maybe Type
+getType n (Ctx ctx) = lookup n ctx
 
-addGlobal :: Ctx -> (String, Type) -> Ctx
-addGlobal (Ctx globals locals) (n, ty) = Ctx ((n, ty) : globals) locals
-
-getLocal :: Int -> Ctx -> Type
-getLocal i (Ctx _ locals) = locals !! i
-
-addLocals :: Ctx -> [Type] -> Ctx
-addLocals (Ctx globals locals) types = Ctx globals (reverse types ++ locals)
+addType :: Ctx -> (String, Type) -> Ctx
+addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
 
 defaultCtx :: Ctx
 defaultCtx =
-  Ctx [("int_print", Arr [int] void), ("int_add", Arr [int, int] int)] []
+  Ctx [("int_print", Arr [int] void), ("int_add", Arr [int, int] int)]
 
 infer :: Module -> InferResult
 infer mod = i_stmts defaultCtx (stmts mod)
@@ -71,25 +77,26 @@ i_stmt ctx (Expr expr) = do
   return (ctx, ty)
 i_stmt ctx (FnStmt fn) = do
   ty <- i_fn ctx fn
-  return (addGlobal ctx (name fn, ty), ty)
+  return (addType ctx (name fn, ty), ty)
 
 i_fn :: Ctx -> Function -> InferResult
 i_fn ctx fn = do
-  let tyArgs =
-        case (params fn) of
-          [] -> [void]
-          p -> map (\(TypedName _ ty) -> ty) p
-  let ty = Arr tyArgs (retType fn)
-  c_stmts (addLocals ctx tyArgs) (body fn) (retType fn)
+  let tyArgs = map (\(TypedName n ty) -> (n, ty)) (params fn)
+  let ty =
+        Arr
+          (if null tyArgs
+             then [void]
+             else map snd tyArgs)
+          (retType fn)
+  c_stmts (foldl addType ctx tyArgs) (body fn) (retType fn)
   return ty
 
 i_expr :: Ctx -> Expr -> InferResult
 i_expr _ (Literal lit) = i_lit lit
-i_expr ctx (Ident (Global i)) =
-  case getGlobal i ctx of
+i_expr ctx (Ident i) =
+  case getType i ctx of
     Nothing -> mkError $ UnknownVariable i
     Just t -> return t
-i_expr ctx (Ident (Local i)) = return $ getLocal i ctx
 i_expr ctx VoidExpr = return void
 i_expr ctx (App fn []) = i_expr ctx (App fn [VoidExpr])
 i_expr ctx (App fn args) = do

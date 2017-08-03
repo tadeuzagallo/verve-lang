@@ -2,39 +2,36 @@ module Absyn where
 
 import Types
 
-data Name
-  = Global String
-  | Local Int
-  deriving (Show)
+type Name = String
 
-data Module = Module
-  { stmts :: [Stmt]
+data Module a = Module
+  { stmts :: [Stmt a]
   }
 
-data Stmt
-  = FnStmt Function
-  | Expr Expr
+data Stmt a
+  = FnStmt (Function a)
+  | Expr (Expr a)
 
-data Function = Function
+data Function a = Function
   { name :: String
-  , params :: [TypedName]
+  , params :: [TypedName a]
   , retType :: Type
-  , body :: [Stmt]
+  , body :: [Stmt a]
   }
 
-data TypedName =
-  TypedName String
+data TypedName a =
+  TypedName a
             Type
 
-data Expr
+data Expr a
   = Literal Literal
-  | Ident Name
+  | Ident a
   | VoidExpr -- workaround, this can't be expressed in source code
-  | App { callee :: Expr
-        , args :: [Expr] }
-  | BinOp { lhs :: Expr
+  | App { callee :: Expr a
+        , args :: [Expr a] }
+  | BinOp { lhs :: Expr a
           , op :: String
-          , rhs :: Expr }
+          , rhs :: Expr a }
   deriving (Show)
 
 data Literal

@@ -48,7 +48,7 @@ runFile file = do
   -- TODO: add this as `Error::runError`
   either report putStrLn (run result)
   where
-    run :: (Either Error Module) -> Either Error String
+    run :: (Either Error (Module String)) -> Either Error String
     run result = do
       absyn <- result
       ty <- infer absyn
