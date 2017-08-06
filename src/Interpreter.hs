@@ -66,26 +66,32 @@ eval expr = do
   return val
 
 evalWithEnv :: Env -> Expr -> EvalResultT (Env, Value)
-evalWithEnv env Void = return (env, VVoid)
-evalWithEnv env (Lit s) = return $ (env, VLit s)
-evalWithEnv env (Var (Id name _)) =
+evalWithEnv env (Let binds exp) =
+  e_let env binds exp
+
+e_expr :: Env -> Expr -> EvalResult
+e_expr env Void = return VVoid
+e_expr env (Lit s) = return $ VLit s
+e_expr env (Var (Id name _)) =
   case getValue name env of
     Nothing -> mkError $ UnknownVariable name
-    Just val -> return (env, val)
-evalWithEnv env (App fn arg) = do
-  (_, VLam fn') <- evalWithEnv env fn
-  (_, arg') <- evalWithEnv env arg
-  val <- fn' arg'
-  return (env, val)
-evalWithEnv env (Lam (Id name _) body) = do
-  return $ (,) env $ VLam $ \v -> evalWithEnv (addValue env (name, v)) body >>= return . snd
-evalWithEnv env (Let binds exp) = do
-  env' <- e_binds env binds
-  (_, val) <- evalWithEnv env' exp
+    Just val -> return val
+e_expr env (App fn arg) = do
+  VLam fn' <- e_expr env fn
+  arg' <- e_expr env arg
+  fn' arg'
+e_expr env (Lam (Id name _) body) = do
+  return . VLam $ \v -> e_expr (addValue env (name, v)) body
+e_expr env (Let binds exp) =
+  e_let env binds exp >>= return . snd
+
+e_let :: Env -> [Bind] -> Expr -> EvalResultT (Env, Value)
+e_let env binds exp = do
+  env' <- foldM e_bind env binds
+  val <- e_expr env' exp
   return (env', val)
 
-e_binds :: Env -> [Bind] -> EvalResultT Env
-e_binds env [] = return env
-e_binds env ((Id name _, exp):bs) = do
-  (_, exp') <- evalWithEnv env exp
-  e_binds (addValue env (name, exp')) bs
+e_bind :: Env -> Bind -> EvalResultT Env
+e_bind env (Id name _, exp) = do
+  exp' <- e_expr env exp
+  return $ addValue env (name, exp')
