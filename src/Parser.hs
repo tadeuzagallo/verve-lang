@@ -44,7 +44,7 @@ p_stmt = choice [p_function >>= return . FnStmt, p_expr >>= return . Expr]
 p_function :: Parser Function
 p_function = do
   reserved "fn"
-  name <- identifier
+  name <- lcid
   params <- parens $ commaSep p_typedName
   retType <- option void p_retType
   body <- braces . many $ p_stmt
@@ -52,7 +52,7 @@ p_function = do
 
 p_typedName :: Parser TypedName
 p_typedName = do
-  name <- identifier
+  name <- lcid
   symbol ":"
   ty <- p_type
   return (name, ty)
@@ -63,7 +63,7 @@ p_retType = do
   p_type
 
 p_type :: Parser Type
-p_type = choice [identifier >>= return . Con, p_typeArrow]
+p_type = choice [ucid >>= return . Con, p_typeArrow]
 
 p_typeArrow :: Parser Type
 p_typeArrow = do
@@ -75,7 +75,7 @@ p_expr :: Parser Expr
 p_expr = p_lhs >>= p_rhs
 
 p_lhs :: Parser Expr
-p_lhs = choice [p_literal >>= return . Literal, p_name >>= return . Ident]
+p_lhs = choice [p_literal >>= return . Literal, lcid >>= return . Ident]
 
 p_rhs :: Expr -> Parser Expr
 p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
@@ -102,6 +102,3 @@ p_number = do
   case number of
     Left int -> return $ Integer int
     Right float -> return $ Float float
-
-p_name :: Parser Name
-p_name = identifier

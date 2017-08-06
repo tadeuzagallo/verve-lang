@@ -4,7 +4,8 @@ module Lexer
   , stringLiteral
   , charLiteral
   -- Keywords
-  , identifier
+  , lcid
+  , ucid
   , reserved
   , operator
   , symbol
@@ -15,7 +16,9 @@ module Lexer
   , commaSep
   ) where
 
-import Text.Parsec (sepEndBy)
+import Text.Parsec (sepEndBy, many)
+import Text.Parsec.Char (lower, upper, alphaNum)
+import Text.Parsec.String (Parser)
 import Text.Parsec.Language (javaStyle)
 
 import qualified Text.Parsec.Token as Token
@@ -37,13 +40,16 @@ braces = Token.braces lexer
 comma = Token.comma lexer
 
 -- Keywords
-identifier = Token.identifier lexer
+lcid :: Parser String
+lcid = (:) <$> lower <*> many alphaNum <* whiteSpace
+
+ucid :: Parser String
+ucid = (:) <$> upper <*> many alphaNum <* whiteSpace
 
 reserved = Token.reserved lexer
-
 operator = Token.operator lexer
-
 symbol = Token.symbol lexer
 
 -- Utils
 commaSep = flip sepEndBy comma
+whiteSpace = Token.whiteSpace lexer
