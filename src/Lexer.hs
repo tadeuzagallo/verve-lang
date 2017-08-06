@@ -12,6 +12,7 @@ module Lexer
   -- Delimiters
   , parens
   , braces
+  , angles
   -- Utils
   , commaSep
   ) where
@@ -34,8 +35,8 @@ charLiteral = Token.charLiteral lexer
 
 -- Delimiters
 parens = Token.parens lexer
-
 braces = Token.braces lexer
+angles = Token.angles lexer
 
 comma = Token.comma lexer
 

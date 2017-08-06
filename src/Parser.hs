@@ -45,30 +45,41 @@ p_function :: Parser Function
 p_function = do
   reserved "fn"
   name <- lcid
-  params <- parens $ commaSep p_typedName
-  retType <- option void p_retType
+  generics <- option [] p_generics
+  params <- parens $ commaSep (p_typedName generics)
+  retType <- option void (p_retType generics)
   body <- braces . many $ p_stmt
-  return $ Function {name, params, retType, body}
+  return $ Function {name, generics, params, retType, body}
 
-p_typedName :: Parser TypedName
-p_typedName = do
+p_generics :: Parser [Name]
+p_generics = angles $ commaSep ucid
+
+p_typedName :: [Name] -> Parser TypedName
+p_typedName tvars = do
   name <- lcid
   symbol ":"
-  ty <- p_type
+  ty <- p_type tvars
   return (name, ty)
 
-p_retType :: Parser Type
-p_retType = do
+p_retType :: [Name] -> Parser Type
+p_retType tvars = do
   symbol "->"
-  p_type
+  p_type tvars
 
-p_type :: Parser Type
-p_type = choice [ucid >>= return . Con, p_typeArrow]
+p_type :: [Name] -> Parser Type
+p_type tvars = choice [p_simpleType tvars, p_typeArrow tvars]
 
-p_typeArrow :: Parser Type
-p_typeArrow = do
-  tyArgs <- parens $ commaSep p_type
-  retType <- p_type
+p_simpleType :: [Name] -> Parser Type
+p_simpleType tvars = do
+  name <- ucid
+  if elem name tvars
+    then return $ Var name
+    else return $ Con name
+
+p_typeArrow :: [Name] -> Parser Type
+p_typeArrow tvars = do
+  tyArgs <- parens $ commaSep (p_type tvars)
+  retType <- p_type tvars
   return $ Arr tyArgs retType
 
 p_expr :: Parser Expr
@@ -82,8 +93,9 @@ p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
 p_app :: Expr -> Parser Expr
 p_app callee = do
+  types <- angles $ commaSep (p_type [])
   args <- parens $ commaSep p_expr
-  return $ App {callee, args}
+  return $ App {callee, types, args}
 
 p_binop :: Expr -> Parser Expr
 p_binop lhs = do

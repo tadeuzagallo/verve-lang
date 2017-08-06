@@ -28,15 +28,17 @@ d_stmt (FnStmt fn) = (name fn, d_fn fn)
 d_fn :: Function Id -> CA.Expr
 d_fn fn@(Function { params=[] }) = d_fn (fn { params = [("", void)] })
 d_fn fn =
-  foldr CA.Lam (d_stmts $ body fn) (map (uncurry Id) $ params fn)
+  let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry Id) $ params fn)
+   in foldr CA.Lam fn' (map (flip Id Type) $ generics fn)
 
 d_expr :: Expr Id -> CA.Expr
 d_expr VoidExpr = CA.Void
 d_expr (Literal l) = CA.Lit l
 d_expr (Ident id) = CA.Var id
-d_expr (App callee []) = d_expr (App callee [VoidExpr])
-d_expr (App callee args) =
-  foldl mkApp (d_expr callee) args
+d_expr (App callee types []) = d_expr (App callee types [VoidExpr])
+d_expr (App callee types args) =
+  let app = foldl CA.App (d_expr callee) (CA.Type <$> types)
+   in foldl mkApp app args
     where
       mkApp :: CA.Expr -> Expr Id -> CA.Expr
       mkApp callee arg =

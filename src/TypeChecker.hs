@@ -11,6 +11,7 @@ import Error
 import Types
 
 import Control.Monad (foldM, when)
+import Debug.Trace
 
 data TypeError
   = UnknownVariable String
@@ -68,12 +69,15 @@ i_stmt ctx (FnStmt fn) = do
 i_fn :: Ctx -> Function Name -> Result (Function Id, Type)
 i_fn ctx fn = do
   let tyArgs = params fn
-  let ty =
+  let ty_ =
         Arr
           (if null tyArgs
              then [void]
              else map snd tyArgs)
           (retType fn)
+  let ty = if null (generics fn)
+      then ty_
+      else Forall (generics fn) ty_
   let ctx' = foldl addType ctx tyArgs
   (body', bodyTy) <- i_stmts ctx' (body fn)
   typeCheck bodyTy (retType fn)
@@ -87,12 +91,24 @@ i_expr ctx (Ident i) =
     Nothing -> mkError $ UnknownVariable i
     Just ty -> return (Ident (Id i ty), ty)
 i_expr ctx VoidExpr = return (VoidExpr, void)
-i_expr ctx (App fn []) = i_expr ctx (App fn [VoidExpr])
-i_expr ctx (App fn args) = do
+i_expr ctx (App fn types []) = i_expr ctx (App fn types [VoidExpr])
+i_expr ctx (App fn types args) = do
   (fn', tyFn) <- i_expr ctx fn
+  tyFn' <- i_tyApp ctx types [] tyFn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
-  retType <- i_app ctx tyArgs [] tyFn
-  return (App fn' args', retType)
+  retType <- i_app ctx tyArgs [] tyFn'
+  return (App fn' types args', retType)
+
+i_tyApp :: Ctx -> [Type] -> [String] -> Type -> Result Type
+i_tyApp _ [] [] tyRet = return tyRet
+i_tyApp _ [] generics tyRet = return $ Forall generics tyRet
+i_tyApp ctx types [] tyRet =
+  case tyRet of
+    Forall generics tyRet' -> i_tyApp ctx types generics tyRet'
+    _ -> trace "HERE" $ mkError ArityMismatch
+i_tyApp ctx (ty:types) (var:vars) tyRet = do
+  let tyRet' = subst (var, ty) tyRet
+  i_tyApp ctx types vars tyRet'
 
 i_app :: Ctx -> [Type] -> [Type] -> Type -> Result Type
 i_app _ [] [] tyRet = return tyRet
@@ -100,7 +116,7 @@ i_app _ [] tyArgs tyRet = return $ Arr tyArgs tyRet
 i_app ctx args [] tyRet =
   case tyRet of
     Arr tyArgs tyRet' -> i_app ctx args tyArgs tyRet'
-    _ -> mkError ArityMismatch
+    _ -> trace (show tyRet) $ mkError ArityMismatch
 i_app ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
   typeCheck actualTy expectedTy
   i_app ctx args tyArgs tyRet

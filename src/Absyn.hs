@@ -17,6 +17,7 @@ data Stmt a
 
 data Function a = Function
   { name :: a
+  , generics :: [Name]
   , params :: [TypedName]
   , retType :: Type
   , body :: [Stmt a]
@@ -29,6 +30,7 @@ data Expr a
   | Ident a
   | VoidExpr -- workaround, this can't be expressed in source code
   | App { callee :: Expr a
+        , types :: [Type]
         , args :: [Expr a] }
   | BinOp { lhs :: Expr a
           , op :: String

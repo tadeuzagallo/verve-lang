@@ -8,6 +8,7 @@ module Interpreter
 import CoreAbsyn
 import Absyn (Literal(..), Id(..))
 import Error
+import Types (Type)
 
 import Control.Monad (foldM)
 import System.IO.Unsafe (unsafePerformIO)
@@ -31,6 +32,7 @@ data Value
   = VLit Literal
   | VLam (Value -> EvalResult)
   | VVoid
+  | VType Type
 
 instance Show Value where
   show (VLit v) = show v
@@ -82,6 +84,8 @@ e_expr env (App fn arg) = do
   fn' arg'
 e_expr env (Lam (Id name _) body) = do
   return . VLam $ \v -> e_expr (addValue env (name, v)) body
+e_expr _ (Type t) = return $ VType t
+
 e_expr env (Let binds exp) =
   e_let env binds exp >>= return . snd
 

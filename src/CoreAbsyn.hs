@@ -15,7 +15,7 @@ data Expr
         Expr
   {-| Case Expr-}
          {-[Alt]-}
-  {-| Type Type-}
+  | Type Type
   deriving (Show)
 
 type Bind = (Id, Expr)
