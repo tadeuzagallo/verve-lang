@@ -3,6 +3,7 @@ import Error
 import Interpreter
 import Parser
 import TypeChecker
+import Desugar
 
 import Control.Monad.IO.Class (liftIO)
 import System.Console.Haskeline
@@ -37,8 +38,9 @@ repl = runInputT defaultSettings $ loop (defaultCtx, defaultEnv)
     result :: Ctx -> Env -> String -> Either Error (Ctx, Env, String)
     result ctx env input = do
       stmt <- parseStmt "(stdin)" input
-      (ctx', _, ty) <- inferStmt ctx stmt
-      (env', val) <- evalStmt env stmt
+      (ctx', stmt', ty) <- inferStmt ctx stmt
+      let expr = desugarStmt stmt'
+      (env', val) <- evalWithEnv env expr
       let output = printf "%s : %s" (show val) (show ty)
       return (ctx', env', output)
 
@@ -51,7 +53,8 @@ runFile file = do
     run :: (Either Error (Module String)) -> Either Error String
     run result = do
       absyn <- result
-      (_, ty) <- infer absyn
-      val <- eval absyn
+      (absyn', ty) <- infer absyn
+      let core = desugar absyn'
+      val <- eval core
       -- TODO: move this printing into it's own function
       return $ printf "%s : %s" (show val) (show ty)

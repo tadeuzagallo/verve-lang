@@ -5,6 +5,7 @@ import Types
 type Name = String
 
 data Id = Id Name Type
+  deriving (Show)
 
 data Module a = Module
   { stmts :: [Stmt a]
