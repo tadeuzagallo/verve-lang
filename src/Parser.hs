@@ -93,7 +93,7 @@ p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
 p_app :: Expr -> Parser Expr
 p_app callee = do
-  types <- angles $ commaSep (p_type [])
+  types <- option [] $ angles (commaSep $ p_type [])
   args <- parens $ commaSep p_expr
   return $ App {callee, types, args}
 

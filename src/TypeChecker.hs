@@ -11,7 +11,6 @@ import Error
 import Types
 
 import Control.Monad (foldM, when)
-import Debug.Trace
 
 data TypeError
   = UnknownVariable String
@@ -105,7 +104,7 @@ i_tyApp _ [] generics tyRet = return $ Forall generics tyRet
 i_tyApp ctx types [] tyRet =
   case tyRet of
     Forall generics tyRet' -> i_tyApp ctx types generics tyRet'
-    _ -> trace "HERE" $ mkError ArityMismatch
+    _ -> mkError ArityMismatch
 i_tyApp ctx (ty:types) (var:vars) tyRet = do
   let tyRet' = subst (var, ty) tyRet
   i_tyApp ctx types vars tyRet'
@@ -116,7 +115,7 @@ i_app _ [] tyArgs tyRet = return $ Arr tyArgs tyRet
 i_app ctx args [] tyRet =
   case tyRet of
     Arr tyArgs tyRet' -> i_app ctx args tyArgs tyRet'
-    _ -> trace (show tyRet) $ mkError ArityMismatch
+    _ -> mkError ArityMismatch
 i_app ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
   typeCheck actualTy expectedTy
   i_app ctx args tyArgs tyRet
