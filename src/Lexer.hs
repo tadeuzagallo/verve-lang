@@ -17,8 +17,8 @@ module Lexer
   , commaSep
   ) where
 
-import Text.Parsec (sepEndBy, many)
-import Text.Parsec.Char (lower, upper, alphaNum)
+import Text.Parsec ((<|>), sepEndBy, many)
+import Text.Parsec.Char (lower, upper, alphaNum, oneOf)
 import Text.Parsec.String (Parser)
 import Text.Parsec.Language (javaStyle)
 
@@ -42,10 +42,13 @@ comma = Token.comma lexer
 
 -- Keywords
 lcid :: Parser String
-lcid = (:) <$> lower <*> many alphaNum <* whiteSpace
+lcid = (:) <$> lower <*> idSuffix
 
 ucid :: Parser String
-ucid = (:) <$> upper <*> many alphaNum <* whiteSpace
+ucid = (:) <$> upper <*> idSuffix
+
+idSuffix :: Parser String
+idSuffix = many (alphaNum <|> oneOf "_'")<* whiteSpace
 
 reserved = Token.reserved lexer
 operator = Token.operator lexer
