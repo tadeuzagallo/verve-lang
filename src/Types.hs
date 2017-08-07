@@ -1,5 +1,7 @@
 module Types
   ( Type(..)
+  , (<:)
+  , fv
   , subst
   , int
   , float
@@ -8,39 +10,66 @@ module Types
   , void
   ) where
 
-import Data.List (intercalate)
+import Data.List ((\\), intercalate, union)
 import Text.Printf (printf)
 
 data Type
   = Con String
   | Var String
-  | Arr [Type] Type
-  | Forall [String] Type
+  | Fun [String] [Type] Type
   | Type
+  | Top
+  | Bot
   deriving (Eq)
+
+-- Subtyping
+(<:) :: Type -> Type -> Bool
+
+-- S-Refl
+t <: u | t == u = True
+
+-- S-Top
+_ <: Top = True
+
+-- S-Bot
+Bot <: _ = True
+
+-- S-Fun
+(Fun v1 p1 t1) <: (Fun v2 p2 t2) =
+  v1 == v2 && all (uncurry (<:)) (zip p2 p1) && t1 <: t2
+
+_ <: _ = False
+
+-- Free Type Variables
+fv :: Type -> [String]
+fv (Var x) = [x]
+fv (Fun x s r) =
+ (foldl union [] (map fv s) `union` fv r) \\ x
+fv _ = []
 
 instance Show Type where
   show (Con t) = t
   show (Var t) = t
   show Type = "Type"
+  show Top = "⊤"
+  show Bot = "⊥"
 
-  show (Forall [] ty) =
-    show ty
-  show (Forall vars ty) =
-    printf "∀ %s. %s" (intercalate " " vars) (show ty)
+  show (Fun gs [v] t2)
+    | v == void = show (Fun gs [] t2)
+  show (Fun gs t1 t2) =
+    printf "%s(%s) -> %s"
+      (if null gs then "" else printf "∀%s. " (intercalate " " gs))
+      (intercalate ", " $ map show t1)
+      (show t2)
 
-  show (Arr [v] t2)
-    | v == void = show (Arr [] t2)
-  show (Arr t1 t2) =
-    printf "(%s) -> %s" (intercalate ", " $ map show t1) (show t2)
-
-subst :: (String, Type) -> Type -> Type
-subst (v, t) (Var v') | v == v' = t
-subst s (Arr t1 t2) = Arr (map (subst s) t1) (subst s t2)
-subst (v, t) (Forall vars ty) =
-  if elem v vars
-     then Forall vars t
-     else Forall vars $ subst (v, t) ty
+subst :: [(String, Type)] -> Type -> Type
+subst s (Var v) =
+  case lookup v s of
+    Nothing -> Var v
+    Just t -> t
+subst s (Fun gs t1 t2) =
+  let s' = filter (not . flip elem gs . fst) s
+   in Fun gs (map (subst s') t1) (subst s' t2)
 subst _ t = t
 
 int :: Type

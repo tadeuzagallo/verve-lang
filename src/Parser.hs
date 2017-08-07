@@ -80,7 +80,7 @@ p_typeArrow :: [Name] -> Parser Type
 p_typeArrow tvars = do
   tyArgs <- parens $ commaSep (p_type tvars)
   retType <- p_type tvars
-  return $ Arr tyArgs retType
+  return $ Fun [] tyArgs retType
 
 p_expr :: Parser Expr
 p_expr = p_lhs >>= p_rhs
