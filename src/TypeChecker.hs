@@ -58,7 +58,6 @@ i_stmts ctx stmts = do
         (ctx', stmt', ty) <- i_stmt ctx stmt
         return (ctx', stmt':stmts, ty)
 
-
 i_stmt :: Ctx -> Stmt Name -> Result (Ctx, Stmt Id, Type)
 i_stmt ctx (Expr expr) = do
   (expr', ty) <- i_expr ctx expr
@@ -66,6 +65,18 @@ i_stmt ctx (Expr expr) = do
 i_stmt ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addType ctx (name fn, ty), FnStmt fn', ty)
+i_stmt ctx (Enum name ctors) = do
+  let name' = Id name Type
+  let (ctx', ctors') = foldr (i_ctor name) (ctx, []) ctors
+  return (addType ctx' (name, Type), (Enum name' ctors'), Type)
+
+i_ctor :: Name -> DataCtor Name -> (Ctx, [DataCtor Id]) -> (Ctx, [DataCtor Id])
+i_ctor enum (name, types) (ctx, ctors) =
+  let
+    enumTy = Con enum
+    ty = maybe enumTy (flip (Fun []) enumTy) types
+ in
+ (addType ctx (name, ty), (Id name ty, types):ctors)
 
 i_fn :: Ctx -> Function Name -> Result (Function Id, Type)
 i_fn ctx fn = do

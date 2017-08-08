@@ -6,23 +6,22 @@ module Parser
   ) where
 
 import qualified Absyn as A
-       (Expr, Function, Module, Stmt)
+       (Expr, Function, Module, Stmt, DataCtor)
 import Absyn
-       hiding (Expr(), Function(), Module(), Stmt())
+       hiding (Expr(), Function(), Module(), Stmt(), DataCtor)
 import Error
 import Lexer
 import Types
 
-import Data.List (elemIndex)
 import Text.Parsec
-       (ParseError, (<|>), choice, eof, many, option, parse, try)
+       (ParseError, (<|>), choice, eof, many, option, parse, try, optionMaybe)
 import Text.Parsec.String (Parser, parseFromFile)
-import Text.Printf (printf)
 
 type Module = A.Module String
 type Stmt = A.Stmt String
 type Expr = A.Expr String
 type Function = A.Function String
+type DataCtor = A.DataCtor String
 
 instance ErrorT ParseError where
   kind _ = "ParseError"
@@ -39,7 +38,23 @@ p_module :: Parser Module
 p_module = Module <$> (many p_stmt <* eof)
 
 p_stmt :: Parser Stmt
-p_stmt = choice [p_function >>= return . FnStmt, p_expr >>= return . Expr]
+p_stmt = choice [ p_enum
+                , p_function >>= return . FnStmt
+                , p_expr >>= return . Expr
+                ]
+
+p_enum :: Parser Stmt
+p_enum = do
+  reserved "enum"
+  name <- ucid
+  ctors <- braces . many $ p_constructor
+  return $ Enum name ctors
+
+p_constructor :: Parser DataCtor
+p_constructor = do
+  name <- ucid
+  args <- optionMaybe . parens . commaSep $ (p_type [])
+  return $ (name, args)
 
 p_function :: Parser Function
 p_function = do

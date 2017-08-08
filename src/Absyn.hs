@@ -14,6 +14,9 @@ data Module a = Module
 data Stmt a
   = FnStmt (Function a)
   | Expr (Expr a)
+  | Enum a [DataCtor a]
+
+type DataCtor a = (a, Maybe [Type])
 
 data Function a = Function
   { name :: a
