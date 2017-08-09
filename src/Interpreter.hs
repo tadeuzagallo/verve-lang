@@ -6,7 +6,7 @@ module Interpreter
   ) where
 
 import CoreAbsyn
-import Absyn (Literal(..), Id(..))
+import Absyn (Literal(..), Id(..), Name)
 import Error
 import Types (Type)
 
@@ -33,11 +33,21 @@ data Value
   | VLam (Value -> EvalResult)
   | VVoid
   | VType Type
+  | VNeutral Neutral
 
 instance Show Value where
   show (VLit v) = show v
+  show (VNeutral n) = show n
   show (VLam _) = "<function>"
   show VVoid = "()"
+
+data Neutral
+  = NFree Name
+  | NApp Neutral Value
+
+instance Show Neutral where
+  show (NFree n) = n
+  show (NApp n v) = show n ++ " " ++ show v
 
 builtins :: [(String, Value)]
 builtins =
@@ -76,15 +86,17 @@ e_expr env Void = return VVoid
 e_expr env (Lit s) = return $ VLit s
 e_expr env (Var (Id name _)) =
   case getValue name env of
-    Nothing -> mkError $ UnknownVariable name
+    Nothing -> return . VNeutral $ NFree name
     Just val -> return val
-e_expr env (App fn arg) = do
-  VLam fn' <- e_expr env fn
-  arg' <- e_expr env arg
-  fn' arg'
 e_expr env (Lam (Id name _) body) = do
   return . VLam $ \v -> e_expr (addValue env (name, v)) body
 e_expr _ (Type t) = return $ VType t
+e_expr env (App fn arg) = do
+  fnVal <- e_expr env fn
+  arg' <- e_expr env arg
+  case fnVal of
+    VNeutral n -> return . VNeutral $ NApp n arg'
+    VLam f -> f arg'
 
 e_expr env (Let binds exp) =
   e_let env binds exp >>= return . snd

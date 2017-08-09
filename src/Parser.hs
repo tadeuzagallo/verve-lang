@@ -101,7 +101,10 @@ p_expr :: Parser Expr
 p_expr = p_lhs >>= p_rhs
 
 p_lhs :: Parser Expr
-p_lhs = choice [p_literal >>= return . Literal, lcid >>= return . Ident]
+p_lhs = choice [ p_literal >>= return . Literal
+               , lcid >>= return . Ident
+               , ucid >>= return . Ident
+               ]
 
 p_rhs :: Expr -> Parser Expr
 p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs

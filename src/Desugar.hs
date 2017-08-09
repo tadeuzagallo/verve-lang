@@ -13,7 +13,7 @@ desugar = d_stmts . stmts
 desugarStmt :: Stmt Id -> CA.Expr
 desugarStmt stmt =
   let (x, v) = d_stmt stmt
-   in CA.Let  [(x, v)] (CA.Var x)
+   in CA.Let [(x, v)] (CA.Var x)
 
 d_stmts :: [Stmt Id] -> CA.Expr
 d_stmts [] = CA.Void
@@ -24,6 +24,7 @@ d_stmts (s:ss) =
 d_stmt :: Stmt Id -> CA.Bind
 d_stmt (Expr e) = (Id "" void, d_expr e)
 d_stmt (FnStmt fn) = (name fn, d_fn fn)
+d_stmt (Enum _ _) = (Id "" void, CA.Void)
 
 d_fn :: Function Id -> CA.Expr
 d_fn fn@(Function { params=[] }) = d_fn (fn { params = [("", void)] })
