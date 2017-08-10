@@ -32,6 +32,9 @@ data Expr a
   = Literal Literal
   | Ident a
   | VoidExpr -- workaround, this can't be expressed in source code
+  | Match { expr :: Expr a
+          , cases :: [Case a]
+          }
   | App { callee :: Expr a
         , types :: [Type]
         , args :: [Expr a] }
@@ -40,11 +43,23 @@ data Expr a
           , rhs :: Expr a }
   deriving (Show)
 
+data Case a = Case { pattern :: Pattern a
+                   , caseBody :: Expr a
+                   } deriving (Show)
+
+data Pattern a
+  = PatDefault
+  | PatLiteral Literal
+  | PatVar a
+  | PatCtor a [Pattern a]
+  deriving (Show)
+
 data Literal
   = Integer Integer
   | Float Double
   | Char Char
   | String String
+  deriving (Eq)
 
 instance Show Literal where
   show (Integer i) = show i

@@ -7,24 +7,20 @@ data Expr
   = Void
   | Lit Literal
   | Var Id
-  | App Expr
-        Expr
-  | Lam Id
-        Expr
-  | Let [Bind]
-        Expr
-  {-| Case Expr-}
-         {-[Alt]-}
+  | App Expr Expr
+  | Lam Id Expr
+  | Let [Bind] Expr
+  | Match Expr [Case]
   | Type Type
   deriving (Show)
 
 type Bind = (Id, Expr)
 
-type Alt = (AltCon, Expr)
+type Case = (Pattern, Expr)
 
-data AltCon
-  = LitAlt Literal
-  | Default
-  | ConAlt Name
-           [Id]
+data Pattern
+  = PatDefault
+  | PatLiteral Literal
+  | PatVar Id
+  | PatCtor Id [Pattern]
   deriving (Show)

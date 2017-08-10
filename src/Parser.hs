@@ -98,7 +98,9 @@ p_typeArrow tvars = do
   return $ Fun [] tyArgs retType
 
 p_expr :: Parser Expr
-p_expr = p_lhs >>= p_rhs
+p_expr = choice [ p_match
+                , p_lhs >>= p_rhs
+                ]
 
 p_lhs :: Parser Expr
 p_lhs = choice [ p_literal >>= return . Literal
@@ -132,3 +134,30 @@ p_number = do
   case number of
     Left int -> return $ Integer int
     Right float -> return $ Float float
+
+p_match :: Parser Expr
+p_match = do
+  reserved "match"
+  expr <- p_expr
+  cases <- braces . many $ p_case
+  return $ Match { expr, cases }
+
+p_case :: Parser (Case Name)
+p_case = do
+  pattern <- p_pattern
+  symbol ":"
+  caseBody <- p_expr
+  return $ Case { pattern, caseBody }
+
+p_pattern :: Parser (Pattern Name)
+p_pattern = choice [ p_literal >>= return . PatLiteral
+                   , p_ctor >>= return . uncurry PatCtor
+                   , symbol "_" >> return PatDefault
+                   , lcid >>= return . PatVar
+                   ]
+
+p_ctor :: Parser (Name, [Pattern Name])
+p_ctor = do
+  ctorName <- ucid
+  vars <- option [] . parens . commaSep $ p_pattern
+  return (ctorName, vars)

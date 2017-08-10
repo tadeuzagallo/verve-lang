@@ -23,6 +23,7 @@ data Env =
 data RuntimeError
   = Unsupported
   | UnknownVariable String
+  | MatchFailure
   deriving (Show)
 
 instance ErrorT RuntimeError where
@@ -100,6 +101,33 @@ e_expr env (App fn arg) = do
 
 e_expr env (Let binds exp) =
   e_let env binds exp >>= return . snd
+
+e_expr env (Match expr cases) = do
+  v <- e_expr env expr
+  e_cases env v cases
+
+e_cases :: Env -> Value -> [Case] -> EvalResult
+e_cases _ _ [] = mkError MatchFailure
+e_cases env val ((pattern, expr):cases) =
+  case e_pattern env val pattern of
+    Nothing -> e_cases env val cases
+    Just env' -> e_expr env' expr
+
+e_pattern :: Env -> Value -> Pattern -> Maybe Env
+e_pattern env _ PatDefault = Just env
+e_pattern env val (PatVar (Id name _)) =
+  Just (addValue env (name, val))
+e_pattern env (VLit l) (PatLiteral l') =
+  if l == l'
+     then Just env
+     else Nothing
+e_pattern env (VNeutral n) (PatCtor (Id name _) pats) =
+  aux env n pats
+    where
+      aux env (NFree n') [] | n' == name = Just env
+      aux env (NApp n' v) (p:ps) =
+        e_pattern env v p >>= \env' -> aux env' n' ps
+      aux _ _ _ = Nothing
 
 e_let :: Env -> [Bind] -> Expr -> EvalResultT (Env, Value)
 e_let env binds exp = do

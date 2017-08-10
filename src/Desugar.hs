@@ -44,3 +44,14 @@ d_expr (App callee types args) =
       mkApp :: CA.Expr -> Expr Id -> CA.Expr
       mkApp callee arg =
         CA.App callee (d_expr arg)
+
+d_expr (Match expr cases) = CA.Match (d_expr expr) (map d_case cases)
+
+d_case :: Case Id -> CA.Case
+d_case (Case pattern expr) = (d_pattern pattern, d_expr expr)
+
+d_pattern :: Pattern Id -> CA.Pattern
+d_pattern PatDefault = CA.PatDefault
+d_pattern (PatLiteral l) = CA.PatLiteral l
+d_pattern (PatVar v) = CA.PatVar v
+d_pattern (PatCtor name pats) = CA.PatCtor name (map d_pattern pats)

@@ -12,6 +12,7 @@ import Types
 
 import Control.Monad (foldM, when, zipWithM)
 import Data.List (union, groupBy, intersect)
+import Debug.Trace
 
 data TypeError
   = UnknownVariable String
@@ -32,6 +33,12 @@ data Ctx = Ctx [(String, Type)]
 
 getType :: String -> Ctx -> Maybe Type
 getType n (Ctx ctx) = lookup n ctx
+
+getType' :: String -> Ctx -> Result Type
+getType' n ctx =
+  case getType n ctx of
+    Nothing -> mkError (UnknownVariable n)
+    Just t -> return t
 
 addType :: Ctx -> (String, Type) -> Ctx
 addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
@@ -98,8 +105,18 @@ i_expr ctx (Ident i) =
     Nothing -> mkError $ UnknownVariable i
     Just ty -> return (Ident (Id i ty), ty)
 i_expr ctx VoidExpr = return (VoidExpr, void)
+
+i_expr ctx (Match expr cases) = do
+  (expr', ty) <- i_expr ctx expr
+  (cases', casesTy) <- unzip <$> mapM (i_case ctx ty) cases
+  retTy <- case casesTy of
+    [] -> return void
+    x:xs -> mapM_ (typeCheck x) xs >> return x
+  return (Match expr' cases', retTy)
+
 i_expr ctx (App fn types []) = i_expr ctx (App fn types [VoidExpr])
 i_expr ctx (App fn types args) = do
+  -- TODO: handle the case where tyFn is not a fun (TypeError)
   (fn', tyFn@(Fun generics t1 t2)) <- i_expr ctx fn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
   substs <-
@@ -128,6 +145,36 @@ i_lit (Integer _) = int
 i_lit (Float _) = float
 i_lit (Char _) = char
 i_lit (String _) = string
+
+i_case :: Ctx -> Type -> Case Name -> Result (Case Id, Type)
+i_case ctx ty (Case pattern caseBody) = do
+  (pattern', ctx') <- c_pattern ctx ty pattern
+  (caseBody', ty) <- i_expr ctx' caseBody
+  return (Case pattern' caseBody', ty)
+
+c_pattern :: Ctx -> Type -> Pattern Name -> Result (Pattern Id, Ctx)
+c_pattern ctx _ PatDefault = return (PatDefault, ctx)
+c_pattern ctx ty (PatLiteral l) = do
+  let litTy = i_lit l
+  typeCheck ty litTy
+  return (PatLiteral l, ctx)
+c_pattern ctx ty (PatVar v) =
+  let pat = PatVar (Id v ty)
+      ctx' = addType ctx (v, ty)
+   in return (pat, ctx')
+c_pattern ctx ty (PatCtor name vars) = do
+  ctorTy <- getType' name ctx
+  let fnTy@(Fun _ params retTy) = case ctorTy of
+            fn@(Fun _ _ _) -> fn
+            t -> Fun [] [] t
+  when (length vars /= length params) (mkError ArityMismatch)
+  typeCheck ty retTy
+  (vars', ctx') <- foldM aux ([], ctx) (zip params vars)
+  return (PatCtor (Id name fnTy) vars', ctx')
+    where
+      aux (vars, ctx) (ty, var) = do
+        (var', ctx') <- c_pattern ctx ty var
+        return (var':vars, ctx')
 
 -- Inference of type arguments for generic functions
 inferTyArgs :: [Type] -> Type -> Result [Substitution]
