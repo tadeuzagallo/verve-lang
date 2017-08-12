@@ -45,7 +45,7 @@ data Expr a
         , types :: [Type]
         , args :: [Expr a] }
   | BinOp { lhs :: Expr a
-          , op :: String
+          , op :: a
           , rhs :: Expr a }
   deriving (Show)
 

@@ -107,11 +107,21 @@ i_fn ctx fn = do
 
 i_expr :: Ctx -> Expr Name -> Result (Expr Id, Type)
 i_expr _ (Literal lit) = return (Literal lit, i_lit lit)
+
 i_expr ctx (Ident i) =
   case getType i ctx of
     Nothing -> mkError $ UnknownVariable i
     Just ty -> return (Ident (Id i ty), ty)
+
 i_expr ctx VoidExpr = return (VoidExpr, void)
+
+i_expr ctx (BinOp lhs op rhs) = do
+  tyOp@(Fun [] _ retType) <- getType' op ctx
+  (lhs', lhsTy) <- i_expr ctx lhs
+  (rhs', rhsTy) <- i_expr ctx rhs
+  substs <- inferTyArgs [lhsTy, rhsTy] tyOp
+  let tyOp' = subst substs tyOp
+  return (BinOp lhs' (Id op tyOp') rhs', subst substs retType)
 
 i_expr ctx (Match expr cases) = do
   (expr', ty) <- i_expr ctx expr
@@ -185,7 +195,7 @@ c_pattern ctx ty (PatCtor name vars) = do
 
 -- Inference of type arguments for generic functions
 inferTyArgs :: [Type] -> Type -> Result [Substitution]
-inferTyArgs tyArgs (Fun  generics params retType) = do
+inferTyArgs tyArgs (Fun generics params retType) = do
   d <- zipWithM (constraintGen [] generics) tyArgs params
   let c = foldl meet [] d
   mapM (getSubst retType) c
@@ -270,6 +280,8 @@ constraintGen v x s (Var y) | y `elem` x && fv s `intersect` x == [] =
   return [Constraint t y Top]
 
 -- CG-Refl
+constraintGen v x Type Type = return []
+constraintGen v x (Con y) (Con y') | y == y' = return []
 constraintGen v x (Var y) (Var y') | y == y' && y `notElem` x =
   return []
 
