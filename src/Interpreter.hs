@@ -6,7 +6,7 @@ module Interpreter
   ) where
 
 import CoreAbsyn
-import Absyn (Literal(..), Id(..), Name)
+import Absyn (Literal(..), Name)
 import Error
 import Types (Type)
 
@@ -85,11 +85,11 @@ evalWithEnv env (Let binds exp) =
 e_expr :: Env -> Expr -> EvalResult
 e_expr env Void = return VVoid
 e_expr env (Lit s) = return $ VLit s
-e_expr env (Var (Id name _)) =
+e_expr env (Var (name, _)) =
   case getValue name env of
     Nothing -> return . VNeutral $ NFree name
     Just val -> return val
-e_expr env (Lam (Id name _) body) = do
+e_expr env (Lam (name, _) body) = do
   return . VLam $ \v -> e_expr (addValue env (name, v)) body
 e_expr _ (Type t) = return $ VType t
 e_expr env (App fn arg) = do
@@ -115,13 +115,13 @@ e_cases env val ((pattern, expr):cases) =
 
 e_pattern :: Env -> Value -> Pattern -> Maybe Env
 e_pattern env _ PatDefault = Just env
-e_pattern env val (PatVar (Id name _)) =
+e_pattern env val (PatVar (name, _)) =
   Just (addValue env (name, val))
 e_pattern env (VLit l) (PatLiteral l') =
   if l == l'
      then Just env
      else Nothing
-e_pattern env (VNeutral n) (PatCtor (Id name _) pats) =
+e_pattern env (VNeutral n) (PatCtor (name, _) pats) =
   aux env n pats
     where
       aux env (NFree n') [] | n' == name = Just env
@@ -136,6 +136,6 @@ e_let env binds exp = do
   return (env', val)
 
 e_bind :: Env -> Bind -> EvalResultT Env
-e_bind env (Id name _, exp) = do
+e_bind env ((name, _), exp) = do
   exp' <- e_expr env exp
   return $ addValue env (name, exp')

@@ -1,4 +1,4 @@
-import Absyn (Module)
+import Absyn (Module, UnresolvedType)
 import Error
 import Interpreter
 import Parser
@@ -50,7 +50,7 @@ runFile file = do
   -- TODO: add this as `Error::runError`
   either report putStrLn (run result)
   where
-    run :: (Either Error (Module String)) -> Either Error String
+    run :: (Either Error (Module String UnresolvedType)) -> Either Error String
     run result = do
       absyn <- result
       (absyn', ty) <- infer absyn

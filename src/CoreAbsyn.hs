@@ -1,26 +1,26 @@
 module CoreAbsyn where
 
 import Absyn (Id, Literal, Name)
-import Types
+import Types (Type)
 
 data Expr
   = Void
   | Lit Literal
-  | Var Id
+  | Var (Id Type)
   | App Expr Expr
-  | Lam Id Expr
+  | Lam (Id Type) Expr
   | Let [Bind] Expr
   | Match Expr [Case]
   | Type Type
   deriving (Show)
 
-type Bind = (Id, Expr)
+type Bind = (Id Type, Expr)
 
 type Case = (Pattern, Expr)
 
 data Pattern
   = PatDefault
   | PatLiteral Literal
-  | PatVar Id
-  | PatCtor Id [Pattern]
+  | PatVar (Id Type)
+  | PatCtor (Id Type) [Pattern]
   deriving (Show)

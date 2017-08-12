@@ -12,6 +12,7 @@ import Types
 
 import Control.Monad (foldM, when, zipWithM)
 import Data.List (union, groupBy, intersect)
+import Data.Foldable (foldrM)
 import Debug.Trace
 
 data TypeError
@@ -40,32 +41,55 @@ getType' n ctx =
     Nothing -> mkError (UnknownVariable n)
     Just t -> return t
 
+resolveId :: Ctx -> Id UnresolvedType -> Result (Id Type)
+resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
+
+resolveType :: Ctx -> UnresolvedType -> Result Type
+resolveType ctx (UnresolvedType (Con n)) =
+  getType' n ctx
+resolveType ctx (UnresolvedType (Fun gen params ret)) = do
+  params' <- mapM (resolveType ctx . UnresolvedType) params
+  ret' <- resolveType ctx $ UnresolvedType ret
+  return $ Fun gen params' ret'
+resolveType _ (UnresolvedType t) = return t
+
 addType :: Ctx -> (String, Type) -> Ctx
 addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
 
+addGenerics :: [String] -> Ctx -> Ctx
+addGenerics generics ctx =
+  foldl (\ctx g -> addType ctx (g, Var g)) ctx generics
+
 defaultCtx :: Ctx
 defaultCtx =
-  Ctx [("int_print", Fun [] [int] void), ("int_add", Fun [] [int, int] int)]
+  Ctx [ ("Int", int)
+      , ("Float", float)
+      , ("Char", char)
+      , ("String", string)
+      , ("Void", void)
+      , ("int_print", Fun [] [int] void)
+      , ("int_add", Fun [] [int, int] int)
+      ]
 
-infer :: Module Name -> Result (Module Id, Type)
+infer :: Module Name UnresolvedType -> Result (Module (Id Type) Type, Type)
 infer mod = do
   (stmts, ty) <- i_stmts defaultCtx (stmts mod)
   return (Module stmts, ty)
 
-inferStmt :: Ctx -> Stmt Name -> Result (Ctx, Stmt Id, Type)
+inferStmt :: Ctx -> Stmt Name UnresolvedType -> Result (Ctx, Stmt (Id Type) Type, Type)
 inferStmt = i_stmt
 
-i_stmts :: Ctx -> [Stmt Name] -> Result ([Stmt Id], Type)
+i_stmts :: Ctx -> [Stmt Name UnresolvedType ] -> Result ([Stmt (Id Type) Type], Type)
 i_stmts ctx stmts = do
   (_, stmts', ty) <- foldM aux (ctx, [], void) stmts
   return (reverse stmts', ty)
     where
-      aux :: (Ctx, [Stmt Id], Type) -> Stmt Name -> Result (Ctx, [Stmt Id], Type)
+      aux :: (Ctx, [Stmt (Id Type) Type], Type) -> Stmt Name  UnresolvedType -> Result (Ctx, [Stmt (Id Type) Type], Type)
       aux (ctx, stmts, _) stmt = do
         (ctx', stmt', ty) <- i_stmt ctx stmt
         return (ctx', stmt':stmts, ty)
 
-i_stmt :: Ctx -> Stmt Name -> Result (Ctx, Stmt Id, Type)
+i_stmt :: Ctx -> Stmt Name UnresolvedType -> Result (Ctx, Stmt (Id Type) Type, Type)
 i_stmt ctx (Expr expr) = do
   (expr', ty) <- i_expr ctx expr
   return (ctx, Expr expr', ty)
@@ -73,45 +97,61 @@ i_stmt ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addType ctx (name fn, ty), FnStmt fn', ty)
 i_stmt ctx (Enum name ctors) = do
-  let name' = Id name Type
-  let (ctx', ctors') = foldr (i_ctor name) (ctx, []) ctors
+  let name' = (name, Type)
+  (ctx', ctors') <- foldrM (i_ctor name) (ctx, []) ctors
   return (addType ctx' (name, Type), (Enum name' ctors'), Type)
 i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
-  let ctx' = addType (addType ctx opLhs) opRhs
-  (opBody', bodyTy) <- i_stmts ctx' opBody
-  typeCheck bodyTy opRetType
-  let ty = Fun opGenerics [snd opLhs, snd opRhs] opRetType
-  let op' = op { opName = Id opName ty, opBody = opBody' }
+  let ctx' = addGenerics opGenerics ctx
+  opLhs' <- resolveId ctx' opLhs
+  opRhs' <- resolveId ctx' opRhs
+  opRetType' <- resolveType ctx' opRetType
+  let ctx'' = addType (addType ctx' opLhs') opRhs'
+  (opBody', bodyTy) <- i_stmts ctx'' opBody
+  typeCheck bodyTy opRetType'
+  let ty = Fun opGenerics [snd opLhs', snd opRhs'] opRetType'
+  let op' = op { opLhs = opLhs'
+               , opName = (opName, ty)
+               , opRhs = opRhs'
+               , opRetType = opRetType'
+               , opBody = opBody' }
   return (addType ctx (opName, ty), op', ty)
 
-i_ctor :: Name -> DataCtor Name -> (Ctx, [DataCtor Id]) -> (Ctx, [DataCtor Id])
-i_ctor enum (name, types) (ctx, ctors) =
-  let
-    enumTy = Con enum
-    ty = maybe enumTy (flip (Fun []) enumTy) types
- in
- (addType ctx (name, ty), (Id name ty, types):ctors)
+i_ctor :: Name -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
+i_ctor enum (name, types) (ctx, ctors) = do
+  let enumTy = Con enum
+  (types', ty) <- case types of
+          Nothing -> return (Nothing, enumTy)
+          Just t -> do
+            types' <- mapM (resolveType ctx) t
+            return (Just types', Fun [] types' enumTy)
+  return (addType ctx (name, ty), ((name, ty), types'):ctors)
 
-i_fn :: Ctx -> Function Name -> Result (Function Id, Type)
+i_fn :: Ctx -> Function Name UnresolvedType -> Result (Function (Id Type) Type, Type)
 i_fn ctx fn = do
-  let tyArgs = params fn
+  let ctx' = addGenerics (generics fn) ctx
+  tyArgs <- mapM (resolveId ctx') (params fn)
+  retType' <- resolveType ctx' (retType fn)
   let ty =
         Fun (generics fn)
             (if null tyArgs then [void] else map snd tyArgs)
-            (retType fn)
-  let ctx' = foldl addType ctx tyArgs
-  (body', bodyTy) <- i_stmts ctx' (body fn)
-  typeCheck bodyTy (retType fn)
-  let fn' = fn { name = Id (name fn) ty, body = body' }
+            retType'
+  let ctx'' = foldl addType ctx' tyArgs
+  (body', bodyTy) <- i_stmts ctx'' (body fn)
+  typeCheck bodyTy retType'
+  let fn' = fn { name = (name fn, ty)
+               , params = tyArgs
+               , retType = retType'
+               , body = body'
+               }
   return (fn', ty)
 
-i_expr :: Ctx -> Expr Name -> Result (Expr Id, Type)
+i_expr :: Ctx -> Expr Name UnresolvedType -> Result (Expr (Id Type) Type, Type)
 i_expr _ (Literal lit) = return (Literal lit, i_lit lit)
 
 i_expr ctx (Ident i) =
   case getType i ctx of
     Nothing -> mkError $ UnknownVariable i
-    Just ty -> return (Ident (Id i ty), ty)
+    Just ty -> return (Ident (i, ty), ty)
 
 i_expr ctx VoidExpr = return (VoidExpr, void)
 
@@ -121,7 +161,7 @@ i_expr ctx (BinOp lhs op rhs) = do
   (rhs', rhsTy) <- i_expr ctx rhs
   substs <- inferTyArgs [lhsTy, rhsTy] tyOp
   let tyOp' = subst substs tyOp
-  return (BinOp lhs' (Id op tyOp') rhs', subst substs retType)
+  return (BinOp lhs' (op, tyOp') rhs', subst substs retType)
 
 i_expr ctx (Match expr cases) = do
   (expr', ty) <- i_expr ctx expr
@@ -136,12 +176,13 @@ i_expr ctx (App fn types args) = do
   -- TODO: handle the case where tyFn is not a fun (TypeError)
   (fn', tyFn@(Fun generics t1 t2)) <- i_expr ctx fn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
+  types' <- mapM (resolveType ctx) types
   substs <-
-        case (tyFn, types) of
+        case (tyFn, types') of
           (Fun (_:_) _ _, []) ->
             inferTyArgs tyArgs tyFn
           _ ->
-            return $ zip generics types
+            return $ zip generics types'
   let tyFn' = subst substs (Fun [] t1 t2)
   retType <- i_app ctx tyArgs [] tyFn'
   return (App fn' (map snd substs) args', retType)
@@ -163,20 +204,20 @@ i_lit (Float _) = float
 i_lit (Char _) = char
 i_lit (String _) = string
 
-i_case :: Ctx -> Type -> Case Name -> Result (Case Id, Type)
+i_case :: Ctx -> Type -> Case Name UnresolvedType -> Result (Case (Id Type) Type, Type)
 i_case ctx ty (Case pattern caseBody) = do
   (pattern', ctx') <- c_pattern ctx ty pattern
   (caseBody', ty) <- i_expr ctx' caseBody
   return (Case pattern' caseBody', ty)
 
-c_pattern :: Ctx -> Type -> Pattern Name -> Result (Pattern Id, Ctx)
+c_pattern :: Ctx -> Type -> Pattern Name -> Result (Pattern (Id Type), Ctx)
 c_pattern ctx _ PatDefault = return (PatDefault, ctx)
 c_pattern ctx ty (PatLiteral l) = do
   let litTy = i_lit l
   typeCheck ty litTy
   return (PatLiteral l, ctx)
 c_pattern ctx ty (PatVar v) =
-  let pat = PatVar (Id v ty)
+  let pat = PatVar (v, ty)
       ctx' = addType ctx (v, ty)
    in return (pat, ctx')
 c_pattern ctx ty (PatCtor name vars) = do
@@ -187,7 +228,7 @@ c_pattern ctx ty (PatCtor name vars) = do
   when (length vars /= length params) (mkError ArityMismatch)
   typeCheck ty retTy
   (vars', ctx') <- foldM aux ([], ctx) (zip params vars)
-  return (PatCtor (Id name fnTy) vars', ctx')
+  return (PatCtor (name, fnTy) vars', ctx')
     where
       aux (vars, ctx) (ty, var) = do
         (var', ctx') <- c_pattern ctx ty var

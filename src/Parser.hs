@@ -5,10 +5,7 @@ module Parser
   , parseStmt
   ) where
 
-import qualified Absyn as A
-       (Expr, Function, Module, Stmt, DataCtor)
 import Absyn
-       hiding (Expr(), Function(), Module(), Stmt(), DataCtor)
 import Error
 import Lexer
 import Types
@@ -17,54 +14,48 @@ import Text.Parsec
        (ParseError, (<|>), choice, eof, many, option, parse, try, optionMaybe)
 import Text.Parsec.String (Parser, parseFromFile)
 
-type Module = A.Module String
-type Stmt = A.Stmt String
-type Expr = A.Expr String
-type Function = A.Function String
-type DataCtor = A.DataCtor String
-
 instance ErrorT ParseError where
   kind _ = "ParseError"
 
-parseFile :: String -> IO (Either Error Module)
+parseFile :: String -> IO (Either Error (Module Name UnresolvedType))
 parseFile file = do
   result <- parseFromFile p_module file
   return $ either (Left . Error) Right result
 
-parseStmt :: String -> String -> Either Error Stmt
+parseStmt :: String -> String -> Either Error (Stmt Name UnresolvedType)
 parseStmt file source = liftError $ parse (p_stmt <* eof) file source
 
-p_module :: Parser Module
+p_module :: Parser (Module Name UnresolvedType)
 p_module = Module <$> (many p_stmt <* eof)
 
-p_stmt :: Parser Stmt
+p_stmt :: Parser (Stmt Name UnresolvedType)
 p_stmt = choice [ p_enum
                 , p_operator
                 , p_function >>= return . FnStmt
                 , p_expr >>= return . Expr
                 ]
 
-p_enum :: Parser Stmt
+p_enum :: Parser (Stmt Name UnresolvedType)
 p_enum = do
   reserved "enum"
   name <- ucid
   ctors <- braces . many $ p_constructor
   return $ Enum name ctors
 
-p_constructor :: Parser DataCtor
+p_constructor :: Parser (DataCtor Name UnresolvedType)
 p_constructor = do
   name <- ucid
-  args <- optionMaybe . parens . commaSep $ (p_type [])
+  args <- optionMaybe . parens . commaSep $ p_type
   return $ (name, args)
 
-p_operator :: Parser Stmt
+p_operator :: Parser (Stmt Name UnresolvedType)
 p_operator = do
   reserved "operator"
   opGenerics <- option [] p_generics
-  opLhs <- parens $ p_typedName opGenerics
+  opLhs <- parens p_typedName
   opName <- operator
-  opRhs <- parens $ p_typedName opGenerics
-  opRetType <- p_retType opGenerics
+  opRhs <- parens p_typedName
+  opRetType <- p_retType
   opBody <- braces . many $ p_stmt
   return $ Operator { opGenerics
                     , opLhs
@@ -74,68 +65,67 @@ p_operator = do
                     , opBody
                     }
 
-p_function :: Parser Function
+p_function :: Parser (Function Name UnresolvedType)
 p_function = do
   reserved "fn"
   name <- lcid
   generics <- option [] p_generics
-  params <- parens $ commaSep (p_typedName generics)
-  retType <- option void (p_retType generics)
+  params <- parens $ commaSep p_typedName
+  retType <- option (UnresolvedType void) p_retType
   body <- braces . many $ p_stmt
   return $ Function {name, generics, params, retType, body}
 
 p_generics :: Parser [Name]
 p_generics = angles $ commaSep ucid
 
-p_typedName :: [Name] -> Parser TypedName
-p_typedName tvars = do
+p_typedName :: Parser (Id UnresolvedType)
+p_typedName = do
   name <- lcid
   symbol ":"
-  ty <- p_type tvars
+  ty <- p_type
   return (name, ty)
 
-p_retType :: [Name] -> Parser Type
-p_retType tvars = do
+p_retType :: Parser UnresolvedType
+p_retType = do
   symbol "->"
-  p_type tvars
+  p_type
 
-p_type :: [Name] -> Parser Type
-p_type tvars = choice [p_simpleType tvars, p_typeArrow tvars]
+p_type :: Parser UnresolvedType
+p_type = p_type' >>= return . UnresolvedType
 
-p_simpleType :: [Name] -> Parser Type
-p_simpleType tvars = do
-  name <- ucid
-  if elem name tvars
-    then return $ Var name
-    else return $ Con name
+p_type' :: Parser Type
+p_type' = choice [p_simpleType, p_typeArrow]
 
-p_typeArrow :: [Name] -> Parser Type
-p_typeArrow tvars = do
-  tyArgs <- parens $ commaSep (p_type tvars)
-  retType <- p_type tvars
+p_simpleType :: Parser Type
+p_simpleType = ucid >>= return . Con
+
+p_typeArrow :: Parser Type
+p_typeArrow = do
+  tyArgs <- parens $ commaSep p_type'
+  retType <- p_type'
   return $ Fun [] tyArgs retType
 
-p_expr :: Parser Expr
+p_expr :: Parser (Expr Name UnresolvedType)
 p_expr = choice [ p_match
                 , p_lhs >>= p_rhs
                 ]
 
-p_lhs :: Parser Expr
+p_lhs :: Parser (Expr Name UnresolvedType)
 p_lhs = choice [ p_literal >>= return . Literal
                , lcid >>= return . Ident
                , ucid >>= return . Ident
                ]
 
-p_rhs :: Expr -> Parser Expr
+p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_rhs lhs = (choice [try $ p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
-p_app :: Expr -> Parser Expr
+p_app :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_app callee = do
-  types <- option [] $ angles (commaSep $ p_type [])
+  types <- option [] $ angles (commaSep $ p_type)
   args <- parens $ commaSep p_expr
   return $ App {callee, types, args}
 
-p_binop :: Expr -> Parser Expr
+p_binop :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_binop lhs = do
   op <- try operator
   rhs <- p_expr
@@ -153,14 +143,14 @@ p_number = do
     Left int -> return $ Integer int
     Right float -> return $ Float float
 
-p_match :: Parser Expr
+p_match :: Parser (Expr Name UnresolvedType)
 p_match = do
   reserved "match"
   expr <- p_expr
   cases <- braces . many $ p_case
   return $ Match { expr, cases }
 
-p_case :: Parser (Case Name)
+p_case :: Parser (Case Name UnresolvedType)
 p_case = do
   pattern <- p_pattern
   symbol ":"
