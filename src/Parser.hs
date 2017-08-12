@@ -60,12 +60,14 @@ p_constructor = do
 p_operator :: Parser Stmt
 p_operator = do
   reserved "operator"
-  opLhs <- parens $ p_typedName []
+  opGenerics <- option [] p_generics
+  opLhs <- parens $ p_typedName opGenerics
   opName <- operator
-  opRhs <- parens $ p_typedName []
-  opRetType <- p_retType []
+  opRhs <- parens $ p_typedName opGenerics
+  opRetType <- p_retType opGenerics
   opBody <- braces . many $ p_stmt
-  return $ Operator { opLhs
+  return $ Operator { opGenerics
+                    , opLhs
                     , opName
                     , opRhs
                     , opRetType
@@ -125,7 +127,7 @@ p_lhs = choice [ p_literal >>= return . Literal
                ]
 
 p_rhs :: Expr -> Parser Expr
-p_rhs lhs = (choice [p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
+p_rhs lhs = (choice [try $ p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
 p_app :: Expr -> Parser Expr
 p_app callee = do

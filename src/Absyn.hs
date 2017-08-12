@@ -15,7 +15,8 @@ data Stmt a
   = FnStmt (Function a)
   | Expr (Expr a)
   | Enum a [DataCtor a]
-  | Operator { opLhs :: TypedName
+  | Operator { opGenerics :: [Name]
+             , opLhs :: TypedName
              , opName :: a
              , opRhs :: TypedName
              , opRetType :: Type

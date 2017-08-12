@@ -76,11 +76,11 @@ i_stmt ctx (Enum name ctors) = do
   let name' = Id name Type
   let (ctx', ctors') = foldr (i_ctor name) (ctx, []) ctors
   return (addType ctx' (name, Type), (Enum name' ctors'), Type)
-i_stmt ctx op@(Operator opLhs opName opRhs opRetType opBody) = do
+i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
   let ctx' = addType (addType ctx opLhs) opRhs
   (opBody', bodyTy) <- i_stmts ctx' opBody
   typeCheck bodyTy opRetType
-  let ty = Fun [] [snd opLhs, snd opRhs] opRetType
+  let ty = Fun opGenerics [snd opLhs, snd opRhs] opRetType
   let op' = op { opName = Id opName ty, opBody = opBody' }
   return (addType ctx (opName, ty), op', ty)
 
@@ -116,7 +116,7 @@ i_expr ctx (Ident i) =
 i_expr ctx VoidExpr = return (VoidExpr, void)
 
 i_expr ctx (BinOp lhs op rhs) = do
-  tyOp@(Fun [] _ retType) <- getType' op ctx
+  tyOp@(Fun _ _ retType) <- getType' op ctx
   (lhs', lhsTy) <- i_expr ctx lhs
   (rhs', rhsTy) <- i_expr ctx rhs
   substs <- inferTyArgs [lhsTy, rhsTy] tyOp
