@@ -18,7 +18,6 @@ import Debug.Trace
 data TypeError
   = UnknownVariable String
   | ArityMismatch
-  | ConstraintError
   | InferenceFailure
   | TypeError Type Type
   deriving (Show)
@@ -334,7 +333,7 @@ constraintGen v x (Fun y r s) (Fun y' t u)
     return $ foldl meet [] c `meet` d
 
 constraintGen v x s t =
-  mkError ConstraintError
+  mkError $ TypeError s t
 
 -- Least Upper Bound
 (\/) :: Type -> Type -> Type
