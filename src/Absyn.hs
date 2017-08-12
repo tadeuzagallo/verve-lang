@@ -15,6 +15,12 @@ data Stmt a
   = FnStmt (Function a)
   | Expr (Expr a)
   | Enum a [DataCtor a]
+  | Operator { opLhs :: TypedName
+             , opName :: a
+             , opRhs :: TypedName
+             , opRetType :: Type
+             , opBody :: [Stmt a]
+             }
 
 type DataCtor a = (a, Maybe [Type])
 

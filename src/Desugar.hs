@@ -25,6 +25,10 @@ d_stmt :: Stmt Id -> CA.Bind
 d_stmt (Expr e) = (Id "" void, d_expr e)
 d_stmt (FnStmt fn) = (name fn, d_fn fn)
 d_stmt (Enum _ _) = (Id "" void, CA.Void)
+d_stmt (Operator opLhs opName opRhs opRetType opBody) =
+  let opLhs' = Id (fst opLhs) (snd opLhs)
+      opRhs' = Id (fst opRhs) (snd opRhs)
+   in (opName, CA.Lam opLhs' (CA.Lam opRhs' (d_stmts opBody)))
 
 d_fn :: Function Id -> CA.Expr
 d_fn fn@(Function { params=[] }) = d_fn (fn { params = [("", void)] })

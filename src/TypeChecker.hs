@@ -76,6 +76,13 @@ i_stmt ctx (Enum name ctors) = do
   let name' = Id name Type
   let (ctx', ctors') = foldr (i_ctor name) (ctx, []) ctors
   return (addType ctx' (name, Type), (Enum name' ctors'), Type)
+i_stmt ctx op@(Operator opLhs opName opRhs opRetType opBody) = do
+  let ctx' = addType (addType ctx opLhs) opRhs
+  (opBody', bodyTy) <- i_stmts ctx' opBody
+  typeCheck bodyTy opRetType
+  let ty = Fun [] [snd opLhs, snd opRhs] opRetType
+  let op' = op { opName = Id opName ty, opBody = opBody' }
+  return (addType ctx (opName, ty), op', ty)
 
 i_ctor :: Name -> DataCtor Name -> (Ctx, [DataCtor Id]) -> (Ctx, [DataCtor Id])
 i_ctor enum (name, types) (ctx, ctors) =

@@ -39,6 +39,7 @@ p_module = Module <$> (many p_stmt <* eof)
 
 p_stmt :: Parser Stmt
 p_stmt = choice [ p_enum
+                , p_operator
                 , p_function >>= return . FnStmt
                 , p_expr >>= return . Expr
                 ]
@@ -55,6 +56,21 @@ p_constructor = do
   name <- ucid
   args <- optionMaybe . parens . commaSep $ (p_type [])
   return $ (name, args)
+
+p_operator :: Parser Stmt
+p_operator = do
+  reserved "operator"
+  opLhs <- parens $ p_typedName []
+  opName <- operator
+  opRhs <- parens $ p_typedName []
+  opRetType <- p_retType []
+  opBody <- braces . many $ p_stmt
+  return $ Operator { opLhs
+                    , opName
+                    , opRhs
+                    , opRetType
+                    , opBody
+                    }
 
 p_function :: Parser Function
 p_function = do
