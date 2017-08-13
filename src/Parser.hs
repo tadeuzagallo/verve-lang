@@ -114,7 +114,7 @@ p_lhs :: Parser (Expr Name UnresolvedType)
 p_lhs = choice [ p_literal >>= return . Literal
                , lcid >>= return . Ident
                , ucid >>= return . Ident
-               , parens p_expr
+               , parens (p_expr <|> (operator >>= return . Ident))
                ]
 
 p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
