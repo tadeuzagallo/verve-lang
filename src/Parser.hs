@@ -13,7 +13,6 @@ import Types
 import Debug.Trace
 
 import Text.Parsec (ParseError, (<|>), choice, eof, many, many1, option, parse, try, optionMaybe, sepEndBy, skipMany1)
-import Text.Parsec.Char (newline)
 import Text.Parsec.String (Parser, parseFromFile)
 
 instance ErrorT ParseError where
