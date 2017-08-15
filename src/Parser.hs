@@ -10,8 +10,10 @@ import Error
 import Lexer
 import Types
 
-import Text.Parsec
-       (ParseError, (<|>), choice, eof, many, option, parse, try, optionMaybe)
+import Debug.Trace
+
+import Text.Parsec (ParseError, (<|>), choice, eof, many, many1, option, parse, try, optionMaybe, sepEndBy, skipMany1)
+import Text.Parsec.Char (newline)
 import Text.Parsec.String (Parser, parseFromFile)
 
 instance ErrorT ParseError where
@@ -26,7 +28,7 @@ parseStmt :: String -> String -> Either Error (Stmt Name UnresolvedType)
 parseStmt file source = liftError $ parse (p_stmt <* eof) file source
 
 p_module :: Parser (Module Name UnresolvedType)
-p_module = Module <$> (many p_stmt <* eof)
+p_module = Module <$> (p_stmt `sepEndBy` p_separator <* eof)
 
 p_stmt :: Parser (Stmt Name UnresolvedType)
 p_stmt = choice [ p_enum
@@ -39,7 +41,7 @@ p_enum :: Parser (Stmt Name UnresolvedType)
 p_enum = do
   reserved "enum"
   name <- ucid
-  ctors <- braces . many $ p_constructor
+  ctors <- p_body p_constructor
   return $ Enum name ctors
 
 p_constructor :: Parser (DataCtor Name UnresolvedType)
@@ -56,7 +58,7 @@ p_operator = do
   opName <- operator
   opRhs <- parens p_typedName
   opRetType <- p_retType
-  opBody <- braces . many $ p_stmt
+  opBody <- p_codeBlock
   return $ Operator { opGenerics
                     , opLhs
                     , opName
@@ -72,7 +74,7 @@ p_function = do
   generics <- option [] p_generics
   params <- parens $ commaSep p_typedName
   retType <- option (UnresolvedType void) p_retType
-  body <- braces . many $ p_stmt
+  body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 
 p_generics :: Parser [Name]
@@ -87,7 +89,7 @@ p_typedName = do
 
 p_retType :: Parser UnresolvedType
 p_retType = do
-  symbol "->"
+  reservedOp "->"
   p_type
 
 p_type :: Parser UnresolvedType
@@ -128,7 +130,7 @@ p_app callee = do
 
 p_binop :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_binop lhs = do
-  op <- try operator
+  op <- operator
   rhs <- p_expr
   return $ BinOp {lhs, op, rhs}
 
@@ -148,7 +150,7 @@ p_match :: Parser (Expr Name UnresolvedType)
 p_match = do
   reserved "match"
   expr <- p_expr
-  cases <- braces . many $ p_case
+  cases <- p_body p_case
   return $ Match { expr, cases }
 
 p_case :: Parser (Case Name UnresolvedType)
@@ -170,3 +172,12 @@ p_ctor = do
   ctorName <- ucid
   vars <- option [] . parens . commaSep $ p_pattern
   return (ctorName, vars)
+
+p_codeBlock :: Parser [Stmt Name UnresolvedType]
+p_codeBlock = p_body p_stmt
+
+p_body :: Parser a -> Parser [a]
+p_body p = braces $ p `sepEndBy` p_separator
+
+p_separator :: Parser ()
+p_separator = skipMany1 newline

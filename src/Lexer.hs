@@ -7,6 +7,7 @@ module Lexer
   , lcid
   , ucid
   , reserved
+  , reservedOp
   , operator
   , symbol
   -- Delimiters
@@ -17,43 +18,82 @@ module Lexer
   , commaSep
   ) where
 
-import Text.Parsec ((<|>), sepEndBy, many)
-import Text.Parsec.Char (lower, upper, alphaNum, oneOf)
+import Text.Parsec ((<|>), sepEndBy, many, many1, between, try, skipMany, skipMany1, choice)
+import Text.Parsec.Char (lower, upper, alphaNum, oneOf, noneOf, char, anyChar, string, digit, satisfy, endOfLine)
 import Text.Parsec.String (Parser)
-import Text.Parsec.Language (javaStyle)
 
-import qualified Text.Parsec.Token as Token
+lexeme p = p <* space
 
-lexer = Token.makeTokenParser javaStyle
+space' = choice [ oneOf " \t" >> return ()
+                , multiLineComment
+                , oneLineComment
+                ]
+
+space = skipMany space'
+
+newline = space >> endOfLine >> space
+
+anySpace = skipMany (space' <|> newline)
+
+comment = oneLineComment <|> multiLineComment
+
+oneLineComment = do
+  try . string $ "//"
+  skipMany . satisfy $ (/= '\n')
+
+multiLineComment = do
+  try . string $ "/*"
+  content
+  return ()
+    where
+      content :: Parser String
+      content = try (string "*/") <|> (anyChar >> content)
+
 
 -- Literals
-naturalOrFloat = Token.naturalOrFloat lexer
+naturalOrFloat :: Parser (Either Integer Double)
+naturalOrFloat = lexeme $ Left <$> (many1 digit >>= return . read)
 
-stringLiteral = Token.stringLiteral lexer
+stringLiteral :: Parser String
+stringLiteral = lexeme $ between (char '"') (char '"') (many . noneOf $ "\"")
 
-charLiteral = Token.charLiteral lexer
+charLiteral :: Parser Char
+charLiteral = lexeme $ between (char '\'') (char '\'') (noneOf "'")
 
 -- Delimiters
-parens = Token.parens lexer
-braces = Token.braces lexer
-angles = Token.angles lexer
+parens :: Parser a -> Parser a
+parens p = lexeme $ between (char '(' <* anySpace) (anySpace *> char ')') p
 
-comma = Token.comma lexer
+braces :: Parser a -> Parser a
+braces p = lexeme $ between (anySpace *> char '{' *> anySpace) (anySpace *> char '}') p
+
+angles :: Parser a -> Parser a
+angles p = lexeme $ between (char '<' <* anySpace) (anySpace *> char '>') p
+
+comma = char ',' <* anySpace
 
 -- Keywords
 lcid :: Parser String
-lcid = (:) <$> lower <*> idSuffix
+lcid = (:) <$> lower <*> idSuffix <* space
 
 ucid :: Parser String
-ucid = (:) <$> upper <*> idSuffix
+ucid = (:) <$> upper <*> idSuffix <* space
 
 idSuffix :: Parser String
-idSuffix = many (alphaNum <|> oneOf "_'")<* whiteSpace
+idSuffix = many (alphaNum <|> oneOf "_'")
 
-reserved = Token.reserved lexer
-operator = Token.operator lexer
-symbol = Token.symbol lexer
+reserved :: String -> Parser String
+reserved name = lexeme . try . string $ name
+
+reservedOp :: String -> Parser String
+reservedOp name = lexeme . try . string $ name
+
+operator :: Parser String
+operator = lexeme . try . many1 . oneOf $ ":!#$%&*+./<=>?@\\^|-~"
+
+symbol :: String -> Parser String
+symbol c = lexeme . try . string $ c
 
 -- Utils
+commaSep :: Parser a -> Parser [a]
 commaSep = flip sepEndBy comma
-whiteSpace = Token.whiteSpace lexer
