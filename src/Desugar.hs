@@ -17,6 +17,7 @@ desugarStmt stmt =
 
 d_stmts :: [Stmt (Id Type) Type] -> CA.Expr
 d_stmts [] = CA.Void
+d_stmts (Let var expr:ss) = CA.Let [(var, d_expr expr)] (d_stmts ss)
 d_stmts [s] = snd $ d_stmt s
 d_stmts (s:ss) =
   CA.Let [d_stmt s] (d_stmts ss)

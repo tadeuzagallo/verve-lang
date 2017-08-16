@@ -32,6 +32,7 @@ p_module = Module <$> (p_stmt `sepEndBy` p_separator <* eof)
 p_stmt :: Parser (Stmt Name UnresolvedType)
 p_stmt = choice [ p_enum
                 , p_operator
+                , p_let
                 , p_function >>= return . FnStmt
                 , p_expr >>= return . Expr
                 ]
@@ -65,6 +66,14 @@ p_operator = do
                     , opRetType
                     , opBody
                     }
+
+p_let :: Parser (Stmt Name UnresolvedType)
+p_let = do
+  reserved "let"
+  name <- lcid
+  symbol "="
+  expr <- p_expr
+  return $ Let name expr
 
 p_function :: Parser (Function Name UnresolvedType)
 p_function = do

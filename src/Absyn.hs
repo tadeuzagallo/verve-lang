@@ -17,6 +17,7 @@ data Stmt a b
   = FnStmt (Function a b)
   | Expr (Expr a b)
   | Enum a [DataCtor a b]
+  | Let a (Expr a b)
   | Operator { opGenerics :: [Name]
              , opLhs :: Id b
              , opName :: a

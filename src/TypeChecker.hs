@@ -114,6 +114,11 @@ i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
                , opRetType = opRetType'
                , opBody = opBody' }
   return (addType ctx (opName, ty), op', ty)
+i_stmt ctx (Let var expr) = do
+  (expr', exprTy) <- i_expr ctx expr
+  let ctx' = addType ctx (var, exprTy)
+  let let' = Let (var, exprTy) expr'
+  return (ctx', let', void)
 
 i_ctor :: Name -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
 i_ctor enum (name, types) (ctx, ctors) = do
