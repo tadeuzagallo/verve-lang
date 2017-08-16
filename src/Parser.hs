@@ -104,7 +104,7 @@ p_type :: Parser UnresolvedType
 p_type = p_type' >>= return . UnresolvedType
 
 p_type' :: Parser Type
-p_type' = choice [p_simpleType, p_typeArrow]
+p_type' = choice [p_simpleType, p_typeArrow, p_typeRecord]
 
 p_simpleType :: Parser Type
 p_simpleType = ucid >>= return . Con
@@ -114,6 +114,11 @@ p_typeArrow = do
   tyArgs <- parens $ commaSep p_type'
   retType <- p_type'
   return $ Fun [] tyArgs retType
+
+p_typeRecord :: Parser Type
+p_typeRecord = do
+  fields <- braces $ commaSep ((,) <$> lcid <* symbol ":" <*> p_type')
+  return $ Rec fields
 
 p_expr :: Parser (Expr Name UnresolvedType)
 p_expr = choice [ p_match
