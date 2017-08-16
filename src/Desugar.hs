@@ -53,6 +53,9 @@ d_expr (App callee types args) =
         CA.App callee (d_expr arg)
 
 d_expr (Match expr cases) = CA.Match (d_expr expr) (map d_case cases)
+d_expr (Record fields) =
+  let fields' = map (\(a, b) -> (a, d_expr b)) fields
+   in CA.Record fields'
 
 d_case :: Case (Id Type) Type -> CA.Case
 d_case (Case pattern expr) = (d_pattern pattern, d_expr expr)

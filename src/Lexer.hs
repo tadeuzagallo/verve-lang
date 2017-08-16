@@ -17,6 +17,7 @@ module Lexer
   -- Utils
   , commaSep
   , newline
+  , comma
   ) where
 
 import Text.Parsec ((<|>), sepEndBy, many, many1, between, try, skipMany, skipMany1, choice)

@@ -11,6 +11,7 @@ import Error
 import Types (Type)
 
 import Control.Monad (foldM)
+import Data.List (intercalate)
 import System.IO.Unsafe (unsafePerformIO)
 
 type EvalResultT = Either Error
@@ -35,12 +36,18 @@ data Value
   | VVoid
   | VType Type
   | VNeutral Neutral
+  | VRecord [(String, Value)]
 
 instance Show Value where
   show (VLit v) = show v
   show (VNeutral n) = show n
   show (VLam _) = "<function>"
   show VVoid = "()"
+  show (VRecord fields) =
+    "{" ++ fields' ++ "}"
+      where
+        fields' = intercalate ", " $ map showField fields
+        showField (key, value) = key ++ " = " ++ show value
 
 data Neutral
   = NFree Name
@@ -105,6 +112,11 @@ e_expr env (Let binds exp) =
 e_expr env (Match expr cases) = do
   v <- e_expr env expr
   e_cases env v cases
+
+e_expr env (Record fields) = do
+  fieldValues <- mapM (e_expr env . snd) fields
+  let labels = map (fst . fst) fields
+  return . VRecord $ zip labels fieldValues
 
 e_cases :: Env -> Value -> [Case] -> EvalResult
 e_cases _ _ [] = mkError MatchFailure

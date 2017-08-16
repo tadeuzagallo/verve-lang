@@ -17,6 +17,7 @@ data Type
   = Con String
   | Var String
   | Fun [String] [Type] Type
+  | Rec [(String, Type)]
   | Type
   | Top
   | Bot
@@ -54,13 +55,18 @@ instance Show Type where
   show Top = "⊤"
   show Bot = "⊥"
 
-  show (Fun gs [v] t2)
-    | v == void = show (Fun gs [] t2)
+  show (Fun gs [v] t2) | v == void = show (Fun gs [] t2)
   show (Fun gs t1 t2) =
     printf "%s(%s) -> %s"
       (if null gs then "" else printf "∀%s. " (intercalate " " gs))
       (intercalate ", " $ map show t1)
       (show t2)
+
+  show (Rec fields) =
+    "{" ++ fields' ++ "}"
+      where
+        fields' = intercalate ", " $ map showField fields
+        showField (key, value) = key ++ ": " ++ show value
 
 subst :: [(String, Type)] -> Type -> Type
 subst s (Var v) =

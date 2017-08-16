@@ -121,7 +121,8 @@ p_expr = choice [ p_match
                 ]
 
 p_lhs :: Parser (Expr Name UnresolvedType)
-p_lhs = choice [ p_literal >>= return . Literal
+p_lhs = choice [ p_record
+               , p_literal >>= return . Literal
                , lcid >>= return . Ident
                , ucid >>= return . Ident
                , parens (p_expr <|> (operator >>= return . Ident))
@@ -129,6 +130,12 @@ p_lhs = choice [ p_literal >>= return . Literal
 
 p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_rhs lhs = (choice [try $ p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
+
+p_record :: Parser (Expr Name UnresolvedType)
+p_record =
+  Record <$> braces (field `sepEndBy` comma)
+    where
+      field = (,) <$> lcid <*> (symbol "=" *> p_expr)
 
 p_app :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_app callee = do
@@ -144,8 +151,10 @@ p_binop lhs = do
 
 p_literal :: Parser Literal
 p_literal =
-  choice
-    [p_number, charLiteral >>= return . Char, stringLiteral >>= return . String]
+  choice [ p_number
+         , charLiteral >>= return . Char
+         , stringLiteral >>= return . String
+         ]
 
 p_number :: Parser Literal
 p_number = do

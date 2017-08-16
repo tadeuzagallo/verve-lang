@@ -12,6 +12,7 @@ data Expr
   | Let [Bind] Expr
   | Match Expr [Case]
   | Type Type
+  | Record [Bind]
   deriving (Show)
 
 type Bind = (Id Type, Expr)

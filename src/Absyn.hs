@@ -51,6 +51,7 @@ data Expr a b
           , op :: a
           , rhs :: Expr a b
           }
+  | Record [(a, Expr a b)]
   deriving (Show)
 
 data Case a b = Case { pattern :: Pattern a

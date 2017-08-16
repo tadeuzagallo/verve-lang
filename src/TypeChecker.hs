@@ -191,6 +191,14 @@ i_expr ctx (App fn types args) = do
   retType <- i_app ctx tyArgs [] tyFn'
   return (App fn' (map snd substs) args', retType)
 
+i_expr ctx (Record fields) = do
+  (exprs, types) <- mapM (i_expr ctx . snd) fields >>= return . unzip
+  let labels = map fst fields
+  let fieldsTy = zip labels types
+  let recordTy = Rec fieldsTy
+  let record = Record (zip fieldsTy exprs)
+  return (record, recordTy)
+
 i_app :: Ctx -> [Type] -> [Type] -> Type -> Result Type
 i_app _ [] [] tyRet = return tyRet
 i_app _ [] tyArgs tyRet = return $ Fun [] tyArgs tyRet
