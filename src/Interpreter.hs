@@ -12,6 +12,7 @@ import Types (Type)
 
 import Control.Monad (foldM)
 import Data.List (intercalate)
+import Data.Maybe (fromJust)
 import System.IO.Unsafe (unsafePerformIO)
 
 type EvalResultT = Either Error
@@ -69,6 +70,10 @@ builtins =
         (\v ->
            case unsafePerformIO (print v) of
              () -> return VVoid))
+  , ("#fieldAccess"
+    , VLam (\(VLit (String field)) ->
+        return . VLam $ \(VRecord fields) ->
+          return . fromJust $ lookup field fields))
   ]
 
 defaultEnv :: Env

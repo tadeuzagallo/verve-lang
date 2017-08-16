@@ -134,7 +134,7 @@ p_lhs = choice [ p_record
                ]
 
 p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
-p_rhs lhs = (choice [try $ p_app lhs, p_binop lhs] >>= p_rhs) <|> return lhs
+p_rhs lhs = (choice [try $ p_app lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
 p_record :: Parser (Expr Name UnresolvedType)
 p_record =
@@ -153,6 +153,12 @@ p_binop lhs = do
   op <- operator
   rhs <- p_expr
   return $ BinOp {lhs, op, rhs}
+
+p_fieldAccess :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
+p_fieldAccess lhs = do
+  symbol "."
+  fieldName <- lcid
+  return $ FieldAccess lhs fieldName
 
 p_literal :: Parser Literal
 p_literal =

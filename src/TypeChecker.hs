@@ -20,6 +20,8 @@ data TypeError
   | ArityMismatch
   | InferenceFailure
   | TypeError Type Type
+  | UnknownField Type String
+  | GenericError String
   deriving (Show)
 
 instance ErrorT TypeError where
@@ -198,6 +200,15 @@ i_expr ctx (Record fields) = do
   let recordTy = Rec fieldsTy
   let record = Record (zip fieldsTy exprs)
   return (record, recordTy)
+
+i_expr ctx (FieldAccess expr field) = do
+  (expr', ty) <- i_expr ctx expr
+  case ty of
+    Rec r ->
+      case lookup field r of
+        Nothing -> mkError $ UnknownField (Rec r) field
+        Just t -> return (FieldAccess expr' (field, t), t)
+    _ -> mkError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
 i_app :: Ctx -> [Type] -> [Type] -> Type -> Result Type
 i_app _ [] [] tyRet = return tyRet
