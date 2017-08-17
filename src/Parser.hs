@@ -125,6 +125,7 @@ p_simpleType = ucid >>= return . Con
 p_typeArrow :: Parser Type
 p_typeArrow = do
   tyArgs <- parens $ commaSep p_type'
+  reservedOp "->"
   retType <- p_type'
   return $ Fun [] tyArgs retType
 
