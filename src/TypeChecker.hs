@@ -52,7 +52,13 @@ resolveType ctx (UnresolvedType (Fun gen params ret)) = do
   params' <- mapM (resolveType ctx . UnresolvedType) params
   ret' <- resolveType ctx $ UnresolvedType ret
   return $ Fun gen params' ret'
-resolveType _ (UnresolvedType t) = return t
+resolveType ctx (UnresolvedType (Rec fieldsTy)) = do
+  fieldsTy' <- mapM (\(n, t) -> resolveId ctx (n, UnresolvedType t)) fieldsTy
+  return $ Rec fieldsTy'
+resolveType _ (UnresolvedType Top) = return Top
+resolveType _ (UnresolvedType Bot) = return Bot
+resolveType _ (UnresolvedType Type) = return Type
+resolveType _ (UnresolvedType (Var c)) = return (Var c)
 
 addType :: Ctx -> (String, Type) -> Ctx
 addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
