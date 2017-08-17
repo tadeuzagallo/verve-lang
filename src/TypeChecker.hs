@@ -121,6 +121,9 @@ i_stmt ctx (Let var expr) = do
   let ctx' = addType ctx (var, exprTy)
   let let' = Let (var, exprTy) expr'
   return (ctx', let', void)
+i_stmt ctx (Class name vars) = do
+  vars' <- mapM (resolveId ctx) vars
+  return $ (addType ctx (name, Type), Class (name, Type) vars', Type)
 
 i_ctor :: Name -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
 i_ctor enum (name, types) (ctx, ctors) = do

@@ -18,6 +18,9 @@ data Stmt a b
   | Expr (Expr a b)
   | Enum a [DataCtor a b]
   | Let a (Expr a b)
+  | Class { className :: a
+          , classVars :: [(Name, b)]
+          }
   | Operator { opGenerics :: [Name]
              , opLhs :: Id b
              , opName :: a

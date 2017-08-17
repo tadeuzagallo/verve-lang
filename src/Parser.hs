@@ -33,6 +33,7 @@ p_stmt :: Parser (Stmt Name UnresolvedType)
 p_stmt = choice [ p_enum
                 , p_operator
                 , p_let
+                , p_class
                 , p_function >>= return . FnStmt
                 , p_expr >>= return . Expr
                 ]
@@ -74,6 +75,18 @@ p_let = do
   symbol "="
   expr <- p_expr
   return $ Let name expr
+
+p_class :: Parser (Stmt Name UnresolvedType)
+p_class = do
+  reserved "class"
+  className <- ucid
+  classVars <- p_body p_classVar
+  return $ Class { className, classVars }
+
+p_classVar :: Parser (Name, UnresolvedType)
+p_classVar = do
+  reserved "let"
+  p_typedName
 
 p_function :: Parser (Function Name UnresolvedType)
 p_function = do

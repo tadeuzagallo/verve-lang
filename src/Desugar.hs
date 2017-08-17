@@ -26,6 +26,7 @@ d_stmt :: Stmt (Id Type) Type -> CA.Bind
 d_stmt (Expr e) = (("", void), d_expr e)
 d_stmt (FnStmt fn) = (name fn, d_fn fn)
 d_stmt (Enum _ _) = (("", void), CA.Void)
+d_stmt (Class name _) = (("", Type), CA.Var name)
 d_stmt (Operator _ opLhs opName opRhs _ opBody) =
   let opLhs' = (fst opLhs, snd opLhs)
       opRhs' = (fst opRhs, snd opRhs)
