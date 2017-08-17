@@ -4,7 +4,9 @@ import Types (Type)
 
 type Name = String
 
-newtype UnresolvedType = UnresolvedType Type
+data UnresolvedType
+  = UnresolvedType Type
+  | Placeholder
   deriving (Show)
 
 type Id b = (Name, b)

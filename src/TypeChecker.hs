@@ -58,6 +58,7 @@ resolveId :: Ctx -> Id UnresolvedType -> Result (Id Type)
 resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
 
 resolveType :: Ctx -> UnresolvedType -> Result Type
+resolveType ctx Placeholder = undefined
 resolveType ctx (UnresolvedType (Con n)) =
   getType' n ctx
 resolveType ctx (UnresolvedType (Fun gen params ret)) = do
