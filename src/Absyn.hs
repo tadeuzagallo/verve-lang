@@ -47,7 +47,7 @@ data Expr a b
           , cases :: [Case a b]
           }
   | App { callee :: Expr a b
-        , types :: [b]
+        , typeArgs :: [b]
         , args :: [Expr a b]
         }
   | BinOp { lhs :: Expr a b

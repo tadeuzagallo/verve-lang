@@ -142,9 +142,14 @@ p_lhs :: Parser (Expr Name UnresolvedType)
 p_lhs = choice [ p_record
                , p_literal >>= return . Literal
                , lcid >>= return . Ident
-               , ucid >>= return . Ident
+               , ucid >>= p_ctor
                , parens (p_expr <|> (operator >>= return . Ident))
                ]
+
+p_ctor :: Name -> Parser (Expr Name UnresolvedType)
+p_ctor name =
+  (try p_record >>= \r -> return (App (Ident name) [] [r]))
+  <|> return (Ident name)
 
 p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_rhs lhs = (choice [try $ p_app lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
@@ -157,9 +162,9 @@ p_record =
 
 p_app :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_app callee = do
-  types <- option [] $ angles (commaSep $ p_type)
+  typeArgs <- option [] $ angles (commaSep $ p_type)
   args <- parens $ commaSep p_expr
-  return $ App {callee, types, args}
+  return $ App {callee, typeArgs, args}
 
 p_binop :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_binop lhs = do
@@ -203,13 +208,13 @@ p_case = do
 
 p_pattern :: Parser (Pattern Name)
 p_pattern = choice [ p_literal >>= return . PatLiteral
-                   , p_ctor >>= return . uncurry PatCtor
+                   , p_patCtor >>= return . uncurry PatCtor
                    , symbol "_" >> return PatDefault
                    , lcid >>= return . PatVar
                    ]
 
-p_ctor :: Parser (Name, [Pattern Name])
-p_ctor = do
+p_patCtor :: Parser (Name, [Pattern Name])
+p_patCtor = do
   ctorName <- ucid
   vars <- option [] . parens . commaSep $ p_pattern
   return (ctorName, vars)

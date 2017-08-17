@@ -17,6 +17,7 @@ import Debug.Trace
 
 data TypeError
   = UnknownVariable String
+  | UnknownType String
   | ArityMismatch
   | InferenceFailure
   | TypeError Type Type
@@ -31,14 +32,25 @@ typeCheck :: Type -> Type -> Result ()
 typeCheck actualTy expectedTy =
   when (actualTy /= expectedTy) (mkError $ TypeError expectedTy actualTy)
 
-data Ctx = Ctx [(String, Type)]
+data Ctx = Ctx { types :: [(String, Type)]
+               , values :: [(String, Type)]
+               }
 
 getType :: String -> Ctx -> Maybe Type
-getType n (Ctx ctx) = lookup n ctx
+getType n ctx = lookup n (types ctx)
+
+getValueType :: String -> Ctx -> Maybe Type
+getValueType n ctx = lookup n (values ctx)
 
 getType' :: String -> Ctx -> Result Type
 getType' n ctx =
   case getType n ctx of
+    Nothing -> mkError (UnknownType n)
+    Just t -> return t
+
+getValueType' :: String -> Ctx -> Result Type
+getValueType' n ctx =
+  case getValueType n ctx of
     Nothing -> mkError (UnknownVariable n)
     Just t -> return t
 
@@ -58,10 +70,14 @@ resolveType ctx (UnresolvedType (Rec fieldsTy)) = do
 resolveType _ (UnresolvedType Top) = return Top
 resolveType _ (UnresolvedType Bot) = return Bot
 resolveType _ (UnresolvedType Type) = return Type
+-- TODO: check if type variable is in scope
 resolveType _ (UnresolvedType (Var c)) = return (Var c)
 
 addType :: Ctx -> (String, Type) -> Ctx
-addType (Ctx ctx) (n, ty) = Ctx ((n, ty) : ctx)
+addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
+
+addValueType :: Ctx -> (String, Type) -> Ctx
+addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
 
 addGenerics :: [String] -> Ctx -> Ctx
 addGenerics generics ctx =
@@ -69,14 +85,16 @@ addGenerics generics ctx =
 
 defaultCtx :: Ctx
 defaultCtx =
-  Ctx [ ("Int", int)
-      , ("Float", float)
-      , ("Char", char)
-      , ("String", string)
-      , ("Void", void)
-      , ("int_print", Fun [] [int] void)
-      , ("int_add", Fun [] [int, int] int)
-      ]
+  Ctx { types = [ ("Int", int)
+                , ("Float", float)
+                , ("Char", char)
+                , ("String", string)
+                , ("Void", void)
+                ]
+      , values = [ ("int_print", [int] ~> void)
+                 , ("int_add", [int, int] ~> int)
+                 ]
+      }
 
 infer :: Module Name UnresolvedType -> Result (Module (Id Type) Type, Type)
 infer mod = do
@@ -102,7 +120,7 @@ i_stmt ctx (Expr expr) = do
   return (ctx, Expr expr', ty)
 i_stmt ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
-  return (addType ctx (name fn, ty), FnStmt fn', ty)
+  return (addValueType ctx (name fn, ty), FnStmt fn', ty)
 i_stmt ctx (Enum name ctors) = do
   let name' = (name, Type)
   (ctx', ctors') <- foldrM (i_ctor name) (ctx, []) ctors
@@ -112,7 +130,7 @@ i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
   opLhs' <- resolveId ctx' opLhs
   opRhs' <- resolveId ctx' opRhs
   opRetType' <- resolveType ctx' opRetType
-  let ctx'' = addType (addType ctx' opLhs') opRhs'
+  let ctx'' = addValueType (addValueType ctx' opLhs') opRhs'
   (opBody', bodyTy) <- i_stmts ctx'' opBody
   typeCheck bodyTy opRetType'
   let ty = Fun opGenerics [snd opLhs', snd opRhs'] opRetType'
@@ -121,15 +139,22 @@ i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
                , opRhs = opRhs'
                , opRetType = opRetType'
                , opBody = opBody' }
-  return (addType ctx (opName, ty), op', ty)
+  return (addValueType ctx (opName, ty), op', ty)
+
 i_stmt ctx (Let var expr) = do
   (expr', exprTy) <- i_expr ctx expr
-  let ctx' = addType ctx (var, exprTy)
+  let ctx' = addValueType ctx (var, exprTy)
   let let' = Let (var, exprTy) expr'
   return (ctx', let', void)
+
 i_stmt ctx (Class name vars) = do
   vars' <- mapM (resolveId ctx) vars
-  return $ (addType ctx (name, Type), Class (name, Type) vars', Type)
+  let classTy = Con name
+  let ctorTy = [Rec vars'] ~> classTy
+  let ctx' = addType ctx (name, Type)
+  let ctx'' = addValueType ctx' (name, ctorTy)
+  let class' = Class (name, Type) vars'
+  return (ctx'', class', Type)
 
 i_ctor :: Name -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
 i_ctor enum (name, types) (ctx, ctors) = do
@@ -139,7 +164,7 @@ i_ctor enum (name, types) (ctx, ctors) = do
           Just t -> do
             types' <- mapM (resolveType ctx) t
             return (Just types', Fun [] types' enumTy)
-  return (addType ctx (name, ty), ((name, ty), types'):ctors)
+  return (addValueType ctx (name, ty), ((name, ty), types'):ctors)
 
 i_fn :: Ctx -> Function Name UnresolvedType -> Result (Function (Id Type) Type, Type)
 i_fn ctx fn = do
@@ -150,7 +175,7 @@ i_fn ctx fn = do
         Fun (generics fn)
             (if null tyArgs then [void] else map snd tyArgs)
             retType'
-  let ctx'' = foldl addType ctx' tyArgs
+  let ctx'' = foldl addValueType ctx' tyArgs
   (body', bodyTy) <- i_stmts ctx'' (body fn)
   typeCheck bodyTy retType'
   let fn' = fn { name = (name fn, ty)
@@ -164,14 +189,14 @@ i_expr :: Ctx -> Expr Name UnresolvedType -> Result (Expr (Id Type) Type, Type)
 i_expr _ (Literal lit) = return (Literal lit, i_lit lit)
 
 i_expr ctx (Ident i) =
-  case getType i ctx of
+  case getValueType i ctx of
     Nothing -> mkError $ UnknownVariable i
     Just ty -> return (Ident (i, ty), ty)
 
 i_expr ctx VoidExpr = return (VoidExpr, void)
 
 i_expr ctx (BinOp lhs op rhs) = do
-  tyOp@(Fun _ _ retType) <- getType' op ctx
+  tyOp@(Fun _ _ retType) <- getValueType' op ctx
   (lhs', lhsTy) <- i_expr ctx lhs
   (rhs', rhsTy) <- i_expr ctx rhs
   substs <- inferTyArgs [lhsTy, rhsTy] tyOp
@@ -250,10 +275,10 @@ c_pattern ctx ty (PatLiteral l) = do
   return (PatLiteral l, ctx)
 c_pattern ctx ty (PatVar v) =
   let pat = PatVar (v, ty)
-      ctx' = addType ctx (v, ty)
+      ctx' = addValueType ctx (v, ty)
    in return (pat, ctx')
 c_pattern ctx ty (PatCtor name vars) = do
-  ctorTy <- getType' name ctx
+  ctorTy <- getValueType' name ctx
   let fnTy@(Fun _ params retTy) = case ctorTy of
             fn@(Fun _ _ _) -> fn
             t -> Fun [] [] t

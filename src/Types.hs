@@ -8,6 +8,7 @@ module Types
   , char
   , string
   , void
+  , (~>)
   ) where
 
 import Data.List ((\\), intercalate, union)
@@ -92,3 +93,6 @@ string = Con "String"
 
 void :: Type
 void = Con "Void"
+
+(~>) :: [Type] -> Type -> Type
+(~>) = Fun []

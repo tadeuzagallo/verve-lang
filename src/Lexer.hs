@@ -67,7 +67,7 @@ parens :: Parser a -> Parser a
 parens p = lexeme $ between (char '(' <* anySpace) (anySpace *> char ')') p
 
 braces :: Parser a -> Parser a
-braces p = lexeme $ between (anySpace *> char '{' *> anySpace) (anySpace *> char '}') p
+braces p = lexeme $ between (char '{' <* anySpace) (anySpace *> char '}') p
 
 angles :: Parser a -> Parser a
 angles p = lexeme $ between (char '<' <* anySpace) (anySpace *> char '>') p
