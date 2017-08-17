@@ -93,6 +93,8 @@ eval expr = do
 evalWithEnv :: Env -> Expr -> EvalResultT (Env, Value)
 evalWithEnv env (Let binds exp) =
   e_let env binds exp
+evalWithEnv env exp =
+  (,) env <$> e_expr env exp
 
 e_expr :: Env -> Expr -> EvalResult
 e_expr env Void = return VVoid
