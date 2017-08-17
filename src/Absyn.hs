@@ -55,7 +55,7 @@ data Expr a b
           , rhs :: Expr a b
           }
   | Record [(a, Expr a b)]
-  | FieldAccess (Expr a b) a
+  | FieldAccess (Expr a b) b a
   deriving (Show)
 
 data Case a b = Case { pattern :: Pattern a

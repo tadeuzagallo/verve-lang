@@ -177,7 +177,7 @@ p_fieldAccess :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_fieldAccess lhs = do
   symbol "."
   fieldName <- lcid
-  return $ FieldAccess lhs fieldName
+  return $ FieldAccess lhs (UnresolvedType Type) fieldName
 
 p_literal :: Parser Literal
 p_literal =

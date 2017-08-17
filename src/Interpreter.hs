@@ -74,6 +74,9 @@ builtins =
     , VLam (\(VLit (String field)) ->
         return . VLam $ \(VRecord fields) ->
           return . fromJust $ lookup field fields))
+  , ("#unwrapClass"
+    , VLam (\(VNeutral (NApp _ v)) ->
+      return v))
   ]
 
 defaultEnv :: Env

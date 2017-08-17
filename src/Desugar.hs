@@ -59,10 +59,16 @@ d_expr (Record fields) =
   let fields' = map (\(a, b) -> (a, d_expr b)) fields
    in CA.Record fields'
 
-d_expr (FieldAccess expr (field, _)) =
-  CA.App
+d_expr (FieldAccess expr ty (field, _)) =
+  let dexpr = (d_expr expr)
+      expr' =
+        case ty of
+          Cls _ _ -> CA.App (CA.Var ("#unwrapClass", void)) dexpr
+          Rec _ -> dexpr
+          _ -> undefined
+   in CA.App
     (CA.App (CA.Var ("#fieldAccess", void)) (CA.Lit $ String field))
-    (d_expr expr)
+    expr'
 
 d_case :: Case (Id Type) Type -> CA.Case
 d_case (Case pattern expr) = (d_pattern pattern, d_expr expr)

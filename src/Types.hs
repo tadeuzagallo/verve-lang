@@ -19,9 +19,10 @@ data Type
   | Var String
   | Fun [String] [Type] Type
   | Rec [(String, Type)]
-  | Type
+  | Cls String [(String, Type)]
   | Top
   | Bot
+  | Type
   deriving (Eq)
 
 -- Subtyping
@@ -52,6 +53,7 @@ fv _ = []
 instance Show Type where
   show (Con t) = t
   show (Var t) = t
+  show (Cls t _) = t
   show Type = "Type"
   show Top = "⊤"
   show Bot = "⊥"
