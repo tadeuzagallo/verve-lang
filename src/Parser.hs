@@ -163,8 +163,7 @@ p_record =
 
 p_app :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_app callee = do
-  typeArgs <- option [] $ angles (commaSep $ p_type)
-  args <- parens $ commaSep p_expr
+  (typeArgs, args) <- p_appArgs
   return $ App {callee, typeArgs, args}
 
 p_binop :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
@@ -177,7 +176,18 @@ p_fieldAccess :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_fieldAccess lhs = do
   symbol "."
   fieldName <- lcid
-  return $ FieldAccess lhs Placeholder fieldName
+  p_methodCall lhs fieldName <|> return (FieldAccess lhs Placeholder fieldName)
+
+p_methodCall :: Expr Name UnresolvedType -> Name -> Parser (Expr Name UnresolvedType)
+p_methodCall lhs name = do
+  (typeArgs, args) <- p_appArgs
+  return $ App { callee = Ident name, typeArgs, args = lhs : args }
+
+p_appArgs :: Parser ([UnresolvedType], [Expr Name UnresolvedType])
+p_appArgs = do
+  typeArgs <- option [] $ angles (commaSep $ p_type)
+  args <- parens $ commaSep p_expr
+  return (typeArgs, args)
 
 p_literal :: Parser Literal
 p_literal =
