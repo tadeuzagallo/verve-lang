@@ -152,7 +152,7 @@ i_stmt ctx (Class name vars) = do
   vars' <- mapM (resolveId ctx) vars
   let classTy = Cls name vars'
   let ctorTy = [Rec vars'] ~> classTy
-  let ctx' = addType ctx (name, Type)
+  let ctx' = addType ctx (name, classTy)
   let ctx'' = addValueType ctx' (name, ctorTy)
   let class' = Class (name, Type) vars'
   return (ctx'', class', Type)
