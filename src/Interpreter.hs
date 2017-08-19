@@ -65,6 +65,16 @@ builtins =
         (\(VLit (Integer a)) ->
            return . VLam $ \(VLit (Integer b)) ->
              return . VLit . Integer $ a + b))
+  , ( "int_sub"
+    , VLam
+        (\(VLit (Integer a)) ->
+           return . VLam $ \(VLit (Integer b)) ->
+             return . VLit . Integer $ a - b))
+  , ( "int_mul"
+    , VLam
+        (\(VLit (Integer a)) ->
+           return . VLam $ \(VLit (Integer b)) ->
+             return . VLit . Integer $ a * b))
   , ( "int_print"
     , VLam
         (\v ->
