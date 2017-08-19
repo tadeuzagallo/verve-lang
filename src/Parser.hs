@@ -24,7 +24,7 @@ parseFile file = do
   return $ either (Left . Error) Right result
 
 parseStmt :: String -> String -> Either Error (Stmt Name UnresolvedType)
-parseStmt file source = liftError $ parse (p_stmt <* eof) file source
+parseStmt file source = liftError $ parse (anySpace *> p_stmt <* eof) file source
 
 p_module :: Parser (Module Name UnresolvedType)
 p_module = Module <$> (p_stmt `sepEndBy` p_separator <* eof)
@@ -42,8 +42,9 @@ p_enum :: Parser (Stmt Name UnresolvedType)
 p_enum = do
   reserved "enum"
   name <- ucid
+  generics <- option [] p_generics
   ctors <- p_body p_constructor
-  return $ Enum name ctors
+  return $ Enum name generics ctors
 
 p_constructor :: Parser (DataCtor Name UnresolvedType)
 p_constructor = do
@@ -123,7 +124,12 @@ p_type' :: Parser Type
 p_type' = choice [p_simpleType, p_typeArrow, p_typeRecord]
 
 p_simpleType :: Parser Type
-p_simpleType = ucid >>= return . Con
+p_simpleType = ucid >>= p_typeApp . Var
+
+p_typeApp :: Type -> Parser Type
+p_typeApp ty = do
+  angles (commaSep  p_type') >>= return . TyApp ty
+  <|> return ty
 
 p_typeArrow :: Parser Type
 p_typeArrow = do
@@ -152,11 +158,11 @@ p_lhs = choice [ p_record
 
 p_ctor :: Name -> Parser (Expr Name UnresolvedType)
 p_ctor name =
-  (try p_record >>= \r -> return (App (Ident name) [] [r]))
+  (try p_record >>= \r -> return (Call (Ident name) [] [r]))
   <|> return (Ident name)
 
 p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
-p_rhs lhs = (choice [try $ p_app lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
+p_rhs lhs = (choice [try $ p_call lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
 p_record :: Parser (Expr Name UnresolvedType)
 p_record =
@@ -164,10 +170,10 @@ p_record =
     where
       field = (,) <$> lcid <*> (symbol "=" *> p_expr)
 
-p_app :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
-p_app callee = do
-  (typeArgs, args) <- p_appArgs
-  return $ App {callee, typeArgs, args}
+p_call :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
+p_call callee = do
+  (typeArgs, args) <- p_callArgs
+  return $ Call {callee, typeArgs, args}
 
 p_binop :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_binop lhs = do
@@ -183,11 +189,11 @@ p_fieldAccess lhs = do
 
 p_methodCall :: Expr Name UnresolvedType -> Name -> Parser (Expr Name UnresolvedType)
 p_methodCall lhs name = do
-  (typeArgs, args) <- p_appArgs
-  return $ App { callee = Ident name, typeArgs, args = lhs : args }
+  (typeArgs, args) <- p_callArgs
+  return $ Call { callee = Ident name, typeArgs, args = lhs : args }
 
-p_appArgs :: Parser ([UnresolvedType], [Expr Name UnresolvedType])
-p_appArgs = do
+p_callArgs :: Parser ([UnresolvedType], [Expr Name UnresolvedType])
+p_callArgs = do
   typeArgs <- option [] $ angles (commaSep $ p_type)
   args <- parens $ commaSep p_expr
   return (typeArgs, args)

@@ -42,6 +42,7 @@ data Value
 
 instance Show Value where
   show (VLit v) = show v
+  show (VType t) = show t
   show (VNeutral n) = show n
   show (VLam _) = "<function>"
   show VVoid = "()"

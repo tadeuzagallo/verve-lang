@@ -59,7 +59,8 @@ resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
 
 resolveType :: Ctx -> UnresolvedType -> Result Type
 resolveType ctx Placeholder = undefined
-resolveType ctx (UnresolvedType (Con n)) =
+resolveType _ (UnresolvedType (Con c)) = return (Con c)
+resolveType ctx (UnresolvedType (Var n)) =
   getType' n ctx
 resolveType ctx (UnresolvedType (Fun gen params ret)) = do
   params' <- mapM (resolveType ctx . UnresolvedType) params
@@ -68,11 +69,17 @@ resolveType ctx (UnresolvedType (Fun gen params ret)) = do
 resolveType ctx (UnresolvedType (Rec fieldsTy)) = do
   fieldsTy' <- mapM (\(n, t) -> resolveId ctx (n, UnresolvedType t)) fieldsTy
   return $ Rec fieldsTy'
+resolveType ctx (UnresolvedType (TyApp t1 t2)) = do
+  t1' <- resolveType ctx $ UnresolvedType t1
+  t2' <- mapM (resolveType ctx . UnresolvedType) t2
+  case t1' of
+    TyAbs params ty ->
+      let ctx' = foldl addType ctx (zip params t2')
+       in resolveType ctx' (UnresolvedType ty)
+    _ -> return $ TyApp t1' t2'
 resolveType _ (UnresolvedType Top) = return Top
 resolveType _ (UnresolvedType Bot) = return Bot
 resolveType _ (UnresolvedType Type) = return Type
--- TODO: check if type variable is in scope
-resolveType _ (UnresolvedType (Var c)) = return (Var c)
 
 addType :: Ctx -> (String, Type) -> Ctx
 addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
@@ -124,11 +131,18 @@ i_stmt ctx (Expr expr) = do
 i_stmt ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addValueType ctx (name fn, ty), FnStmt fn', ty)
-i_stmt ctx (Enum name ctors) = do
-  let name' = (name, Con name)
-  let ctx' = addType ctx name'
-  (ctx'', ctors') <- foldrM (i_ctor name) (ctx', []) ctors
-  return (addType ctx'' (name, Type), (Enum name' ctors'), Type)
+i_stmt ctx (Enum name generics ctors) = do
+  let mkEnumTy ty = case (ty, generics) of
+                (Nothing, []) -> Con name
+                (Nothing, _)  -> TyAbs generics (TyApp (Con name) (map Var generics))
+                (Just t, [])  -> Fun generics t (Con name)
+                (Just t, _)   -> Fun generics t (TyApp (Con name) (map Var generics))
+  let enumTy = mkEnumTy Nothing
+  let name' = (name, enumTy)
+  let ctx' = addGenerics generics ctx
+  let ctx'' = addType ctx' name'
+  (ctx''', ctors') <- foldrM (i_ctor mkEnumTy) (ctx'', []) ctors
+  return (addType ctx''' (name, enumTy), (Enum name' generics ctors'), Type)
 i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
   let ctx' = addGenerics opGenerics ctx
   opLhs' <- resolveId ctx' opLhs
@@ -164,18 +178,14 @@ i_stmt ctx (Class name vars methods) = do
 i_method :: Type -> (Ctx, [Function (Id Type) Type]) -> Function Name UnresolvedType -> Result (Ctx, [Function (Id Type) Type])
 i_method classTy (ctx, fns) fn = do
   let ctx' = addType ctx ("Self", classTy)
-  let fn' = fn { params = ("self", UnresolvedType $ Con "Self") : params fn }
+  let fn' = fn { params = ("self", UnresolvedType $ Var "Self") : params fn }
   (fn'', fnTy) <- i_fn ctx' fn'
   return (addValueType ctx (name fn, fnTy), fn'' : fns)
 
-i_ctor :: Name -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
-i_ctor enum (name, types) (ctx, ctors) = do
-  let enumTy = Con enum
-  (types', ty) <- case types of
-          Nothing -> return (Nothing, enumTy)
-          Just t -> do
-            types' <- mapM (resolveType ctx) t
-            return (Just types', Fun [] types' enumTy)
+i_ctor :: (Maybe [Type] -> Type) -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
+i_ctor mkEnumTy (name, types) (ctx, ctors) = do
+  types' <- sequence (types >>= return . mapM (resolveType ctx))
+  let ty = mkEnumTy types'
   return (addValueType ctx (name, ty), ((name, ty), types'):ctors)
 
 i_fn :: Ctx -> Function Name UnresolvedType -> Result (Function (Id Type) Type, Type)
@@ -224,8 +234,8 @@ i_expr ctx (Match expr cases) = do
     x:xs -> mapM_ (typeCheck x) xs >> return x
   return (Match expr' cases', retTy)
 
-i_expr ctx (App fn types []) = i_expr ctx (App fn types [VoidExpr])
-i_expr ctx (App fn types args) = do
+i_expr ctx (Call fn types []) = i_expr ctx (Call fn types [VoidExpr])
+i_expr ctx (Call fn types args) = do
   -- TODO: handle the case where tyFn is not a fun (TypeError)
   (fn', tyFn@(Fun generics t1 t2)) <- i_expr ctx fn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
@@ -237,8 +247,8 @@ i_expr ctx (App fn types args) = do
           _ ->
             return $ zip generics types'
   let tyFn' = subst substs (Fun [] t1 t2)
-  retType <- i_app ctx tyArgs [] tyFn'
-  return (App fn' (map snd substs) args', retType)
+  retType <- i_call ctx tyArgs [] tyFn'
+  return (Call fn' (map snd substs) args', retType)
 
 i_expr ctx (Record fields) = do
   (exprs, types) <- mapM (i_expr ctx . snd) fields >>= return . unzip
@@ -258,16 +268,16 @@ i_expr ctx (FieldAccess expr _ field) = do
     Cls _ r -> aux r
     _ -> mkError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
-i_app :: Ctx -> [Type] -> [Type] -> Type -> Result Type
-i_app _ [] [] tyRet = return tyRet
-i_app _ [] tyArgs tyRet = return $ Fun [] tyArgs tyRet
-i_app ctx args [] tyRet =
+i_call :: Ctx -> [Type] -> [Type] -> Type -> Result Type
+i_call _ [] [] tyRet = return tyRet
+i_call _ [] tyArgs tyRet = return $ Fun [] tyArgs tyRet
+i_call ctx args [] tyRet =
   case tyRet of
-    Fun [] tyArgs tyRet' -> i_app ctx args tyArgs tyRet'
+    Fun [] tyArgs tyRet' -> i_call ctx args tyArgs tyRet'
     _ -> mkError ArityMismatch
-i_app ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
-  typeCheck actualTy expectedTy
-  i_app ctx args tyArgs tyRet
+i_call ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
+  when (not $ actualTy <: expectedTy) (mkError $ TypeError expectedTy actualTy)
+  i_call ctx args tyArgs tyRet
 
 i_lit :: Literal -> Type
 i_lit (Integer _) = int

@@ -18,7 +18,7 @@ data Module a b = Module
 data Stmt a b
   = FnStmt (Function a b)
   | Expr (Expr a b)
-  | Enum a [DataCtor a b]
+  | Enum a [Name] [DataCtor a b]
   | Let a (Expr a b)
   | Class { className :: a
           , classVars :: [(Name, b)]
@@ -49,10 +49,10 @@ data Expr a b
   | Match { expr :: Expr a b
           , cases :: [Case a b]
           }
-  | App { callee :: Expr a b
-        , typeArgs :: [b]
-        , args :: [Expr a b]
-        }
+  | Call { callee :: Expr a b
+         , typeArgs :: [b]
+         , args :: [Expr a b]
+         }
   | BinOp { lhs :: Expr a b
           , op :: a
           , rhs :: Expr a b

@@ -26,7 +26,7 @@ d_stmts (Expr e:ss) =
   CA.Let [(("", void), d_expr e)] (d_stmts ss)
 d_stmts (FnStmt fn:ss) =
   CA.Let [(name fn, d_fn fn)] (d_stmts ss)
-d_stmts (Enum name _ : ss) =
+d_stmts (Enum name _ _ : ss) =
   CA.Let [(("", Type), CA.Var name)] (d_stmts ss)
 d_stmts (Operator _ opLhs opName opRhs _ opBody : ss) =
   CA.Let [(opName, CA.Lam opLhs (CA.Lam opRhs (d_stmts opBody)))] (d_stmts ss)
@@ -46,10 +46,10 @@ d_expr :: Expr (Id Type) Type -> CA.Expr
 d_expr VoidExpr = CA.Void
 d_expr (Literal l) = CA.Lit l
 d_expr (Ident id) = CA.Var id
-d_expr (App callee types []) = d_expr (App callee types [VoidExpr])
+d_expr (Call callee types []) = d_expr (Call callee types [VoidExpr])
 d_expr (BinOp lhs op rhs) =
-  d_expr (App (Ident op) [] [lhs, rhs])
-d_expr (App callee types args) =
+  d_expr (Call (Ident op) [] [lhs, rhs])
+d_expr (Call callee types args) =
   let app = foldl CA.App (d_expr callee) (CA.Type <$> types)
    in foldl mkApp app args
     where
