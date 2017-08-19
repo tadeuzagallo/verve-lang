@@ -8,6 +8,7 @@ module Error
   , liftError
   ) where
 
+import Text.Parsec (ParseError)
 import Text.Printf (printf)
 
 class (Show a) =>
@@ -26,6 +27,10 @@ instance Show Error where
 
 instance ErrorT Error where
   kind (Error a) = kind a
+
+-- Orphan instance for Parsec.ParseError
+instance ErrorT ParseError where
+  kind _ = "ParseError"
 
 mkError :: (ErrorT a) => a -> Either Error b
 mkError a = Left (Error a)

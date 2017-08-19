@@ -10,13 +10,8 @@ import Error
 import Lexer
 import Types
 
-import Debug.Trace
-
-import Text.Parsec (ParseError, (<|>), choice, eof, many, many1, option, parse, try, optionMaybe, sepEndBy, skipMany1)
+import Text.Parsec ((<|>), choice, eof, option, parse, try, optionMaybe, sepEndBy, skipMany1)
 import Text.Parsec.String (Parser, parseFromFile)
-
-instance ErrorT ParseError where
-  kind _ = "ParseError"
 
 parseFile :: String -> IO (Either Error (Module Name UnresolvedType))
 parseFile file = do
