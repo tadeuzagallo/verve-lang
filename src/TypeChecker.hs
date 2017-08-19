@@ -123,9 +123,10 @@ i_stmt ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addValueType ctx (name fn, ty), FnStmt fn', ty)
 i_stmt ctx (Enum name ctors) = do
-  let name' = (name, Type)
-  (ctx', ctors') <- foldrM (i_ctor name) (ctx, []) ctors
-  return (addType ctx' (name, Type), (Enum name' ctors'), Type)
+  let name' = (name, Con name)
+  let ctx' = addType ctx name'
+  (ctx'', ctors') <- foldrM (i_ctor name) (ctx', []) ctors
+  return (addType ctx'' (name, Type), (Enum name' ctors'), Type)
 i_stmt ctx op@(Operator opGenerics opLhs opName opRhs opRetType opBody) = do
   let ctx' = addGenerics opGenerics ctx
   opLhs' <- resolveId ctx' opLhs
