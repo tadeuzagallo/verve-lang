@@ -39,7 +39,8 @@ d_fn fn@(Function { params=[] }) =
   d_fn (fn { params = [("", void)] })
 d_fn fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
-   in foldr CA.Lam fn' (map (flip (,) Type) $ generics fn)
+      fn'' = foldr CA.Lam fn' (map (flip (,) Type) $ generics fn)
+   in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn'')
 
 d_expr :: Expr (Id Type) Type -> CA.Expr
 d_expr VoidExpr = CA.Void

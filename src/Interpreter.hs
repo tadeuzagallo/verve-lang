@@ -11,6 +11,7 @@ import Error
 import Types (Type)
 
 import Control.Monad (foldM)
+import Control.Monad.Fix (mfix)
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import System.IO.Unsafe (unsafePerformIO)
@@ -87,6 +88,7 @@ builtins =
   , ("#unwrapClass"
     , VLam (\(VNeutral (NApp _ v)) ->
       return v))
+  , ("#fix", VLam (\(VLam fn) -> mfix fn))
   ]
 
 defaultEnv :: Env

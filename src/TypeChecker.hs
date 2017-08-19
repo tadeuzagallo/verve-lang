@@ -187,8 +187,9 @@ i_fn ctx fn = do
         Fun (generics fn)
             (if null tyArgs then [void] else map snd tyArgs)
             retType'
-  let ctx'' = foldl addValueType ctx' tyArgs
-  (body', bodyTy) <- i_stmts ctx'' (body fn)
+  let ctx'' = addValueType ctx' (name fn, ty)
+  let ctx''' = foldl addValueType ctx'' tyArgs
+  (body', bodyTy) <- i_stmts ctx''' (body fn)
   typeCheck bodyTy retType'
   let fn' = fn { name = (name fn, ty)
                , params = tyArgs
