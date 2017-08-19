@@ -28,9 +28,7 @@ d_stmt (FnStmt fn) = (name fn, d_fn fn)
 d_stmt (Enum name _) = (("", Type), CA.Var name)
 d_stmt (Class name _) = (("", Type), CA.Var name)
 d_stmt (Operator _ opLhs opName opRhs _ opBody) =
-  let opLhs' = (fst opLhs, snd opLhs)
-      opRhs' = (fst opRhs, snd opRhs)
-   in (opName, CA.Lam opLhs' (CA.Lam opRhs' (d_stmts opBody)))
+   (opName, CA.Lam opLhs (CA.Lam opRhs (d_stmts opBody)))
 
 d_fn :: Function (Id Type) Type -> CA.Expr
 d_fn fn@(Function { params=[] }) = d_fn (fn { params = [("", void)] })
