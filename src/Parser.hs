@@ -80,8 +80,11 @@ p_class :: Parser (Stmt Name UnresolvedType)
 p_class = do
   reserved "class"
   className <- ucid
-  classVars <- p_body p_classVar
-  return $ Class { className, classVars }
+  (classVars, classMethods) <-
+    braces $ (,)
+    <$> p_classVar `sepEndBy` p_separator
+    <*> p_function `sepEndBy` p_separator
+  return $ Class { className, classVars, classMethods }
 
 p_classVar :: Parser (Name, UnresolvedType)
 p_classVar = do

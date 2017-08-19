@@ -148,14 +148,22 @@ i_stmt ctx (Let var expr) = do
   let let' = Let (var, exprTy) expr'
   return (ctx', let', void)
 
-i_stmt ctx (Class name vars) = do
+i_stmt ctx (Class name vars methods) = do
   vars' <- mapM (resolveId ctx) vars
   let classTy = Cls name vars'
   let ctorTy = [Rec vars'] ~> classTy
   let ctx' = addType ctx (name, classTy)
   let ctx'' = addValueType ctx' (name, ctorTy)
-  let class' = Class (name, Type) vars'
-  return (ctx'', class', Type)
+  (ctx''', methods') <- foldM (i_method classTy) (ctx'', []) methods
+  let class' = Class (name, classTy) vars' methods'
+  return (ctx''', class', Type)
+
+i_method :: Type -> (Ctx, [Function (Id Type) Type]) -> Function Name UnresolvedType -> Result (Ctx, [Function (Id Type) Type])
+i_method classTy (ctx, fns) fn = do
+  let ctx' = addType ctx ("Self", classTy)
+  let fn' = fn { params = ("self", UnresolvedType $ Con "Self") : params fn }
+  (fn'', fnTy) <- i_fn ctx' fn'
+  return (addValueType ctx (name fn, fnTy), fn'' : fns)
 
 i_ctor :: Name -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
 i_ctor enum (name, types) (ctx, ctors) = do

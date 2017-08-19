@@ -22,6 +22,7 @@ data Stmt a b
   | Let a (Expr a b)
   | Class { className :: a
           , classVars :: [(Name, b)]
+          , classMethods :: [Function a b]
           }
   | Operator { opGenerics :: [Name]
              , opLhs :: Id b
