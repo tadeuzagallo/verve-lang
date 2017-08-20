@@ -31,7 +31,7 @@ instance ErrorT TypeError where
 
 typeCheck :: Type -> Type -> Result ()
 typeCheck actualTy expectedTy =
-  when (actualTy /= expectedTy) (mkError $ TypeError expectedTy actualTy)
+  when (not $ actualTy <: expectedTy) (mkError $ TypeError expectedTy actualTy)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
@@ -240,9 +240,9 @@ i_expr ctx (BinOp lhs op rhs) = do
 i_expr ctx (Match expr cases) = do
   (expr', ty) <- i_expr ctx expr
   (cases', casesTy) <- unzip <$> mapM (i_case ctx ty) cases
-  retTy <- case casesTy of
-    [] -> return void
-    x:xs -> mapM_ (typeCheck x) xs >> return x
+  let retTy = case casesTy of
+                [] -> void
+                x:xs -> foldl (\/) x xs
   return (Match expr' cases', retTy)
 
 i_expr ctx (Call fn types []) = i_expr ctx (Call fn types [VoidExpr])
@@ -287,7 +287,7 @@ i_call ctx args [] tyRet =
     Fun [] tyArgs tyRet' -> i_call ctx args tyArgs tyRet'
     _ -> mkError ArityMismatch
 i_call ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
-  when (not $ actualTy <: expectedTy) (mkError $ TypeError expectedTy actualTy)
+  typeCheck actualTy expectedTy
   i_call ctx args tyArgs tyRet
 
 i_lit :: Literal -> Type
@@ -306,7 +306,7 @@ c_pattern :: Ctx -> Type -> Pattern Name -> Result (Pattern (Id Type), Ctx)
 c_pattern ctx _ PatDefault = return (PatDefault, ctx)
 c_pattern ctx ty (PatLiteral l) = do
   let litTy = i_lit l
-  typeCheck ty litTy
+  typeCheck litTy ty
   return (PatLiteral l, ctx)
 c_pattern ctx ty (PatVar v) =
   let pat = PatVar (v, ty)
@@ -318,7 +318,7 @@ c_pattern ctx ty (PatCtor name vars) = do
                             fn@(Fun _ params retTy) -> (fn, params, retTy)
                             t -> (Fun [] [] t, [], t)
   when (length vars /= length params) (mkError ArityMismatch)
-  typeCheck ty retTy
+  typeCheck retTy ty
   (vars', ctx') <- foldM aux ([], ctx) (zip params vars)
   return (PatCtor (name, fnTy) vars', ctx')
     where
