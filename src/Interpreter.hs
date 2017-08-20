@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns -fno-warn-incomplete-uni-patterns #-}
+
 module Interpreter
   ( eval
   , evalWithEnv
@@ -113,8 +115,8 @@ evalWithEnv env exp =
   (,) env <$> e_expr env exp
 
 e_expr :: Env -> Expr -> EvalResult
-e_expr env Void = return VVoid
-e_expr env (Lit s) = return $ VLit s
+e_expr _ Void = return VVoid
+e_expr _ (Lit s) = return $ VLit s
 e_expr env (Var (name, _)) =
   case getValue name env of
     Nothing -> return . VNeutral $ NFree name
