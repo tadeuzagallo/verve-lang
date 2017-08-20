@@ -162,6 +162,8 @@ e_pattern env (VNeutral n) (PatCtor (name, _) pats) =
   aux env n pats
     where
       aux env (NFree n') [] | n' == name = Just env
+      aux env (NApp n (VType _)) p =
+        aux env n p
       aux env (NApp n' v) (p:ps) =
         e_pattern env v p >>= \env' -> aux env' n' ps
       aux _ _ _ = Nothing

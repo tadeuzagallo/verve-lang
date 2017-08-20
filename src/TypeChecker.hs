@@ -315,7 +315,8 @@ c_pattern ctx ty (PatVar v) =
 c_pattern ctx ty (PatCtor name vars) = do
   ctorTy <- getValueType' name ctx
   let (fnTy, params, retTy) = case ctorTy of
-                            fn@(Fun _ params retTy) -> (fn, params, retTy)
+                            fn@(Fun [] params retTy) -> (fn, params, retTy)
+                            fn@(Fun gen params retTy) -> (fn, params, TyAbs gen retTy)
                             t -> (Fun [] [] t, [], t)
   when (length vars /= length params) (mkError ArityMismatch)
   typeCheck retTy ty
