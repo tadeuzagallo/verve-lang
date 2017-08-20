@@ -43,12 +43,12 @@ Bot <: _ = True
 (Fun v1 p1 t1) <: (Fun v2 p2 t2) =
   v1 == v2 && all (uncurry (<:)) (zip p2 p1) && t1 <: t2
 
-t1@(TyAbs gen t12) <: t2@(TyApp t21 args) =
+_t1@(TyAbs gen t12) <: t2@(TyApp _t21 args) =
   let t1' = subst (zip gen args) t12
-   in t1' <: t2 && t2 <: t1'
+   in t1' <: t2
 
-t1@(TyApp t11 t12) <: t2@(TyApp t21 t22) =
-  t1 <: t2 && and (zipWith (<:) t12 t22)
+(TyApp t11 t12) <: (TyApp t21 t22) =
+  t11 <: t21 && and (zipWith (<:) t12 t22)
 
 _ <: _ = False
 

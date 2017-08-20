@@ -1,6 +1,6 @@
 module CoreAbsyn where
 
-import Absyn (Id, Literal, Name)
+import Absyn (Id, Literal)
 import Types (Type)
 
 data Expr
