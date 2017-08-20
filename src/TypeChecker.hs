@@ -453,12 +453,6 @@ constraintGen v x (Fun y r s) (Fun y' t u)
     d <- constraintGen (v `union` y) x s u
     return $ foldl meet [] c `meet` d
 
-constraintGen v x (TyAbs params t1) t2@(TyApp _ args)
-  | length args == length params
-  && intersect (v `union` x) params == []
-  = do
-    constraintGen v x t1 t2
-
 constraintGen v x (TyApp t11 t12) (TyApp t21 t22) = do
   cTy <- constraintGen v x t11 t21
   cArgs <- zipWithM (constraintGen v x) t12 t22
