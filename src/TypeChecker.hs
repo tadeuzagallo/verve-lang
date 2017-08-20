@@ -329,8 +329,9 @@ c_pattern ctx ty (PatCtor name vars) = do
 -- Inference of type arguments for generic functions
 inferTyArgs :: [Type] -> Type -> Result [Substitution]
 inferTyArgs tyArgs (Fun generics params retType) = do
+  let initialCs = map (flip (Constraint Bot) Top) generics
   d <- zipWithM (constraintGen [] generics) tyArgs params
-  let c = foldl meet [] d
+  let c = initialCs `meet` foldl meet [] d
   mapM (getSubst retType) c
 inferTyArgs _ _ = mkError $ ArityMismatch
 
@@ -434,19 +435,16 @@ constraintGen _ _ Bot _ = return []
 
 -- CG-Upper
 constraintGen v x (Var y) s | y `elem` x && fv s `intersect` x == [] =
-  let t = v \\ s in
-  return [Constraint Bot y t]
+  let t = v \\ s
+   in return [Constraint Bot y t]
 
 -- CG-Lower
 constraintGen v x s (Var y) | y `elem` x && fv s `intersect` x == [] =
-  let t = v // s in
-  return [Constraint t y Top]
+  let t = v // s
+   in return [Constraint t y Top]
 
 -- CG-Refl
-constraintGen _v _x Type Type = return []
-constraintGen _v _x (Con y) (Con y') | y == y' = return []
-constraintGen _v x (Var y) (Var y') | y == y' && y `notElem` x =
-  return []
+constraintGen _v _x t1 t2 | t1 <: t2 = return []
 
 -- CG-Fun
 constraintGen v x (Fun y r s) (Fun y' t u)
@@ -455,8 +453,19 @@ constraintGen v x (Fun y r s) (Fun y' t u)
     d <- constraintGen (v `union` y) x s u
     return $ foldl meet [] c `meet` d
 
-constraintGen _v _x s t =
-  mkError $ TypeError s t
+constraintGen v x (TyAbs params t1) t2@(TyApp _ args)
+  | length args == length params
+  && intersect (v `union` x) params == []
+  = do
+    constraintGen v x t1 t2
+
+constraintGen v x (TyApp t11 t12) (TyApp t21 t22) = do
+  cTy <- constraintGen v x t11 t21
+  cArgs <- zipWithM (constraintGen v x) t12 t22
+  return $ foldl meet [] cArgs `meet` cTy
+
+constraintGen _v _x actual expected =
+  mkError $ TypeError expected actual
 
 -- Least Upper Bound
 (\/) :: Type -> Type -> Type
