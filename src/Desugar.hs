@@ -75,7 +75,7 @@ d_expr (FieldAccess expr ty (field, _)) =
     expr'
 
 d_case :: Case (Id Type) Type -> CA.Case
-d_case (Case pattern expr) = (d_pattern pattern, d_expr expr)
+d_case (Case pattern expr) = (d_pattern pattern, d_stmts expr)
 
 d_pattern :: Pattern (Id Type) -> CA.Pattern
 d_pattern PatDefault = CA.PatDefault

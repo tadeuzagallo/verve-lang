@@ -299,7 +299,7 @@ i_lit (String _) = string
 i_case :: Ctx -> Type -> Case Name UnresolvedType -> Result (Case (Id Type) Type, Type)
 i_case ctx ty (Case pattern caseBody) = do
   (pattern', ctx') <- c_pattern ctx ty pattern
-  (caseBody', ty) <- i_expr ctx' caseBody
+  (caseBody', ty) <- i_stmts ctx' caseBody
   return (Case pattern' caseBody', ty)
 
 c_pattern :: Ctx -> Type -> Pattern Name -> Result (Pattern (Id Type), Ctx)

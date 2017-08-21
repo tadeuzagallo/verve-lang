@@ -10,7 +10,7 @@ import Error
 import Lexer
 import Types
 
-import Text.Parsec ((<|>), choice, eof, option, parse, try, optionMaybe, sepEndBy, skipMany1)
+import Text.Parsec ((<|>), choice, eof, option, optional, parse, try, optionMaybe, sepEndBy, skipMany1, lookAhead)
 import Text.Parsec.String (Parser, parseFromFile)
 
 parseFile :: String -> IO (Either Error (Module Name UnresolvedType))
@@ -216,15 +216,27 @@ p_match = do
 
 p_case :: Parser (Case Name UnresolvedType)
 p_case = do
+  reserved "case"
   pattern <- p_pattern
   symbol ":"
-  caseBody <- p_expr
+  caseBody <- p_caseBody True
   return $ Case { pattern, caseBody }
 
+p_caseBody :: Bool -> Parser [Stmt Name UnresolvedType]
+p_caseBody first = do
+  (lookAheadCase >> return [])
+  <|>
+    (option [] ((:) <$> (try $ sep >> p_stmt) <*> p_caseBody False))
+    where
+      lookAheadCase = lookAhead . try $ optional p_separator >> reserved "case"
+      sep
+        | first = optional p_separator
+        | otherwise = p_separator
+
 p_pattern :: Parser (Pattern Name)
-p_pattern = choice [ p_literal >>= return . PatLiteral
+p_pattern = choice [ symbol "_" >> return PatDefault
+                   , p_literal >>= return . PatLiteral
                    , p_patCtor >>= return . uncurry PatCtor
-                   , symbol "_" >> return PatDefault
                    , lcid >>= return . PatVar
                    ]
 
