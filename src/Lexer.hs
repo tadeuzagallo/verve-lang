@@ -21,7 +21,7 @@ module Lexer
   , anySpace
   ) where
 
-import Text.Parsec ((<|>), sepEndBy, many, many1, between, try, skipMany, choice)
+import Text.Parsec ((<|>), sepEndBy, many, many1, between, try, skipMany, choice, unexpected)
 import Text.Parsec.Char (lower, upper, alphaNum, oneOf, noneOf, char, anyChar, string, digit, satisfy, endOfLine)
 import Text.Parsec.String (Parser)
 
@@ -83,11 +83,30 @@ comma :: Parser ()
 comma = ignore (char ',' <* anySpace)
 
 -- Keywords
+reservedKeywords :: [String]
+reservedKeywords = [ "fn"
+                   , "match"
+                   , "case"
+                   , "if"
+                   , "else"
+                   , "operator"
+                   , "let"
+                   , "class"
+                   , "enum"
+                   , "type"
+                   ]
+
+checkKeyword :: String -> Parser String
+checkKeyword word =
+  if word `elem` reservedKeywords
+     then unexpected ("reserved keyword " ++ show word)
+     else return word
+
 lcid :: Parser String
-lcid = (:) <$> lower <*> idSuffix <* space
+lcid = lexeme . try $ (:) <$> lower <*> idSuffix >>= checkKeyword
 
 ucid :: Parser String
-ucid = (:) <$> upper <*> idSuffix <* space
+ucid = lexeme . try $ (:) <$> upper <*> idSuffix
 
 idSuffix :: Parser String
 idSuffix = many (alphaNum <|> oneOf "_'")
