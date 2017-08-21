@@ -10,7 +10,7 @@ import Error
 import Lexer
 import Types
 
-import Text.Parsec ((<|>), choice, eof, option, optional, parse, try, optionMaybe, sepEndBy, skipMany1, lookAhead)
+import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepEndBy, skipMany1, lookAhead)
 import Text.Parsec.String (Parser, parseFromFile)
 
 parseFile :: String -> IO (Either Error (Module Name UnresolvedType))
@@ -31,7 +31,7 @@ p_stmt = choice [ p_enum
                 , p_class
                 , p_function >>= return . FnStmt
                 , p_expr >>= return . Expr
-                ]
+                ] <?> "statement"
 
 p_enum :: Parser (Stmt Name UnresolvedType)
 p_enum = do
@@ -140,6 +140,7 @@ p_typeRecord = do
 
 p_expr :: Parser (Expr Name UnresolvedType)
 p_expr = choice [ p_match
+                , p_if
                 , p_lhs >>= p_rhs
                 ]
 
@@ -161,7 +162,7 @@ p_rhs lhs = (choice [try $ p_call lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs
 
 p_record :: Parser (Expr Name UnresolvedType)
 p_record =
-  Record <$> braces (field `sepEndBy` comma)
+  Record <$> braces (commaSep field)
     where
       field = (,) <$> lcid <*> (symbol "=" *> p_expr)
 
@@ -245,6 +246,19 @@ p_patCtor = do
   ctorName <- ucid
   vars <- option [] . parens . commaSep $ p_pattern
   return (ctorName, vars)
+
+p_if :: Parser (Expr Name UnresolvedType)
+p_if = do
+  reserved "if"
+  ifCond <- p_expr
+  ifBody <- p_codeBlock
+  ifElseBody <- option [] p_else
+  return $ If { ifCond, ifBody, ifElseBody }
+
+p_else :: Parser [Stmt Name UnresolvedType]
+p_else = do
+  reserved "else"
+  p_codeBlock <|> ((:[]) <$> (Expr <$> p_if))
 
 p_codeBlock :: Parser [Stmt Name UnresolvedType]
 p_codeBlock = p_body p_stmt

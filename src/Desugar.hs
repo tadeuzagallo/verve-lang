@@ -74,6 +74,11 @@ d_expr (FieldAccess expr ty (field, _)) =
     (CA.App (CA.Var ("#fieldAccess", void)) (CA.Lit $ String field))
     expr'
 
+d_expr (If ifCond ifBody elseBody) =
+  CA.Match (d_expr ifCond) [ (CA.PatCtor ("True", bool) [], d_stmts ifBody)
+                           , (CA.PatCtor ("False", bool) [], d_stmts elseBody)
+                           ]
+
 d_case :: Case (Id Type) Type -> CA.Case
 d_case (Case pattern expr) = (d_pattern pattern, d_stmts expr)
 

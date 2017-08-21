@@ -3,6 +3,7 @@ module Types
   , (<:)
   , fv
   , subst
+  , bool
   , int
   , float
   , char
@@ -107,6 +108,9 @@ subst s (TyAbs gen ty) =
    in TyAbs gen (subst s' ty)
 subst s (TyApp t1 t2) =
   TyApp (subst s t1) (map (subst s) t2)
+
+bool :: Type
+bool = Con "Bool"
 
 int :: Type
 int = Con "Int"

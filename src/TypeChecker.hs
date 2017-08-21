@@ -112,6 +112,8 @@ defaultCtx =
                  , ("int_add", [int, int] ~> int)
                  , ("int_sub", [int, int] ~> int)
                  , ("int_mul", [int, int] ~> int)
+                 , ("True", bool)
+                 , ("False", bool)
                  ]
       }
 
@@ -278,6 +280,13 @@ i_expr ctx (FieldAccess expr _ field) = do
     Rec r -> aux r
     Cls _ r -> aux r
     _ -> mkError . GenericError $ "Expected a record, but found value of type " ++ show ty
+
+i_expr ctx (If ifCond ifBody elseBody) = do
+  (ifCond', ty) <- i_expr ctx ifCond
+  typeCheck ty bool
+  (ifBody', ifTy) <- i_stmts ctx ifBody
+  (elseBody', elseTy) <- i_stmts ctx elseBody
+  return (If ifCond' ifBody' elseBody', ifTy \/ elseTy)
 
 i_call :: Ctx -> [Type] -> [Type] -> Type -> Result Type
 i_call _ [] [] tyRet = return tyRet

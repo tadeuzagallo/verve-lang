@@ -50,6 +50,10 @@ data Expr a b
   | Match { expr :: Expr a b
           , cases :: [Case a b]
           }
+  | If { ifCond :: Expr a b
+       , ifBody :: [Stmt a b]
+       , ifElseBody :: [Stmt a b]
+       }
   | Call { callee :: Expr a b
          , typeArgs :: [b]
          , args :: [Expr a b]
