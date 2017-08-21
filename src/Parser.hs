@@ -30,7 +30,7 @@ p_stmt = choice [ p_enum
                 , p_let
                 , p_class
                 , p_function >>= return . FnStmt
-                , p_expr >>= return . Expr
+                , p_expr True >>= return . Expr
                 ] <?> "statement"
 
 p_enum :: Parser (Stmt Name UnresolvedType)
@@ -69,7 +69,7 @@ p_let = do
   reserved "let"
   name <- lcid
   symbol "="
-  expr <- p_expr
+  expr <- p_expr True
   return $ Let name expr
 
 p_class :: Parser (Stmt Name UnresolvedType)
@@ -138,24 +138,32 @@ p_typeRecord = do
   fields <- braces $ commaSep ((,) <$> lcid <* symbol ":" <*> p_type')
   return $ Rec fields
 
-p_expr :: Parser (Expr Name UnresolvedType)
-p_expr = choice [ p_match
-                , p_if
-                , p_lhs >>= p_rhs
-                ]
+p_expr :: Bool -> Parser (Expr Name UnresolvedType)
+p_expr allowCtor = choice [ p_match
+                          , p_if
+                          , p_lhs allowCtor >>= p_rhs
+                          ]
 
-p_lhs :: Parser (Expr Name UnresolvedType)
-p_lhs = choice [ p_record
-               , p_literal >>= return . Literal
-               , lcid >>= return . Ident
-               , ucid >>= p_ctor
-               , parens (p_expr <|> (operator >>= return . Ident))
-               ]
+p_lhs :: Bool -> Parser (Expr Name UnresolvedType)
+p_lhs allowCtor = choice [ p_record
+                         , p_literal >>= return . Literal
+                         , lcid >>= return . Ident
+                         , p_ucidCtor allowCtor
+                         , parens (p_expr True <|> (operator >>= return . Ident))
+                         ]
+
+p_ucidCtor :: Bool -> Parser (Expr Name UnresolvedType)
+p_ucidCtor allowCtor = do
+  name <- ucid
+  let name' = Ident name
+  if allowCtor
+     then p_ctor name <|> return name'
+     else return name'
 
 p_ctor :: Name -> Parser (Expr Name UnresolvedType)
-p_ctor name =
-  (try p_record >>= \r -> return (Call (Ident name) [] [r]))
-  <|> return (Ident name)
+p_ctor name = do
+  r <- p_record
+  return (Call (Ident name) [] [r])
 
 p_rhs :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_rhs lhs = (choice [try $ p_call lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
@@ -164,7 +172,7 @@ p_record :: Parser (Expr Name UnresolvedType)
 p_record =
   Record <$> braces (commaSep field)
     where
-      field = (,) <$> lcid <*> (symbol "=" *> p_expr)
+      field = (,) <$> lcid <*> (symbol "=" *> p_expr True)
 
 p_call :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_call callee = do
@@ -174,7 +182,7 @@ p_call callee = do
 p_binop :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_binop lhs = do
   op <- operator
-  rhs <- p_expr
+  rhs <- p_expr True
   return $ BinOp {lhs, op, rhs}
 
 p_fieldAccess :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
@@ -191,7 +199,7 @@ p_methodCall lhs name = do
 p_callArgs :: Parser ([UnresolvedType], [Expr Name UnresolvedType])
 p_callArgs = do
   typeArgs <- option [] $ angles (commaSep $ p_type)
-  args <- parens $ commaSep p_expr
+  args <- parens $ commaSep (p_expr True)
   return (typeArgs, args)
 
 p_literal :: Parser Literal
@@ -211,7 +219,7 @@ p_number = do
 p_match :: Parser (Expr Name UnresolvedType)
 p_match = do
   reserved "match"
-  expr <- p_expr
+  expr <- p_expr False
   cases <- p_body p_case
   return $ Match { expr, cases }
 
@@ -250,7 +258,7 @@ p_patCtor = do
 p_if :: Parser (Expr Name UnresolvedType)
 p_if = do
   reserved "if"
-  ifCond <- p_expr
+  ifCond <- p_expr False
   ifBody <- p_codeBlock
   ifElseBody <- option [] p_else
   return $ If { ifCond, ifBody, ifElseBody }
