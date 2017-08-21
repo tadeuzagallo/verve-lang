@@ -172,7 +172,7 @@ p_record :: Parser (Expr Name UnresolvedType)
 p_record =
   Record <$> braces (commaSep field)
     where
-      field = (,) <$> lcid <*> (symbol "=" *> p_expr True)
+      field = (,) <$> lcid <*> (symbol ":" *> p_expr True)
 
 p_call :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_call callee = do
