@@ -11,6 +11,8 @@ import Error
 import Types
 
 import Control.Monad (foldM, when, zipWithM)
+import Control.Monad.State (StateT, evalStateT)
+import Control.Monad.Except (Except, runExcept, throwError)
 import Data.List (union, groupBy, intersect)
 import Data.Foldable (foldrM)
 
@@ -29,38 +31,36 @@ data TypeError
 instance ErrorT TypeError where
   kind _ = "TypeError"
 
-typeCheck :: Type -> Type -> Result ()
+type Infer a = (StateT InferState (Except TypeError) a)
+
+data InferState = InferState { uid :: Int }
+
+typeCheck :: Type -> Type -> Infer ()
 typeCheck actualTy expectedTy =
-  when (not $ actualTy <: expectedTy) (mkError $ TypeError expectedTy actualTy)
+  when (not $ actualTy <: expectedTy) (throwError $ TypeError expectedTy actualTy)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
                }
 
-getType :: String -> Ctx -> Maybe Type
-getType n ctx = lookup n (types ctx)
-
-getValueType :: String -> Ctx -> Maybe Type
-getValueType n ctx = lookup n (values ctx)
-
-getType' :: String -> Ctx -> Result Type
-getType' n ctx =
-  case getType n ctx of
-    Nothing -> mkError (UnknownType n)
+getType :: String -> Ctx -> Infer Type
+getType n ctx =
+  case lookup n (types ctx) of
+    Nothing -> throwError (UnknownType n)
     Just t -> return t
 
-getValueType' :: String -> Ctx -> Result Type
-getValueType' n ctx =
-  case getValueType n ctx of
-    Nothing -> mkError (UnknownVariable n)
+getValueType :: String -> Ctx -> Infer Type
+getValueType n ctx =
+  case lookup n (values ctx) of
+    Nothing -> throwError (UnknownVariable n)
     Just t -> return t
 
-resolveId :: Ctx -> Id UnresolvedType -> Result (Id Type)
+resolveId :: Ctx -> Id UnresolvedType -> Infer (Id Type)
 resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
 
-resolveType :: Ctx -> UnresolvedType -> Result Type
+resolveType :: Ctx -> UnresolvedType -> Infer Type
 resolveType ctx (UnresolvedType (Var n)) =
-  getType' n ctx
+  getType n ctx
 resolveType ctx (UnresolvedType (Fun gen params ret)) = do
   params' <- mapM (resolveType ctx . UnresolvedType) params
   ret' <- resolveType ctx $ UnresolvedType ret
@@ -120,25 +120,37 @@ defaultCtx =
                  ]
       }
 
+initInfer :: InferState
+initInfer = InferState { uid = 0 }
+
+runInfer :: Infer a -> (a -> b) -> Result b
+runInfer m f = 
+  case runExcept $ evalStateT m initInfer of
+    Left err -> Left (Error err)
+    Right v -> Right (f v)
+
+
 infer :: Module Name UnresolvedType -> Result (Module (Id Type) Type, Type)
-infer mod = do
-  (stmts, ty) <- i_stmts defaultCtx (stmts mod)
-  return (Module stmts, ty)
+infer mod =
+  runInfer
+    (i_stmts defaultCtx (stmts mod)) 
+    (\(stmts, ty) -> (Module stmts, ty))
 
 inferStmt :: Ctx -> Stmt Name UnresolvedType -> Result (Ctx, Stmt (Id Type) Type, Type)
-inferStmt = i_stmt
+inferStmt ctx stmt =
+  runInfer (i_stmt ctx stmt) id
 
-i_stmts :: Ctx -> [Stmt Name UnresolvedType ] -> Result ([Stmt (Id Type) Type], Type)
+i_stmts :: Ctx -> [Stmt Name UnresolvedType ] -> Infer ([Stmt (Id Type) Type], Type)
 i_stmts ctx stmts = do
   (_, stmts', ty) <- foldM aux (ctx, [], void) stmts
   return (reverse stmts', ty)
     where
-      aux :: (Ctx, [Stmt (Id Type) Type], Type) -> Stmt Name  UnresolvedType -> Result (Ctx, [Stmt (Id Type) Type], Type)
+      aux :: (Ctx, [Stmt (Id Type) Type], Type) -> Stmt Name  UnresolvedType -> Infer (Ctx, [Stmt (Id Type) Type], Type)
       aux (ctx, stmts, _) stmt = do
         (ctx', stmt', ty) <- i_stmt ctx stmt
         return (ctx', stmt':stmts, ty)
 
-i_stmt :: Ctx -> Stmt Name UnresolvedType -> Result (Ctx, Stmt (Id Type) Type, Type)
+i_stmt :: Ctx -> Stmt Name UnresolvedType -> Infer (Ctx, Stmt (Id Type) Type, Type)
 i_stmt ctx (Expr expr) = do
   (expr', ty) <- i_expr ctx expr
   return (ctx, Expr expr', ty)
@@ -191,20 +203,20 @@ i_stmt ctx (Class name vars methods) = do
   let class' = Class (name, classTy) vars' methods'
   return (ctx''', class', Type)
 
-i_method :: Type -> (Ctx, [Function (Id Type) Type]) -> Function Name UnresolvedType -> Result (Ctx, [Function (Id Type) Type])
+i_method :: Type -> (Ctx, [Function (Id Type) Type]) -> Function Name UnresolvedType -> Infer (Ctx, [Function (Id Type) Type])
 i_method classTy (ctx, fns) fn = do
   let ctx' = addType ctx ("Self", classTy)
   let fn' = fn { params = ("self", UnresolvedType $ Var "Self") : params fn }
   (fn'', fnTy) <- i_fn ctx' fn'
   return (addValueType ctx (name fn, fnTy), fn'' : fns)
 
-i_ctor :: (Maybe [Type] -> Type) -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Result (Ctx, [DataCtor (Id Type) Type])
+i_ctor :: (Maybe [Type] -> Type) -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Infer (Ctx, [DataCtor (Id Type) Type])
 i_ctor mkEnumTy (name, types) (ctx, ctors) = do
   types' <- sequence (types >>= return . mapM (resolveType ctx))
   let ty = mkEnumTy types'
   return (addValueType ctx (name, ty), ((name, ty), types'):ctors)
 
-i_fn :: Ctx -> Function Name UnresolvedType -> Result (Function (Id Type) Type, Type)
+i_fn :: Ctx -> Function Name UnresolvedType -> Infer (Function (Id Type) Type, Type)
 i_fn ctx fn = do
   let ctx' = addGenerics (generics fn) ctx
   tyArgs <- mapM (resolveId ctx') (params fn)
@@ -224,18 +236,17 @@ i_fn ctx fn = do
                }
   return (fn', ty)
 
-i_expr :: Ctx -> Expr Name UnresolvedType -> Result (Expr (Id Type) Type, Type)
+i_expr :: Ctx -> Expr Name UnresolvedType -> Infer (Expr (Id Type) Type, Type)
 i_expr _ (Literal lit) = return (Literal lit, i_lit lit)
 
-i_expr ctx (Ident i) =
-  case getValueType i ctx of
-    Nothing -> mkError $ UnknownVariable i
-    Just ty -> return (Ident (i, ty), ty)
+i_expr ctx (Ident i) = do
+  ty <- getValueType i ctx
+  return (Ident (i, ty), ty)
 
 i_expr _ VoidExpr = return (VoidExpr, void)
 
 i_expr ctx (BinOp lhs op rhs) = do
-  tyOp@(Fun _ _ retType) <- getValueType' op ctx
+  tyOp@(Fun _ _ retType) <- getValueType op ctx
   (lhs', lhsTy) <- i_expr ctx lhs
   (rhs', rhsTy) <- i_expr ctx rhs
   substs <- inferTyArgs [lhsTy, rhsTy] tyOp
@@ -276,13 +287,15 @@ i_expr ctx (Record fields) = do
 
 i_expr ctx (FieldAccess expr _ field) = do
   (expr', ty) <- i_expr ctx expr
-  let aux r = case lookup field r of
-                Nothing -> mkError $ UnknownField (Rec r) field
+  let
+      aux :: [(String, Type)] -> Infer (Expr (Id Type) Type, Type)
+      aux r = case lookup field r of
+                Nothing -> throwError $ UnknownField (Rec r) field
                 Just t -> return (FieldAccess expr' ty (field, t), t)
   case ty of
     Rec r -> aux r
     Cls _ r -> aux r
-    _ -> mkError . GenericError $ "Expected a record, but found value of type " ++ show ty
+    _ -> throwError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
 i_expr ctx (If ifCond ifBody elseBody) = do
   (ifCond', ty) <- i_expr ctx ifCond
@@ -298,13 +311,13 @@ i_expr ctx (List items) = do
              x:xs -> list $ foldl (\/) x xs
   return (List items', ty)
 
-i_call :: Ctx -> [Type] -> [Type] -> Type -> Result Type
+i_call :: Ctx -> [Type] -> [Type] -> Type -> Infer Type
 i_call _ [] [] tyRet = return tyRet
 i_call _ [] tyArgs tyRet = return $ Fun [] tyArgs tyRet
 i_call ctx args [] tyRet =
   case tyRet of
     Fun [] tyArgs tyRet' -> i_call ctx args tyArgs tyRet'
-    _ -> mkError ArityMismatch
+    _ -> throwError ArityMismatch
 i_call ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
   typeCheck actualTy expectedTy
   i_call ctx args tyArgs tyRet
@@ -315,13 +328,13 @@ i_lit (Float _) = float
 i_lit (Char _) = char
 i_lit (String _) = string
 
-i_case :: Ctx -> Type -> Case Name UnresolvedType -> Result (Case (Id Type) Type, Type)
+i_case :: Ctx -> Type -> Case Name UnresolvedType -> Infer (Case (Id Type) Type, Type)
 i_case ctx ty (Case pattern caseBody) = do
   (pattern', ctx') <- c_pattern ctx ty pattern
   (caseBody', ty) <- i_stmts ctx' caseBody
   return (Case pattern' caseBody', ty)
 
-c_pattern :: Ctx -> Type -> Pattern Name -> Result (Pattern (Id Type), Ctx)
+c_pattern :: Ctx -> Type -> Pattern Name -> Infer (Pattern (Id Type), Ctx)
 c_pattern ctx _ PatDefault = return (PatDefault, ctx)
 c_pattern ctx ty (PatLiteral l) = do
   let litTy = i_lit l
@@ -332,12 +345,12 @@ c_pattern ctx ty (PatVar v) =
       ctx' = addValueType ctx (v, ty)
    in return (pat, ctx')
 c_pattern ctx ty (PatCtor name vars) = do
-  ctorTy <- getValueType' name ctx
+  ctorTy <- getValueType name ctx
   let (fnTy, params, retTy) = case ctorTy of
                             fn@(Fun [] params retTy) -> (fn, params, retTy)
                             fn@(Fun gen params retTy) -> (fn, params, TyAbs gen retTy)
                             t -> (Fun [] [] t, [], t)
-  when (length vars /= length params) (mkError ArityMismatch)
+  when (length vars /= length params) (throwError ArityMismatch)
   typeCheck retTy ty
   let substs = case (retTy, ty) of
                  (TyAbs gen _, TyApp _ args) -> zip gen args
@@ -351,13 +364,13 @@ c_pattern ctx ty (PatCtor name vars) = do
         return (var':vars, ctx')
 
 -- Inference of type arguments for generic functions
-inferTyArgs :: [Type] -> Type -> Result [Substitution]
+inferTyArgs :: [Type] -> Type -> Infer [Substitution]
 inferTyArgs tyArgs (Fun generics params retType) = do
   let initialCs = map (flip (Constraint Bot) Top) generics
   d <- zipWithM (constraintGen [] generics) tyArgs params
   let c = initialCs `meet` foldl meet [] d
   mapM (getSubst retType) c
-inferTyArgs _ _ = mkError $ ArityMismatch
+inferTyArgs _ _ = throwError $ ArityMismatch
 
 -- Variable Elimination
 
@@ -449,7 +462,7 @@ data Constraint
   = Constraint Type String Type
   deriving (Eq, Show)
 
-constraintGen :: [String] -> [String] -> Type -> Type -> Result [Constraint]
+constraintGen :: [String] -> [String] -> Type -> Type -> Infer [Constraint]
 
 -- CG-Top
 constraintGen _ _ _ Top = return []
@@ -483,7 +496,7 @@ constraintGen v x (TyApp t11 t12) (TyApp t21 t22) = do
   return $ foldl meet [] cArgs `meet` cTy
 
 constraintGen _v _x actual expected =
-  mkError $ TypeError expected actual
+  throwError $ TypeError expected actual
 
 -- Least Upper Bound
 (\/) :: Type -> Type -> Type
@@ -564,11 +577,11 @@ joinVariance _ _ = Invariant
 -- Create Substitution
 type Substitution = (String, Type)
 
-getSubst :: Type -> Constraint -> Result Substitution
+getSubst :: Type -> Constraint -> Infer Substitution
 getSubst r (Constraint s x t) =
   case variance x r of
     Bivariant -> return (x, s)
     Covariant -> return (x, s)
     Contravariant -> return (x, t)
     Invariant | s == t -> return (x, s)
-    _ -> mkError InferenceFailure
+    _ -> throwError InferenceFailure
