@@ -335,11 +335,15 @@ c_pattern ctx ty (PatCtor name vars) = do
   ctorTy <- getValueType' name ctx
   let (fnTy, params, retTy) = case ctorTy of
                             fn@(Fun [] params retTy) -> (fn, params, retTy)
-                            fn@(Fun gen params retTy) -> (fn, map ((\\) gen) params, TyAbs gen retTy)
+                            fn@(Fun gen params retTy) -> (fn, params, TyAbs gen retTy)
                             t -> (Fun [] [] t, [], t)
   when (length vars /= length params) (mkError ArityMismatch)
   typeCheck retTy ty
-  (vars', ctx') <- foldM aux ([], ctx) (zip params vars)
+  let substs = case (retTy, ty) of
+                 (TyAbs gen _, TyApp _ args) -> zip gen args
+                 _ -> []
+  let params' = map (subst substs) params
+  (vars', ctx') <- foldM aux ([], ctx) (zip params' vars)
   return (PatCtor (name, fnTy) vars', ctx')
     where
       aux (vars, ctx) (ty, var) = do
@@ -562,8 +566,7 @@ type Substitution = (String, Type)
 
 getSubst :: Type -> Constraint -> Result Substitution
 getSubst r (Constraint s x t) =
-  let m = (variance x r) in
-  case m of
+  case variance x r of
     Bivariant -> return (x, s)
     Covariant -> return (x, s)
     Contravariant -> return (x, t)
