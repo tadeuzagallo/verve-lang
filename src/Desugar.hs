@@ -79,6 +79,14 @@ d_expr (If ifCond ifBody elseBody) =
                            , (CA.PatCtor ("False", bool) [], d_stmts elseBody)
                            ]
 
+d_expr (List items) =
+  aux items
+    where
+      aux [] = nil
+      aux (x:xs) = cons (d_expr x) (aux xs)
+      nil = CA.Var ("Nil", void)
+      cons head tail = CA.App (CA.App (CA.Var ("Cons", void)) head) tail
+
 d_case :: Case (Id Type) Type -> CA.Case
 d_case (Case pattern expr) = (d_pattern pattern, d_stmts expr)
 

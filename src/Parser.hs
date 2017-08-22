@@ -146,6 +146,7 @@ p_expr allowCtor = choice [ p_match
 
 p_lhs :: Bool -> Parser (Expr Name UnresolvedType)
 p_lhs allowCtor = choice [ p_record
+                         , p_list
                          , p_literal >>= return . Literal
                          , lcid >>= return . Ident
                          , p_ucidCtor allowCtor
@@ -173,6 +174,10 @@ p_record =
   Record <$> braces (commaSep field)
     where
       field = (,) <$> lcid <*> (symbol ":" *> p_expr True)
+
+p_list :: Parser (Expr Name UnresolvedType)
+p_list =
+  List <$> (brackets . commaSep $ p_expr True)
 
 p_call :: Expr Name UnresolvedType -> Parser (Expr Name UnresolvedType)
 p_call callee = do

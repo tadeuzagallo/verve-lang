@@ -107,6 +107,7 @@ defaultCtx =
                 , ("Char", char)
                 , ("String", string)
                 , ("Void", void)
+                , ("List", genericList)
                 ]
       , values = [ ("int_print", [int] ~> void)
                  , ("int_add", [int, int] ~> int)
@@ -114,6 +115,8 @@ defaultCtx =
                  , ("int_mul", [int, int] ~> int)
                  , ("True", bool)
                  , ("False", bool)
+                 , ("Nil", genericList)
+                 , ("Cons", Fun ["T"] [Var "T", list (Var "T")] (list $ Var "T"))
                  ]
       }
 
@@ -288,6 +291,13 @@ i_expr ctx (If ifCond ifBody elseBody) = do
   (elseBody', elseTy) <- i_stmts ctx elseBody
   return (If ifCond' ifBody' elseBody', ifTy \/ elseTy)
 
+i_expr ctx (List items) = do
+  (items', itemsTy) <- unzip <$> mapM (i_expr ctx) items
+  let ty = case itemsTy of
+             [] -> genericList
+             x:xs -> list $ foldl (\/) x xs
+  return (List items', ty)
+
 i_call :: Ctx -> [Type] -> [Type] -> Type -> Result Type
 i_call _ [] [] tyRet = return tyRet
 i_call _ [] tyArgs tyRet = return $ Fun [] tyArgs tyRet
@@ -325,7 +335,7 @@ c_pattern ctx ty (PatCtor name vars) = do
   ctorTy <- getValueType' name ctx
   let (fnTy, params, retTy) = case ctorTy of
                             fn@(Fun [] params retTy) -> (fn, params, retTy)
-                            fn@(Fun gen params retTy) -> (fn, map ((//) gen) params, TyAbs gen retTy)
+                            fn@(Fun gen params retTy) -> (fn, map ((\\) gen) params, TyAbs gen retTy)
                             t -> (Fun [] [] t, [], t)
   when (length vars /= length params) (mkError ArityMismatch)
   typeCheck retTy ty

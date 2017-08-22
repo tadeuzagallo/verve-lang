@@ -13,6 +13,7 @@ module Lexer
   -- Delimiters
   , parens
   , braces
+  , brackets
   , angles
   -- Utils
   , commaSep
@@ -75,6 +76,9 @@ parens p = lexeme $ between (char '(' <* anySpace) (anySpace *> char ')') p
 
 braces :: Parser a -> Parser a
 braces p = lexeme $ between (char '{' <* anySpace) (anySpace *> char '}') p
+
+brackets :: Parser a -> Parser a
+brackets p = lexeme $ between (char '[' <* anySpace) (anySpace *> char ']') p
 
 angles :: Parser a -> Parser a
 angles p = lexeme $ between (char '<' <* anySpace) (anySpace *> char '>') p

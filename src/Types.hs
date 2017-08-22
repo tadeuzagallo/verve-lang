@@ -9,6 +9,8 @@ module Types
   , char
   , string
   , void
+  , list
+  , genericList
   , (~>)
   ) where
 
@@ -126,6 +128,12 @@ string = Con "String"
 
 void :: Type
 void = Con "Void"
+
+list :: Type -> Type
+list ty = TyApp (Con "List") [ty]
+
+genericList :: Type
+genericList = ["T"] `TyAbs` (list $ Var "T")
 
 (~>) :: [Type] -> Type -> Type
 (~>) = Fun []

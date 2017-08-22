@@ -63,6 +63,7 @@ data Expr a b
           , rhs :: Expr a b
           }
   | Record [(a, Expr a b)]
+  | List [Expr a b]
   | FieldAccess (Expr a b) b a
   deriving (Show)
 
