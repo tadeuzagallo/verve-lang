@@ -119,7 +119,7 @@ p_type' :: Parser Type
 p_type' = choice [p_simpleType, p_typeArrow, p_typeRecord]
 
 p_simpleType :: Parser Type
-p_simpleType = ucid >>= p_typeApp . Var
+p_simpleType = ucid >>= p_typeApp . Var . var
 
 p_typeApp :: Type -> Parser Type
 p_typeApp ty = do

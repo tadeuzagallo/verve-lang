@@ -1,5 +1,7 @@
 module Types
   ( Type(..)
+  , Var()
+  , unsafeFreshVar
   , (<:)
   , fv
   , subst
@@ -11,19 +13,29 @@ module Types
   , void
   , list
   , genericList
+  , var
   , (~>)
   ) where
 
 import Data.List ((\\), intercalate, union)
 import Text.Printf (printf)
 
+data Var = TV String Int
+  deriving (Eq)
+
+instance Show Var where
+  show (TV v _) = v
+
+unsafeFreshVar :: Var -> Int -> Var
+unsafeFreshVar (TV name _) = TV name
+
 data Type
   = Con String
-  | Var String
-  | Fun [String] [Type] Type
+  | Var Var
+  | Fun [Var] [Type] Type
   | Rec [(String, Type)]
   | Cls String [(String, Type)]
-  | TyAbs [String] Type
+  | TyAbs [Var] Type
   | TyApp Type [Type]
   | Top
   | Bot
@@ -56,7 +68,7 @@ _t1@(TyAbs gen t12) <: t2@(TyApp _t21 args) =
 _ <: _ = False
 
 -- Free Type Variables
-fv :: Type -> [String]
+fv :: Type -> [Var]
 fv (Var x) = [x]
 fv (Fun x s r) =
  (foldl union [] (map fv s) `union` fv r) \\ x
@@ -64,7 +76,7 @@ fv _ = []
 
 instance Show Type where
   show (Con t) = t
-  show (Var t) = t
+  show (Var v) = show v
   show (Cls t _) = t
   show Type = "Type"
   show Top = "⊤"
@@ -73,7 +85,7 @@ instance Show Type where
   show (Fun gs [v] t2) | v == void = show (Fun gs [] t2)
   show (Fun gs t1 t2) =
     printf "%s(%s) -> %s"
-      (if null gs then "" else printf "∀%s. " (intercalate " " gs))
+      (if null gs then "" else printf "∀%s. " (intercalate " " $ map show gs))
       (intercalate ", " $ map show t1)
       (show t2)
 
@@ -84,12 +96,12 @@ instance Show Type where
         showField (key, value) = key ++ ": " ++ show value
 
   show (TyAbs params ty) =
-    "∀" ++ (intercalate " " params)  ++ "." ++ show ty
+    "∀" ++ (intercalate " " $ map show params)  ++ "." ++ show ty
 
   show (TyApp ty args) =
     show ty ++ "<" ++ intercalate ", " (map show args) ++ ">"
 
-subst :: [(String, Type)] -> Type -> Type
+subst :: [(Var, Type)] -> Type -> Type
 subst _ (Con c) = Con c
 subst _ Top = Top
 subst _ Bot = Bot
@@ -133,7 +145,10 @@ list :: Type -> Type
 list ty = TyApp (Con "List") [ty]
 
 genericList :: Type
-genericList = ["T"] `TyAbs` (list $ Var "T")
+genericList = [var "T"] `TyAbs` (list . Var $ var "T")
+
+var :: String -> Var
+var v = TV v 0
 
 (~>) :: [Type] -> Type -> Type
 (~>) = Fun []
