@@ -1,6 +1,7 @@
 module Lexer
   -- Literals
-  ( naturalOrFloat
+  ( natural
+  , naturalOrFloat
   , stringLiteral
   , charLiteral
   -- Keywords
@@ -62,7 +63,10 @@ multiLineComment = do
 
 -- Literals
 naturalOrFloat :: Parser (Either Integer Double)
-naturalOrFloat = lexeme $ Left <$> (many1 digit >>= return . read)
+naturalOrFloat = Left <$> natural
+
+natural :: Parser Integer
+natural = lexeme $ many1 digit >>= return . read
 
 stringLiteral :: Parser String
 stringLiteral = lexeme $ between (char '"') (char '"') (many . noneOf $ "\"")

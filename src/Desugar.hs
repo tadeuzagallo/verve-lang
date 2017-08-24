@@ -28,7 +28,7 @@ d_stmts (FnStmt fn:ss) =
   CA.Let [(name fn, d_fn fn)] (d_stmts ss)
 d_stmts (Enum name _ _ : ss) =
   CA.Let [(("", Type), CA.Var name)] (d_stmts ss)
-d_stmts (Operator _ opLhs opName opRhs _ opBody : ss) =
+d_stmts (Operator _ _ _ opLhs opName opRhs _ opBody : ss) =
   CA.Let [(opName, CA.Lam opLhs (CA.Lam opRhs (d_stmts opBody)))] (d_stmts ss)
 d_stmts (Class _ _ methods : ss) =
   let methods' = map (\fn -> (name fn, d_fn fn)) methods

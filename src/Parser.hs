@@ -51,6 +51,9 @@ p_constructor = do
 
 p_operator :: AbsynParser Stmt
 p_operator = do
+  opAssoc <- option defaultAssoc p_opAssoc
+  opPrec <- option defaultPrec p_opPrec
+  anySpace
   reserved "operator"
   opGenerics <- option [] p_generics
   opLhs <- parens p_typedName
@@ -58,13 +61,36 @@ p_operator = do
   opRhs <- parens p_typedName
   opRetType <- p_retType
   opBody <- p_codeBlock
-  return $ Operator { opGenerics
+  return $ Operator { opPrec
+                    , opAssoc
+                    , opGenerics
                     , opLhs
                     , opName
                     , opRhs
                     , opRetType
                     , opBody
                     }
+
+p_opPrec :: Parser Precedence
+p_opPrec = do
+  try $ reserved "#prec"
+  parens $ choice [ relative "higher" PrecHigher
+                  , relative "lower" PrecLower
+                  , relative "equal" PrecEqual
+                  , natural >>= return . PrecValue
+                  ]
+  where
+    relative name fn = do
+      try (reserved name)
+      fn <$> parens operator
+
+p_opAssoc :: Parser Associativity
+p_opAssoc = do
+  try $ reserved "#assoc"
+  parens $ assocChoice [AssocLeft, AssocRight, AssocNone]
+    where
+      assocChoice = choice . map assoc
+      assoc a = try (reserved $ show a) *> return a
 
 p_let :: AbsynParser Stmt
 p_let = do

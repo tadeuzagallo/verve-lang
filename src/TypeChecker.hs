@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module TypeChecker
   ( infer
   , inferStmt
@@ -187,7 +189,7 @@ i_stmt ctx (Enum name generics ctors) = do
   let ctx'' = addType ctx' name'
   (ctx''', ctors') <- foldrM (i_ctor mkEnumTy) (ctx'', []) ctors
   return (ctx''', (Enum (name, enumTy) generics ctors'), Type)
-i_stmt ctx (Operator opGenerics opLhs opName opRhs opRetType opBody) = do
+i_stmt ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
   let ctx' = addGenerics opGenerics ctx
   opLhs' <- resolveId ctx' opLhs
   opRhs' <- resolveId ctx' opRhs
@@ -196,7 +198,9 @@ i_stmt ctx (Operator opGenerics opLhs opName opRhs opRetType opBody) = do
   (opBody', bodyTy) <- i_stmts ctx'' opBody
   typeCheck bodyTy opRetType'
   let ty = Fun (map var opGenerics) [snd opLhs', snd opRhs'] opRetType'
-  let op' = Operator { opGenerics = opGenerics
+  let op' = Operator { opAssoc
+                     , opPrec
+                     , opGenerics = opGenerics
                      , opLhs = opLhs'
                      , opName = (opName, ty)
                      , opRhs = opRhs'

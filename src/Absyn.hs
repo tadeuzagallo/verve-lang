@@ -24,7 +24,9 @@ data Stmt a b
           , classVars :: [(Name, b)]
           , classMethods :: [Function a b]
           }
-  | Operator { opGenerics :: [Name]
+  | Operator { opAssoc :: Associativity
+             , opPrec :: Precedence
+             , opGenerics :: [Name]
              , opLhs :: Id b
              , opName :: a
              , opRhs :: Id b
@@ -34,6 +36,34 @@ data Stmt a b
    deriving (Show)
 
 type DataCtor a b = (a, Maybe [b])
+
+data Associativity
+  = AssocNone
+  | AssocLeft
+  | AssocRight
+
+instance Show Associativity where
+  show AssocNone = "none"
+  show AssocLeft = "left"
+  show AssocRight = "right"
+
+defaultAssoc :: Associativity
+defaultAssoc = AssocLeft
+
+data Precedence
+  = PrecHigher Name
+  | PrecLower Name
+  | PrecEqual Name
+  | PrecValue Integer
+
+instance Show Precedence where
+  show (PrecHigher name) = "higher(" ++ name ++ ")"
+  show (PrecLower name) = "lower(" ++ name ++ ")"
+  show (PrecEqual name) = "equal(" ++ name ++ ")"
+  show (PrecValue n) = show n
+
+defaultPrec :: Precedence
+defaultPrec = PrecValue 50
 
 data Function a b = Function
   { name :: a
