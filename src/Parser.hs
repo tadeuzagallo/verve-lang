@@ -51,8 +51,11 @@ p_constructor = do
 
 p_operator :: AbsynParser Stmt
 p_operator = do
-  opAssoc <- option defaultAssoc p_opAssoc
+  maybeOpAssoc <- optionMaybe p_opAssoc
   opPrec <- option defaultPrec p_opPrec
+  opAssoc <- case maybeOpAssoc of
+               Just assoc -> return assoc
+               Nothing -> option defaultAssoc p_opAssoc
   anySpace
   reserved "operator"
   opGenerics <- option [] p_generics
