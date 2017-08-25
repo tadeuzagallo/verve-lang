@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  ghc-options:         -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-incomplete-record-updates -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
+  ghc-options:         -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
   exposed-modules:     Parser
                        Absyn
                        Lexer
@@ -25,13 +25,14 @@ library
                        Error
                        Desugar
                        CoreAbsyn
+                       Naming
   build-depends:       base >= 4.7 && < 5, parsec, mtl
   default-language:    Haskell2010
 
 executable verve
   hs-source-dirs: app
   main-is:        Main.hs
-  ghc-options:    -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-incomplete-record-updates -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
+  ghc-options:    -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
   build-depends:  base >= 4.7 && < 5, verve, haskeline
   default-language:    Haskell2010
 

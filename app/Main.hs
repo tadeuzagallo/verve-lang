@@ -1,9 +1,10 @@
 import Absyn (Module, UnresolvedType)
 import Error
-import Interpreter
 import Parser
+import qualified Naming
 import TypeChecker
 import Desugar
+import Interpreter
 
 import Control.Monad.IO.Class (liftIO)
 import System.Console.Haskeline
@@ -19,30 +20,31 @@ main = do
     file:_ -> runFile file
 
 repl :: IO ()
-repl = runInputT defaultSettings $ loop (defaultCtx, defaultEnv)
+repl = runInputT defaultSettings $ loop (Naming.defaultEnv, defaultCtx, defaultEnv)
   where
-    loop :: (Ctx, Env) -> InputT IO ()
-    loop (ctx, env) = do
+    loop :: (Naming.Env, Ctx, Env) -> InputT IO ()
+    loop (nenv, ctx, env) = do
       minput <- getInputLine "> "
       case minput of
         Nothing -> return ()
         Just "quit" -> return ()
-        Just "" -> outputStrLn "" >> loop (ctx, env)
+        Just "" -> outputStrLn "" >> loop (nenv, ctx, env)
         Just input ->
-          case result ctx env input of
+          case result nenv ctx env input of
             Left err -> do
               liftIO $ report err
-              loop (ctx, env)
-            Right (ctx', env', output) ->
-              outputStrLn output >> loop (ctx', env')
-    result :: Ctx -> Env -> String -> Either Error (Ctx, Env, String)
-    result ctx env input = do
+              loop (nenv, ctx, env)
+            Right (nenv', ctx', env', output) ->
+              outputStrLn output >> loop (nenv', ctx', env')
+    result :: Naming.Env -> Ctx -> Env -> String -> Either Error (Naming.Env, Ctx, Env, String)
+    result nenv ctx env input = do
       stmt <- parseStmt "(stdin)" input
-      (ctx', stmt', ty) <- inferStmt ctx stmt
-      let expr = desugarStmt stmt'
-      (env', val) <- evalWithEnv env expr
+      (nenv', balanced) <- Naming.balanceStmt nenv stmt
+      (ctx', typed, ty) <- inferStmt ctx balanced
+      let core = desugarStmt typed
+      (env', val) <- evalWithEnv env core
       let output = printf "%s : %s" (show val) (show ty)
-      return (ctx', env', output)
+      return (nenv', ctx', env', output)
 
 runFile :: String -> IO ()
 runFile file = do
@@ -53,8 +55,9 @@ runFile file = do
     run :: (Either Error (Module String UnresolvedType)) -> Either Error String
     run result = do
       absyn <- result
-      (absyn', ty) <- infer absyn
-      let core = desugar absyn'
+      balanced <- Naming.balance absyn
+      (typed, ty) <- infer balanced
+      let core = desugar typed
       val <- eval core
       -- TODO: move this printing into it's own function
       return $ printf "%s : %s" (show val) (show ty)
