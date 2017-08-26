@@ -18,6 +18,9 @@ d_stmts [] = CA.Void
 -- terminators
 d_stmts ([Expr e]) =
   d_expr e
+d_stmts ([FnStmt fn]) =
+  let fn' = d_fn fn
+   in CA.Let [(name fn, fn')] (CA.Var $ name fn)
 
 -- intermediaries
 d_stmts (Let var expr : ss) =
@@ -28,8 +31,14 @@ d_stmts (FnStmt fn:ss) =
   CA.Let [(name fn, d_fn fn)] (d_stmts ss)
 d_stmts (Enum name _ _ : ss) =
   CA.Let [(("", Type), CA.Var name)] (d_stmts ss)
-d_stmts (Operator _ _ _ opLhs opName opRhs _ opBody : ss) =
-  CA.Let [(opName, CA.Lam opLhs (CA.Lam opRhs (d_stmts opBody)))] (d_stmts ss)
+d_stmts (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody : ss) =
+  let fn = d_fn (Function { name = opName
+                          , generics = opGenerics
+                          , params = [opLhs, opRhs]
+                          , retType = opRetType
+                          , body = opBody
+                          })
+   in CA.Let [(opName, fn)] (d_stmts ss)
 d_stmts (Class _ _ methods : ss) =
   let methods' = map (\fn -> (name fn, d_fn fn)) methods
    in CA.Let methods' (d_stmts ss)
