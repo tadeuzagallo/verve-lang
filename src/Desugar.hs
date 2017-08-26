@@ -56,8 +56,8 @@ d_expr VoidExpr = CA.Void
 d_expr (Literal l) = CA.Lit l
 d_expr (Ident id) = CA.Var id
 d_expr (Call callee types []) = d_expr (Call callee types [VoidExpr])
-d_expr (BinOp lhs op rhs) =
-  d_expr (Call (Ident op) [] [lhs, rhs])
+d_expr (BinOp tyArgs lhs op rhs) =
+  d_expr (Call (Ident op) tyArgs [lhs, rhs])
 d_expr (Call callee types args) =
   let app = foldl CA.App (d_expr callee) (CA.Type <$> types)
    in foldl mkApp app args

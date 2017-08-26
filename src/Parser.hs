@@ -219,7 +219,7 @@ p_binop :: Expr Name UnresolvedType -> AbsynParser Expr
 p_binop lhs = do
   op <- operator
   rhs <- p_expr True
-  return $ BinOp {lhs, op, rhs}
+  return $ BinOp {opTypeArgs = [], lhs, op, rhs}
 
 p_fieldAccess :: Expr Name UnresolvedType -> AbsynParser Expr
 p_fieldAccess lhs = do

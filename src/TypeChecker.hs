@@ -267,13 +267,13 @@ i_expr ctx (Ident i) = do
 
 i_expr _ VoidExpr = return (VoidExpr, void)
 
-i_expr ctx (BinOp lhs op rhs) = do
+i_expr ctx (BinOp _ lhs op rhs) = do
   tyOp@(Fun _ _ retType) <- getValueType op ctx
   (lhs', lhsTy) <- i_expr ctx lhs
   (rhs', rhsTy) <- i_expr ctx rhs
   substs <- inferTyArgs [lhsTy, rhsTy] tyOp
   let tyOp' = subst substs tyOp
-  return (BinOp lhs' (op, tyOp') rhs', subst substs retType)
+  return (BinOp (map snd substs) lhs' (op, tyOp') rhs', subst substs retType)
 
 i_expr ctx (Match expr cases) = do
   (expr', ty) <- i_expr ctx expr

@@ -89,16 +89,16 @@ n_fn env fn = do
   return fn { body = body' }
 
 n_expr :: Env -> Expr Name UnresolvedType -> Result (Expr Name UnresolvedType)
-n_expr env (BinOp ll lop (BinOp rl rop rr)) = do
+n_expr env (BinOp _ ll lop (BinOp _ rl rop rr)) = do
   ll' <- n_expr env ll
   rl' <- n_expr env rl
   rr' <- n_expr env rr
   c <- comparePrec env lop rop
   return $ case c of
     PLeft ->
-      BinOp (BinOp ll' lop rl') rop rr'
+      BinOp [] (BinOp [] ll' lop rl') rop rr'
     PRight ->
-      BinOp ll' lop (BinOp rl' rop rr')
+      BinOp [] ll' lop (BinOp [] rl' rop rr')
 n_expr _ expr = return expr
 
 data Prec

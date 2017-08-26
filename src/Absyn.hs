@@ -88,7 +88,8 @@ data Expr a b
          , typeArgs :: [b]
          , args :: [Expr a b]
          }
-  | BinOp { lhs :: Expr a b
+  | BinOp { opTypeArgs :: [b]
+          , lhs :: Expr a b
           , op :: a
           , rhs :: Expr a b
           }
