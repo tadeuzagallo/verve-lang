@@ -12,7 +12,7 @@ import Absyn
 import Error
 import Types
 
-import Control.Monad (foldM, when, zipWithM)
+import Control.Monad (foldM, when, zipWithM, zipWithM_)
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Except (Except, runExcept, throwError)
 import Data.List (union, groupBy, intersect, sortBy)
@@ -285,19 +285,23 @@ i_expr ctx (Match expr cases) = do
 
 i_expr ctx (Call fn types []) = i_expr ctx (Call fn types [VoidExpr])
 i_expr ctx (Call fn types args) = do
-  -- TODO: handle the case where tyFn is not a fun (TypeError)
-  (fn', tyFn@(Fun generics t1 t2)) <- i_expr ctx fn
+  (fn', tyFn) <- i_expr ctx fn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
   types' <- mapM (resolveType ctx) types
+  let tyFn' = normalizeFnType tyFn
+  tyFn''@(Fun _ _ retType) <- adjustFnType tyArgs tyFn'
   substs <-
-        case (tyFn, types') of
+        case (tyFn'', types') of
           (Fun (_:_) _ _, []) ->
-            inferTyArgs tyArgs tyFn
-          _ ->
-            return $ zip generics types'
-  let tyFn' = subst substs (Fun [] t1 t2)
-  retType <- i_call ctx tyArgs [] tyFn'
-  return (Call fn' (map snd substs) args', retType)
+            inferTyArgs tyArgs tyFn''
+          (Fun gen params _, _) -> do
+            let s = zip gen types'
+            let params' = map (subst s) params
+            zipWithM_ typeCheck tyArgs params'
+            return s
+          _ -> undefined
+  let retType' = subst substs retType
+  return (Call fn' (map snd substs) args', retType')
 
 i_expr ctx (Record fields) = do
   (exprs, types) <- mapM (i_expr ctx . snd) fields >>= return . unzip
@@ -333,16 +337,20 @@ i_expr ctx (List items) = do
              x:xs -> list $ foldl (\/) x xs
   return (List items', ty)
 
-i_call :: Ctx -> [Type] -> [Type] -> Type -> Infer Type
-i_call _ [] [] tyRet = return tyRet
-i_call _ [] tyArgs tyRet = return $ Fun [] tyArgs tyRet
-i_call ctx args [] tyRet =
-  case tyRet of
-    Fun [] tyArgs tyRet' -> i_call ctx args tyArgs tyRet'
-    _ -> throwError ArityMismatch
-i_call ctx (actualTy:args) (expectedTy:tyArgs) tyRet = do
-  typeCheck actualTy expectedTy
-  i_call ctx args tyArgs tyRet
+normalizeFnType :: Type -> Type
+normalizeFnType (Fun gen params (Fun [] params' retTy)) =
+  normalizeFnType (Fun gen (params ++ params') retTy)
+normalizeFnType ty = ty
+
+adjustFnType :: [a] -> Type -> Infer Type
+adjustFnType args fn@(Fun gen params retType) = do
+  let lArgs = length args
+  case compare lArgs (length params) of
+    EQ -> return fn
+    LT ->
+      return $ Fun gen (take lArgs params) $ Fun [] (drop lArgs params) retType
+    GT -> throwError ArityMismatch
+adjustFnType _ ty = throwError . GenericError $ "Expected a function, found " ++ show ty
 
 i_lit :: Literal -> Type
 i_lit (Integer _) = int
