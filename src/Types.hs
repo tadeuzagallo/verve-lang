@@ -23,6 +23,12 @@ import Text.Printf (printf)
 data Var = TV String Int
   deriving (Eq)
 
+instance Ord Var where
+  compare (TV x m) (TV y n) =
+    case compare x y of
+      EQ -> compare m n
+      ord -> ord
+
 instance Show Var where
   show (TV v _) = v
 

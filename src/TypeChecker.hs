@@ -15,7 +15,7 @@ import Types
 import Control.Monad (foldM, when, zipWithM)
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Except (Except, runExcept, throwError)
-import Data.List (union, groupBy, intersect)
+import Data.List (union, groupBy, intersect, sortBy)
 import Data.Foldable (foldrM)
 
 import qualified Data.List ((\\))
@@ -544,7 +544,8 @@ meet [] d = d
 meet c d =
   map merge cs
     where
-      cs = groupBy prj (c `union` d)
+      cs = groupBy prj sorted
+      sorted = sortBy (\(Constraint _ t _) (Constraint _ u _) -> compare t u) (c `union` d)
       prj (Constraint _ t _) (Constraint _ u _) = t == u
       merge [] = undefined
       merge (c:cs) = foldl mergeC c cs
