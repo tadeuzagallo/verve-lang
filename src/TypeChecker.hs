@@ -15,8 +15,9 @@ import Types
 import Control.Monad (foldM, when, zipWithM, zipWithM_)
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Except (Except, runExcept, throwError)
-import Data.List (union, groupBy, intersect, sortBy)
 import Data.Foldable (foldrM)
+import Data.List (union, groupBy, intersect, sortBy)
+import Data.Maybe (fromJust)
 
 import qualified Data.List ((\\))
 
@@ -535,6 +536,9 @@ s \/ t | s <: t = t
 s \/ t | t <: s = s
 (Fun x v p) \/ (Fun x' w q) | x == x' =
   Fun x (zipWith (/\) v w) (p \/ q)
+(Rec f1) \/ (Rec f2) =
+  let fields = (fst <$> f1) `intersect` (fst <$> f2)
+   in Rec $ map (\f -> (f, fromJust (lookup f f1) \/ fromJust (lookup f f2))) fields
 _ \/ _ = Top
 
 -- Greatest Lower Bound
