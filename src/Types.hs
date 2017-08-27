@@ -75,10 +75,26 @@ _ <: _ = False
 
 -- Free Type Variables
 fv :: Type -> [Var]
+-- No free variables
+fv Top = []
+fv Bot = []
+fv Type = []
+fv (Con _) = []
+
+-- Var
 fv (Var x) = [x]
+
+-- Combinations
 fv (Fun x s r) =
  (foldl union [] (map fv s) `union` fv r) \\ x
-fv _ = []
+fv (Rec fields) =
+  foldl union [] $ map (fv . snd) fields
+fv (Cls _ fields) =
+  foldl union [] $ map (fv . snd) fields
+fv (TyAbs gen ty) =
+  fv ty \\ gen
+fv (TyApp ty args) =
+ (foldl union [] (map fv args) `union` fv ty)
 
 instance Show Type where
   show (Con t) = t
