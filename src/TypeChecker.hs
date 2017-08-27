@@ -548,6 +548,9 @@ s /\ t | s <: t = s
 s /\ t | t <: s = t
 (Fun x v p) /\ (Fun x' w q) | x == x' =
   Fun x (zipWith (\/) v w) (p /\ q)
+(Rec f1) /\ (Rec f2) =
+  let fields = (fst <$> f1) `union` (fst <$> f2)
+   in Rec $ map (\f -> (f, maybe Top id (lookup f f1) /\ maybe Top id (lookup f f2))) fields
 _ /\ _ = Bot
 
 -- The meet of two X/V-constraints C and D, written C /\ D, is defined as follows:
