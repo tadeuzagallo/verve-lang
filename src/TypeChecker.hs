@@ -128,6 +128,7 @@ defaultCtx =
                 , (var "String", string)
                 , (var "Void", void)
                 , (var "List", genericList)
+                , (var "Bool", bool)
                 ]
       , values = [ ("int_print", [int] ~> void)
                  , ("int_add", [int, int] ~> int)
