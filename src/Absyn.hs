@@ -36,6 +36,9 @@ data Stmt a b
   | Interface { intfName :: a
               , intfParam :: Name
               , intfMethods :: [FunctionDecl a b]}
+  | Implementation { implName :: a
+                   , implType :: b
+                   , implMethods :: [Function a b]}
    deriving (Show)
 
 type DataCtor a b = (a, Maybe [b])

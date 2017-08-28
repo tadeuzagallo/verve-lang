@@ -43,6 +43,7 @@ d_stmts (Class _ _ methods : ss) =
   let methods' = map (\fn -> (name fn, d_fn fn)) methods
    in CA.Let methods' (d_stmts ss)
 d_stmts (Interface _ _ _ : ss) = d_stmts ss
+d_stmts (Implementation _ _ _ : ss) = d_stmts ss
 
 d_fn :: Function (Id Type) Type -> CA.Expr
 d_fn fn@(Function { params=[] }) =

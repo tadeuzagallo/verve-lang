@@ -29,6 +29,8 @@ data TypeError
   | TypeError Type Type
   | UnknownField Type String
   | GenericError String
+  | MissingImplementation Name
+  | ExtraneousImplementation Name
   deriving (Show)
 
 instance ErrorT TypeError where
@@ -235,13 +237,45 @@ i_stmt ctx (Interface name param methods) = do
   let intf = Interface (name, ty) param methods'
   return (addType ctx (var name, ty), intf, ty)
 
+i_stmt ctx (Implementation implName ty methods) = do
+  Intf _ param intfMethods <- getType (var implName) ctx
+  ty' <- resolveType ctx ty
+  -- TODO: proper error in intf is not an Intf
+  let ctx' = addType ctx (param, ty')
+  (methods', methodsTy) <- unzip <$> mapM (i_fn ctx') methods
+  let substs = [(param, ty')]
+  checkCompleteInterface substs intfMethods (zip (map name methods) methodsTy)
+  checkExtraneousMethods intfMethods (zip (map name methods) methodsTy)
+  let impl = Implementation (implName, void) ty' methods'
+  return (ctx, impl, void)
+
+checkCompleteInterface :: [(Var, Type)] -> [(Name, Type)] -> [(Name, Type)] -> Infer ()
+checkCompleteInterface substs intf impl = do
+  mapM_ aux intf
+  where
+    aux :: (Name, Type) -> Infer ()
+    aux (methodName, methodTy) =
+      case lookup methodName impl of
+        Nothing -> throwError $ MissingImplementation methodName
+        Just ty -> typeCheck ty (subst substs methodTy)
+
+checkExtraneousMethods :: [(Name, Type)] -> [(Name, Type)] -> Infer ()
+checkExtraneousMethods intf impl = do
+  mapM_ aux impl
+  where
+    aux :: (Name, Type) -> Infer ()
+    aux (methodName, _) =
+      case lookup methodName intf of
+        Nothing -> throwError $ ExtraneousImplementation methodName
+        Just _ -> return ()
+
 i_fnDecl :: Ctx -> FunctionDecl Name UnresolvedType -> Infer (FunctionDecl (Id Type) Type, (Name, Type))
 i_fnDecl ctx (FunctionDecl name gen params retType) = do
   (ty, params', retType') <- fnTy ctx (gen, params, retType)
   let fnDecl = FunctionDecl (name, ty) gen params' retType'
   return (fnDecl, (name, ty))
 
-fnTy :: Ctx -> ([Name], [(Name, UnresolvedType)], UnresolvedType) -> Infer (Type, [(Name, Type)], Type) 
+fnTy :: Ctx -> ([Name], [(Name, UnresolvedType)], UnresolvedType) -> Infer (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
   tyArgs <- mapM (resolveId ctx) params
   retType' <- resolveType ctx retType
@@ -631,9 +665,9 @@ variance v (TyAbs gen ty)
 variance v (TyApp ty args) =
   let vars = map (variance v) args
    in foldl joinVariance (variance v ty) vars
-variance v (Intf _ param methods) 
+variance v (Intf _ param methods)
   | v == param = Bivariant
-  | otherwise = 
+  | otherwise =
     let methods' = map (variance v . snd) methods
      in foldl joinVariance Bivariant methods'
 

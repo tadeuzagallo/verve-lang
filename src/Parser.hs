@@ -32,6 +32,7 @@ p_stmt = choice [ p_enum
                 , p_let
                 , p_class
                 , p_interface
+                , p_implementation
                 , p_function >>= return . FnStmt
                 , p_expr True >>= return . Expr
                 ] <?> "statement"
@@ -135,6 +136,14 @@ p_fnDecl = do
   fnDeclParams <- parens $ commaSep p_typedName
   fnDeclRetType <- option (UnresolvedType void) p_retType
   return $ FunctionDecl {fnDeclName, fnDeclGenerics, fnDeclParams, fnDeclRetType}
+
+p_implementation :: AbsynParser Stmt
+p_implementation = do
+  reserved "implementation"
+  implName <- ucid
+  implType <- angles p_type
+  implMethods <- p_body p_function
+  return $ Implementation { implName, implType, implMethods }
 
 p_function :: AbsynParser Function
 p_function = do
