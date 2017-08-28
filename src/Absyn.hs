@@ -1,12 +1,14 @@
 module Absyn where
 
-import Types (Type)
-
 type Name = String
 
 data UnresolvedType
-  = UnresolvedType Type
-  | Placeholder
+  = UTName Name
+  | UTApp UnresolvedType [UnresolvedType]
+  | UTArrow [UnresolvedType] UnresolvedType
+  | UTRecord [(Name, UnresolvedType)]
+  | UTVoid
+  | UTPlaceholder
   deriving (Show)
 
 type Id b = (Name, b)

@@ -8,7 +8,6 @@ module Parser
 import Absyn
 import Error
 import Lexer
-import Types
 
 import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepEndBy, skipMany1, lookAhead)
 import Text.Parsec.String (Parser, parseFromFile)
@@ -134,7 +133,7 @@ p_fnDecl = do
   fnDeclName <- lcid
   fnDeclGenerics <- option [] p_generics
   fnDeclParams <- parens $ commaSep p_typedName
-  fnDeclRetType <- option (UnresolvedType void) p_retType
+  fnDeclRetType <- option UTVoid p_retType
   return $ FunctionDecl {fnDeclName, fnDeclGenerics, fnDeclParams, fnDeclRetType}
 
 p_implementation :: AbsynParser Stmt
@@ -171,30 +170,27 @@ p_retType = do
   p_type
 
 p_type :: Parser UnresolvedType
-p_type = p_type' >>= return . UnresolvedType
+p_type = choice [p_simpleType, p_typeArrow, p_typeRecord]
 
-p_type' :: Parser Type
-p_type' = choice [p_simpleType, p_typeArrow, p_typeRecord]
+p_simpleType :: Parser UnresolvedType
+p_simpleType = ucid >>= p_typeApp . UTName
 
-p_simpleType :: Parser Type
-p_simpleType = ucid >>= p_typeApp . Var . var
-
-p_typeApp :: Type -> Parser Type
+p_typeApp :: UnresolvedType -> Parser UnresolvedType
 p_typeApp ty = do
-  angles (commaSep  p_type') >>= return . TyApp ty
+  angles (commaSep p_type) >>= return . UTApp ty
   <|> return ty
 
-p_typeArrow :: Parser Type
+p_typeArrow :: Parser UnresolvedType
 p_typeArrow = do
-  tyArgs <- parens $ commaSep p_type'
+  tyArgs <- parens $ commaSep p_type
   reservedOp "->"
-  retType <- p_type'
-  return $ Fun [] tyArgs retType
+  retType <- p_type
+  return $ UTArrow tyArgs retType
 
-p_typeRecord :: Parser Type
+p_typeRecord :: Parser UnresolvedType
 p_typeRecord = do
-  fields <- braces $ commaSep ((,) <$> lcid <* symbol ":" <*> p_type')
-  return $ Rec fields
+  fields <- braces $ commaSep ((,) <$> lcid <* symbol ":" <*> p_type)
+  return $ UTRecord fields
 
 p_expr :: Bool -> AbsynParser Expr
 p_expr allowCtor = choice [ p_match
@@ -252,7 +248,7 @@ p_fieldAccess :: Expr Name UnresolvedType -> AbsynParser Expr
 p_fieldAccess lhs = do
   symbol "."
   fieldName <- lcid
-  p_methodCall lhs fieldName <|> return (FieldAccess lhs Placeholder fieldName)
+  p_methodCall lhs fieldName <|> return (FieldAccess lhs UTPlaceholder fieldName)
 
 p_methodCall :: Expr Name UnresolvedType -> Name -> AbsynParser Expr
 p_methodCall lhs name = do
