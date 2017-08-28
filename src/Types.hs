@@ -43,6 +43,7 @@ data Type
   | Cls String [(String, Type)]
   | TyAbs [Var] Type
   | TyApp Type [Type]
+  | Intf String Var [(String, Type)]
   | Top
   | Bot
   | Type
@@ -94,12 +95,15 @@ fv (Cls _ fields) =
 fv (TyAbs gen ty) =
   fv ty \\ gen
 fv (TyApp ty args) =
- (foldl union [] (map fv args) `union` fv ty)
+ foldl union [] (map fv args) `union` fv ty
+fv (Intf _ param methods) =
+  (foldl union [] $ map (fv . snd) methods) \\ [param]
 
 instance Show Type where
   show (Con t) = t
   show (Var v) = show v
   show (Cls t _) = t
+  show (Intf t _ _) = t
   show Type = "Type"
   show Top = "⊤"
   show Bot = "⊥"
@@ -144,6 +148,9 @@ subst s (TyAbs gen ty) =
    in TyAbs gen (subst s' ty)
 subst s (TyApp t1 t2) =
   TyApp (subst s t1) (map (subst s) t2)
+subst s (Intf name param methods) =
+  let s' = filter ((/=) param . fst) s
+   in Intf name param (map (fmap $ subst s') methods)
 
 bool :: Type
 bool = Con "Bool"

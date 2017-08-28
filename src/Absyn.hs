@@ -33,6 +33,9 @@ data Stmt a b
              , opRetType :: b
              , opBody :: [Stmt a b]
              }
+  | Interface { intfName :: a
+              , intfParam :: Name
+              , intfMethods :: [FunctionDecl a b]}
    deriving (Show)
 
 type DataCtor a b = (a, Maybe [b])
@@ -71,6 +74,13 @@ data Function a b = Function
   , params :: [Id b]
   , retType :: b
   , body :: [Stmt a b]
+  } deriving (Show)
+
+data FunctionDecl a b = FunctionDecl
+  { fnDeclName :: a
+  , fnDeclGenerics :: [Name]
+  , fnDeclParams :: [Id b]
+  , fnDeclRetType :: b
   } deriving (Show)
 
 data Expr a b

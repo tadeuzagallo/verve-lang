@@ -31,6 +31,7 @@ p_stmt = choice [ p_enum
                 , p_operator
                 , p_let
                 , p_class
+                , p_interface
                 , p_function >>= return . FnStmt
                 , p_expr True >>= return . Expr
                 ] <?> "statement"
@@ -118,13 +119,30 @@ p_classVar = do
   reserved "let"
   p_typedName
 
+p_interface :: AbsynParser Stmt
+p_interface = do
+  reserved "interface"
+  intfName <- ucid
+  intfParam <- angles ucid
+  intfMethods <- p_body p_fnDecl
+  return $ Interface { intfName, intfParam, intfMethods }
+
+p_fnDecl :: AbsynParser FunctionDecl
+p_fnDecl = do
+  reserved "fn"
+  fnDeclName <- lcid
+  fnDeclGenerics <- option [] p_generics
+  fnDeclParams <- parens $ commaSep p_typedName
+  fnDeclRetType <- option (UnresolvedType void) p_retType
+  return $ FunctionDecl {fnDeclName, fnDeclGenerics, fnDeclParams, fnDeclRetType}
+
 p_function :: AbsynParser Function
 p_function = do
-  reserved "fn"
-  name <- lcid
-  generics <- option [] p_generics
-  params <- parens $ commaSep p_typedName
-  retType <- option (UnresolvedType void) p_retType
+  FunctionDecl { fnDeclName = name
+               , fnDeclGenerics = generics
+               , fnDeclParams = params
+               , fnDeclRetType = retType
+               } <- p_fnDecl
   body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 
