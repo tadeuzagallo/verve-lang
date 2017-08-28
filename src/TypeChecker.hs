@@ -3,14 +3,15 @@
 module TypeChecker
   ( infer
   , inferStmt
-  , Ctx
-  , defaultCtx
   , TypeError
   ) where
 
 import Absyn
+import Ctx hiding (getType, getValueType)
 import Error
+import TypeError
 import Types
+import qualified Ctx (getType, getValueType)
 
 import Control.Monad (foldM, when, zipWithM, zipWithM_)
 import Control.Monad.State (StateT, evalStateT, get, put)
@@ -21,21 +22,6 @@ import Data.Maybe (fromJust)
 
 import qualified Data.List ((\\))
 
-data TypeError
-  = UnknownVariable String
-  | UnknownType String
-  | ArityMismatch
-  | InferenceFailure
-  | TypeError Type Type
-  | UnknownField Type String
-  | GenericError String
-  | MissingImplementation Name
-  | ExtraneousImplementation Name
-  deriving (Show)
-
-instance ErrorT TypeError where
-  kind _ = "TypeError"
-
 type Infer a = (StateT InferState (Except TypeError) a)
 
 data InferState = InferState { uid :: Int }
@@ -43,22 +29,6 @@ data InferState = InferState { uid :: Int }
 typeCheck :: Type -> Type -> Infer ()
 typeCheck actualTy expectedTy =
   when (not $ actualTy <: expectedTy) (throwError $ TypeError expectedTy actualTy)
-
-data Ctx = Ctx { types :: [(Var, Type)]
-               , values :: [(String, Type)]
-               }
-
-getType :: Var -> Ctx -> Infer Type
-getType n ctx =
-  case lookup n (types ctx) of
-    Nothing -> throwError (UnknownType $ show n)
-    Just t -> instantiate t
-
-getValueType :: String -> Ctx -> Infer Type
-getValueType n ctx =
-  case lookup n (values ctx) of
-    Nothing -> throwError (UnknownVariable n)
-    Just t -> instantiate t
 
 resolveId :: Ctx -> Id UnresolvedType -> Infer (Id Type)
 resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
@@ -113,36 +83,11 @@ fresh var = do
   put s{uid = uid s + 1}
   return $ unsafeFreshVar var (uid s)
 
-addType :: Ctx -> (Var, Type) -> Ctx
-addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
+getType :: Var -> Ctx -> Infer Type
+getType n ctx = Ctx.getType n ctx >>= instantiate
 
-addValueType :: Ctx -> (String, Type) -> Ctx
-addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
-
-addGenerics :: [String] -> Ctx -> Ctx
-addGenerics generics ctx =
-  foldl (\ctx g -> addType ctx (var g, Var $ var g)) ctx generics
-
-defaultCtx :: Ctx
-defaultCtx =
-  Ctx { types = [ (var "Int", int)
-                , (var "Float", float)
-                , (var "Char", char)
-                , (var "String", string)
-                , (var "Void", void)
-                , (var "List", genericList)
-                , (var "Bool", bool)
-                ]
-      , values = [ ("int_print", [int] ~> void)
-                 , ("int_add", [int, int] ~> int)
-                 , ("int_sub", [int, int] ~> int)
-                 , ("int_mul", [int, int] ~> int)
-                 , ("True", bool)
-                 , ("False", bool)
-                 , ("Nil", genericList)
-                 , ("Cons", Fun [var "T"] [Var $ var "T", list . Var $ var "T"] (list . Var $ var "T"))
-                 ]
-      }
+getValueType :: Name -> Ctx -> Infer Type
+getValueType n ctx = Ctx.getValueType n ctx >>= instantiate
 
 initInfer :: InferState
 initInfer = InferState { uid = 0 }

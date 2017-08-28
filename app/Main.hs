@@ -1,4 +1,5 @@
 import Absyn (Module, UnresolvedType)
+import Ctx
 import Error
 import Parser
 import qualified Naming
