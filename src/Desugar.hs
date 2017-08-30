@@ -42,31 +42,53 @@ d_stmts (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody : ss) =
 d_stmts (Class _ _ methods : ss) =
   let methods' = map (\fn -> (name fn, d_fn fn)) methods
    in CA.Let methods' (d_stmts ss)
-d_stmts (Interface _ _ _ : ss) = d_stmts ss
-d_stmts (Implementation _ _ _ : ss) = d_stmts ss
+
+d_stmts (Interface _ _ methods : ss) =
+  CA.Let (map d_intfMethod methods) (d_stmts ss)
+
+d_stmts (Implementation (name, _) ty methods : ss) =
+  let dict = CA.Record (map d_implMethod methods)
+   in CA.Let [(("#" ++ name ++ show ty, void), dict)] (d_stmts ss)
 
 d_fn :: Function (Id Type) Type -> CA.Expr
 d_fn fn@(Function { params=[] }) =
   d_fn (fn { params = [("", void)] })
 d_fn fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
-      fn'' = foldr CA.Lam fn' (map (flip (,) Type) $ generics fn)
+      fn'' = foldr CA.Lam fn' (map (flip (,) Type . fst) $ generics fn)
    in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn'')
+
+mk_var :: String -> CA.Expr
+mk_var v = CA.Var (v, void)
+
+d_intfMethod :: FunctionDecl (Id Type) Type -> CA.Bind
+d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
+  let select = CA.App (mk_var "#fieldAccess") (CA.Lit (String s_name))
+      select' = CA.App select (mk_var "#dict")
+   in (name, CA.Lam ("#dict", void) (CA.Lam ("", Type) select'))
+
+d_implMethod :: Function (Id Type) Type -> CA.Bind
+d_implMethod fn = (name fn, d_fn fn)
 
 d_expr :: Expr (Id Type) Type -> CA.Expr
 d_expr VoidExpr = CA.Void
 d_expr (Literal l) = CA.Lit l
 d_expr (Ident id) = CA.Var id
-d_expr (Call callee types []) = d_expr (Call callee types [VoidExpr])
+d_expr (Call callee constraints types []) = d_expr (Call callee constraints types [VoidExpr])
 d_expr (BinOp tyArgs lhs op rhs) =
-  d_expr (Call (Ident op) tyArgs [lhs, rhs])
-d_expr (Call callee types args) =
-  let app = foldl CA.App (d_expr callee) (CA.Type <$> types)
-   in foldl mkApp app args
+  -- TODO: missing constraintArgs
+  d_expr (Call (Ident op) [] tyArgs [lhs, rhs])
+d_expr (Call callee constraints types args) =
+  let app = foldl CA.App (d_expr callee) (map mkConstraint constraints)
+      app' = foldl CA.App app (CA.Type <$> types)
+   in foldl mkApp app' args
     where
       mkApp :: CA.Expr -> Expr (Id Type) Type -> CA.Expr
       mkApp callee arg =
         CA.App callee (d_expr arg)
+
+      mkConstraint (typeArg, typeBound) =
+        mk_var ("#" ++ show typeBound ++ show typeArg)
 
 d_expr (Match expr cases) = CA.Match (d_expr expr) (map d_case cases)
 

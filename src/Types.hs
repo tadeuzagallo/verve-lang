@@ -37,8 +37,8 @@ unsafeFreshVar (TV name _) = TV name
 
 data Type
   = Con String
-  | Var Var
-  | Fun [Var] [Type] Type
+  | Var Var [Type]
+  | Fun [(Var, [Type])] [Type] Type
   | Rec [(String, Type)]
   | Cls String [(String, Type)]
   | TyAbs [Var] Type
@@ -83,11 +83,11 @@ fv Type = []
 fv (Con _) = []
 
 -- Var
-fv (Var x) = [x]
+fv (Var x _) = [x]
 
 -- Combinations
 fv (Fun x s r) =
- (foldl union [] (map fv s) `union` fv r) \\ x
+  (foldl union [] (map fv s) `union` fv r) \\ map fst x
 fv (Rec fields) =
   foldl union [] $ map (fv . snd) fields
 fv (Cls _ fields) =
@@ -101,7 +101,7 @@ fv (Intf _ param methods) =
 
 instance Show Type where
   show (Con t) = t
-  show (Var v) = show v
+  show (Var v _) = show v
   show (Cls t _) = t
   show (Intf t _ _) = t
   show Type = "Type"
@@ -132,12 +132,13 @@ subst _ (Con c) = Con c
 subst _ Top = Top
 subst _ Bot = Bot
 subst _ Type = Type
-subst s (Var v) =
+subst s var@(Var v _) =
   case lookup v s of
-    Nothing -> Var v
+    Nothing -> var
     Just t -> t
 subst s (Fun gs t1 t2) =
-  let s' = filter (not . flip elem gs . fst) s
+  let gs' = map fst gs
+      s' = filter (not . flip elem gs' . fst) s
    in Fun gs (map (subst s') t1) (subst s' t2)
 subst s (Rec fields) =
   Rec (map (\(k, v) -> (k, subst s v)) fields)
@@ -174,7 +175,7 @@ list :: Type -> Type
 list ty = TyApp (Con "List") [ty]
 
 genericList :: Type
-genericList = [var "T"] `TyAbs` (list . Var $ var "T")
+genericList = [var "T"] `TyAbs` (list $ Var (var "T") [])
 
 var :: String -> Var
 var v = TV v 0

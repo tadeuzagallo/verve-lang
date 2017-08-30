@@ -8,6 +8,7 @@ data UnresolvedType
   | UTArrow [UnresolvedType] UnresolvedType
   | UTRecord [(Name, UnresolvedType)]
   | UTVoid
+  | UTTop
   | UTPlaceholder
   deriving (Show)
 
@@ -28,7 +29,7 @@ data Stmt a b
           }
   | Operator { opAssoc :: Associativity
              , opPrec :: Precedence
-             , opGenerics :: [Name]
+             , opGenerics :: [(Name, [b])]
              , opLhs :: Id b
              , opName :: a
              , opRhs :: Id b
@@ -75,7 +76,7 @@ defaultPrec = PrecValue 50
 
 data Function a b = Function
   { name :: a
-  , generics :: [Name]
+  , generics :: [(Name, [b])]
   , params :: [Id b]
   , retType :: b
   , body :: [Stmt a b]
@@ -83,7 +84,7 @@ data Function a b = Function
 
 data FunctionDecl a b = FunctionDecl
   { fnDeclName :: a
-  , fnDeclGenerics :: [Name]
+  , fnDeclGenerics :: [(Name, [b])]
   , fnDeclParams :: [Id b]
   , fnDeclRetType :: b
   } deriving (Show)
@@ -100,6 +101,7 @@ data Expr a b
        , ifElseBody :: [Stmt a b]
        }
   | Call { callee :: Expr a b
+         , constraintArgs :: [(b, b)]
          , typeArgs :: [b]
          , args :: [Expr a b]
          }

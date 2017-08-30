@@ -18,12 +18,13 @@ module Lexer
   , angles
   -- Utils
   , commaSep
+  , commaSep1
   , newline
   , comma
   , anySpace
   ) where
 
-import Text.Parsec ((<|>), sepEndBy, many, many1, between, try, skipMany, choice, unexpected)
+import Text.Parsec ((<|>), sepEndBy1, sepEndBy, many, many1, between, try, skipMany, choice, unexpected)
 import Text.Parsec.Char (lower, upper, alphaNum, oneOf, noneOf, char, anyChar, string, digit, satisfy, endOfLine)
 import Text.Parsec.String (Parser)
 
@@ -134,6 +135,9 @@ symbol c = ignore . lexeme . try . string $ c
 -- Utils
 commaSep :: Parser a -> Parser [a]
 commaSep = flip sepEndBy comma
+
+commaSep1 :: Parser a -> Parser [a]
+commaSep1 = flip sepEndBy1 comma
 
 ignore :: Parser a -> Parser ()
 ignore p = p >> return ()

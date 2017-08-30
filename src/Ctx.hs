@@ -6,7 +6,6 @@ module Ctx
   , getType
   , addValueType
   , getValueType
-  , addGenerics
   ) where
 
 import TypeError
@@ -36,10 +35,6 @@ addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
 
-addGenerics :: [String] -> Ctx -> Ctx
-addGenerics generics ctx =
-  foldl (\ctx g -> addType ctx (var g, Var $ var g)) ctx generics
-
 defaultCtx :: Ctx
 defaultCtx =
   Ctx { types = [ (var "Int", int)
@@ -57,7 +52,7 @@ defaultCtx =
                  , ("True", bool)
                  , ("False", bool)
                  , ("Nil", genericList)
-                 , ("Cons", Fun [var "T"] [Var $ var "T", list . Var $ var "T"] (list . Var $ var "T"))
+                 , ("Cons", Fun [(var "T", [Top])] [Var (var "T") [Top], list $ Var (var "T") [Top]] (list $ Var (var "T") [Top]))
                  ]
       }
 

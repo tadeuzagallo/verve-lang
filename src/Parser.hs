@@ -40,7 +40,7 @@ p_enum :: AbsynParser Stmt
 p_enum = do
   reserved "enum"
   name <- ucid
-  generics <- option [] p_generics
+  generics <- option [] (angles . commaSep $ ucid)
   ctors <- p_body p_constructor
   return $ Enum name generics ctors
 
@@ -154,8 +154,14 @@ p_function = do
   body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 
-p_generics :: Parser [Name]
-p_generics = angles $ commaSep ucid
+p_generics :: Parser [(Name, [UnresolvedType])]
+p_generics = angles $ commaSep p_genericParam
+
+p_genericParam :: Parser (Name, [UnresolvedType])
+p_genericParam = do
+  var <- ucid
+  bounds <- option ([UTTop]) (symbol ":" *>  (parens (commaSep1 p_type) <|> (p_type >>= return . (:[]) )))
+  return (var, bounds)
 
 p_typedName :: Parser (Id UnresolvedType)
 p_typedName = do
@@ -218,7 +224,7 @@ p_ucidCtor allowCtor = do
 p_ctor :: Name -> AbsynParser Expr
 p_ctor name = do
   r <- p_record
-  return (Call (Ident name) [] [r])
+  return (Call (Ident name) [] [] [r])
 
 p_rhs :: Expr Name UnresolvedType -> AbsynParser Expr
 p_rhs lhs = (choice [try $ p_call lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
@@ -236,7 +242,7 @@ p_list =
 p_call :: Expr Name UnresolvedType -> AbsynParser Expr
 p_call callee = do
   (typeArgs, args) <- p_callArgs
-  return $ Call {callee, typeArgs, args}
+  return $ Call {callee, constraintArgs = [], typeArgs, args}
 
 p_binop :: Expr Name UnresolvedType -> AbsynParser Expr
 p_binop lhs = do
@@ -253,7 +259,7 @@ p_fieldAccess lhs = do
 p_methodCall :: Expr Name UnresolvedType -> Name -> AbsynParser Expr
 p_methodCall lhs name = do
   (typeArgs, args) <- p_callArgs
-  return $ Call { callee = Ident name, typeArgs, args = lhs : args }
+  return $ Call { callee = Ident name, constraintArgs = [], typeArgs, args = lhs : args }
 
 p_callArgs :: Parser ([UnresolvedType], [Expr Name UnresolvedType])
 p_callArgs = do
