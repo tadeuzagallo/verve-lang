@@ -215,8 +215,9 @@ i_stmt ctx (Implementation implName ty methods) = do
   let substs = [(param, ty')]
   checkCompleteInterface substs intfMethods (zip (map name methods) methodsTy)
   checkExtraneousMethods intfMethods (zip (map name methods) methodsTy)
+  ctx' <- addInstance ctx (implName, ty')
   let impl = Implementation (implName, void) ty' methods'
-  return (ctx, impl, void)
+  return (ctx', impl, void)
 
 checkCompleteInterface :: [(Var, Type)] -> [(Name, Type)] -> [(Name, Type)] -> Infer ()
 checkCompleteInterface substs intf impl = do
@@ -327,10 +328,12 @@ i_expr ctx (Call fn _ types args) = do
           _ -> undefined
   let retType' = subst substs retType
   let typeArgs' = map snd substs
-  let constraintArgs = concatMap aux (zip gen typeArgs')
+  constraintArgs <- concat <$> mapM (aux ctx) (zip gen typeArgs')
   return (Call fn' constraintArgs typeArgs' args', retType')
     where
-      aux ((_, bounds), tyArg) = map ((,) tyArg) bounds
+      aux ctx ((_, bounds), tyArg) = do
+        mapM_ (boundsCheck ctx tyArg) bounds
+        return $ map ((,) tyArg) bounds
 
 i_expr ctx (Record fields) = do
   (exprs, types) <- mapM (i_expr ctx . snd) fields >>= return . unzip
@@ -365,6 +368,14 @@ i_expr ctx (List items) = do
              [] -> genericList
              x:xs -> list $ foldl (\/) x xs
   return (List items', ty)
+
+boundsCheck :: Ctx -> Type -> Type -> Infer ()
+boundsCheck ctx ty (Intf name _ _) = do
+  instances <- getInstances name ctx
+  when (ty `notElem` instances) (throwError $ MissingInstance name ty)
+
+boundsCheck _ _ ty =
+  throwError $ InterfaceExpected ty
 
 normalizeFnType :: Type -> Type
 normalizeFnType (Fun gen params (Fun [] params' retTy)) =

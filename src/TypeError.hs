@@ -16,6 +16,8 @@ data TypeError
   | GenericError String
   | MissingImplementation Name
   | ExtraneousImplementation Name
+  | InterfaceExpected Type
+  | MissingInstance String Type
   deriving (Show)
 
 instance ErrorT TypeError where
