@@ -370,6 +370,9 @@ i_expr ctx (List items) = do
   return (List items', ty)
 
 boundsCheck :: Ctx -> Type -> Type -> Infer ()
+boundsCheck _ v@(Var _ bounds) ty@(Intf name _ _) = do
+  when (ty `notElem` bounds) (throwError $ MissingInstance name v)
+
 boundsCheck ctx ty (Intf name _ _) = do
   instances <- getInstances name ctx
   when (ty `notElem` instances) (throwError $ MissingInstance name ty)
