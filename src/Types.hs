@@ -2,6 +2,7 @@ module Types
   ( Type(..)
   , Var()
   , unsafeFreshVar
+  , unsafeNewVar
   , (<:)
   , fv
   , subst
@@ -34,6 +35,9 @@ instance Show Var where
 
 unsafeFreshVar :: Var -> Int -> Var
 unsafeFreshVar (TV name _) = TV name
+
+unsafeNewVar :: String -> Int -> Var
+unsafeNewVar = TV
 
 data Type
   = Con String
@@ -185,7 +189,7 @@ genericList :: Type
 genericList = [var "T"] `TyAbs` (list $ Var (var "T") [])
 
 var :: String -> Var
-var v = TV v 0
+var v = TV v (-1)
 
 (~>) :: [Type] -> Type -> Type
 (~>) = Fun []

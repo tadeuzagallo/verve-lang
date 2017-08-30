@@ -3,7 +3,9 @@ module Ctx
   ( Ctx()
   , defaultCtx
   , addType
+  , addTypeVar
   , getType
+  , getTypeVar
   , addValueType
   , getValueType
   , addInstance
@@ -20,8 +22,11 @@ data Ctx = Ctx { types :: [(Var, Type)]
                , instances :: [(String, [Type])]
                }
 
-getType :: MonadError TypeError m => Var -> Ctx -> m Type
-getType n ctx =
+getType :: MonadError TypeError m => String -> Ctx -> m Type
+getType name = getTypeVar (var name)
+
+getTypeVar :: MonadError TypeError m => Var -> Ctx -> m Type
+getTypeVar n ctx =
   case lookup n (types ctx) of
     Nothing -> throwError (UnknownType $ show n)
     Just t -> return t
@@ -32,8 +37,11 @@ getValueType n ctx =
     Nothing -> throwError (UnknownVariable n)
     Just t -> return t
 
-addType :: Ctx -> (Var, Type) -> Ctx
-addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
+addType :: Ctx -> (String, Type) -> Ctx
+addType ctx (n, ty) = addTypeVar ctx (var n, ty)
+
+addTypeVar :: Ctx -> (Var, Type) -> Ctx
+addTypeVar ctx (n, ty) = ctx { types = (n, ty) : types ctx }
 
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }

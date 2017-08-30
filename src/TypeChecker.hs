@@ -35,7 +35,7 @@ resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
 
 resolveType :: Ctx -> UnresolvedType -> Infer Type
 resolveType ctx (UTName v) =
-  getType (var v) ctx
+  getType v ctx
 resolveType ctx (UTArrow params ret) = do
   params' <- mapM (resolveType ctx) params
   ret' <- resolveType ctx ret
@@ -62,10 +62,6 @@ resolveGenerics ctx gen =
         bounds' <- mapM (resolveType ctx) bounds
         return (name, bounds')
 
-makeGenericVars :: [(Name, [Type])] -> [(Var, [Type])]
-makeGenericVars gen =
-  map (\(k, v) -> (var k, v)) gen
-
 instantiate :: Type -> Infer Type
 instantiate (TyAbs gen ty) = do
   gen' <- mapM fresh gen
@@ -88,20 +84,22 @@ freshBound (var, bounds) = do
   var' <- fresh var
   return (var', bounds)
 
-getType :: Var -> Ctx -> Infer Type
+getType :: Name -> Ctx -> Infer Type
 getType n ctx = Ctx.getType n ctx >>= instantiate
 
 getValueType :: Name -> Ctx -> Infer Type
 getValueType n ctx = Ctx.getValueType n ctx >>= instantiate
 
-addGenerics :: [(Name, [UnresolvedType])] -> Ctx -> Infer Ctx
-addGenerics generics ctx =
-  foldM aux ctx generics
+addGenerics :: Ctx -> [(Name, [Type])] -> Infer (Ctx, [(Var, [Type])])
+addGenerics ctx generics =
+  foldM aux (ctx, []) generics
     where
-      aux ctx (g, bounds) = do
-        let g' = var g
-        bounds' <- mapM (resolveType ctx) bounds
-        return $ addType ctx (g', Var g' bounds')
+      aux (ctx, vars) (g, bounds) = do
+        g' <- fresh (var g)
+        return (addTypeVar ctx (var g, Var g' bounds), vars ++ [(g', bounds)])
+
+defaultBounds :: [a] -> [(a, [b])]
+defaultBounds = map (flip (,) [])
 
 initInfer :: InferState
 initInfer = InferState { uid = 0 }
@@ -137,33 +135,32 @@ i_stmt :: Ctx -> Stmt Name UnresolvedType -> Infer (Ctx, Stmt (Id Type) Type, Ty
 i_stmt ctx (Expr expr) = do
   (expr', ty) <- i_expr ctx expr
   return (ctx, Expr expr', ty)
+
 i_stmt ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addValueType ctx (name fn, ty), FnStmt fn', ty)
+
 i_stmt ctx (Enum name generics ctors) = do
-  let generics' = map var generics
-  let genericsBound = map (flip (,) []) generics'
+  (ctx', generics') <- addGenerics ctx (defaultBounds generics)
   let mkEnumTy ty = case (ty, generics') of
                 (Nothing, []) -> Con name
-                (Nothing, _)  -> TyAbs generics' (TyApp (Con name) (map (uncurry Var) genericsBound))
                 (Just t, [])  -> Fun [] t (Con name)
-                (Just t, _)   -> Fun genericsBound t (TyApp (Con name) (map (uncurry Var) genericsBound))
+                (Nothing, _)  -> TyAbs (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
+                (Just t, _)   -> Fun generics' t (TyApp (Con name) (map (uncurry Var) generics'))
   let enumTy = mkEnumTy Nothing
-  let name' = (var name, enumTy)
-  ctx' <- addGenerics (map (flip (,) []) generics) ctx
-  let ctx'' = addType ctx' name'
+  let ctx'' = addType ctx' (name, enumTy)
   (ctx''', ctors') <- foldrM (i_ctor mkEnumTy) (ctx'', []) ctors
   return (ctx''', (Enum (name, enumTy) generics ctors'), Type)
+
 i_stmt ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
-  ctx' <- addGenerics opGenerics ctx
+  opGenerics' <- resolveGenerics ctx opGenerics
+  (ctx', opGenericVars) <- addGenerics ctx opGenerics'
   opLhs' <- resolveId ctx' opLhs
   opRhs' <- resolveId ctx' opRhs
   opRetType' <- resolveType ctx' opRetType
   let ctx'' = addValueType (addValueType ctx' opLhs') opRhs'
   (opBody', bodyTy) <- i_stmts ctx'' opBody
   typeCheck bodyTy opRetType'
-  opGenerics' <- resolveGenerics ctx'' opGenerics
-  let opGenericVars = makeGenericVars opGenerics'
   let ty = Fun opGenericVars [snd opLhs', snd opRhs'] opRetType'
   let op' = Operator { opAssoc
                      , opPrec
@@ -185,7 +182,7 @@ i_stmt ctx (Class name vars methods) = do
   vars' <- mapM (resolveId ctx) vars
   let classTy = Cls name vars'
   let ctorTy = [Rec vars'] ~> classTy
-  let ctx' = addType ctx (var name, classTy)
+  let ctx' = addType ctx (name, classTy)
   let ctx'' = addValueType ctx' (name, ctorTy)
 
   (ctx''', methods') <- foldM (i_method classTy) (ctx'', []) methods
@@ -193,24 +190,23 @@ i_stmt ctx (Class name vars methods) = do
   return (ctx''', class', Type)
 
 i_stmt ctx (Interface name param methods) = do
-  ctx' <- addGenerics [(param, [])] ctx
+  (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
   (methods', methodsTy) <- unzip <$> mapM (i_fnDecl ctx') methods
-  let ty = Intf name (var param) methodsTy
+  let ty = Intf name param' methodsTy
   let intf = Interface (name, ty) param methods'
-  let ctx' = foldl (aux ty) ctx methodsTy
-  return (addType ctx' (var name, ty), intf, ty)
+  let ctx' = foldl (aux ty param') ctx methodsTy
+  return (addType ctx' (name, ty), intf, ty)
     where
-      aux intf ctx (name, Fun gen params retType) =
-        let ty = Fun ((var param, [intf]) : gen) params retType
+      aux intf param ctx (name, Fun gen params retType) =
+        let ty = Fun ((param, [intf]) : gen) params retType
          in addValueType ctx (name, ty)
-      aux _ _ _ = undefined
+      aux _ _ _ _ = undefined
 
 i_stmt ctx (Implementation implName ty methods) = do
-  Intf _ param intfMethods <- getType (var implName) ctx
+  Intf _ param intfMethods <- getType implName ctx
   ty' <- resolveType ctx ty
   -- TODO: proper error in intf is not an Intf
-  let ctx' = addType ctx (param, ty')
-  (methods', methodsTy) <- unzip <$> mapM (i_fn ctx') methods
+  (methods', methodsTy) <- unzip <$> mapM (i_fn ctx) methods
   let substs = [(param, ty')]
   checkCompleteInterface substs intfMethods (zip (map name methods) methodsTy)
   checkExtraneousMethods intfMethods (zip (map name methods) methodsTy)
@@ -240,24 +236,25 @@ checkExtraneousMethods intf impl = do
 
 i_fnDecl :: Ctx -> FunctionDecl Name UnresolvedType -> Infer (FunctionDecl (Id Type) Type, (Name, Type))
 i_fnDecl ctx (FunctionDecl name gen params retType) = do
-  (ty, gen', params', retType') <- fnTy ctx (gen, params, retType)
+  gen' <- resolveGenerics ctx gen
+  (ctx', genVars) <- addGenerics ctx gen'
+  (ty, params', retType') <- fnTy ctx' (genVars, params, retType)
   let fnDecl = FunctionDecl (name, ty) gen' params' retType'
   return (fnDecl, (name, ty))
 
-fnTy :: Ctx -> ([(Name, [UnresolvedType])], [(Name, UnresolvedType)], UnresolvedType) -> Infer (Type, [(Name, [Type])], [(Name, Type)], Type)
+fnTy :: Ctx -> ([(Var, [Type])], [(Name, UnresolvedType)], UnresolvedType) -> Infer (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
   tyArgs <- mapM (resolveId ctx) params
   retType' <- resolveType ctx retType
-  generics' <- resolveGenerics ctx generics
   let tyArgs' = if null tyArgs
       then [void]
       else map snd tyArgs
-  let ty = Fun (makeGenericVars generics') tyArgs' retType'
-  return (ty, generics', tyArgs, retType')
+  let ty = Fun generics tyArgs' retType'
+  return (ty, tyArgs, retType')
 
 i_method :: Type -> (Ctx, [Function (Id Type) Type]) -> Function Name UnresolvedType -> Infer (Ctx, [Function (Id Type) Type])
 i_method classTy (ctx, fns) fn = do
-  let ctx' = addType ctx (var "Self", classTy)
+  let ctx' = addType ctx ("Self", classTy)
   let fn' = fn { params = ("self", UTName "Self") : params fn }
   (fn'', fnTy) <- i_fn ctx' fn'
   return (addValueType ctx (name fn, fnTy), fn'' : fns)
@@ -270,8 +267,9 @@ i_ctor mkEnumTy (name, types) (ctx, ctors) = do
 
 i_fn :: Ctx -> Function Name UnresolvedType -> Infer (Function (Id Type) Type, Type)
 i_fn ctx fn = do
-  ctx' <- addGenerics (generics fn) ctx
-  (ty, gen', tyArgs, retType') <- fnTy ctx' (generics fn, params fn, retType fn)
+  gen' <- resolveGenerics ctx $ generics fn
+  (ctx', genericVars) <- addGenerics ctx gen'
+  (ty, tyArgs, retType') <- fnTy ctx' (genericVars, params fn, retType fn)
   let ctx'' = addValueType ctx' (name fn, ty)
   let ctx''' = foldl addValueType ctx'' tyArgs
   (body', bodyTy) <- i_stmts ctx''' (body fn)
