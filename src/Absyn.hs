@@ -92,6 +92,7 @@ data Expr a b
   = Literal Literal
   | Ident a
   | VoidExpr -- workaround, this can't be expressed in source code
+  | ParenthesizedExpr (Expr a b)
   | Match { expr :: Expr a b
           , cases :: [Case a b]
           }

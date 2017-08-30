@@ -291,6 +291,8 @@ i_expr ctx (Ident i) = do
 
 i_expr _ VoidExpr = return (VoidExpr, void)
 
+i_expr ctx (ParenthesizedExpr expr) = i_expr ctx expr
+
 i_expr ctx (BinOp _ lhs op rhs) = do
   tyOp@(Fun _ _ retType) <- getValueType op ctx
   (lhs', lhsTy) <- i_expr ctx lhs

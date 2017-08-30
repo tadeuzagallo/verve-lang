@@ -210,8 +210,14 @@ p_lhs allowCtor = choice [ p_record
                          , p_literal >>= return . Literal
                          , lcid >>= return . Ident
                          , p_ucidCtor allowCtor
-                         , parens (p_expr True <|> (operator >>= return . Ident))
+                         , parens p_parenthesizedExpr
                          ]
+
+p_parenthesizedExpr :: AbsynParser Expr
+p_parenthesizedExpr = do
+  choice [ ParenthesizedExpr <$> p_expr True
+         , operator >>= return . Ident
+         ]
 
 p_ucidCtor :: Bool -> AbsynParser Expr
 p_ucidCtor allowCtor = do
