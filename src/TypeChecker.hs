@@ -26,8 +26,8 @@ type Infer a = (StateT InferState (Except TypeError) a)
 
 data InferState = InferState { uid :: Int }
 
-typeCheck :: Type -> Type -> Infer ()
-typeCheck actualTy expectedTy =
+(<:!) :: Type -> Type -> Infer ()
+actualTy <:! expectedTy =
   when (not $ actualTy <: expectedTy) (throwError $ TypeError expectedTy actualTy)
 
 resolveId :: Ctx -> Id UnresolvedType -> Infer (Id Type)
@@ -160,7 +160,7 @@ i_stmt ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
   opRetType' <- resolveType ctx' opRetType
   let ctx'' = addValueType (addValueType ctx' opLhs') opRhs'
   (opBody', bodyTy) <- i_stmts ctx'' opBody
-  typeCheck bodyTy opRetType'
+  bodyTy <:! opRetType'
   let ty = Fun opGenericVars [snd opLhs', snd opRhs'] opRetType'
   let op' = Operator { opAssoc
                      , opPrec
@@ -222,7 +222,7 @@ checkCompleteInterface substs intf impl = do
     aux (methodName, methodTy) =
       case lookup methodName impl of
         Nothing -> throwError $ MissingImplementation methodName
-        Just ty -> typeCheck ty (subst substs methodTy)
+        Just ty -> ty <:! (subst substs methodTy)
 
 checkExtraneousMethods :: [(Name, Type)] -> [(Name, Type)] -> Infer ()
 checkExtraneousMethods intf impl = do
@@ -273,7 +273,7 @@ i_fn ctx fn = do
   let ctx'' = addValueType ctx' (name fn, ty)
   let ctx''' = foldl addValueType ctx'' tyArgs
   (body', bodyTy) <- i_stmts ctx''' (body fn)
-  typeCheck bodyTy retType'
+  bodyTy <:! retType'
   let fn' = fn { name = (name fn, ty)
                , generics = gen'
                , params = tyArgs
@@ -322,7 +322,7 @@ i_expr ctx (Call fn _ types args) = do
           (Fun gen params _, _) -> do
             let s = zip (map fst gen) types'
             let params' = map (subst s) params
-            zipWithM_ typeCheck tyArgs params'
+            zipWithM_ (<:!) tyArgs params'
             return s
           _ -> undefined
   let retType' = subst substs retType
@@ -356,7 +356,7 @@ i_expr ctx (FieldAccess expr _ field) = do
 
 i_expr ctx (If ifCond ifBody elseBody) = do
   (ifCond', ty) <- i_expr ctx ifCond
-  typeCheck ty bool
+  ty <:! bool
   (ifBody', ifTy) <- i_stmts ctx ifBody
   (elseBody', elseTy) <- i_stmts ctx elseBody
   return (If ifCond' ifBody' elseBody', ifTy \/ elseTy)
@@ -410,7 +410,7 @@ c_pattern :: Ctx -> Type -> Pattern Name -> Infer (Pattern (Id Type), Ctx)
 c_pattern ctx _ PatDefault = return (PatDefault, ctx)
 c_pattern ctx ty (PatLiteral l) = do
   let litTy = i_lit l
-  typeCheck litTy ty
+  litTy <:! ty
   return (PatLiteral l, ctx)
 c_pattern ctx ty (PatVar v) =
   let pat = PatVar (v, ty)
@@ -423,7 +423,7 @@ c_pattern ctx ty (PatCtor name vars) = do
                             fn@(Fun gen params retTy) -> (fn, params, TyAbs (map fst gen) retTy)
                             t -> (Fun [] [] t, [], t)
   when (length vars /= length params) (throwError ArityMismatch)
-  typeCheck retTy ty
+  retTy <:! ty
   let substs = case (retTy, ty) of
                  (TyAbs gen _, TyApp _ args) -> zip gen args
                  _ -> []
