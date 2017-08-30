@@ -56,7 +56,11 @@ d_fn fn@(Function { params=[] }) =
 d_fn fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
       fn'' = foldr CA.Lam fn' (map (flip (,) Type . fst) $ generics fn)
-   in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn'')
+      fn''' = foldr CA.Lam fn'' (concatMap constraints $ generics fn)
+   in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn''')
+  where
+    constraints (varName, bounds) =
+      map (\bound -> ("#" ++ show bound ++ varName, void)) bounds
 
 mk_var :: String -> CA.Expr
 mk_var v = CA.Var (v, void)
