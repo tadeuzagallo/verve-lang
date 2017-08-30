@@ -160,7 +160,7 @@ p_generics = angles $ commaSep p_genericParam
 p_genericParam :: Parser (Name, [UnresolvedType])
 p_genericParam = do
   var <- ucid
-  bounds <- option ([UTTop]) (symbol ":" *>  (parens (commaSep1 p_type) <|> (p_type >>= return . (:[]) )))
+  bounds <- option [] (symbol ":" *>  (parens (commaSep1 p_type) <|> (p_type >>= return . (:[]) )))
   return (var, bounds)
 
 p_typedName :: Parser (Id UnresolvedType)

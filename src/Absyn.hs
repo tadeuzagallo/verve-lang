@@ -8,7 +8,6 @@ data UnresolvedType
   | UTArrow [UnresolvedType] UnresolvedType
   | UTRecord [(Name, UnresolvedType)]
   | UTVoid
-  | UTTop
   | UTPlaceholder
   deriving (Show)
 

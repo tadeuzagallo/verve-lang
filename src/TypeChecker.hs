@@ -52,7 +52,6 @@ resolveType ctx (UTApp t1 t2) = do
       return $ subst (zip params t2') ty
     _ -> return $ TyApp t1' t2'
 resolveType _ UTVoid = return void
-resolveType _ UTTop = return Top
 resolveType _ UTPlaceholder = undefined
 
 resolveGenerics :: Ctx -> [(Name, [UnresolvedType])] -> Infer [(Name, [Type])]
@@ -70,7 +69,7 @@ makeGenericVars gen =
 instantiate :: Type -> Infer Type
 instantiate (TyAbs gen ty) = do
   gen' <- mapM fresh gen
-  let s = zip gen (map (flip Var [Top]) gen')
+  let s = zip gen (map (flip Var []) gen')
   return $ TyAbs gen' (subst s ty)
 instantiate (Fun gen params ret) = do
   gen' <- mapM freshBound gen
@@ -143,7 +142,7 @@ i_stmt ctx (FnStmt fn) = do
   return (addValueType ctx (name fn, ty), FnStmt fn', ty)
 i_stmt ctx (Enum name generics ctors) = do
   let generics' = map var generics
-  let genericsBound = map (flip (,) [Top]) generics'
+  let genericsBound = map (flip (,) []) generics'
   let mkEnumTy ty = case (ty, generics') of
                 (Nothing, []) -> Con name
                 (Nothing, _)  -> TyAbs generics' (TyApp (Con name) (map (uncurry Var) genericsBound))
@@ -151,7 +150,7 @@ i_stmt ctx (Enum name generics ctors) = do
                 (Just t, _)   -> Fun genericsBound t (TyApp (Con name) (map (uncurry Var) genericsBound))
   let enumTy = mkEnumTy Nothing
   let name' = (var name, enumTy)
-  ctx' <- addGenerics (map (flip (,) [UTTop]) generics) ctx
+  ctx' <- addGenerics (map (flip (,) []) generics) ctx
   let ctx'' = addType ctx' name'
   (ctx''', ctors') <- foldrM (i_ctor mkEnumTy) (ctx'', []) ctors
   return (ctx''', (Enum (name, enumTy) generics ctors'), Type)
@@ -194,7 +193,7 @@ i_stmt ctx (Class name vars methods) = do
   return (ctx''', class', Type)
 
 i_stmt ctx (Interface name param methods) = do
-  ctx' <- addGenerics [(param, [UTTop])] ctx
+  ctx' <- addGenerics [(param, [])] ctx
   (methods', methodsTy) <- unzip <$> mapM (i_fnDecl ctx') methods
   let ty = Intf name (var param) methodsTy
   let intf = Interface (name, ty) param methods'
