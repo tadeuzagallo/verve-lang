@@ -72,6 +72,13 @@ _t1@(TyAbs gen t12) <: t2@(TyApp _t21 args) =
 (TyApp t11 t12) <: (TyApp t21 t22) =
   t11 <: t21 && and (zipWith (<:) t12 t22)
 
+(Rec r1) <: (Rec r2) =
+  all aux r2
+    where
+      aux (k, t2) = case lookup k r1 of
+        Nothing -> False
+        Just t1 -> t1 <: t2
+
 _ <: _ = False
 
 -- Free Type Variables
