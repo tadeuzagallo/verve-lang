@@ -122,9 +122,13 @@ instance Show Type where
   show (Fun gs [v] t2) | v == void = show (Fun gs [] t2)
   show (Fun gs t1 t2) =
     printf "%s(%s) -> %s"
-      (if null gs then "" else printf "∀%s. " (intercalate " " $ map show gs))
+      (if null gs then "" else printf "∀%s. " (intercalate " " $ map var gs))
       (intercalate ", " $ map show t1)
       (show t2)
+        where
+          var (v, []) = show v
+          var (v, [t]) = printf "(%s: %s)" (show v) (show t)
+          var (v, ts) = printf "(%s: (%s))" (show v) (intercalate ", " $ map show ts)
 
   show (Rec fields) =
     "{" ++ fields' ++ "}"
