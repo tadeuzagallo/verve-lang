@@ -1,4 +1,4 @@
-import Absyn (Module, UnresolvedType)
+import Absyn (Module(Module), Name, Stmt, UnresolvedType)
 import Ctx
 import Error
 import Parser
@@ -7,6 +7,7 @@ import TypeChecker
 import Desugar
 import Interpreter
 
+import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
@@ -18,42 +19,52 @@ main = do
   args <- getArgs
   case args of
     [] -> repl
+    "--print-statements":file:_ -> runAndPrintStmts file
     file:_ -> runFile file
 
+type EvalCtx = (Naming.Env, Ctx, Env)
+
+initEvalCtx :: EvalCtx
+initEvalCtx = (Naming.defaultEnv, defaultCtx, defaultEnv)
+
+evalStmt ::  EvalCtx -> Stmt Name UnresolvedType -> Result (EvalCtx, String)
+evalStmt (nenv, ctx, env) stmt = do
+  (nenv', balanced) <- Naming.balanceStmt nenv stmt
+  (ctx', typed, ty) <- inferStmt ctx balanced
+  let core = desugarStmt typed
+  (env', val) <- evalWithEnv env core
+  let output = printf "%s : %s" (show val) (show ty)
+  return ((nenv', ctx', env'), output)
+
 repl :: IO ()
-repl = runInputT defaultSettings $ loop (Naming.defaultEnv, defaultCtx, defaultEnv)
+repl = runInputT defaultSettings $ loop initEvalCtx
   where
-    loop :: (Naming.Env, Ctx, Env) -> InputT IO ()
-    loop (nenv, ctx, env) = do
+    loop :: EvalCtx -> InputT IO ()
+    loop ctx = do
       minput <- getInputLine "> "
       case minput of
         Nothing -> return ()
         Just "quit" -> return ()
-        Just "" -> outputStrLn "" >> loop (nenv, ctx, env)
+        Just "" -> outputStrLn "" >> loop ctx
         Just input ->
-          case result nenv ctx env input of
+          case result ctx input of
             Left err -> do
               liftIO $ report err
-              loop (nenv, ctx, env)
-            Right (nenv', ctx', env', output) ->
-              outputStrLn output >> loop (nenv', ctx', env')
-    result :: Naming.Env -> Ctx -> Env -> String -> Either Error (Naming.Env, Ctx, Env, String)
-    result nenv ctx env input = do
+              loop ctx
+            Right (ctx', output) ->
+              outputStrLn output >> loop ctx'
+    result :: EvalCtx -> String -> Result (EvalCtx, String)
+    result ctx input = do
       stmt <- parseStmt "(stdin)" input
-      (nenv', balanced) <- Naming.balanceStmt nenv stmt
-      (ctx', typed, ty) <- inferStmt ctx balanced
-      let core = desugarStmt typed
-      (env', val) <- evalWithEnv env core
-      let output = printf "%s : %s" (show val) (show ty)
-      return (nenv', ctx', env', output)
+      evalStmt ctx stmt
 
-runFile :: String -> IO ()
-runFile file = do
+runAndPrintStmts :: String -> IO ()
+runAndPrintStmts file = do
   result <- parseFile file
   -- TODO: add this as `Error::runError`
   either report putStrLn (run result)
   where
-    run :: (Either Error (Module String UnresolvedType)) -> Either Error String
+    run :: (Result (Module Name UnresolvedType)) -> Result String
     run result = do
       absyn <- result
       balanced <- Naming.balance absyn
@@ -62,3 +73,18 @@ runFile file = do
       val <- eval core
       -- TODO: move this printing into it's own function
       return $ printf "%s : %s" (show val) (show ty)
+
+runFile :: String -> IO ()
+runFile file = do
+  result <- parseFile file
+  -- TODO: add this as `Error::runError`
+  either report id (run result)
+  where
+    run :: (Result (Module Name UnresolvedType)) -> Result (IO ())
+    run result = do
+      (Module stmts) <- result
+      mapM_ putStrLn . reverse . snd <$> foldM aux (initEvalCtx, []) stmts
+    aux :: (EvalCtx, [String]) -> Stmt Name UnresolvedType -> Result (EvalCtx, [String])
+    aux (ctx, outs) stmt = do
+      (ctx', out) <- evalStmt ctx stmt
+      return (ctx', out : outs)

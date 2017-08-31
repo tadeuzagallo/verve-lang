@@ -23,7 +23,7 @@ parseStmt :: String -> String -> Either Error (Stmt Name UnresolvedType)
 parseStmt file source = liftError $ parse (anySpace *> p_stmt <* eof) file source
 
 p_module :: AbsynParser Module
-p_module = Module <$> (p_stmt `sepEndBy` p_separator <* eof)
+p_module = Module <$> (anySpace *> p_stmt `sepEndBy` p_separator <* eof)
 
 p_stmt :: AbsynParser Stmt
 p_stmt = choice [ p_enum
