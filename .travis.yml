@@ -12,7 +12,10 @@
 sudo: false
 
 # Do not choose a language; we provide our own build tools.
-language: generic
+language: python
+
+env:
+  - LC_ALL=C.UTF-8
 
 # Caching so the next build will be fast too.
 cache:
@@ -33,7 +36,7 @@ before_install:
 
 install:
 # Build dependencies
-- stack --no-terminal --install-ghc build --only-dependencies
+- stack --no-terminal --install-ghc build
 - pip install -r tests/requirements.txt
 
 script:
