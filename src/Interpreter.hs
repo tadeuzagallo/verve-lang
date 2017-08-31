@@ -52,7 +52,7 @@ instance Show Value where
     "{" ++ fields' ++ "}"
       where
         fields' = intercalate ", " $ map showField fields
-        showField (key, value) = key ++ " = " ++ show value
+        showField (key, value) = key ++ ": " ++ show value
 
 data Neutral
   = NFree Name
