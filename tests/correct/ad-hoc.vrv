@@ -21,15 +21,13 @@ fn g<U, T: Intish>(x: T) -> Int {
   to_int(x)
 }
 
-// TODO: fix need for explicit type arg
-/*g(7) / / CHECK-L: 7 : Int*/
+g(7) // CHECK-L: 7 : Int
 
 fn f<T: Intish>(x: T) -> Int {
   g(x)
 }
 
-// TODO: fix need for explicit type arg
-/*f(32) / / CHECK: 32 : Int*/
+f(32) // CHECK: 32 : Int
 
 interface Read<T> {
   fn read() -> T
