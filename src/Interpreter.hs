@@ -60,7 +60,7 @@ data Neutral
 
 instance Show Neutral where
   show (NFree n) = n
-  show (NApp n v) = show n ++ " " ++ show v
+  show (NApp n v) = show n ++ "(" ++ show v ++ ")"
 
 builtins :: [(String, Value)]
 builtins =
@@ -79,6 +79,11 @@ builtins =
         (\(VLit (Integer a)) ->
            return . VLam $ \(VLit (Integer b)) ->
              return . VLit . Integer $ a * b))
+  , ( "int_div"
+    , VLam
+        (\(VLit (Integer a)) ->
+           return . VLam $ \(VLit (Integer b)) ->
+             return . VLit . Integer $ a `div` b))
   , ( "int_print"
     , VLam
         (\v ->
