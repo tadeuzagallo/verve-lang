@@ -7,7 +7,7 @@ import TypeChecker
 import Desugar
 import Interpreter
 
-import Control.Monad (foldM)
+import Control.Monad (foldM_)
 import Control.Monad.IO.Class (liftIO)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
@@ -83,8 +83,13 @@ runAndPrintStmts file = do
     run :: (Result (Module Name UnresolvedType)) -> Result (IO ())
     run result = do
       (Module stmts) <- result
-      mapM_ putStrLn . reverse . snd <$> foldM aux (initEvalCtx, []) stmts
-    aux :: (EvalCtx, [String]) -> Stmt Name UnresolvedType -> Result (EvalCtx, [String])
-    aux (ctx, outs) stmt = do
-      (ctx', out) <- evalStmt ctx stmt
-      return (ctx', out : outs)
+      return $ foldM_ aux initEvalCtx stmts
+    aux :: EvalCtx -> Stmt Name UnresolvedType -> IO EvalCtx
+    aux ctx stmt =
+      case evalStmt ctx stmt of
+        Left err -> do
+          report err
+          return ctx
+        Right (ctx', out) -> do
+          putStrLn out
+          return ctx'
