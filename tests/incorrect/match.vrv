@@ -1,4 +1,4 @@
-// RUN: %not %verve | %check
+// RUN: %verve | %check
 
 enum Bool {
   True
@@ -11,8 +11,8 @@ enum PairT<T, U> {
 
 match Pair(2, True) {
   case True: x
-} // CHECK: Failed to unify Bool with PairT<Int, Bool>
+} // CHECK: Expected a value of type `PairT<Int, Bool>`, but found `Bool`
 
 match Pair(3, False) {
   case Int(x): False
-} // CHECK: Unknown constructor: Int
+} // CHECK: Unknown variable: Int

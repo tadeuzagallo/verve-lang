@@ -1,0 +1,9 @@
+// RUN: %verve | %check
+
+enum Bool {
+  True
+  False
+}
+
+fn f(x: Bool) -> Bool { x }
+f(Bool) // CHECK-L: Unknown variable: Bool

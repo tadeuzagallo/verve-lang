@@ -1,0 +1,18 @@
+// RUN: %verve | %check
+
+class S {
+  let x : Int
+}
+
+S {} // CHECK-L: Expected a value of type `{x: Int}`, but found `{}`
+S {x: 0, y: 10} // Not an error anymore
+
+
+let s = S {x: 10}
+"".y // CHECK-L: Expected a record, but found value of type String
+s.y // CHECK-L: Trying to access unknown property `y` of object of type `S`
+
+s.x() // CHECK-L: Unknown variable: x
+s.y() // CHECK-L: Unknown variable: y
+
+"".y() // CHECK-L: Unknown variable: y

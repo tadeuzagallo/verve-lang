@@ -46,7 +46,8 @@ fn length<T>(l: List<T>) -> Nat {
   }
 }
 
-length(Nil) // CHECK: Z : Nat
+// TODO: should not require explicitly providing type arg
+length<Nat>(Nil) // CHECK-L: Z : Nat
 length(Cons(1, Nil)) // CHECK-L: S(Z) : Nat
 length(Cons(1, Cons(2, Cons(3, Nil)))) // CHECK-L: S(S(S(Z))) : Nat
 

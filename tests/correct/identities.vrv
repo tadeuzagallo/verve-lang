@@ -1,0 +1,42 @@
+// RUN: %verve | %check
+
+// helper
+enum Bool {
+  True
+  False
+}
+
+// function identity
+fn id<T>(x: T) -> T { x }
+
+id(id) // CHECK-L: ∀T. (T) -> T
+id(id)(id)(42) // CHECK-L: 42 : Int
+id(id)(id)(True) // CHECK-L: True : Bool
+// TODO: allow function expressions
+/*id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42) / / CHECK-L: 42 : Int*/
+
+// record identity
+fn id<T>(x: T) -> T {
+  ({ x: x }).x
+}
+
+id(id) // CHECK-L: ∀T. (T) -> T
+id(id)(id)(42) // CHECK-L: 42 : Int
+id(id)(id)(True) // CHECK-L: True : Bool
+// TODO: allow function expressions
+/*id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42) / / CHECK-L: 42 : Int*/
+
+// enum identity
+enum Box<T> { Box(T) }
+
+fn id<T>(x: T) -> T {
+  match Box<T>(x) {
+    case Box(x): x
+  }
+}
+
+id(id) // CHECK-L: ∀T. (T) -> T
+id(id)(id)(42) // CHECK-L: 42 : Int
+id(id)(id)(True) // CHECK-L: True : Bool
+// TODO: allow function expressions
+/*id(id)(id)(id)(id)(fn f<T>(x: T) -> T { x })(42) / / CHECK-L: 42 : Int*/

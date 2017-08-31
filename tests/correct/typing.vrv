@@ -1,0 +1,11 @@
+// RUN: %verve | %check
+
+// TODO: this is not visible anymore - how to test it?
+// instantiation
+fn id<T>(x: T) -> T { x } //CHECK-L: ∀T. (T) -> T
+id //CHECK-L: ∀T. (T) -> T
+
+// TODO: Consider application with only type args
+// type substitution
+/*id<Int>*/
+/*id<Bool>*/

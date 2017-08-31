@@ -1,4 +1,0 @@
-// RUN: %not %verve | %check
-
-fn f(x: { x: Int }) -> Int { x.x }
-f({ y: 2 }) // CHECK: Failed to unify {x : Int} with {y : Int}

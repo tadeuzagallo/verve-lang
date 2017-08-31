@@ -1,9 +1,0 @@
-// RUN: %verve | %check
-
-// instantiation
-fn id<T>(x: T) -> T { x } //CHECK-L: forall T₁, (T₁) -> T₁
-id //CHECK-L: forall T₂, (T₂) -> T₂
-
-// type substitution
-id<Int>
-id<Bool>

@@ -1,0 +1,11 @@
+// RUN: %verve | %check
+operator (x : Int) >> (y : Int) -> Int {
+  y
+}
+
+#assoc(right)
+operator (x : Int) << (y : Int) -> Int {
+  x
+}
+
+3 >> 4 << 5 // CHECK-L: Precedence parsing error: cannot mix `>>` and `<<` in the same infix expression

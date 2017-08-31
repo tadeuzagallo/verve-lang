@@ -3,5 +3,5 @@
 let x = 1
 x // CHECK: 1 : Int
 
-let f = fn id<T>(x: T) -> T { x }
-f(x)
+/*let f = fn id<T>(x: T) -> T { x }*/
+/*f(x)*/

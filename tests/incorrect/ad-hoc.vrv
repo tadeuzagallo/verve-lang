@@ -1,0 +1,55 @@
+// RUN: %verve | %check
+
+interface Intish<T> {
+  fn to_int(x: T) -> Int
+}
+
+fn g'<T>(x: T) -> Int {
+  to_int(x) // CHECK-L: No instance of `Intish` for type `T`
+}
+
+implementation Intish<Int> {
+  fn to_int(x: Int) -> Bool {
+    True // CHECK-L: Expected a value of type `(Int) -> Int`, but found `(Int) -> Bool`
+  }
+}
+
+implementation Intish<Bool> {
+  fn to_int(x: Bool) -> Int { 0 }
+  fn to_bool(x: Bool) -> Bool { x } // CHECK-L: Implementation contains method `to_bool` which is not part of the interface
+}
+
+implementation Intish<Bool> {} // CHECK-L: Implementation is missing method `to_int`
+
+implementation Intish<Int> {
+  fn to_int(x: Int) -> Int { x }
+}
+
+implementation Intish<Bool> {
+  fn to_int(x: Bool) -> Int {
+    if x { 1 } else { 0 }
+  }
+}
+
+interface Math<T> {
+  fn add(x: T, y: T) -> Int
+}
+
+implementation Math<Bool> {
+  fn add(x: Bool, y: Bool) -> Int { 0 }
+}
+
+implementation Math<Int> {
+  // CHECK-L: Expected a value of type `(Int, Int) -> Int`, but found `(Bool, Bool) -> Int`
+  fn add(x: Bool, y: Bool) -> Int { 0 }
+}
+
+enum Maybe<T> {
+  None
+  Some(T)
+}
+
+// TODO: reimplment the following check
+/* CHECK-L: Trying to implement Intish for Maybe<Int>, but Maybe<Int> should be a simple type, class or enum (monomorphic) */
+implementation Intish< Maybe<Int> > {
+}

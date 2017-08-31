@@ -1,0 +1,65 @@
+// RUN: %verve | %check
+
+operator (x: Int) + (y: Int) -> Int {
+  int_add(x, y)
+}
+
+3 + 5 // CHECK-L: 8 : Int
+
+// TODO: add support for operators in interfaces
+/*interface Num<T> {*/
+  /*#assoc(left)*/
+  /*operator (T) + (T) -> T*/
+
+  /*#assoc(left) #prec(equal(+))*/
+  /*operator (T) - (T) -> T*/
+
+  /*#assoc(left) #prec(higher(+))*/
+  /*operator (T) * (T) -> T*/
+
+  /*#assoc(left) #prec(equal(*))*/
+  /*#unknown / / CHECK: warning: Unknown attribute: unknown*/
+  /*operator (T) / (T) -> T*/
+/*}*/
+
+/*implementation Num<Int> {*/
+  /*operator (x: Int) + (y: Int) -> Int {*/
+    /*int_add(x, y)*/
+  /*}*/
+  /*operator (x: Int) - (y: Int) -> Int {*/
+    /*int_sub(x, y)*/
+  /*}*/
+  /*operator (x: Int) * (y: Int) -> Int {*/
+    /*int_mul(x, y)*/
+  /*}*/
+  /*operator (x: Int) / (y: Int) -> Int {*/
+    /*int_div(x, y)*/
+  /*}*/
+/*}*/
+
+/*5 + 37 / / CHECK: 42 : Int*/
+/*5 + 3 * 15 / / CHECK: 50 : Int*/
+/*3 * 15 + 5 / / CHECK: 50 : Int*/
+/*3 * (15 + 5) / / CHECK: 60 : Int*/
+/*(15 + 5) * 3  / / CHECK: 60 : Int*/
+/*3 * 5 / 2 / / CHECK: 7 : Int*/
+/*5 / 2 * 3 / / CHECK: 6 : Int*/
+/*(+)(3, 5) / / CHECK: 8 : Int*/
+
+/*fn add<T: Num>(x: T, y: T) -> T {*/
+  /*x + y*/
+/*}*/
+/*add(3, 5)*/
+
+operator (x: Int) < (y: Int) -> Bool { False }
+
+fn a<T>(x: T) -> T { x }
+
+3 < {x: 5}.x
+
+a<Int>(4)
+// TODO: add support for applications with type only(?)
+/*a<Int>*/
+
+/*a<() -> Int>(fn x() -> Int { 3 })*/
+4 < (4)
