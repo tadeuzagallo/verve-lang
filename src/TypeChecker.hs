@@ -326,7 +326,7 @@ i_expr ctx (Call fn _ types args) = do
             return s
           _ -> undefined
   let retType' = subst substs retType
-  let typeArgs' = map snd substs
+  let typeArgs' = map (fromJust . flip lookup substs . fst) gen
   constraintArgs <- concat <$> mapM (aux ctx) (zip gen typeArgs')
   return (Call fn' constraintArgs typeArgs' args', retType')
     where
