@@ -58,8 +58,8 @@ repl = runInputT defaultSettings $ loop initEvalCtx
       stmt <- parseStmt "(stdin)" input
       evalStmt ctx stmt
 
-runAndPrintStmts :: String -> IO ()
-runAndPrintStmts file = do
+runFile :: String -> IO ()
+runFile file = do
   result <- parseFile file
   -- TODO: add this as `Error::runError`
   either report putStrLn (run result)
@@ -74,8 +74,8 @@ runAndPrintStmts file = do
       -- TODO: move this printing into it's own function
       return $ printf "%s : %s" (show val) (show ty)
 
-runFile :: String -> IO ()
-runFile file = do
+runAndPrintStmts :: String -> IO ()
+runAndPrintStmts file = do
   result <- parseFile file
   -- TODO: add this as `Error::runError`
   either report id (run result)
