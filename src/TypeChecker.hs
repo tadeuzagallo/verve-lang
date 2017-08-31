@@ -438,7 +438,7 @@ c_pattern ctx ty (PatCtor name vars) = do
 -- Inference of type arguments for generic functions
 inferTyArgs :: [Type] -> Type -> Infer [Substitution]
 inferTyArgs tyArgs (Fun generics params retType) = do
-  let initialCs = concatMap (\(var, bounds) -> map (Constraint Bot var) bounds) generics
+  let initialCs = map (flip (Constraint Bot) Top . fst) generics
   d <- zipWithM (constraintGen [] (map fst generics)) tyArgs params
   let c = initialCs `meet` foldl meet [] d
   mapM (getSubst retType) c
