@@ -18,7 +18,12 @@ type OpInfo = (Associativity, PrecInt)
 data NameError
   = UnknownOperator Name
   | PrecedenceError Name Name
-  deriving (Show)
+
+instance Show NameError where
+  show (PrecedenceError p1 p2) =
+    "Precedence parsing error: cannot mix `" ++ p1 ++ "` and `" ++ p2 ++ "` in the same infix expression"
+  show (UnknownOperator name) =
+    "Unknown operator: " ++ name
 
 instance ErrorT NameError where
   kind _ = "NameError"
