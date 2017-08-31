@@ -345,13 +345,13 @@ i_expr ctx (Record fields) = do
 i_expr ctx (FieldAccess expr _ field) = do
   (expr', ty) <- i_expr ctx expr
   let
-      aux :: [(String, Type)] -> Infer (Expr (Id Type) Type, Type)
-      aux r = case lookup field r of
-                Nothing -> throwError $ UnknownField (Rec r) field
+      aux :: Type -> [(String, Type)] -> Infer (Expr (Id Type) Type, Type)
+      aux ty r = case lookup field r of
+                Nothing -> throwError $ UnknownField ty field
                 Just t -> return (FieldAccess expr' ty (field, t), t)
   case ty of
-    Rec r -> aux r
-    Cls _ r -> aux r
+    Rec r -> aux ty r
+    Cls _ r -> aux ty r
     _ -> throwError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
 i_expr ctx (If ifCond ifBody elseBody) = do
