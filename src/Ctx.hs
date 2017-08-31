@@ -78,7 +78,7 @@ defaultCtx =
                  , ("True", bool)
                  , ("False", bool)
                  , ("Nil", genericList)
-                 , ("Cons", Fun [(var "T", [Top])] [Var (var "T") [Top], list $ Var (var "T") [Top]] (list $ Var (var "T") [Top]))
+                 , ("Cons", Fun [(var "T", [])] [Var (var "T") [], list $ Var (var "T") []] (list $ Var (var "T") []))
                  ]
       , instances = []
       }
