@@ -328,7 +328,7 @@ i_expr ctx (Call fn _ types args) = do
   let retType' = subst substs retType
   let typeArgs' = map (\var ->
                         if var `elem` skippedVars
-                           then hole
+                           then mkHole var
                            else fromJust . flip lookup substs . fst $ var) gen
   constraintArgs <- concat <$> mapM (aux ctx) (zip gen typeArgs')
   return (Call fn' constraintArgs typeArgs' args', retType')

@@ -14,7 +14,7 @@ implementation Intish<Bool> {
   }
 }
 
-to_int // CHECK-L: <function> : ∀(T: Intish). (T) -> Int
+to_int // CHECK-L: ∀(T: Intish). (T) -> Int
 to_int(42) // CHECK: 42 : Int
 
 fn g<U, T: Intish>(x: T) -> Int {
@@ -93,6 +93,7 @@ f(True) // CHECK-L: 1 : Int
 /*x(True) / / CHECK-L: 1 : Int*/
 /*x<Int>(5) / / CHECK-L: 5 : Int*/
 
+// TODO: fix subtyping for polymorphic functions
 /*"through polymorphic apply"*/
 /*fn app<T: Intish>(f: (T) -> Int, x: T) -> Int {*/
   /*f(x)*/
@@ -109,8 +110,15 @@ fn add<T: Intish, U: Intish>(x: T, y: U) -> Int {
   int_add(to_int(x), to_int(y))
 }
 add(True, 42) // CHECK-L: 43 : Int
-/*add(True)(42) / / CHECK-L: 43 : Int*/
-/*let x = add(True) / / CHECK: forall U.*, \(U.*: Intish\) -> Int*/
-/*x(42) / / CHECK-L: 43 : Int*/
-/*x(True) / / CHECK-L: 2 : Int*/
-/*x<Bool>(False) / / CHECK-L: 1 : Int*/
+add(True)(42) // CHECK-L: 43 : Int
+let x = add(True)
+x // CHECK-L: ∀(U: Intish). (U) -> Int
+x(42) // CHECK-L: 43 : Int
+x(True) // CHECK-L: 2 : Int
+x<Bool>(False)
+
+// Check order when there are multiple constrained holes
+fn f<A, B: Intish, C: Intish>(a: A, b: B, c: C) -> Int {
+  int_add(to_int(b),to_int(c))
+}
+f(1)(False)(2) // CHECK-L: 2 : Int
