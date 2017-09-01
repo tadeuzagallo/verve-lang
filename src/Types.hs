@@ -15,6 +15,7 @@ module Types
   , list
   , genericList
   , var
+  , hole
   , (~>)
   ) where
 
@@ -194,6 +195,9 @@ genericList = [var "T"] `TyAbs` (list $ Var (var "T") [])
 
 var :: String -> Var
 var v = TV v (-1)
+
+hole :: Type
+hole = Var (TV "#hole" (-42)) [Bot]
 
 (~>) :: [Type] -> Type -> Type
 (~>) = Fun []

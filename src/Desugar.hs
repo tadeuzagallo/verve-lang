@@ -85,12 +85,20 @@ d_expr (BinOp tyArgs lhs op rhs) =
   d_expr (Call (Ident op) [] tyArgs [lhs, rhs])
 d_expr (Call callee constraints types args) =
   let app = foldl CA.App (d_expr callee) (map mkConstraint constraints)
-      app' = foldl CA.App app (CA.Type <$> types)
-   in foldl mkApp app' args
+      (app', holes) = foldl mkTypeApp (app, []) types
+      app'' = foldl mkApp app' args
+   in foldl (flip CA.Lam) app'' (reverse holes)
     where
       mkApp :: CA.Expr -> Expr (Id Type) Type -> CA.Expr
       mkApp callee arg =
         CA.App callee (d_expr arg)
+
+      mkTypeApp :: (CA.Expr, [Id Type]) -> Type -> (CA.Expr, [Id Type])
+      mkTypeApp (app, holes) ty | ty == hole =
+        let holeName = "#hole" ++ show (length holes)
+         in (CA.App app $ mk_var holeName, (holeName, void) : holes)
+      mkTypeApp (app, holes) ty =
+        (CA.App app $ CA.Type ty, holes)
 
       mkConstraint (typeArg, typeBound) =
         mk_var ("#" ++ show typeBound ++ show typeArg)

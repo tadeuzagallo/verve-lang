@@ -314,7 +314,7 @@ i_expr ctx (Call fn _ types args) = do
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
   types' <- mapM (resolveType ctx) types
   let tyFn' = normalizeFnType tyFn
-  tyFn''@(Fun gen _ retType) <- adjustFnType tyArgs tyFn'
+  (tyFn''@(Fun gen _ retType), skippedVars) <- adjustFnType (null types) tyArgs tyFn'
   substs <-
         case (tyFn'', types') of
           (Fun (_:_) _ _, []) ->
@@ -326,7 +326,10 @@ i_expr ctx (Call fn _ types args) = do
             return s
           _ -> undefined
   let retType' = subst substs retType
-  let typeArgs' = map (fromJust . flip lookup substs . fst) gen
+  let typeArgs' = map (\var ->
+                        if var `elem` skippedVars
+                           then hole
+                           else fromJust . flip lookup substs . fst $ var) gen
   constraintArgs <- concat <$> mapM (aux ctx) (zip gen typeArgs')
   return (Call fn' constraintArgs typeArgs' args', retType')
     where
@@ -384,15 +387,19 @@ normalizeFnType (Fun gen params (Fun [] params' retTy)) =
   normalizeFnType (Fun gen (params ++ params') retTy)
 normalizeFnType ty = ty
 
-adjustFnType :: [a] -> Type -> Infer Type
-adjustFnType args fn@(Fun gen params retType) = do
+adjustFnType :: Bool -> [a] -> Type -> Infer (Type, [(Var, [Type])])
+adjustFnType allowHoles args fn@(Fun gen params retType) = do
   let lArgs = length args
   case compare lArgs (length params) of
-    EQ -> return fn
+    EQ -> return (fn, [])
     LT ->
-      return $ Fun gen (take lArgs params) $ Fun [] (drop lArgs params) retType
+      let headArgs = take lArgs params
+          tailArgs = drop lArgs params
+          skippedGen = filter aux gen
+          aux (v, _) = allowHoles && v `elem` (fv $ Fun [] tailArgs retType) && v `notElem` (foldl union [] $ map fv headArgs)
+       in return (Fun gen headArgs $ Fun skippedGen tailArgs retType, skippedGen)
     GT -> throwError ArityMismatch
-adjustFnType _ ty = throwError . GenericError $ "Expected a function, found " ++ show ty
+adjustFnType _ _ ty = throwError . GenericError $ "Expected a function, found " ++ show ty
 
 i_lit :: Literal -> Type
 i_lit (Integer _) = int
