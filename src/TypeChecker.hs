@@ -577,6 +577,13 @@ constraintGen v x (TyApp t11 t12) (TyApp t21 t22) = do
   cArgs <- zipWithM (constraintGen v x) t12 t22
   return $ foldl meet [] cArgs `meet` cTy
 
+constraintGen v x (Rec f1) (Rec f2) | map fst f2 `intersect` map fst f1 == map fst f2 = do
+  cs <- mapM aux f2
+  return $ foldl meet [] cs
+    where
+      aux (key, v2) =
+        constraintGen v x (fromJust $ lookup key f1) v2
+
 constraintGen _v _x actual expected =
   throwError $ TypeError expected actual
 
