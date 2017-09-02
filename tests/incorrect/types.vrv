@@ -1,3 +1,19 @@
 // RUN: %verve | %check
 
 fn f(x: List<Int, Bool>) {} // CHECK-L: Type applied to too many arguments
+
+interface I<T> {}
+
+// CHECK-L: Implementation of `I` for type `List<Int>` does not use all the type variables it introduces
+implementation I<List<Int>> {}
+
+// CHECK-L: Implementation of `I` for type `Int` does not use all the type variables it introduces
+implementation<T> I<Int> {}
+
+// CHECK-L: Implementation of `I` for type `List<Int>` does not use all the type variables it introduces
+implementation<T> I<List<Int>> {}
+
+enum Pair<T, U> {}
+
+// CHECK-L: Implementation of `I` for type `Pair<U, Int>` does not use all the type variables it introduces
+implementation<T, U> I<Pair<U, Int>> {}

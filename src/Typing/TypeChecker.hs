@@ -22,7 +22,7 @@ import Typing.Types
 import Control.Monad (foldM, when, zipWithM, zipWithM_)
 import Data.Bifunctor (first)
 import Data.Foldable (foldrM)
-import Data.List (union)
+import Data.List (intersect, union)
 
 (<:!) :: Type -> Type -> Tc ()
 actualTy <:! expectedTy =
@@ -183,12 +183,16 @@ i_stmt ctx (Implementation implName generics ty methods) = do
   ctx' <- extendCtx ctx ty' genericVars
   return (ctx', impl, void)
   where
-    extendCtx ctx (TyApp ty _) genericVars@(_:_) =
+    extendCtx ctx (TyApp ty args) genericVars@(_:_) | vars  `intersect` args == vars =
       addInstance ctx (implName, (ty, genericVars))
+        where
+          vars = map (uncurry Var) genericVars
+    extendCtx _ ty@(TyApp _ _) [] =
+      throwError (ImplementationError implName ty)
     extendCtx ctx ty [] =
       addInstance ctx (implName, (ty, []))
-    extendCtx _ _ _ =
-      throwError ImplementationError
+    extendCtx _ ty _ =
+      throwError (ImplementationError implName ty)
 
 checkCompleteInterface :: Substitution -> [(Name, Type)] -> [(Name, Type)] -> Tc ()
 checkCompleteInterface substs intf impl = do
