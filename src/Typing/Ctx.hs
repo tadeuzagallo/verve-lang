@@ -13,7 +13,9 @@ module Typing.Ctx
 import Typing.State
 import Typing.Substitution
 import Typing.TypeError
-import Typing.Types
+import Typing.Types hiding (list)
+
+import qualified Typing.Types as Types (list)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
@@ -60,7 +62,7 @@ defaultCtx =
                 , ("Char", char)
                 , ("String", string)
                 , ("Void", void)
-                , ("List", genericList)
+                , ("List", forall [T] $ list T)
                 , ("Bool", bool)
                 ]
       , values = [ ("int_print", [int] ~> void)
@@ -70,9 +72,24 @@ defaultCtx =
                  , ("int_div", [int, int] ~> int)
                  , ("True", bool)
                  , ("False", bool)
-                 , ("Nil", genericList)
-                 , ("Cons", Fun [(var "T", [])] [Var (var "T") [], list $ Var (var "T") []] (list $ Var (var "T") []))
+                 , ("Nil", forall [T] $ list T)
+                 , ("Cons", forall [T] $ [var T, list T] ~> list T)
                  ]
       , instances = []
       }
 
+-- HELPERS
+
+list :: FakeVar -> Type
+list ty = Types.list (var ty)
+
+forall :: [FakeVar] -> Type -> Type
+forall vs (Fun [] params args) =
+  let vs' = map (flip (,) [] . tyvar) vs
+   in Fun vs' params args
+
+forall vs ty =
+  TyAbs (map tyvar vs) ty
+
+var :: FakeVar -> Type
+var name = Var (tyvar name) []

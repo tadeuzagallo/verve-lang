@@ -60,7 +60,7 @@ addGenerics ctx generics =
   foldM aux (ctx, []) generics
     where
       aux (ctx, vars) (g, bounds) = do
-        g' <- freshVar (var g)
+        g' <- newVar g
         return (addType ctx (g, Var g' bounds), vars ++ [(g', bounds)])
 
 defaultBounds :: [a] -> [(a, [b])]
@@ -319,9 +319,9 @@ i_expr ctx (If ifCond ifBody elseBody) = do
 
 i_expr ctx (List items) = do
   (items', itemsTy) <- unzip <$> mapM (i_expr ctx) items
-  let ty = case itemsTy of
-             [] -> genericList
-             x:xs -> list $ foldl (\/) x xs
+  ty <- case itemsTy of
+          [] -> resolveType ctx (UTName "Nil")
+          x:xs -> return . list $ foldl (\/) x xs
   return (List items', ty)
 
 boundsCheck :: Ctx -> Type -> Type -> Tc ()

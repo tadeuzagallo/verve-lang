@@ -1,9 +1,12 @@
 module Typing.Types
   ( Type(..)
   , Var()
-  , (~>)
+  , newVar
   , freshVar
   , fv
+
+
+  -- BASE TYPES
   , bool
   , int
   , float
@@ -11,8 +14,13 @@ module Typing.Types
   , string
   , void
   , list
-  , genericList
-  , var
+  , (~>)
+
+  -- HELPERS FOR WRITING BUILTIN TYPES
+  , FakeVar(..)
+  , tyvar
+
+  -- TYPE HOLE HELPERS
   , mkHole
   , isHole
   ) where
@@ -36,10 +44,13 @@ instance Ord Var where
 instance Show Var where
   show (TV v _) = v
 
-freshVar :: Var -> Tc Var
-freshVar (TV name _) = do
+newVar :: String -> Tc Var
+newVar name = do
   uid <- mkUniqueId
   return $ TV name uid
+
+freshVar :: Var -> Tc Var
+freshVar (TV name _) = newVar name
 
 data Type
   = Con String
@@ -133,11 +144,15 @@ void = Con "Void"
 list :: Type -> Type
 list ty = TyApp (Con "List") [ty]
 
-genericList :: Type
-genericList = [var "T"] `TyAbs` (list $ Var (var "T") [])
+(~>) :: [Type] -> Type -> Type
+(~>) = Fun []
 
-var :: String -> Var
-var v = TV v (-1)
+data FakeVar
+  = T
+  deriving (Show)
+
+tyvar :: FakeVar -> Var
+tyvar v = TV (show v) (-1)
 
 holeVar :: Var
 holeVar = TV "#hole" (-42)
@@ -148,6 +163,3 @@ mkHole (_, bounds) = Var holeVar bounds
 isHole :: Type -> Bool
 isHole (Var tv _) | tv == holeVar = True
 isHole _ = False
-
-(~>) :: [Type] -> Type -> Type
-(~>) = Fun []
