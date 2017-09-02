@@ -15,7 +15,7 @@ import Typing.Subtyping
 import Typing.TypeError
 import Typing.Types
 
-import Control.Monad (foldM, when, zipWithM_)
+import Control.Monad (foldM, when, zipWithM, zipWithM_)
 import Data.Foldable (foldrM)
 import Data.List (union)
 
@@ -248,12 +248,13 @@ i_expr _ VoidExpr = return (VoidExpr, void)
 
 i_expr ctx (ParenthesizedExpr expr) = i_expr ctx expr
 
-i_expr ctx (BinOp _ lhs op rhs) = do
-  tyOp@(Fun _ _ _) <- getValueType op ctx
+i_expr ctx (BinOp _ _ lhs op rhs) = do
+  tyOp@(Fun gen _ _) <- getValueType op ctx
   (lhs', lhsTy) <- i_expr ctx lhs
   (rhs', rhsTy) <- i_expr ctx rhs
   (retType', typeArgs)  <- inferTyArgs [lhsTy, rhsTy] tyOp
-  return (BinOp typeArgs lhs' (op, tyOp) rhs', retType')
+  (typeArgs', constraintArgs) <- adjustTypeArgs ctx gen [] typeArgs
+  return (BinOp constraintArgs typeArgs' lhs' (op, tyOp) rhs', retType')
 
 i_expr ctx (Match expr cases) = do
   (expr', ty) <- i_expr ctx expr
@@ -279,16 +280,8 @@ i_expr ctx (Call fn _ types args) = do
             zipWithM_ (<:!) tyArgs params'
             return (applySubst s retType, tyArgs)
           _ -> undefined
-  let typeArgs' = zipWith (\var ty ->
-                        if var `elem` skippedVars
-                           then mkHole var
-                           else ty) gen typeArgs
-  constraintArgs <- concat <$> mapM (aux ctx) (zip gen typeArgs')
+  (typeArgs', constraintArgs) <- adjustTypeArgs ctx gen skippedVars typeArgs
   return (Call fn' constraintArgs typeArgs' args', retType')
-    where
-      aux ctx ((_, bounds), tyArg) = do
-        mapM_ (boundsCheck ctx tyArg) bounds
-        return $ map ((,) tyArg) bounds
 
 i_expr ctx (Record fields) = do
   (exprs, types) <- mapM (i_expr ctx . snd) fields >>= return . unzip
@@ -323,6 +316,22 @@ i_expr ctx (List items) = do
           [] -> resolveType ctx (UTName "Nil")
           x:xs -> return . list $ foldl (\/) x xs
   return (List items', ty)
+
+adjustTypeArgs :: Ctx -> [(Var, [Type])] -> [(Var, [Type])] -> [Type] -> Tc ([Type], [(Type, Type)])
+adjustTypeArgs ctx gen skippedVars typeArgs = do
+  constrArgs <- concat <$> zipWithM findConstrArgs gen typeArgs'
+  return (typeArgs', constrArgs)
+    where
+      typeArgs' = zipWith findHoles gen typeArgs
+
+      findHoles var ty =
+        if var `elem` skippedVars
+           then mkHole var
+           else ty
+
+      findConstrArgs (_, bounds) tyArg = do
+        mapM_ (boundsCheck ctx tyArg) bounds
+        return $ map ((,) tyArg) bounds
 
 boundsCheck :: Ctx -> Type -> Type -> Tc ()
 boundsCheck _ v@(Var _ bounds) ty@(Intf name _ _) = do

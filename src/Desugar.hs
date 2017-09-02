@@ -80,9 +80,8 @@ d_expr (Literal l) = CA.Lit l
 d_expr (Ident id) = CA.Var id
 d_expr (ParenthesizedExpr expr) = d_expr expr
 d_expr (Call callee constraints types []) = d_expr (Call callee constraints types [VoidExpr])
-d_expr (BinOp tyArgs lhs op rhs) =
-  -- TODO: missing constraintArgs
-  d_expr (Call (Ident op) [] tyArgs [lhs, rhs])
+d_expr (BinOp constrArgs tyArgs lhs op rhs) =
+  d_expr (Call (Ident op) constrArgs tyArgs [lhs, rhs])
 d_expr (Call callee constraints types args) =
   let (constraints', constraintHoles) = foldl mkConstraint ([], []) constraints
       app = foldl CA.App (d_expr callee) constraints'

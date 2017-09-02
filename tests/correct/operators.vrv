@@ -63,3 +63,20 @@ a<Int>(4)
 
 /*a<() -> Int>(fn x() -> Int { 3 })*/
 4 < (4)
+
+// Interfaces with operators by hand
+interface Num'<T> {
+  fn plus(x: T, y: T) -> T
+}
+
+implementation Num'<Int> {
+  fn plus(x: Int, y: Int) -> Int {
+    int_add(x, y)
+  }
+}
+
+operator<T: Num'> (x: T) + (y: T) -> T {
+  plus(x, y)
+}
+
+1 + 3
