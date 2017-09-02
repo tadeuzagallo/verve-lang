@@ -114,6 +114,7 @@ data Expr a b
   | Record [(a, Expr a b)]
   | List [Expr a b]
   | FieldAccess (Expr a b) b a
+  | FnExpr (Function a b)
   deriving (Show)
 
 data Case a b = Case { pattern :: Pattern a

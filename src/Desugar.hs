@@ -84,6 +84,7 @@ d_expr (ParenthesizedExpr expr) = d_expr expr
 d_expr (Call callee constraints types []) = d_expr (Call callee constraints types [VoidExpr])
 d_expr (BinOp constrArgs tyArgs lhs op rhs) =
   d_expr (Call (Ident op) constrArgs tyArgs [lhs, rhs])
+
 d_expr (Call callee constraints types args) =
   let (constraints', constraintHoles) = foldl mkConstraint ([], []) constraints
       app = foldl CA.App (d_expr callee) constraints'
@@ -140,6 +141,9 @@ d_expr (List items) =
       aux (x:xs) = cons (d_expr x) (aux xs)
       nil = CA.Var ("Nil", void)
       cons head tail = CA.App (CA.App (CA.Var ("Cons", void)) head) tail
+
+d_expr (FnExpr fn) =
+  d_fn fn
 
 d_case :: Case (Id Type) Type -> CA.Case
 d_case (Case pattern expr) = (d_pattern pattern, d_stmts expr)

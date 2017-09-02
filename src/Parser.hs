@@ -201,6 +201,7 @@ p_typeRecord = do
 p_expr :: Bool -> AbsynParser Expr
 p_expr allowCtor = choice [ p_match
                           , p_if
+                          , p_function >>= return . FnExpr
                           , p_lhs allowCtor >>= p_rhs
                           ]
 

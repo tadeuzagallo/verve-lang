@@ -16,6 +16,7 @@ import Typing.TypeError
 import Typing.Types
 
 import Control.Monad (foldM, when, zipWithM, zipWithM_)
+import Data.Bifunctor (first)
 import Data.Foldable (foldrM)
 import Data.List (union)
 
@@ -325,6 +326,9 @@ i_expr ctx (List items) = do
           [] -> resolveType ctx (UTName "Nil")
           x:xs -> return . list $ foldl (\/) x xs
   return (List items', ty)
+
+i_expr ctx (FnExpr fn) =
+  first FnExpr <$> i_fn ctx fn
 
 adjustTypeArgs :: Ctx -> [(Var, [Type])] -> [(Var, [Type])] -> [Type] -> Tc ([Type], [(Type, Type)])
 adjustTypeArgs ctx gen skippedVars typeArgs = do
