@@ -21,6 +21,8 @@ d_stmts ([Expr e]) =
 d_stmts ([FnStmt fn]) =
   let fn' = d_fn fn
    in CA.Let [(name fn, fn')] (CA.Var $ name fn)
+d_stmts ([Let var expr]) =
+  CA.Let [(var, d_expr expr)] (CA.Var var)
 
 -- intermediaries
 d_stmts (Let var expr : ss) =

@@ -137,7 +137,7 @@ i_stmt ctx (Let var expr) = do
   (expr', exprTy) <- i_expr ctx expr
   let ctx' = addValueType ctx (var, exprTy)
   let let' = Let (var, exprTy) expr'
-  return (ctx', let', void)
+  return (ctx', let', exprTy)
 
 i_stmt ctx (Class name vars methods) = do
   vars' <- mapM (resolveId ctx) vars
