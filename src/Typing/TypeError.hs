@@ -10,6 +10,7 @@ data TypeError
   = UnknownVariable String
   | UnknownType String
   | ArityMismatch
+  | TypeArityMismatch
   | InferenceFailure
   | TypeError Type Type
   | UnknownField Type String
@@ -32,7 +33,8 @@ instance Show TypeError where
   show (ExtraneousImplementation name) = "Implementation contains method `" ++ name ++ "` which is not part of the interface"
   show (InterfaceExpected ty) = "Expected an interface, but found type `" ++ show ty ++ "`"
   show (MissingInstance intf ty) = "No instance of `" ++ intf ++ "` for type `" ++ show ty ++  "`"
-  show (ImplementationError) = "TODO: ImplementationError"
+  show TypeArityMismatch = "Type applied to too many arguments"
+  show ImplementationError = "TODO: ImplementationError"
 
 instance ErrorT TypeError where
   kind _ = "TypeError"

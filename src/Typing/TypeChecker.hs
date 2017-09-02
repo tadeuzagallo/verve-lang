@@ -45,8 +45,8 @@ resolveType ctx (U.TApp t1 t2) = do
   t1' <- resolveType ctx t1
   t2' <- mapM (resolveType ctx) t2
   case t1' of
-    -- TODO: this doesn't seem right
-    TyAbs params ty ->
+    TyAbs params ty -> do
+      when (length params /= length t2) $ throwError TypeArityMismatch
       return $ applySubst (zipSubst params t2') ty
     _ -> return $ TyApp t1' t2'
 resolveType _ U.TVoid = return void
