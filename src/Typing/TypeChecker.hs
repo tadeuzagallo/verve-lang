@@ -62,7 +62,7 @@ resolveGenerics ctx gen =
           Intf _ _  _ -> return ty'
           _ -> throwError $ InterfaceExpected ty'
 
-addGenerics :: Ctx -> [(Name, [Type])] -> Tc (Ctx, [(Var, [Type])])
+addGenerics :: Ctx -> [(Name, [Type])] -> Tc (Ctx, [BoundVar])
 addGenerics ctx generics =
   foldM aux (ctx, []) generics
     where
@@ -214,7 +214,7 @@ i_fnDecl ctx (FunctionDecl name gen params retType) = do
   let fnDecl = FunctionDecl (name, ty) gen' params' retType'
   return (fnDecl, (name, ty))
 
-fnTy :: Ctx -> ([(Var, [Type])], [(Name, UnresolvedType)], UnresolvedType) -> Tc (Type, [(Name, Type)], Type)
+fnTy :: Ctx -> ([BoundVar], [(Name, UnresolvedType)], UnresolvedType) -> Tc (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
   tyArgs <- mapM (resolveId ctx) params
   retType' <- resolveType ctx retType
@@ -348,7 +348,7 @@ i_expr ctx (List items) = do
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn
 
-adjustTypeArgs :: Ctx -> [(Var, [Type])] -> [(Var, [Type])] -> [Type] -> Tc ([Type], [(Type, Type)])
+adjustTypeArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc ([Type], [(Type, Type)])
 adjustTypeArgs ctx gen skippedVars typeArgs = do
   constrArgs <- concat <$> zipWithM findConstrArgs gen typeArgs'
   return ([], constrArgs)
@@ -411,7 +411,7 @@ normalizeFnType (Fun gen params (Fun [] params' retTy)) =
   normalizeFnType (Fun gen (params ++ params') retTy)
 normalizeFnType ty = ty
 
-adjustFnType :: Bool -> [a] -> Type -> Tc (Type, [(Var, [Type])])
+adjustFnType :: Bool -> [a] -> Type -> Tc (Type, [BoundVar])
 adjustFnType allowHoles args fn@(Fun gen params retType) = do
   let lArgs = length args
   case compare lArgs (length params) of

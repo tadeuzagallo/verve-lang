@@ -1,6 +1,7 @@
 module Typing.Types
   ( Type(..)
   , Var()
+  , BoundVar
   , newVar
   , freshVar
   , fv
@@ -52,10 +53,12 @@ newVar name = do
 freshVar :: Var -> Tc Var
 freshVar (TV name _) = newVar name
 
+type BoundVar = (Var, [Type])
+
 data Type
   = Con String
   | Var Var [Type]
-  | Fun [(Var, [Type])] [Type] Type
+  | Fun [BoundVar] [Type] Type
   | Rec [(String, Type)]
   | Cls String [(String, Type)]
   | TyAbs [Var] Type
@@ -157,7 +160,7 @@ tyvar v = TV (show v) (-1)
 holeVar :: Var
 holeVar = TV "#hole" (-42)
 
-mkHole :: (Var, [Type]) -> Type
+mkHole :: BoundVar -> Type
 mkHole (_, bounds) = Var holeVar bounds
 
 isHole :: Type -> Bool
