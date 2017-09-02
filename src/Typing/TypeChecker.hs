@@ -269,7 +269,10 @@ i_expr ctx (Match expr cases) = do
                 [] -> void
                 x:xs -> foldl (\/) x xs
   return (Match expr' cases', retTy)
-i_expr ctx (Call fn constraintArgs types []) = i_expr ctx (Call fn constraintArgs types [VoidExpr])
+
+i_expr ctx (Call fn constraintArgs types []) =
+  i_expr ctx (Call fn constraintArgs types [VoidExpr])
+
 i_expr ctx (Call fn _ types args) = do
   (fn', tyFn) <- i_expr ctx fn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
@@ -284,7 +287,7 @@ i_expr ctx (Call fn _ types args) = do
             let s = zipSubst (map fst gen) types'
             let params' = map (applySubst s) params
             zipWithM_ (<:!) tyArgs params'
-            return (applySubst s retType, tyArgs)
+            return (applySubst s retType, types')
           _ -> undefined
   (typeArgs', constraintArgs) <- adjustTypeArgs ctx gen skippedVars typeArgs
   return (Call fn' constraintArgs typeArgs' args', retType')
