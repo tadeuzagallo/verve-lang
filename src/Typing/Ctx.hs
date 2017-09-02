@@ -15,14 +15,14 @@ import Typing.Substitution
 import Typing.TypeError
 import Typing.Types
 
-data Ctx = Ctx { types :: [(Var, Type)]
+data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
                , instances :: [(String, [Type])]
                }
 
 getType :: String -> Ctx -> Tc Type
 getType n ctx =
-  case lookup (var n) (types ctx) of
+  case lookup n (types ctx) of
     Nothing -> throwError (UnknownType $ show n)
     Just t -> instantiate t
 
@@ -33,7 +33,7 @@ getValueType n ctx =
     Just t -> instantiate t
 
 addType :: Ctx -> (String, Type) -> Ctx
-addType ctx (n, ty) = ctx { types = (var n, ty) : types ctx }
+addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
 
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
@@ -55,13 +55,13 @@ addInstance ctx (n, ty) = do
 
 defaultCtx :: Ctx
 defaultCtx =
-  Ctx { types = [ (var "Int", int)
-                , (var "Float", float)
-                , (var "Char", char)
-                , (var "String", string)
-                , (var "Void", void)
-                , (var "List", genericList)
-                , (var "Bool", bool)
+  Ctx { types = [ ("Int", int)
+                , ("Float", float)
+                , ("Char", char)
+                , ("String", string)
+                , ("Void", void)
+                , ("List", genericList)
+                , ("Bool", bool)
                 ]
       , values = [ ("int_print", [int] ~> void)
                  , ("int_add", [int, int] ~> int)
