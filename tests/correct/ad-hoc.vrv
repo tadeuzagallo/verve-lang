@@ -152,3 +152,13 @@ implementation<T: Intish, U> Intish<Pair<T, U>> { fn to_int(p: Pair<T, U>) -> In
     }
   }
 }
+
+implementation<T: Intish> Intish<List<T>> {
+  fn to_int(xs: List<T>) -> Int {
+    match xs {
+      case Cons(x, xs): int_add(to_int(x), to_int(xs))
+      case Nil: 0
+    }
+  }
+}
+to_int([13, 31]) // CHECK-L: 44 : Int

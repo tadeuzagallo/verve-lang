@@ -28,11 +28,11 @@ d_stmts ([Let var expr]) =
 d_stmts (Let var expr : ss) =
   CA.Let [(var, d_expr expr)] (d_stmts ss)
 d_stmts (Expr e:ss) =
-  CA.Let [(("#ignore", void), d_expr e)] (d_stmts ss)
+  CA.Let [(ignore void, d_expr e)] (d_stmts ss)
 d_stmts (FnStmt fn:ss) =
   CA.Let [(name fn, d_fn fn)] (d_stmts ss)
 d_stmts (Enum name _ _ : ss) =
-  CA.Let [(("#ignore", Type), CA.Var name)] (d_stmts ss)
+  CA.Let [(ignore Type, CA.Var name)] (d_stmts ss)
 d_stmts (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody : ss) =
   let fn = d_fn (Function { name = opName
                           , generics = opGenerics
@@ -49,15 +49,17 @@ d_stmts (Interface _ _ methods : ss) =
   CA.Let (map d_intfMethod methods) (d_stmts ss)
 
 d_stmts (Implementation (name, _) generics ty methods : ss) =
-  let dict = CA.Record (map (d_implMethod generics) methods ++ [((name, void), CA.Lit $ String $ print ty)])
-   in CA.Let [(("#" ++ name ++ print ty, void), dict)] (d_stmts ss)
+  let dict = CA.Record (map (d_implMethod generics) methods)
+      dictName = ("#" ++ name ++ print ty, void)
+      fixedDict = CA.App (mk_var "#fix") (CA.Lam dictName dict)
+   in CA.Let [(dictName, fixedDict)] (d_stmts ss)
   where
     print (TyApp ty _) = print ty
     print ty = show ty
 
 d_fnNoFix :: Function (Id Type) Type -> CA.Expr
 d_fnNoFix fn@(Function { params=[] }) =
-  d_fn (fn { params = [("#ignore", void)] })
+  d_fn (fn { params = [ignore void] })
 
 d_fnNoFix fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
@@ -78,7 +80,7 @@ d_intfMethod :: FunctionDecl (Id Type) Type -> CA.Bind
 d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
   let select = CA.App (mk_var "#fieldAccess") (CA.Lit (String s_name))
       select' = CA.App select (mk_var "#dict")
-   in (name, CA.Lam ("#dict", void) (CA.Lam ("#ignore", Type) select'))
+   in (name, CA.Lam ("#dict", void) (CA.Lam (ignore Type) select'))
 
 d_implMethod :: [(Name, [Type])] -> Function (Id Type) Type -> CA.Bind
 d_implMethod gen fn =
@@ -164,3 +166,6 @@ d_pattern PatDefault = CA.PatDefault
 d_pattern (PatLiteral l) = CA.PatLiteral l
 d_pattern (PatVar v) = CA.PatVar v
 d_pattern (PatCtor name pats) = CA.PatCtor name (map d_pattern pats)
+
+ignore :: Type -> Id Type
+ignore ty = ("#ignore", ty)

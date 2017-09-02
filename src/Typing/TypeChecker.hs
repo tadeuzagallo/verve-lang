@@ -170,16 +170,21 @@ i_stmt ctx (Implementation implName generics ty methods) = do
   generics' <- resolveGenerics ctx generics
   (ctx', genericVars) <- addGenerics ctx generics'
   ty' <- resolveType ctx' ty
-  (methods', methodsTy) <- unzip <$> mapM (i_fnNonRec ctx') methods
+  ctx'' <- extendCtx ctx' ty' genericVars
+  (methods', methodsTy) <- unzip <$> mapM (i_fnNonRec ctx'') methods
   let substs = mkSubst (param, ty')
   checkCompleteInterface substs intfMethods (zip (map name methods) methodsTy)
   checkExtraneousMethods intfMethods (zip (map name methods) methodsTy)
-  ctx' <- case (ty', genericVars) of
-            (TyApp ty _, (_:_)) -> addInstance ctx (implName, (ty, genericVars))
-            (ty, []) -> addInstance ctx (implName, (ty, []))
-            _ -> throwError ImplementationError
   let impl = Implementation (implName, void) generics' ty' methods'
+  ctx' <- extendCtx ctx ty' genericVars
   return (ctx', impl, void)
+  where
+    extendCtx ctx (TyApp ty _) genericVars@(_:_) =
+      addInstance ctx (implName, (ty, genericVars))
+    extendCtx ctx ty [] =
+      addInstance ctx (implName, (ty, []))
+    extendCtx _ _ _ =
+      throwError ImplementationError
 
 checkCompleteInterface :: Substitution -> [(Name, Type)] -> [(Name, Type)] -> Tc ()
 checkCompleteInterface substs intf impl = do
