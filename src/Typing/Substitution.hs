@@ -5,9 +5,11 @@ module Typing.Substitution
   , mkSubsts
   , zipSubst
   , applySubst
+  , instantiate
   ) where
 
 import Typing.Types
+import Typing.State
 
 newtype Substitution = Substitution [(Var, Type)]
 
@@ -52,3 +54,19 @@ applySubst s (Intf name param methods) =
 filterSubst :: (Var -> Bool) -> Substitution -> Substitution
 filterSubst f (Substitution s) =
   Substitution $ filter (f . fst) s
+
+freshBound :: (Var, [Type]) -> Tc (Var, [Type])
+freshBound (var, bounds) = do
+  var' <- freshVar var
+  return (var', bounds)
+
+instantiate :: Type -> Tc Type
+instantiate (TyAbs gen ty) = do
+  gen' <- mapM freshVar gen
+  let s = zipSubst gen (map (flip Var []) gen')
+  return $ TyAbs gen' (applySubst s ty)
+instantiate (Fun gen params ret) = do
+  gen' <- mapM freshBound gen
+  let s = zipSubst (map fst gen) (map (uncurry Var) gen')
+  return $ Fun gen' (map (applySubst s) params) (applySubst s ret)
+instantiate ty = return ty

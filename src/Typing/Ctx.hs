@@ -3,56 +3,48 @@ module Typing.Ctx
   ( Ctx()
   , defaultCtx
   , addType
-  , addTypeVar
   , getType
-  , getTypeVar
   , addValueType
   , getValueType
   , addInstance
   , getInstances
   ) where
 
+import Typing.State
+import Typing.Substitution
 import Typing.TypeError
 import Typing.Types
-
-import Control.Monad.Except (MonadError, throwError)
 
 data Ctx = Ctx { types :: [(Var, Type)]
                , values :: [(String, Type)]
                , instances :: [(String, [Type])]
                }
 
-getType :: MonadError TypeError m => String -> Ctx -> m Type
-getType name = getTypeVar (var name)
-
-getTypeVar :: MonadError TypeError m => Var -> Ctx -> m Type
-getTypeVar n ctx =
-  case lookup n (types ctx) of
+getType :: String -> Ctx -> Tc Type
+getType n ctx =
+  case lookup (var n) (types ctx) of
     Nothing -> throwError (UnknownType $ show n)
-    Just t -> return t
+    Just t -> instantiate t
 
-getValueType :: MonadError TypeError m => String -> Ctx -> m Type
+getValueType :: String -> Ctx -> Tc Type
 getValueType n ctx =
   case lookup n (values ctx) of
     Nothing -> throwError (UnknownVariable n)
-    Just t -> return t
+    Just t -> instantiate t
 
 addType :: Ctx -> (String, Type) -> Ctx
-addType ctx (n, ty) = addTypeVar ctx (var n, ty)
-
-addTypeVar :: Ctx -> (Var, Type) -> Ctx
-addTypeVar ctx (n, ty) = ctx { types = (n, ty) : types ctx }
+addType ctx (n, ty) = ctx { types = (var n, ty) : types ctx }
 
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
 
-getInstances :: MonadError TypeError m => String -> Ctx -> m [Type]
+getInstances :: String -> Ctx -> Tc [Type]
 getInstances n ctx =
   case lookup n (instances ctx) of
     Nothing -> return []
     Just insts -> return insts
 
-addInstance :: MonadError TypeError m => Ctx -> (String, Type) -> m Ctx
+addInstance :: Ctx -> (String, Type) -> Tc Ctx
 addInstance ctx (n, ty) = do
   insts <- getInstances n ctx
   return $ ctx { instances = update n (ty : insts) (instances ctx) }

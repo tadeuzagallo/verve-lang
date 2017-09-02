@@ -2,8 +2,7 @@ module Typing.Types
   ( Type(..)
   , Var()
   , (~>)
-  , unsafeFreshVar
-  , unsafeNewVar
+  , freshVar
   , fv
   , bool
   , int
@@ -17,6 +16,8 @@ module Typing.Types
   , mkHole
   , isHole
   ) where
+
+import Typing.State
 
 import Data.List (intercalate, union)
 import Text.Printf (printf)
@@ -35,11 +36,10 @@ instance Ord Var where
 instance Show Var where
   show (TV v _) = v
 
-unsafeFreshVar :: Var -> Int -> Var
-unsafeFreshVar (TV name _) = TV name
-
-unsafeNewVar :: String -> Int -> Var
-unsafeNewVar = TV
+freshVar :: Var -> Tc Var
+freshVar (TV name _) = do
+  uid <- mkUniqueId
+  return $ TV name uid
 
 data Type
   = Con String

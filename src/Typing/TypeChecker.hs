@@ -3,22 +3,19 @@
 module Typing.TypeChecker
   ( infer
   , inferStmt
-  , TypeError
   ) where
 
 import Absyn
 import Error
 import Typing.Constraint
-import Typing.Ctx hiding (getType, getValueType)
+import Typing.Ctx
 import Typing.State
 import Typing.Substitution
 import Typing.Subtyping
 import Typing.TypeError
 import Typing.Types
-import qualified Typing.Ctx as Ctx (getType, getValueType)
 
 import Control.Monad (foldM, when, zipWithM_)
-import Control.Monad.Except (throwError)
 import Data.Foldable (foldrM)
 import Data.List (union)
 
@@ -58,40 +55,13 @@ resolveGenerics ctx gen =
         bounds' <- mapM (resolveType ctx) bounds
         return (name, bounds')
 
-instantiate :: Type -> Tc Type
-instantiate (TyAbs gen ty) = do
-  gen' <- mapM fresh gen
-  let s = zipSubst gen (map (flip Var []) gen')
-  return $ TyAbs gen' (applySubst s ty)
-instantiate (Fun gen params ret) = do
-  gen' <- mapM freshBound gen
-  let s = zipSubst (map fst gen) (map (uncurry Var) gen')
-  return $ Fun gen' (map (applySubst s) params) (applySubst s ret)
-instantiate ty = return ty
-
-fresh :: Var -> Tc Var
-fresh var = do
-  uid <- mkUniqueId
-  return $ unsafeFreshVar var uid
-
-freshBound :: (Var, [Type]) -> Tc (Var, [Type])
-freshBound (var, bounds) = do
-  var' <- fresh var
-  return (var', bounds)
-
-getType :: Name -> Ctx -> Tc Type
-getType n ctx = Ctx.getType n ctx >>= instantiate
-
-getValueType :: Name -> Ctx -> Tc Type
-getValueType n ctx = Ctx.getValueType n ctx >>= instantiate
-
 addGenerics :: Ctx -> [(Name, [Type])] -> Tc (Ctx, [(Var, [Type])])
 addGenerics ctx generics =
   foldM aux (ctx, []) generics
     where
       aux (ctx, vars) (g, bounds) = do
-        g' <- fresh (var g)
-        return (addTypeVar ctx (var g, Var g' bounds), vars ++ [(g', bounds)])
+        g' <- freshVar (var g)
+        return (addType ctx (g, Var g' bounds), vars ++ [(g', bounds)])
 
 defaultBounds :: [a] -> [(a, [b])]
 defaultBounds = map (flip (,) [])

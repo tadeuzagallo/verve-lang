@@ -10,7 +10,6 @@ import Typing.Types
 import Typing.Variance
 
 import Control.Monad (zipWithM)
-import Control.Monad.Except (throwError)
 import Data.List (groupBy, intersect, sortBy, union)
 import Data.Maybe (fromJust)
 
