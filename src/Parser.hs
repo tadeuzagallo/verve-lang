@@ -139,10 +139,11 @@ p_fnDecl = do
 p_implementation :: AbsynParser Stmt
 p_implementation = do
   reserved "implementation"
+  implGenerics <- option [] p_generics
   implName <- ucid
   implType <- angles p_type
   implMethods <- p_body p_function
-  return $ Implementation { implName, implType, implMethods }
+  return $ Implementation { implName, implGenerics, implType, implMethods }
 
 p_function :: AbsynParser Function
 p_function = do

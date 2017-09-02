@@ -164,16 +164,21 @@ i_stmt ctx (Interface name param methods) = do
          in addValueType ctx (name, ty)
       aux _ _ _ _ = undefined
 
-i_stmt ctx (Implementation implName ty methods) = do
+i_stmt ctx (Implementation implName generics ty methods) = do
   Intf _ param intfMethods <- getType implName ctx
-  ty' <- resolveType ctx ty
   -- TODO: proper error in intf is not an Intf
-  (methods', methodsTy) <- unzip <$> mapM (i_fn ctx) methods
+  generics' <- resolveGenerics ctx generics
+  (ctx', genericVars) <- addGenerics ctx generics'
+  ty' <- resolveType ctx' ty
+  (methods', methodsTy) <- unzip <$> mapM (i_fnNonRec ctx') methods
   let substs = mkSubst (param, ty')
   checkCompleteInterface substs intfMethods (zip (map name methods) methodsTy)
   checkExtraneousMethods intfMethods (zip (map name methods) methodsTy)
-  ctx' <- addInstance ctx (implName, ty')
-  let impl = Implementation (implName, void) ty' methods'
+  ctx' <- case (ty', genericVars) of
+            (TyApp ty _, (_:_)) -> addInstance ctx (implName, (ty, genericVars))
+            (ty, []) -> addInstance ctx (implName, (ty, []))
+            _ -> throwError ImplementationError
+  let impl = Implementation (implName, void) generics' ty' methods'
   return (ctx', impl, void)
 
 checkCompleteInterface :: Substitution -> [(Name, Type)] -> [(Name, Type)] -> Tc ()
@@ -228,11 +233,19 @@ i_ctor mkEnumTy (name, types) (ctx, ctors) = do
   return (addValueType ctx (name, ty), ((name, ty), types'):ctors)
 
 i_fn :: Ctx -> Function Name UnresolvedType -> Tc (Function (Id Type) Type, Type)
-i_fn ctx fn = do
+i_fn = i_fnBase True
+
+i_fnNonRec :: Ctx -> Function Name UnresolvedType -> Tc (Function (Id Type) Type, Type)
+i_fnNonRec = i_fnBase False
+
+i_fnBase :: Bool -> Ctx -> Function Name UnresolvedType -> Tc (Function (Id Type) Type, Type)
+i_fnBase addToCtx ctx fn = do
   gen' <- resolveGenerics ctx $ generics fn
   (ctx', genericVars) <- addGenerics ctx gen'
   (ty, tyArgs, retType') <- fnTy ctx' (genericVars, params fn, retType fn)
-  let ctx'' = addValueType ctx' (name fn, ty)
+  let ctx'' = if addToCtx
+                then addValueType ctx' (name fn, ty)
+                else ctx'
   let ctx''' = foldl addValueType ctx'' tyArgs
   (body', bodyTy) <- i_stmts ctx''' (body fn)
   bodyTy <:! retType'
@@ -323,7 +336,7 @@ i_expr ctx (If ifCond ifBody elseBody) = do
 i_expr ctx (List items) = do
   (items', itemsTy) <- unzip <$> mapM (i_expr ctx) items
   ty <- case itemsTy of
-          [] -> resolveType ctx (UTName "Nil")
+          [] -> getValueType "Nil" ctx
           x:xs -> return . list $ foldl (\/) x xs
   return (List items', ty)
 
@@ -333,7 +346,7 @@ i_expr ctx (FnExpr fn) =
 adjustTypeArgs :: Ctx -> [(Var, [Type])] -> [(Var, [Type])] -> [Type] -> Tc ([Type], [(Type, Type)])
 adjustTypeArgs ctx gen skippedVars typeArgs = do
   constrArgs <- concat <$> zipWithM findConstrArgs gen typeArgs'
-  return (typeArgs', constrArgs)
+  return ([], constrArgs)
     where
       typeArgs' = zipWith findHoles gen typeArgs
 
@@ -342,20 +355,48 @@ adjustTypeArgs ctx gen skippedVars typeArgs = do
            then mkHole var
            else ty
 
+      findConstrArgs (_, []) tyArg = do
+        return [(tyArg, Type)]
+
       findConstrArgs (_, bounds) tyArg = do
-        mapM_ (boundsCheck ctx tyArg) bounds
-        return $ map ((,) tyArg) bounds
+        concat <$> mapM (boundsCheck ctx tyArg) bounds
 
-boundsCheck :: Ctx -> Type -> Type -> Tc ()
-boundsCheck _ v@(Var _ bounds) ty@(Intf name _ _) = do
-  when (ty `notElem` bounds) (throwError $ MissingInstance name v)
-
-boundsCheck ctx ty (Intf name _ _) = do
-  instances <- getInstances name ctx
-  when (ty `notElem` instances) (throwError $ MissingInstance name ty)
+boundsCheck :: Ctx -> Type -> Type -> Tc [(Type, Type)]
+boundsCheck ctx t1 t2@(Intf name _ _) = do
+  args <- boundsCheck' ctx t1 t2
+  if null args
+     then throwError $ MissingInstance name t1
+     else return args
 
 boundsCheck _ _ ty =
   throwError $ InterfaceExpected ty
+
+boundsCheck' :: Ctx -> Type -> Type -> Tc [(Type, Type)]
+boundsCheck' _ v@(Var _ bounds) intf = do
+  return $ if intf `elem` bounds
+              then [(v, intf), (v, Type)]
+              else []
+
+boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
+  instances <- getInstances name ctx
+  case lookup ty instances of
+    Nothing -> return []
+    Just vars ->
+      ([(ty, intf), (ty, Type)] ++) <$> (concat <$> zipWithM (\arg (_, bounds) ->
+        concat <$> mapM (boundsCheck ctx arg) bounds
+           ) args vars)
+
+boundsCheck' ctx ty intf@(Intf name _ _) = do
+  instances <- getInstances name ctx
+  case lookup ty instances of
+    Just [] -> return [(ty, intf), (ty, Type)]
+    _ -> return []
+
+boundsCheck' ctx (TyAbs params ty) intf =
+  boundsCheck' ctx (params \\ ty) intf
+
+boundsCheck' _ _ _ =
+  return []
 
 normalizeFnType :: Type -> Type
 normalizeFnType (Fun gen params (Fun [] params' retTy)) =

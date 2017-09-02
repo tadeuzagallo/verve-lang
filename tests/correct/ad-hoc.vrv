@@ -122,3 +122,33 @@ fn f<A, B: Intish, C: Intish>(a: A, b: B, c: C) -> Int {
   int_add(to_int(b),to_int(c))
 }
 f(1)(False)(2) // CHECK-L: 2 : Int
+
+implementation<T: Intish> Intish<List<T>> {
+  fn to_int(xs: List<T>) -> Int {
+    42
+  }
+}
+to_int([True])
+
+enum Pair<A, B> {
+  Pair(A, B)
+}
+implementation<T: Intish, U: Intish> Intish<Pair<T, U>> {
+  fn to_int(p: Pair<T, U>) -> Int {
+    match p {
+      case Pair(a, b): int_add(to_int(a), to_int(b))
+    }
+  }
+}
+to_int(Pair(42, True)) // CHECK-L: 43 : Int
+to_int(Pair(42, False)) // CHECK-L: 42 : Int
+to_int(Pair(42, "")) // CHECK-L: No instance of `Intish` for type `String`
+to_int(Pair(False)) // CHECK-L: No instance of `Intish`
+
+implementation<T: Intish, U> Intish<Pair<T, U>> { fn to_int(p: Pair<T, U>) -> Int {
+    match p {
+      case Pair(a, b): int_add(to_int(a), to_int(b))
+      // CHECK-L: No instance of `Intish` for type `U`
+    }
+  }
+}

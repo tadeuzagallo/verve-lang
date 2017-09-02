@@ -39,6 +39,7 @@ data Stmt a b
               , intfParam :: Name
               , intfMethods :: [FunctionDecl a b]}
   | Implementation { implName :: a
+                   , implGenerics :: [(Name, [b])]
                    , implType :: b
                    , implMethods :: [Function a b]}
    deriving (Show)

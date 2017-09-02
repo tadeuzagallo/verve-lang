@@ -18,6 +18,7 @@ data TypeError
   | ExtraneousImplementation Name
   | InterfaceExpected Type
   | MissingInstance String Type
+  | ImplementationError
 
 instance Show TypeError where
   show (UnknownVariable x) = "Unknown variable: " ++ x
@@ -31,6 +32,7 @@ instance Show TypeError where
   show (ExtraneousImplementation name) = "Implementation contains method `" ++ name ++ "` which is not part of the interface"
   show (InterfaceExpected ty) = "Expected an interface, but found type `" ++ show ty ++ "`"
   show (MissingInstance intf ty) = "No instance of `" ++ intf ++ "` for type `" ++ show ty ++  "`"
+  show (ImplementationError) = "TODO: ImplementationError"
 
 instance ErrorT TypeError where
   kind _ = "TypeError"

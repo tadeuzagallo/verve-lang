@@ -19,7 +19,7 @@ import qualified Typing.Types as Types (list)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
-               , instances :: [(String, [Type])]
+               , instances :: [(String, [(Type, [(Var, [Type])])])]
                }
 
 getType :: String -> Ctx -> Tc Type
@@ -40,16 +40,16 @@ addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
 
-getInstances :: String -> Ctx -> Tc [Type]
+getInstances :: String -> Ctx -> Tc [(Type, [(Var, [Type])])]
 getInstances n ctx =
   case lookup n (instances ctx) of
     Nothing -> return []
     Just insts -> return insts
 
-addInstance :: Ctx -> (String, Type) -> Tc Ctx
-addInstance ctx (n, ty) = do
+addInstance :: Ctx -> (String, (Type, [(Var, [Type])])) -> Tc Ctx
+addInstance ctx (n, inst) = do
   insts <- getInstances n ctx
-  return $ ctx { instances = update n (ty : insts) (instances ctx) }
+  return $ ctx { instances = update n (inst : insts) (instances ctx) }
     where
       update key value [] = [(key, value)]
       update key value ((k,_):rest) | k == key = (key, value) : rest

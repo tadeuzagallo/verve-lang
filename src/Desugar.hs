@@ -28,11 +28,11 @@ d_stmts ([Let var expr]) =
 d_stmts (Let var expr : ss) =
   CA.Let [(var, d_expr expr)] (d_stmts ss)
 d_stmts (Expr e:ss) =
-  CA.Let [(("", void), d_expr e)] (d_stmts ss)
+  CA.Let [(("#ignore", void), d_expr e)] (d_stmts ss)
 d_stmts (FnStmt fn:ss) =
   CA.Let [(name fn, d_fn fn)] (d_stmts ss)
 d_stmts (Enum name _ _ : ss) =
-  CA.Let [(("", Type), CA.Var name)] (d_stmts ss)
+  CA.Let [(("#ignore", Type), CA.Var name)] (d_stmts ss)
 d_stmts (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody : ss) =
   let fn = d_fn (Function { name = opName
                           , generics = opGenerics
@@ -48,21 +48,28 @@ d_stmts (Class _ _ methods : ss) =
 d_stmts (Interface _ _ methods : ss) =
   CA.Let (map d_intfMethod methods) (d_stmts ss)
 
-d_stmts (Implementation (name, _) ty methods : ss) =
-  let dict = CA.Record (map d_implMethod methods)
-   in CA.Let [(("#" ++ name ++ show ty, void), dict)] (d_stmts ss)
+d_stmts (Implementation (name, _) generics ty methods : ss) =
+  let dict = CA.Record (map (d_implMethod generics) methods ++ [((name, void), CA.Lit $ String $ print ty)])
+   in CA.Let [(("#" ++ name ++ print ty, void), dict)] (d_stmts ss)
+  where
+    print (TyApp ty _) = print ty
+    print ty = show ty
 
-d_fn :: Function (Id Type) Type -> CA.Expr
-d_fn fn@(Function { params=[] }) =
-  d_fn (fn { params = [("", void)] })
-d_fn fn =
+d_fnNoFix :: Function (Id Type) Type -> CA.Expr
+d_fnNoFix fn@(Function { params=[] }) =
+  d_fn (fn { params = [("#ignore", void)] })
+
+d_fnNoFix fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
-      fn'' = foldr CA.Lam fn' (map (flip (,) Type . fst) $ generics fn)
-      fn''' = foldr CA.Lam fn'' (concatMap constraints $ generics fn)
-   in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn''')
+   in foldr CA.Lam fn' (concatMap constraints $ generics fn)
   where
     constraints (varName, bounds) =
-      map (\bound -> ("#" ++ show bound ++ varName, void)) bounds
+      map (\bound -> ("#" ++ show bound ++ varName, void)) bounds ++ [(varName, Type)]
+
+d_fn :: Function (Id Type) Type -> CA.Expr
+d_fn fn =
+  let fn' = d_fnNoFix fn
+   in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn')
 
 mk_var :: String -> CA.Expr
 mk_var v = CA.Var (v, void)
@@ -71,10 +78,12 @@ d_intfMethod :: FunctionDecl (Id Type) Type -> CA.Bind
 d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
   let select = CA.App (mk_var "#fieldAccess") (CA.Lit (String s_name))
       select' = CA.App select (mk_var "#dict")
-   in (name, CA.Lam ("#dict", void) (CA.Lam ("", Type) select'))
+   in (name, CA.Lam ("#dict", void) (CA.Lam ("#ignore", Type) select'))
 
-d_implMethod :: Function (Id Type) Type -> CA.Bind
-d_implMethod fn = (name fn, d_fn fn)
+d_implMethod :: [(Name, [Type])] -> Function (Id Type) Type -> CA.Bind
+d_implMethod gen fn =
+  let fn' = fn { generics = gen ++ generics fn }
+   in (name fn, d_fnNoFix fn')
 
 d_expr :: Expr (Id Type) Type -> CA.Expr
 d_expr VoidExpr = CA.Void
@@ -108,6 +117,8 @@ d_expr (Call callee constraints types args) =
       mkConstraint (constraints, holes) (typeArg, _) | isHole typeArg =
         let holeName = "#constr_hole" ++ show (length holes)
          in (constraints ++ [mk_var holeName], (holeName, void) : holes)
+      mkConstraint (constraints, holes) (typeArg, Type) =
+        (constraints ++ [CA.Type typeArg], holes)
       mkConstraint (constraints, holes) (typeArg, typeBound) =
         let constr = mk_var ("#" ++ show typeBound ++ show typeArg)
          in (constraints ++ [constr], holes)
