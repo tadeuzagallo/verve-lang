@@ -53,3 +53,5 @@ enum Maybe<T> {
 /* CHECK-L: Trying to implement Intish for Maybe<Int>, but Maybe<Int> should be a simple type, class or enum (monomorphic) */
 implementation Intish< Maybe<Int> > {
 }
+
+fn f<T: Int>(x: T) { } // CHECK-L: Expected an interface, but found type `Int`

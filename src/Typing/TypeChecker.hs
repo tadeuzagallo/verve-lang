@@ -49,11 +49,17 @@ resolveType _ UTPlaceholder = undefined
 
 resolveGenerics :: Ctx -> [(Name, [UnresolvedType])] -> Tc [(Name, [Type])]
 resolveGenerics ctx gen =
-  mapM aux gen
+  mapM resolve gen
     where
-      aux (name, bounds) = do
-        bounds' <- mapM (resolveType ctx) bounds
+      resolve (name, bounds) = do
+        bounds' <- mapM resolveConstraint bounds
         return (name, bounds')
+
+      resolveConstraint ty = do
+        ty' <- resolveType ctx ty
+        case ty' of
+          Intf _ _  _ -> return ty'
+          _ -> throwError $ InterfaceExpected ty'
 
 addGenerics :: Ctx -> [(Name, [Type])] -> Tc (Ctx, [(Var, [Type])])
 addGenerics ctx generics =
