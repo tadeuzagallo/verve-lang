@@ -7,7 +7,7 @@ module Naming
   , defaultEnv
   ) where
 
-import Absyn
+import Absyn.Untyped
 import Error
 
 import Control.Monad (foldM)
@@ -45,15 +45,15 @@ getOpInfo name (Env env) =
 getPrec :: Name -> Env -> Result PrecInt
 getPrec name env = snd <$> getOpInfo name env
 
-balance :: Module Name UnresolvedType -> Result (Module Name UnresolvedType)
+balance :: Module -> Result Module
 balance (Module stmts) = do
   (_, stmts') <- n_stmts defaultEnv stmts
   return $ Module stmts'
 
-balanceStmt :: Env -> Stmt Name UnresolvedType -> Result (Env, Stmt Name UnresolvedType)
+balanceStmt :: Env -> Stmt -> Result (Env, Stmt)
 balanceStmt = n_stmt
 
-n_stmts :: Env -> [Stmt Name UnresolvedType] -> Result (Env, [Stmt Name UnresolvedType])
+n_stmts :: Env -> [Stmt] -> Result (Env, [Stmt])
 n_stmts env stmts = do
   (env', stmts') <- foldM aux (env, []) stmts
   return (env', reverse stmts')
@@ -62,7 +62,7 @@ n_stmts env stmts = do
         (env', stmt') <- n_stmt env stmt
         return (env', stmt' : stmts)
 
-n_stmt :: Env -> Stmt Name UnresolvedType -> Result (Env, Stmt Name UnresolvedType)
+n_stmt :: Env -> Stmt -> Result (Env, Stmt)
 n_stmt env op@(Operator { opAssoc, opPrec, opName, opBody }) = do
   opPrec' <- prec env opPrec
   let env' = addOpInfo env (opName, (opAssoc, opPrec'))
@@ -88,12 +88,12 @@ prec env (PrecEqual n) =  getPrec n env
 prec env (PrecHigher n) =  (+) 1 <$> getPrec n env
 prec env (PrecLower n) =  (-) 1 <$> getPrec n env
 
-n_fn :: Env -> Function Name UnresolvedType -> Result (Function Name UnresolvedType)
+n_fn :: Env -> Function -> Result Function
 n_fn env fn = do
   (_, body') <- n_stmts env (body fn)
   return fn { body = body' }
 
-n_expr :: Env -> Expr Name UnresolvedType -> Result (Expr Name UnresolvedType)
+n_expr :: Env -> Expr -> Result Expr
 n_expr env (BinOp _ _ ll lop (BinOp _ _ rl rop rr)) = do
   ll' <- n_expr env ll
   rl' <- n_expr env rl

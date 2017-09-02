@@ -1,4 +1,4 @@
-import Absyn (Module(Module), Name, Stmt, UnresolvedType)
+import Absyn.Untyped
 import Error
 import Parser
 import qualified Naming
@@ -14,6 +14,8 @@ import System.Console.Haskeline
 import System.Environment (getArgs)
 import Text.Printf (printf)
 
+import Debug.Trace
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -27,7 +29,7 @@ type EvalCtx = (Naming.Env, Ctx, Env)
 initEvalCtx :: EvalCtx
 initEvalCtx = (Naming.defaultEnv, defaultCtx, defaultEnv)
 
-evalStmt ::  EvalCtx -> Stmt Name UnresolvedType -> Result (EvalCtx, String)
+evalStmt ::  EvalCtx -> Stmt -> Result (EvalCtx, String)
 evalStmt (nenv, ctx, env) stmt = do
   (nenv', balanced) <- Naming.balanceStmt nenv stmt
   (ctx', typed, ty) <- inferStmt ctx balanced
@@ -64,13 +66,13 @@ runFile file = do
   -- TODO: add this as `Error::runError`
   either report putStrLn (run result)
   where
-    run :: (Result (Module Name UnresolvedType)) -> Result String
+    run :: (Result Module) -> Result String
     run result = do
       absyn <- result
       balanced <- Naming.balance absyn
       (typed, ty) <- infer balanced
       let core = desugar typed
-      val <- eval core
+      val <- trace (show core) eval core
       -- TODO: move this printing into it's own function
       return $ printf "%s : %s" (show val) (show ty)
 
@@ -80,11 +82,11 @@ runAndPrintStmts file = do
   -- TODO: add this as `Error::runError`
   either report id (run result)
   where
-    run :: (Result (Module Name UnresolvedType)) -> Result (IO ())
+    run :: (Result Module) -> Result (IO ())
     run result = do
       (Module stmts) <- result
       return $ foldM_ aux initEvalCtx stmts
-    aux :: EvalCtx -> Stmt Name UnresolvedType -> IO EvalCtx
+    aux :: EvalCtx -> Stmt -> IO EvalCtx
     aux ctx stmt =
       case evalStmt ctx stmt of
         Left err -> do

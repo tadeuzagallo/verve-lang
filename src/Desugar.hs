@@ -3,17 +3,17 @@ module Desugar
   , desugarStmt
   ) where
 
-import Absyn
+import Absyn.Typed
 import Typing.Types
 import qualified CoreAbsyn as CA
 
-desugar :: Module (Id Type) Type -> CA.Expr
+desugar :: Module -> CA.Expr
 desugar = d_stmts . stmts
 
-desugarStmt :: Stmt (Id Type) Type -> CA.Expr
+desugarStmt :: Stmt -> CA.Expr
 desugarStmt stmt = d_stmts [stmt]
 
-d_stmts :: [Stmt (Id Type) Type] -> CA.Expr
+d_stmts :: [Stmt] -> CA.Expr
 d_stmts [] = CA.Void
 -- terminators
 d_stmts ([Expr e]) =
@@ -57,7 +57,7 @@ d_stmts (Implementation (name, _) generics ty methods : ss) =
     print (TyApp ty _) = print ty
     print ty = show ty
 
-d_fnNoFix :: Function (Id Type) Type -> CA.Expr
+d_fnNoFix :: Function -> CA.Expr
 d_fnNoFix fn@(Function { params=[] }) =
   d_fn (fn { params = [ignore void] })
 
@@ -68,7 +68,7 @@ d_fnNoFix fn =
     constraints (varName, bounds) =
       map (\bound -> ("#" ++ show bound ++ varName, void)) bounds ++ [(varName, Type)]
 
-d_fn :: Function (Id Type) Type -> CA.Expr
+d_fn :: Function -> CA.Expr
 d_fn fn =
   let fn' = d_fnNoFix fn
    in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn')
@@ -76,18 +76,18 @@ d_fn fn =
 mk_var :: String -> CA.Expr
 mk_var v = CA.Var (v, void)
 
-d_intfMethod :: FunctionDecl (Id Type) Type -> CA.Bind
+d_intfMethod :: FunctionDecl -> CA.Bind
 d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
   let select = CA.App (mk_var "#fieldAccess") (CA.Lit (String s_name))
       select' = CA.App select (mk_var "#dict")
    in (name, CA.Lam ("#dict", void) (CA.Lam (ignore Type) select'))
 
-d_implMethod :: [(Name, [Type])] -> Function (Id Type) Type -> CA.Bind
+d_implMethod :: [(Name, [Type])] -> Function -> CA.Bind
 d_implMethod gen fn =
   let fn' = fn { generics = gen ++ generics fn }
    in (name fn, d_fnNoFix fn')
 
-d_expr :: Expr (Id Type) Type -> CA.Expr
+d_expr :: Expr -> CA.Expr
 d_expr VoidExpr = CA.Void
 d_expr (Literal l) = CA.Lit l
 d_expr (Ident id) = CA.Var id
@@ -104,18 +104,18 @@ d_expr (Call callee constraints types args) =
       app''' = foldl (flip CA.Lam) app'' holes
    in foldl (flip CA.Lam) app''' constraintHoles
     where
-      mkApp :: CA.Expr -> Expr (Id Type) Type -> CA.Expr
+      mkApp :: CA.Expr -> Expr -> CA.Expr
       mkApp callee arg =
         CA.App callee (d_expr arg)
 
-      mkTypeApp :: (CA.Expr, [Id Type]) -> Type -> (CA.Expr, [Id Type])
+      mkTypeApp :: (CA.Expr, [Id]) -> Type -> (CA.Expr, [Id])
       mkTypeApp (app, holes) ty | isHole ty =
         let holeName = "#hole" ++ show (length holes)
          in (CA.App app $ mk_var holeName, (holeName, void) : holes)
       mkTypeApp (app, holes) ty =
         (CA.App app $ CA.Type ty, holes)
 
-      mkConstraint :: ([CA.Expr], [Id Type]) -> (Type, Type) -> ([CA.Expr], [Id Type])
+      mkConstraint :: ([CA.Expr], [Id]) -> (Type, Type) -> ([CA.Expr], [Id])
       mkConstraint (constraints, holes) (typeArg, _) | isHole typeArg =
         let holeName = "#constr_hole" ++ show (length holes)
          in (constraints ++ [mk_var holeName], (holeName, void) : holes)
@@ -158,14 +158,14 @@ d_expr (List items) =
 d_expr (FnExpr fn) =
   d_fn fn
 
-d_case :: Case (Id Type) Type -> CA.Case
+d_case :: Case -> CA.Case
 d_case (Case pattern expr) = (d_pattern pattern, d_stmts expr)
 
-d_pattern :: Pattern (Id Type) -> CA.Pattern
+d_pattern :: Pattern -> CA.Pattern
 d_pattern PatDefault = CA.PatDefault
 d_pattern (PatLiteral l) = CA.PatLiteral l
 d_pattern (PatVar v) = CA.PatVar v
 d_pattern (PatCtor name pats) = CA.PatCtor name (map d_pattern pats)
 
-ignore :: Type -> Id Type
+ignore :: Type -> Id
 ignore ty = ("#ignore", ty)

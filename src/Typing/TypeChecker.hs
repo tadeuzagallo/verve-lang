@@ -5,7 +5,11 @@ module Typing.TypeChecker
   , inferStmt
   ) where
 
-import Absyn
+import qualified Absyn.Untyped as U
+import qualified Absyn.Typed as T
+
+import Absyn.Base
+import Absyn.Meta
 import Error
 import Typing.Constraint
 import Typing.Ctx
@@ -24,20 +28,20 @@ import Data.List (union)
 actualTy <:! expectedTy =
   when (not $ actualTy <: expectedTy) (throwError $ TypeError expectedTy actualTy)
 
-resolveId :: Ctx -> Id UnresolvedType -> Tc (Id Type)
+resolveId :: Ctx -> U.Id -> Tc T.Id
 resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
 
-resolveType :: Ctx -> UnresolvedType -> Tc Type
-resolveType ctx (UTName v) =
+resolveType :: Ctx -> U.Type -> Tc Type
+resolveType ctx (U.TName v) =
   getType v ctx
-resolveType ctx (UTArrow params ret) = do
+resolveType ctx (U.TArrow params ret) = do
   params' <- mapM (resolveType ctx) params
   ret' <- resolveType ctx ret
   return $ Fun [] params' ret'
-resolveType ctx (UTRecord fieldsTy) = do
+resolveType ctx (U.TRecord fieldsTy) = do
   fieldsTy' <- mapM (resolveId ctx) fieldsTy
   return $ Rec fieldsTy'
-resolveType ctx (UTApp t1 t2) = do
+resolveType ctx (U.TApp t1 t2) = do
   t1' <- resolveType ctx t1
   t2' <- mapM (resolveType ctx) t2
   case t1' of
@@ -45,10 +49,10 @@ resolveType ctx (UTApp t1 t2) = do
     TyAbs params ty ->
       return $ applySubst (zipSubst params t2') ty
     _ -> return $ TyApp t1' t2'
-resolveType _ UTVoid = return void
-resolveType _ UTPlaceholder = undefined
+resolveType _ U.TVoid = return void
+resolveType _ U.TPlaceholder = undefined
 
-resolveGenerics :: Ctx -> [(Name, [UnresolvedType])] -> Tc [(Name, [Type])]
+resolveGenerics :: Ctx -> [(Name, [U.Type])] -> Tc [(Name, [Type])]
 resolveGenerics ctx gen =
   mapM resolve gen
     where
@@ -73,27 +77,27 @@ addGenerics ctx generics =
 defaultBounds :: [a] -> [(a, [b])]
 defaultBounds = map (flip (,) [])
 
-infer :: Module Name UnresolvedType -> Result (Module (Id Type) Type, Type)
+infer :: U.Module -> Result (T.Module, Type)
 infer mod =
   runTc
     (i_stmts defaultCtx (stmts mod))
     (\(stmts, ty) -> (Module stmts, ty))
 
-inferStmt :: Ctx -> Stmt Name UnresolvedType -> Result (Ctx, Stmt (Id Type) Type, Type)
+inferStmt :: Ctx -> U.Stmt -> Result (Ctx, T.Stmt, Type)
 inferStmt ctx stmt =
   runTc (i_stmt ctx stmt) id
 
-i_stmts :: Ctx -> [Stmt Name UnresolvedType ] -> Tc ([Stmt (Id Type) Type], Type)
+i_stmts :: Ctx -> [U.Stmt] -> Tc ([T.Stmt], Type)
 i_stmts ctx stmts = do
   (_, stmts', ty) <- foldM aux (ctx, [], void) stmts
   return (reverse stmts', ty)
     where
-      aux :: (Ctx, [Stmt (Id Type) Type], Type) -> Stmt Name  UnresolvedType -> Tc (Ctx, [Stmt (Id Type) Type], Type)
+      aux :: (Ctx, [T.Stmt], Type) -> U.Stmt -> Tc (Ctx, [T.Stmt], Type)
       aux (ctx, stmts, _) stmt = do
         (ctx', stmt', ty) <- i_stmt ctx stmt
         return (ctx', stmt':stmts, ty)
 
-i_stmt :: Ctx -> Stmt Name UnresolvedType -> Tc (Ctx, Stmt (Id Type) Type, Type)
+i_stmt :: Ctx -> U.Stmt -> Tc (Ctx, T.Stmt, Type)
 i_stmt ctx (Expr expr) = do
   (expr', ty) <- i_expr ctx expr
   return (ctx, Expr expr', ty)
@@ -206,7 +210,7 @@ checkExtraneousMethods intf impl = do
         Nothing -> throwError $ ExtraneousImplementation methodName
         Just _ -> return ()
 
-i_fnDecl :: Ctx -> FunctionDecl Name UnresolvedType -> Tc (FunctionDecl (Id Type) Type, (Name, Type))
+i_fnDecl :: Ctx -> U.FunctionDecl -> Tc (T.FunctionDecl, (Name, Type))
 i_fnDecl ctx (FunctionDecl name gen params retType) = do
   gen' <- resolveGenerics ctx gen
   (ctx', genVars) <- addGenerics ctx gen'
@@ -214,7 +218,7 @@ i_fnDecl ctx (FunctionDecl name gen params retType) = do
   let fnDecl = FunctionDecl (name, ty) gen' params' retType'
   return (fnDecl, (name, ty))
 
-fnTy :: Ctx -> ([BoundVar], [(Name, UnresolvedType)], UnresolvedType) -> Tc (Type, [(Name, Type)], Type)
+fnTy :: Ctx -> ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
   tyArgs <- mapM (resolveId ctx) params
   retType' <- resolveType ctx retType
@@ -224,26 +228,26 @@ fnTy ctx (generics, params, retType) = do
   let ty = Fun generics tyArgs' retType'
   return (ty, tyArgs, retType')
 
-i_method :: Type -> (Ctx, [Function (Id Type) Type]) -> Function Name UnresolvedType -> Tc (Ctx, [Function (Id Type) Type])
+i_method :: Type -> (Ctx, [T.Function]) -> U.Function -> Tc (Ctx, [T.Function])
 i_method classTy (ctx, fns) fn = do
   let ctx' = addType ctx ("Self", classTy)
-  let fn' = fn { params = ("self", UTName "Self") : params fn }
+  let fn' = fn { params = ("self", U.TName "Self") : params fn }
   (fn'', fnTy) <- i_fn ctx' fn'
   return (addValueType ctx (name fn, fnTy), fn'' : fns)
 
-i_ctor :: (Maybe [Type] -> Type) -> DataCtor Name UnresolvedType -> (Ctx, [DataCtor (Id Type) Type]) -> Tc (Ctx, [DataCtor (Id Type) Type])
+i_ctor :: (Maybe [Type] -> Type) -> U.DataCtor -> (Ctx, [T.DataCtor]) -> Tc (Ctx, [T.DataCtor])
 i_ctor mkEnumTy (name, types) (ctx, ctors) = do
   types' <- sequence (types >>= return . mapM (resolveType ctx))
   let ty = mkEnumTy types'
   return (addValueType ctx (name, ty), ((name, ty), types'):ctors)
 
-i_fn :: Ctx -> Function Name UnresolvedType -> Tc (Function (Id Type) Type, Type)
+i_fn :: Ctx -> U.Function -> Tc (T.Function, Type)
 i_fn = i_fnBase True
 
-i_fnNonRec :: Ctx -> Function Name UnresolvedType -> Tc (Function (Id Type) Type, Type)
+i_fnNonRec :: Ctx -> U.Function -> Tc (T.Function, Type)
 i_fnNonRec = i_fnBase False
 
-i_fnBase :: Bool -> Ctx -> Function Name UnresolvedType -> Tc (Function (Id Type) Type, Type)
+i_fnBase :: Bool -> Ctx -> U.Function -> Tc (T.Function, Type)
 i_fnBase addToCtx ctx fn = do
   gen' <- resolveGenerics ctx $ generics fn
   (ctx', genericVars) <- addGenerics ctx gen'
@@ -262,7 +266,7 @@ i_fnBase addToCtx ctx fn = do
                }
   return (fn', ty)
 
-i_expr :: Ctx -> Expr Name UnresolvedType -> Tc (Expr (Id Type) Type, Type)
+i_expr :: Ctx -> U.Expr -> Tc (T.Expr, Type)
 i_expr _ (Literal lit) = return (Literal lit, i_lit lit)
 
 i_expr ctx (Ident i) = do
@@ -322,7 +326,7 @@ i_expr ctx (Record fields) = do
 i_expr ctx (FieldAccess expr _ field) = do
   (expr', ty) <- i_expr ctx expr
   let
-      aux :: Type -> [(String, Type)] -> Tc (Expr (Id Type) Type, Type)
+      aux :: Type -> [(String, Type)] -> Tc (T.Expr, Type)
       aux ty r = case lookup field r of
                 Nothing -> throwError $ UnknownField ty field
                 Just t -> return (FieldAccess expr' ty (field, t), t)
@@ -431,13 +435,13 @@ i_lit (Float _) = float
 i_lit (Char _) = char
 i_lit (String _) = string
 
-i_case :: Ctx -> Type -> Case Name UnresolvedType -> Tc (Case (Id Type) Type, Type)
+i_case :: Ctx -> Type -> U.Case -> Tc (T.Case, Type)
 i_case ctx ty (Case pattern caseBody) = do
   (pattern', ctx') <- c_pattern ctx ty pattern
   (caseBody', ty) <- i_stmts ctx' caseBody
   return (Case pattern' caseBody', ty)
 
-c_pattern :: Ctx -> Type -> Pattern Name -> Tc (Pattern (Id Type), Ctx)
+c_pattern :: Ctx -> Type -> U.Pattern -> Tc (T.Pattern, Ctx)
 c_pattern ctx _ PatDefault = return (PatDefault, ctx)
 c_pattern ctx ty (PatLiteral l) = do
   let litTy = i_lit l

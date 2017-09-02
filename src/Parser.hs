@@ -5,27 +5,25 @@ module Parser
   , parseStmt
   ) where
 
-import Absyn
+import Absyn.Untyped
 import Error
 import Lexer
 
 import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepEndBy, skipMany1, lookAhead)
 import Text.Parsec.String (Parser, parseFromFile)
 
-type AbsynParser a = Parser (a Name UnresolvedType)
-
-parseFile :: String -> IO (Either Error (Module Name UnresolvedType))
+parseFile :: String -> IO (Either Error (Module))
 parseFile file = do
   result <- parseFromFile p_module file
   return $ either (Left . Error) Right result
 
-parseStmt :: String -> String -> Either Error (Stmt Name UnresolvedType)
+parseStmt :: String -> String -> Either Error (Stmt)
 parseStmt file source = liftError $ parse (anySpace *> p_stmt <* eof) file source
 
-p_module :: AbsynParser Module
+p_module :: Parser Module
 p_module = Module <$> (anySpace *> p_stmt `sepEndBy` p_separator <* eof)
 
-p_stmt :: AbsynParser Stmt
+p_stmt :: Parser Stmt
 p_stmt = choice [ p_enum
                 , p_operator
                 , p_let
@@ -36,7 +34,7 @@ p_stmt = choice [ p_enum
                 , p_expr True >>= return . Expr
                 ] <?> "statement"
 
-p_enum :: AbsynParser Stmt
+p_enum :: Parser Stmt
 p_enum = do
   reserved "enum"
   name <- ucid
@@ -44,13 +42,13 @@ p_enum = do
   ctors <- p_body p_constructor
   return $ Enum name generics ctors
 
-p_constructor :: Parser (DataCtor Name UnresolvedType)
+p_constructor :: Parser (DataCtor)
 p_constructor = do
   name <- ucid
   args <- optionMaybe . parens . commaSep $ p_type
   return $ (name, args)
 
-p_operator :: AbsynParser Stmt
+p_operator :: Parser Stmt
 p_operator = do
   maybeOpAssoc <- optionMaybe p_opAssoc
   opPrec <- option defaultPrec p_opPrec
@@ -96,7 +94,7 @@ p_opAssoc = do
       assocChoice = choice . map assoc
       assoc a = try (reserved $ show a) *> return a
 
-p_let :: AbsynParser Stmt
+p_let :: Parser Stmt
 p_let = do
   reserved "let"
   name <- lcid
@@ -104,7 +102,7 @@ p_let = do
   expr <- p_expr True
   return $ Let name expr
 
-p_class :: AbsynParser Stmt
+p_class :: Parser Stmt
 p_class = do
   reserved "class"
   className <- ucid
@@ -114,12 +112,12 @@ p_class = do
     <*> p_function `sepEndBy` p_separator
   return $ Class { className, classVars, classMethods }
 
-p_classVar :: Parser (Name, UnresolvedType)
+p_classVar :: Parser (Name, Type)
 p_classVar = do
   reserved "let"
   p_typedName
 
-p_interface :: AbsynParser Stmt
+p_interface :: Parser Stmt
 p_interface = do
   reserved "interface"
   intfName <- ucid
@@ -127,16 +125,16 @@ p_interface = do
   intfMethods <- p_body p_fnDecl
   return $ Interface { intfName, intfParam, intfMethods }
 
-p_fnDecl :: AbsynParser FunctionDecl
+p_fnDecl :: Parser FunctionDecl
 p_fnDecl = do
   reserved "fn"
   fnDeclName <- lcid
   fnDeclGenerics <- option [] p_generics
   fnDeclParams <- parens $ commaSep p_typedName
-  fnDeclRetType <- option UTVoid p_retType
+  fnDeclRetType <- option TVoid p_retType
   return $ FunctionDecl {fnDeclName, fnDeclGenerics, fnDeclParams, fnDeclRetType}
 
-p_implementation :: AbsynParser Stmt
+p_implementation :: Parser Stmt
 p_implementation = do
   reserved "implementation"
   implGenerics <- option [] p_generics
@@ -145,7 +143,7 @@ p_implementation = do
   implMethods <- p_body p_function
   return $ Implementation { implName, implGenerics, implType, implMethods }
 
-p_function :: AbsynParser Function
+p_function :: Parser Function
 p_function = do
   FunctionDecl { fnDeclName = name
                , fnDeclGenerics = generics
@@ -155,58 +153,58 @@ p_function = do
   body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 
-p_generics :: Parser [(Name, [UnresolvedType])]
+p_generics :: Parser [(Name, [Type])]
 p_generics = angles $ commaSep p_genericParam
 
-p_genericParam :: Parser (Name, [UnresolvedType])
+p_genericParam :: Parser (Name, [Type])
 p_genericParam = do
   var <- ucid
   bounds <- option [] (symbol ":" *>  (parens (commaSep1 p_type) <|> (p_type >>= return . (:[]) )))
   return (var, bounds)
 
-p_typedName :: Parser (Id UnresolvedType)
+p_typedName :: Parser Param
 p_typedName = do
   name <- lcid
   symbol ":"
   ty <- p_type
   return (name, ty)
 
-p_retType :: Parser UnresolvedType
+p_retType :: Parser Type
 p_retType = do
   reservedOp "->"
   p_type
 
-p_type :: Parser UnresolvedType
+p_type :: Parser Type
 p_type = choice [p_simpleType, p_typeArrow, p_typeRecord]
 
-p_simpleType :: Parser UnresolvedType
-p_simpleType = ucid >>= p_typeApp . UTName
+p_simpleType :: Parser Type
+p_simpleType = ucid >>= p_typeApp . TName
 
-p_typeApp :: UnresolvedType -> Parser UnresolvedType
+p_typeApp :: Type -> Parser Type
 p_typeApp ty = do
-  angles (commaSep p_type) >>= return . UTApp ty
+  angles (commaSep p_type) >>= return . TApp ty
   <|> return ty
 
-p_typeArrow :: Parser UnresolvedType
+p_typeArrow :: Parser Type
 p_typeArrow = do
   tyArgs <- parens $ commaSep p_type
   reservedOp "->"
   retType <- p_type
-  return $ UTArrow tyArgs retType
+  return $ TArrow tyArgs retType
 
-p_typeRecord :: Parser UnresolvedType
+p_typeRecord :: Parser Type
 p_typeRecord = do
   fields <- braces $ commaSep ((,) <$> lcid <* symbol ":" <*> p_type)
-  return $ UTRecord fields
+  return $ TRecord fields
 
-p_expr :: Bool -> AbsynParser Expr
+p_expr :: Bool -> Parser Expr
 p_expr allowCtor = choice [ p_match
                           , p_if
                           , p_function >>= return . FnExpr
                           , p_lhs allowCtor >>= p_rhs
                           ]
 
-p_lhs :: Bool -> AbsynParser Expr
+p_lhs :: Bool -> Parser Expr
 p_lhs allowCtor = choice [ p_record
                          , p_list
                          , p_literal >>= return . Literal
@@ -215,13 +213,13 @@ p_lhs allowCtor = choice [ p_record
                          , parens p_parenthesizedExpr
                          ]
 
-p_parenthesizedExpr :: AbsynParser Expr
+p_parenthesizedExpr :: Parser Expr
 p_parenthesizedExpr = do
   choice [ ParenthesizedExpr <$> p_expr True
          , operator >>= return . Ident
          ]
 
-p_ucidCtor :: Bool -> AbsynParser Expr
+p_ucidCtor :: Bool -> Parser Expr
 p_ucidCtor allowCtor = do
   name <- ucid
   let name' = Ident name
@@ -229,47 +227,47 @@ p_ucidCtor allowCtor = do
      then p_ctor name <|> return name'
      else return name'
 
-p_ctor :: Name -> AbsynParser Expr
+p_ctor :: Name -> Parser Expr
 p_ctor name = do
   r <- p_record
   return (Call (Ident name) [] [] [r])
 
-p_rhs :: Expr Name UnresolvedType -> AbsynParser Expr
+p_rhs :: Expr -> Parser Expr
 p_rhs lhs = (choice [try $ p_call lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
 
-p_record :: AbsynParser Expr
+p_record :: Parser Expr
 p_record =
   Record <$> braces (commaSep field)
     where
       field = (,) <$> lcid <*> (symbol ":" *> p_expr True)
 
-p_list :: AbsynParser Expr
+p_list :: Parser Expr
 p_list =
   List <$> (brackets . commaSep $ p_expr True)
 
-p_call :: Expr Name UnresolvedType -> AbsynParser Expr
+p_call :: Expr -> Parser Expr
 p_call callee = do
   (typeArgs, args) <- p_callArgs
   return $ Call {callee, constraintArgs = [], typeArgs, args}
 
-p_binop :: Expr Name UnresolvedType -> AbsynParser Expr
+p_binop :: Expr -> Parser Expr
 p_binop lhs = do
   op <- operator
   rhs <- p_expr True
   return $ BinOp {opConstraintArgs = [], opTypeArgs = [], lhs, op, rhs}
 
-p_fieldAccess :: Expr Name UnresolvedType -> AbsynParser Expr
+p_fieldAccess :: Expr -> Parser Expr
 p_fieldAccess lhs = do
   symbol "."
   fieldName <- lcid
-  p_methodCall lhs fieldName <|> return (FieldAccess lhs UTPlaceholder fieldName)
+  p_methodCall lhs fieldName <|> return (FieldAccess lhs TPlaceholder fieldName)
 
-p_methodCall :: Expr Name UnresolvedType -> Name -> AbsynParser Expr
+p_methodCall :: Expr -> Name -> Parser Expr
 p_methodCall lhs name = do
   (typeArgs, args) <- p_callArgs
   return $ Call { callee = Ident name, constraintArgs = [], typeArgs, args = lhs : args }
 
-p_callArgs :: Parser ([UnresolvedType], [Expr Name UnresolvedType])
+p_callArgs :: Parser ([Type], [Expr])
 p_callArgs = do
   typeArgs <- option [] $ angles (commaSep $ p_type)
   args <- parens $ commaSep (p_expr True)
@@ -289,14 +287,14 @@ p_number = do
     Left int -> return $ Integer int
     Right float -> return $ Float float
 
-p_match :: AbsynParser Expr
+p_match :: Parser Expr
 p_match = do
   reserved "match"
   expr <- p_expr False
   cases <- p_body p_case
   return $ Match { expr, cases }
 
-p_case :: AbsynParser Case
+p_case :: Parser Case
 p_case = do
   reserved "case"
   pattern <- p_pattern
@@ -304,7 +302,7 @@ p_case = do
   caseBody <- p_caseBody True
   return $ Case { pattern, caseBody }
 
-p_caseBody :: Bool -> Parser [Stmt Name UnresolvedType]
+p_caseBody :: Bool -> Parser [Stmt]
 p_caseBody first = do
   (lookAheadCase >> return [])
   <|>
@@ -315,20 +313,20 @@ p_caseBody first = do
         | first = optional p_separator
         | otherwise = p_separator
 
-p_pattern :: Parser (Pattern Name)
+p_pattern :: Parser Pattern
 p_pattern = choice [ symbol "_" >> return PatDefault
                    , p_literal >>= return . PatLiteral
                    , p_patCtor >>= return . uncurry PatCtor
                    , lcid >>= return . PatVar
                    ]
 
-p_patCtor :: Parser (Name, [Pattern Name])
+p_patCtor :: Parser (Name, [Pattern])
 p_patCtor = do
   ctorName <- ucid
   vars <- option [] . parens . commaSep $ p_pattern
   return (ctorName, vars)
 
-p_if :: AbsynParser Expr
+p_if :: Parser Expr
 p_if = do
   reserved "if"
   ifCond <- p_expr False
@@ -336,12 +334,12 @@ p_if = do
   ifElseBody <- option [] p_else
   return $ If { ifCond, ifBody, ifElseBody }
 
-p_else :: Parser [Stmt Name UnresolvedType]
+p_else :: Parser [Stmt]
 p_else = do
   reserved "else"
   p_codeBlock <|> ((:[]) <$> (Expr <$> p_if))
 
-p_codeBlock :: Parser [Stmt Name UnresolvedType]
+p_codeBlock :: Parser [Stmt]
 p_codeBlock = p_body p_stmt
 
 p_body :: Parser a -> Parser [a]

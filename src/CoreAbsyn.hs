@@ -1,20 +1,20 @@
 module CoreAbsyn where
 
-import Absyn (Id, Literal)
+import Absyn.Typed (Id, Literal)
 import Typing.Types (Type)
 
 data Expr
   = Void
   | Lit Literal
-  | Var (Id Type)
+  | Var Id
   | App Expr Expr
-  | Lam (Id Type) Expr
+  | Lam Id Expr
   | Let [Bind] Expr
   | Match Expr [Case]
   | Type Type
   | Record [Bind]
 
-type Bind = (Id Type, Expr)
+type Bind = (Id, Expr)
 
 type Case = (Pattern, Expr)
 
@@ -44,7 +44,7 @@ showExpr Top (Match expr cases) =
 
 showExpr Bot expr = "(" ++ showExpr Top expr ++ ")"
 
-showId :: Id Type -> String
+showId :: Id -> String
 showId (v, _) = v
 
 showBind :: Bind -> String
@@ -58,8 +58,8 @@ showCase (pat, expr) =
 data Pattern
   = PatDefault
   | PatLiteral Literal
-  | PatVar (Id Type)
-  | PatCtor (Id Type) [Pattern]
+  | PatVar Id
+  | PatCtor Id [Pattern]
 
 instance Show Pattern where
   show = showPat Top

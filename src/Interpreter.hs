@@ -8,7 +8,7 @@ module Interpreter
   ) where
 
 import CoreAbsyn
-import Absyn (Literal(..), Name)
+import Absyn.Meta (Literal(..), Name)
 import Error
 import Typing.Types (Type)
 

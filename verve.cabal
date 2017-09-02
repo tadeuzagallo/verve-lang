@@ -17,7 +17,8 @@ library
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
   exposed-modules:     Parser
-                       Absyn
+                       Absyn.Typed
+                       Absyn.Untyped
                        Lexer
                        Interpreter
                        Error
@@ -27,7 +28,9 @@ library
                        Typing.Ctx
                        Typing.TypeChecker
 
-  other-modules:       Typing.Constraint
+  other-modules:       Absyn.Base
+                       Absyn.Meta
+                       Typing.Constraint
                        Typing.State
                        Typing.Substitution
                        Typing.Subtyping

@@ -2,7 +2,7 @@ module Typing.TypeError
   ( TypeError(..)
   ) where
 
-import Absyn
+import Absyn.Meta
 import Error
 import Typing.Types
 
