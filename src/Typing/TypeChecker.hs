@@ -391,14 +391,17 @@ boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
         concat <$> mapM (boundsCheck ctx arg) bounds
            ) args vars)
 
+boundsCheck' ctx (TyAbs params ty) intf =
+  boundsCheck' ctx (params \\ ty) intf
+
+boundsCheck' _ Bot intf =
+  return [(Bot, intf), (Bot, Type)]
+
 boundsCheck' ctx ty intf@(Intf name _ _) = do
   instances <- getInstances name ctx
   case lookup ty instances of
     Just [] -> return [(ty, intf), (ty, Type)]
     _ -> return []
-
-boundsCheck' ctx (TyAbs params ty) intf =
-  boundsCheck' ctx (params \\ ty) intf
 
 boundsCheck' _ _ _ =
   return []
