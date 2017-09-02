@@ -25,7 +25,7 @@ data Ctx = Ctx { types :: [(String, Type)]
 getType :: String -> Ctx -> Tc Type
 getType n ctx =
   case lookup n (types ctx) of
-    Nothing -> throwError (UnknownType $ show n)
+    Nothing -> throwError (UnknownType n)
     Just t -> instantiate t
 
 getValueType :: String -> Ctx -> Tc Type

@@ -13,6 +13,7 @@ import Absyn.Meta
 import Error
 import Typing.Constraint
 import Typing.Ctx
+import Typing.Kinds
 import Typing.State
 import Typing.Substitution
 import Typing.Subtyping
@@ -27,6 +28,11 @@ import Data.List (intersect, union)
 (<:!) :: Type -> Type -> Tc ()
 actualTy <:! expectedTy =
   when (not $ actualTy <: expectedTy) (throwError $ TypeError expectedTy actualTy)
+
+assertKindStar :: Type -> Tc ()
+assertKindStar ty =
+  let kind = kindOf ty
+   in when (kind /= Star) (throwError $ KindError ty Star kind)
 
 resolveId :: Ctx -> U.Id -> Tc T.Id
 resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
@@ -115,8 +121,8 @@ i_stmt ctx (Enum name generics ctors) = do
                 (Just t, _)   -> Fun generics' t (TyApp (Con name) (map (uncurry Var) generics'))
   let enumTy = mkEnumTy Nothing
   let ctx'' = addType ctx' (name, enumTy)
-  (ctx''', ctors') <- foldrM (i_ctor mkEnumTy) (ctx'', []) ctors
-  return (ctx''', (Enum (name, enumTy) generics ctors'), Type)
+  (ctx''', ctors') <- foldrM (i_ctor ctx'' mkEnumTy) (ctx, []) ctors
+  return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'), Type)
 
 i_stmt ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
   opGenerics' <- resolveGenerics ctx opGenerics
@@ -228,6 +234,7 @@ i_fnDecl ctx (FunctionDecl name gen params retType) = do
 fnTy :: Ctx -> ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
   tyArgs <- mapM (resolveId ctx) params
+  mapM_ (assertKindStar . snd) tyArgs
   retType' <- resolveType ctx retType
   let tyArgs' = if null tyArgs
       then [void]
@@ -242,11 +249,11 @@ i_method classTy (ctx, fns) fn = do
   (fn'', fnTy) <- i_fn ctx' fn'
   return (addValueType ctx (name fn, fnTy), fn'' : fns)
 
-i_ctor :: (Maybe [Type] -> Type) -> U.DataCtor -> (Ctx, [T.DataCtor]) -> Tc (Ctx, [T.DataCtor])
-i_ctor mkEnumTy (name, types) (ctx, ctors) = do
-  types' <- sequence (types >>= return . mapM (resolveType ctx))
+i_ctor :: Ctx -> (Maybe [Type] -> Type) -> U.DataCtor -> (Ctx, [T.DataCtor]) -> Tc (Ctx, [T.DataCtor])
+i_ctor sourceCtx mkEnumTy (name, types) (targetCtx, ctors) = do
+  types' <- sequence (types >>= return . mapM (resolveType sourceCtx))
   let ty = mkEnumTy types'
-  return (addValueType ctx (name, ty), ((name, ty), types'):ctors)
+  return (addValueType targetCtx (name, ty), ((name, ty), types'):ctors)
 
 i_fn :: Ctx -> U.Function -> Tc (T.Function, Type)
 i_fn = i_fnBase True

@@ -1,0 +1,12 @@
+// RUN: %verve | %check
+
+enum List<T> {
+  Nil
+  Cons(T, List<T>)
+}
+
+// CHECK-L: TypeError: Type `∀T.List<T>` has kind * => *, but a type of kind * was expected.
+fn f(x: List) -> List { x }
+
+// CHECK-L: Unknown type: T
+fn f(x: T) -> T { x }

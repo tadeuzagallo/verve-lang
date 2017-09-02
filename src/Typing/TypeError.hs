@@ -5,6 +5,7 @@ module Typing.TypeError
 import Absyn.Meta
 import Error
 import Typing.Types
+import Typing.Kinds
 
 data TypeError
   = UnknownVariable String
@@ -21,6 +22,7 @@ data TypeError
   | MissingInstance String Type
   | ImplementationError String Type
   | ImplementingNonInterface String Type
+  | KindError Type Kind Kind
 
 instance ErrorT TypeError where
   kind _ = "TypeError"
@@ -67,3 +69,6 @@ instance Show TypeError where
 
   show (ImplementationError intfName ty) =
     "Implementation of `" ++ intfName ++ "` for type `" ++ show ty ++ "` does not use all the type variables it introduces and/or uses concrete types."
+
+  show (KindError ty expectedKind actualKind) =
+    "Type `" ++ show ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
