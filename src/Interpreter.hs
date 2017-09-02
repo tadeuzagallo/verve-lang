@@ -10,7 +10,7 @@ module Interpreter
 import CoreAbsyn
 import Absyn (Literal(..), Name)
 import Error
-import Types (Type)
+import Typing.Types (Type)
 
 import Control.Monad (foldM)
 import Control.Monad.Fix (mfix)

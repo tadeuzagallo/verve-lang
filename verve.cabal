@@ -20,14 +20,21 @@ library
                        Absyn
                        Lexer
                        Interpreter
-                       TypeChecker
-                       Types
                        Error
                        Desugar
                        CoreAbsyn
                        Naming
-                       Ctx
-                       TypeError
+                       Typing.Ctx
+                       Typing.TypeChecker
+
+  other-modules:       Typing.Constraint
+                       Typing.State
+                       Typing.Substitution
+                       Typing.Subtyping
+                       Typing.TypeError
+                       Typing.Types
+                       Typing.Variance
+
   build-depends:       base >= 4.7 && < 5, parsec, mtl
   default-language:    Haskell2010
 

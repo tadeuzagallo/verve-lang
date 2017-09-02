@@ -1,10 +1,10 @@
-module TypeError
+module Typing.TypeError
   ( TypeError(..)
   ) where
 
 import Absyn
 import Error
-import Types
+import Typing.Types
 
 data TypeError
   = UnknownVariable String

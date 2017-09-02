@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Ctx
+module Typing.Ctx
   ( Ctx()
   , defaultCtx
   , addType
@@ -12,8 +12,8 @@ module Ctx
   , getInstances
   ) where
 
-import TypeError
-import Types
+import Typing.TypeError
+import Typing.Types
 
 import Control.Monad.Except (MonadError, throwError)
 

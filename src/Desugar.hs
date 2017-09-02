@@ -4,7 +4,7 @@ module Desugar
   ) where
 
 import Absyn
-import Types
+import Typing.Types
 import qualified CoreAbsyn as CA
 
 desugar :: Module (Id Type) Type -> CA.Expr

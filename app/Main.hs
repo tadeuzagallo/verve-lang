@@ -1,11 +1,11 @@
 import Absyn (Module(Module), Name, Stmt, UnresolvedType)
-import Ctx
 import Error
 import Parser
 import qualified Naming
-import TypeChecker
 import Desugar
 import Interpreter
+import Typing.Ctx
+import Typing.TypeChecker
 
 import Control.Monad (foldM_)
 import Control.Monad.IO.Class (liftIO)

@@ -1,7 +1,7 @@
 module CoreAbsyn where
 
 import Absyn (Id, Literal)
-import Types (Type)
+import Typing.Types (Type)
 
 data Expr
   = Void
