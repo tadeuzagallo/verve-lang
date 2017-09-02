@@ -169,8 +169,11 @@ i_stmt ctx (Interface name param methods) = do
       aux _ _ _ _ = undefined
 
 i_stmt ctx (Implementation implName generics ty methods) = do
-  Intf _ param intfMethods <- getType implName ctx
-  -- TODO: proper error in intf is not an Intf
+  Intf _ param intfMethods <-
+    getType implName ctx >>= \ty ->
+      case ty of
+        Intf _ _ _ -> return ty
+        _ -> throwError (ImplementingNonInterface implName ty)
   generics' <- resolveGenerics ctx generics
   (ctx', genericVars) <- addGenerics ctx generics'
   ty' <- resolveType ctx' ty

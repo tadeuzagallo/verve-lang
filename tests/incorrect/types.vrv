@@ -17,3 +17,6 @@ enum Pair<T, U> {}
 
 // CHECK-L: Implementation of `I` for type `Pair<U, Int>` does not use all the type variables it introduces
 implementation<T, U> I<Pair<U, Int>> {}
+
+// CHECK-L: Cannot have an implementation of `List` because it's not an interface. List has type `∀T.List<T>`.
+implementation List<String> {}

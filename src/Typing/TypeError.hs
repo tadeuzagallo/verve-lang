@@ -20,6 +20,7 @@ data TypeError
   | InterfaceExpected Type
   | MissingInstance String Type
   | ImplementationError String Type
+  | ImplementingNonInterface String Type
 
 instance ErrorT TypeError where
   kind _ = "TypeError"
@@ -57,6 +58,9 @@ instance Show TypeError where
 
   show (InterfaceExpected ty) =
     "Expected an interface, but found type `" ++ show ty ++ "`"
+
+  show (ImplementingNonInterface name actualTy) =
+    "Cannot have an implementation of `" ++ name ++ "` because it's not an interface. " ++ name  ++ " has type `" ++ show actualTy ++ "`."
 
   show (MissingInstance intf ty) =
     "No instance of `" ++ intf ++ "` for type `" ++ show ty ++  "`"
