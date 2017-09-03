@@ -14,8 +14,11 @@ import Text.Printf (printf)
 class (Show a) =>
       ErrorT a where
   kind :: a -> String
+  showError :: a -> String
+  showError err = printf "%s: %s" (kind err) (show err)
+
   report :: a -> IO ()
-  report err = printf "%s: %s\n" (kind err) (show err)
+  report err = putStrLn $ showError err
 
 data Error where
   Error :: (ErrorT a) => a -> Error

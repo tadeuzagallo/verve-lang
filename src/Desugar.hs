@@ -90,11 +90,11 @@ d_implMethod gen fn =
 d_expr :: Expr -> CA.Expr
 d_expr VoidExpr = CA.Void
 d_expr (Literal l) = CA.Lit l
-d_expr (Ident id) = CA.Var id
+d_expr (Ident ids ty) = CA.Var (last ids, ty)
 d_expr (ParenthesizedExpr expr) = d_expr expr
 d_expr (Call callee constraints types []) = d_expr (Call callee constraints types [VoidExpr])
-d_expr (BinOp constrArgs tyArgs lhs op rhs) =
-  d_expr (Call (Ident op) constrArgs tyArgs [lhs, rhs])
+d_expr (BinOp constrArgs tyArgs lhs (name, ty) rhs) =
+  d_expr (Call (Ident [name] ty) constrArgs tyArgs [lhs, rhs])
 
 d_expr (Call callee constraints types args) =
   let (constraints', constraintHoles) = foldl mkConstraint ([], []) constraints

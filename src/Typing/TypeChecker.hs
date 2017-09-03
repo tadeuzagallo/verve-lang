@@ -84,10 +84,10 @@ defaultBounds :: [a] -> [(a, [b])]
 defaultBounds = map (flip (,) [])
 
 infer :: U.Module -> Result (T.Module, Type)
-infer mod =
+infer (Module imports stmts) =
   runTc
-    (i_stmts defaultCtx (stmts mod))
-    (\(stmts, ty) -> (Module stmts, ty))
+    (i_stmts defaultCtx stmts)
+    (\(stmts, ty) -> (Module imports stmts, ty))
 
 inferStmt :: Ctx -> U.Stmt -> Result (Ctx, T.Stmt, Type)
 inferStmt ctx stmt =
@@ -283,9 +283,17 @@ i_fnBase addToCtx ctx fn = do
 i_expr :: Ctx -> U.Expr -> Tc (T.Expr, Type)
 i_expr _ (Literal lit) = return (Literal lit, i_lit lit)
 
-i_expr ctx (Ident i) = do
+i_expr ctx (Ident [i] _) = do
   ty <- getValueType i ctx
-  return (Ident (i, ty), ty)
+  return (Ident [i] ty, ty)
+
+i_expr ctx (Ident (i:is) ty) = do
+  ctx' <- getModule i ctx
+  (Ident _ _, ty) <- i_expr ctx' (Ident is ty)
+  return (Ident (i:is) ty, ty)
+
+i_expr _ (Ident [] _) = undefined
+
 
 i_expr _ VoidExpr = return (VoidExpr, void)
 

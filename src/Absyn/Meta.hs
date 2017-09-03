@@ -2,6 +2,17 @@ module Absyn.Meta where
 
 type Name = String
 
+data Import = Import
+  { iGlobal :: Bool
+  , iModule :: [Name]
+  , iAlias :: Maybe Name
+  , iItems :: Maybe [ImportItem]
+  }
+
+data ImportItem
+  = ImportValue Name
+  | ImportType Name [Name]
+
 data Associativity
   = AssocNone
   | AssocLeft

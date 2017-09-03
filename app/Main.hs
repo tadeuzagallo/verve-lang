@@ -7,12 +7,13 @@ import Interpreter
 import Typing.Ctx
 import Typing.TypeChecker
 
-import Control.Monad (foldM_)
+import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Environment (getArgs)
 import Text.Printf (printf)
+import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath)
 
 import Debug.Trace
 
@@ -78,20 +79,40 @@ runFile file = do
 
 runAndPrintStmts :: String -> IO ()
 runAndPrintStmts file = do
-  result <- parseFile file
   -- TODO: add this as `Error::runError`
-  either report id (run result)
+  result <- execFile initEvalCtx file
+  either report (mapM_ putStrLn . reverse . snd) result
+
+execFile :: EvalCtx -> String -> IO (Result ((EvalCtx, EvalCtx), [String]))
+execFile ctx file = do
+  result <- parseFile file
+  either (return . Left) (runModule ctx file) result
+
+runModule :: EvalCtx -> String -> Module -> IO (Result ((EvalCtx, EvalCtx), [String]))
+runModule ctx file (Module imports stmts) = do
+  ctx' <- resolveImports ctx file imports
+  either (return . Left) (\c -> foldM aux (c, []) stmts >>= \(c', out) -> return (Right ((c, c'), out))) ctx'
   where
-    run :: (Result Module) -> Result (IO ())
-    run result = do
-      (Module stmts) <- result
-      return $ foldM_ aux initEvalCtx stmts
-    aux :: EvalCtx -> Stmt -> IO EvalCtx
-    aux ctx stmt =
+    aux :: (EvalCtx, [String]) -> Stmt -> IO (EvalCtx, [String])
+    aux (ctx, msgs) stmt =
       case evalStmt ctx stmt of
         Left err -> do
-          report err
-          return ctx
+          return (ctx, showError err : msgs)
         Right (ctx', out) -> do
-          putStrLn out
-          return ctx'
+          return (ctx', out : msgs)
+
+resolveImports :: EvalCtx -> String -> [Import] -> IO (Result EvalCtx)
+resolveImports ctx _ [] =
+  return . return $ ctx
+
+resolveImports ctx file (imp@(Import _ mod _ _) : imports) = do
+  let path = takeDirectory file </> joinPath mod <.> "vrv"
+  res <- execFile ctx path
+  either (return . Left) (\(c, _) -> resolveImports (importModule imp ctx c) file imports) res
+
+importModule :: Import -> EvalCtx -> (EvalCtx ,EvalCtx) -> EvalCtx
+importModule imp (prevNenv, prevCtx, prevEnv) ((preImpNenv, preImpCtx, preImpEnv), (impNenv, impCtx, impEnv)) =
+  ( Naming.nImportModule imp prevNenv preImpNenv impNenv
+  , tImportModule imp prevCtx preImpCtx impCtx
+  , iImportModule imp prevEnv preImpEnv impEnv
+  )

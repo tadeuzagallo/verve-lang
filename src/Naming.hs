@@ -5,6 +5,7 @@ module Naming
   , balanceStmt
   , Env
   , defaultEnv
+  , nImportModule
   ) where
 
 import Absyn.Untyped
@@ -46,9 +47,9 @@ getPrec :: Name -> Env -> Result PrecInt
 getPrec name env = snd <$> getOpInfo name env
 
 balance :: Module -> Result Module
-balance (Module stmts) = do
+balance (Module imports stmts) = do
   (_, stmts') <- n_stmts defaultEnv stmts
-  return $ Module stmts'
+  return $ Module imports stmts'
 
 balanceStmt :: Env -> Stmt -> Result (Env, Stmt)
 balanceStmt = n_stmt
@@ -120,3 +121,8 @@ comparePrec env l r = do
     (EQ, AssocLeft, AssocLeft) -> return PLeft
     (EQ, AssocRight, AssocRight) -> return PRight
     (EQ, _, _) -> mkError $ PrecedenceError l r
+
+-- MODULE IMPORTATION
+
+nImportModule :: Import -> Env -> Env -> Env -> Env
+nImportModule _ _ _ c = c

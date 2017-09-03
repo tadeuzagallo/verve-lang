@@ -9,19 +9,44 @@ import Absyn.Untyped
 import Error
 import Lexer
 
-import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepEndBy, skipMany1, lookAhead)
+import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepBy1, sepBy, sepEndBy, endBy, skipMany1, lookAhead)
 import Text.Parsec.String (Parser, parseFromFile)
 
-parseFile :: String -> IO (Either Error (Module))
+parseFile :: String -> IO (Result Module)
 parseFile file = do
   result <- parseFromFile p_module file
   return $ either (Left . Error) Right result
 
-parseStmt :: String -> String -> Either Error (Stmt)
+parseStmt :: String -> String -> Result Stmt
 parseStmt file source = liftError $ parse (anySpace *> p_stmt <* eof) file source
 
 p_module :: Parser Module
-p_module = Module <$> (anySpace *> p_stmt `sepEndBy` p_separator <* eof)
+p_module = do
+  anySpace
+  imports <- p_import `sepEndBy` p_separator
+  stmts <- p_stmt `sepEndBy` p_separator
+  anySpace
+  eof
+  return $ Module { imports, stmts }
+
+p_import :: Parser Import
+p_import = do
+  iGlobal <- option False (reserved "global" >> return True)
+  reserved "import"
+  iModule <- ucid `sepBy` symbol "."
+  iAlias <- optionMaybe (reserved "as" >> ucid)
+  iItems <- optionMaybe p_importItems
+  return $ Import { iGlobal, iModule, iAlias, iItems }
+
+p_importItems :: Parser [ImportItem]
+p_importItems =
+  braces . commaSep $ p_importItem
+
+p_importItem :: Parser ImportItem
+p_importItem = do
+  choice [ lcid >>= return . ImportValue
+         , ucid >>= (\t -> ImportType t <$> parens (commaSep ucid))
+         ]
 
 p_stmt :: Parser Stmt
 p_stmt = choice [ p_enum
@@ -208,29 +233,35 @@ p_lhs :: Bool -> Parser Expr
 p_lhs allowCtor = choice [ p_record
                          , p_list
                          , p_literal >>= return . Literal
-                         , lcid >>= return . Ident
-                         , p_ucidCtor allowCtor
+                         , try p_lcid
+                         , p_ucid allowCtor
                          , parens p_parenthesizedExpr
                          ]
+
+p_lcid :: Parser Expr
+p_lcid = do
+  prefix <- ucid `endBy` symbol "."
+  var <- lcid
+  return $ Ident (prefix ++ [var]) TPlaceholder
+
+p_ucid :: Bool -> Parser Expr
+p_ucid allowCtor = do
+  parts <- ucid `sepBy1` symbol "."
+  let ident = Ident parts TPlaceholder
+  if allowCtor
+     then p_ctor ident <|> return ident
+     else return ident
 
 p_parenthesizedExpr :: Parser Expr
 p_parenthesizedExpr = do
   choice [ ParenthesizedExpr <$> p_expr True
-         , operator >>= return . Ident
+         , operator >>= return . flip Ident TPlaceholder . (:[])
          ]
 
-p_ucidCtor :: Bool -> Parser Expr
-p_ucidCtor allowCtor = do
-  name <- ucid
-  let name' = Ident name
-  if allowCtor
-     then p_ctor name <|> return name'
-     else return name'
-
-p_ctor :: Name -> Parser Expr
-p_ctor name = do
+p_ctor :: Expr -> Parser Expr
+p_ctor ctor = do
   r <- p_record
-  return (Call (Ident name) [] [] [r])
+  return (Call ctor [] [] [r])
 
 p_rhs :: Expr -> Parser Expr
 p_rhs lhs = (choice [try $ p_call lhs, p_fieldAccess lhs, p_binop lhs] >>= p_rhs) <|> return lhs
@@ -265,7 +296,7 @@ p_fieldAccess lhs = do
 p_methodCall :: Expr -> Name -> Parser Expr
 p_methodCall lhs name = do
   (typeArgs, args) <- p_callArgs
-  return $ Call { callee = Ident name, constraintArgs = [], typeArgs, args = lhs : args }
+  return $ Call { callee = Ident [name] TPlaceholder, constraintArgs = [], typeArgs, args = lhs : args }
 
 p_callArgs :: Parser ([Type], [Expr])
 p_callArgs = do

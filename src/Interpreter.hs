@@ -5,10 +5,11 @@ module Interpreter
   , evalWithEnv
   , Env
   , defaultEnv
+  , iImportModule
   ) where
 
 import CoreAbsyn
-import Absyn.Meta (Literal(..), Name)
+import Absyn.Meta (Literal(..), Name, Import(..))
 import Error
 import Typing.Types (Type)
 
@@ -183,3 +184,8 @@ e_bind :: Env -> Bind -> EvalResultT Env
 e_bind env ((name, _), exp) = do
   exp' <- e_expr env exp
   return $ addValue env (name, exp')
+
+-- MODULE IMPORTATION
+
+iImportModule :: Import -> Env -> Env -> Env -> Env
+iImportModule _ _ _ c = c

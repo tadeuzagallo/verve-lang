@@ -3,7 +3,8 @@ module Absyn.Base where
 import Absyn.Meta
 
 data BaseModule a b = Module
-  { stmts :: [BaseStmt a b]
+  { imports :: [Import]
+  , stmts :: [BaseStmt a b]
   }
 
 data BaseStmt a b
@@ -54,7 +55,7 @@ data BaseFunctionDecl a b = FunctionDecl
 
 data BaseExpr a b
   = Literal Literal
-  | Ident a
+  | Ident [Name] b
   | VoidExpr -- workaround, this can't be expressed in source code
   | ParenthesizedExpr (BaseExpr a b)
   | Match { expr :: BaseExpr a b

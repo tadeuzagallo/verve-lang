@@ -1,0 +1,51 @@
+// RUN: %verve | %check
+
+global import Enum
+global import Match { Nat(Z) }
+
+import Enum
+import Enum as E
+
+import Match { Nat(Z) }
+import Match as M { Nat(Z), length, List(Cons, Nil) }
+
+A // CHECK-L: A : X
+B // CHECK-L: B : X
+
+fn f(x: Nat) { } // CHECK-L: (Nat) -> Void
+Z // CHECK-L: Z : Nat
+S // CHECK-L: Unknown variable: S
+
+// TODO: Print namespaced values
+
+/* CHECK-L: Enum.True : Bool */
+// CHECK-L: True : Bool
+Enum.True
+
+/* CHECK-L: E.True : Bool */
+// CHECK-L: True : Bool
+E.True
+
+/* CHECK-L: Match.Z : Nat */
+// CHECK-L: Z : Nat
+Match.Z
+
+/* CHECK-L: Unknown variable: Match.S */
+// CHECK-L: Unknown variable: S
+Match.S
+
+/* CHECK-L: M.Z : Nat */
+// CHECK-L: Z : Nat
+M.Z
+
+/* CHECK-L: Unknown variable: M.S */
+// CHECK-L: Unknown variable: S
+M.S
+
+/*CHECK-L: M.S(M.Z) : Nat*/
+// CHECK-L: S(Z) : Nat
+M.length(M.Cons(1, M.Nil))
+
+/* CHECK-L: Unknown variable: M.add */
+// CHECK-L: Unknown variable: add
+M.add
