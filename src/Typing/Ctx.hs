@@ -21,7 +21,6 @@ import Typing.Types hiding (list)
 import qualified Typing.Types as Types (list)
 
 import Data.Bifunctor (first, second)
-import Data.List ((\\), union)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
@@ -119,7 +118,7 @@ tImportModule (Import isGlobal mod alias items) prevCtx impCtx =
   where
     finalCtx =
       if isGlobal
-         then addCtx prevCtx filteredCtx
+         then addCtx filteredCtx prevCtx
          else prevCtx { modules = addModule name (modules prevCtx)
                       , instances = instances impCtx
                       }
@@ -142,8 +141,8 @@ tImportModule (Import isGlobal mod alias items) prevCtx impCtx =
     name = maybe mod (:[]) alias
 
     addCtx c1 c2 =
-      c1 { types = types c1 `union` types c2
-         , values = values c1 `union` values c2
+      c1 { types = types c1 ++ types c2
+         , values = values c1 ++ values c2
          , instances = instances impCtx
          }
 
@@ -168,3 +167,6 @@ tImportModule (Import isGlobal mod alias items) prevCtx impCtx =
                  , instances = []
                  , modules = []
                  }
+
+    (\\) :: Eq a => [(a, b)] -> [(a, b)] -> [(a, b)]
+    lhs \\ rhs = take (length lhs - length rhs) lhs
