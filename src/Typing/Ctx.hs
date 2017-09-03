@@ -113,8 +113,8 @@ getModule n ctx =
     Nothing -> throwError (UnknownModule n)
     Just ctx -> return ctx
 
-tImportModule :: Import -> Ctx -> Ctx -> Ctx -> Ctx
-tImportModule (Import isGlobal mod alias items) prevCtx preImpCtx impCtx =
+tImportModule :: Import -> Ctx -> Ctx -> Ctx
+tImportModule (Import isGlobal mod alias items) prevCtx impCtx =
   finalCtx
   where
     finalCtx =
@@ -163,8 +163,8 @@ tImportModule (Import isGlobal mod alias items) prevCtx preImpCtx impCtx =
     mkFilter (ImportType t cs : is) =
       second (t:) $ mkFilter (map ImportValue cs ++ is)
 
-    newCtx = Ctx { types = (types impCtx) \\ (types preImpCtx)
-                 , values = (values impCtx) \\ (types impCtx)
+    newCtx = Ctx { types = (types impCtx) \\ (types defaultCtx)
+                 , values = (values impCtx) \\ (values defaultCtx)
                  , instances = []
                  , modules = []
                  }

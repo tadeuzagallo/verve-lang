@@ -124,5 +124,5 @@ comparePrec env l r = do
 
 -- MODULE IMPORTATION
 
-nImportModule :: Import -> Env -> Env -> Env -> Env
-nImportModule _ _ _ c = c
+nImportModule :: Import -> Env -> Env -> Env
+nImportModule _ _ c = c

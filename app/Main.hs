@@ -80,18 +80,18 @@ runFile file = do
 runAndPrintStmts :: String -> IO ()
 runAndPrintStmts file = do
   -- TODO: add this as `Error::runError`
-  result <- execFile initEvalCtx file
+  result <- execFile file
   either report (mapM_ putStrLn . reverse . snd) result
 
-execFile :: EvalCtx -> String -> IO (Result ((EvalCtx, EvalCtx), [String]))
-execFile ctx file = do
+execFile :: String -> IO (Result (EvalCtx, [String]))
+execFile file = do
   result <- parseFile file
-  either (return . Left) (runModule ctx file) result
+  either (return . Left) (runModule initEvalCtx file) result
 
-runModule :: EvalCtx -> String -> Module -> IO (Result ((EvalCtx, EvalCtx), [String]))
+runModule :: EvalCtx -> String -> Module -> IO (Result (EvalCtx, [String]))
 runModule ctx file (Module imports stmts) = do
   ctx' <- resolveImports ctx file imports
-  either (return . Left) (\c -> foldM aux (c, []) stmts >>= \(c', out) -> return (Right ((c, c'), out))) ctx'
+  either (return . Left) (\c -> foldM aux (c, []) stmts >>= return . Right) ctx'
   where
     aux :: (EvalCtx, [String]) -> Stmt -> IO (EvalCtx, [String])
     aux (ctx, msgs) stmt =
@@ -107,12 +107,12 @@ resolveImports ctx _ [] =
 
 resolveImports ctx file (imp@(Import _ mod _ _) : imports) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
-  res <- execFile ctx path
+  res <- execFile path
   either (return . Left) (\(c, _) -> resolveImports (importModule imp ctx c) file imports) res
 
-importModule :: Import -> EvalCtx -> (EvalCtx ,EvalCtx) -> EvalCtx
-importModule imp (prevNenv, prevCtx, prevEnv) ((preImpNenv, preImpCtx, preImpEnv), (impNenv, impCtx, impEnv)) =
-  ( Naming.nImportModule imp prevNenv preImpNenv impNenv
-  , tImportModule imp prevCtx preImpCtx impCtx
-  , iImportModule imp prevEnv preImpEnv impEnv
+importModule :: Import -> EvalCtx -> EvalCtx -> EvalCtx
+importModule imp (prevNenv, prevCtx, prevEnv) (impNenv, impCtx, impEnv) =
+  ( Naming.nImportModule imp prevNenv impNenv
+  , tImportModule imp prevCtx impCtx
+  , iImportModule imp prevEnv impEnv
   )

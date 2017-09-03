@@ -187,5 +187,5 @@ e_bind env ((name, _), exp) = do
 
 -- MODULE IMPORTATION
 
-iImportModule :: Import -> Env -> Env -> Env -> Env
-iImportModule _ _ _ c = c
+iImportModule :: Import -> Env -> Env -> Env
+iImportModule _ _ c = c
