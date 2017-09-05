@@ -12,10 +12,10 @@ import Lexer
 import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepBy1, sepBy, sepEndBy, endBy, skipMany1, lookAhead)
 import Text.Parsec.String (Parser, parseFromFile)
 
-parseFile :: String -> IO (Result Module)
+parseFile :: String -> IO (Either [Error] Module)
 parseFile file = do
   result <- parseFromFile p_module file
-  return $ either (Left . Error) Right result
+  return $ either (Left . (:[]) . Error) Right result
 
 parseStmt :: String -> String -> Result Stmt
 parseStmt file source = liftError $ parse (anySpace *> p_stmt <* eof) file source
