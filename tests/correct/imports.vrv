@@ -30,22 +30,25 @@ E.True
 // CHECK-L: Z : Nat
 Match.Z
 
-/* CHECK-L: Unknown variable: Match.S */
-// CHECK-L: Unknown variable: S
+// CHECK-L: Unknown variable: Match.S
 Match.S
 
 /* CHECK-L: M.Z : Nat */
 // CHECK-L: Z : Nat
 M.Z
 
-/* CHECK-L: Unknown variable: M.S */
-// CHECK-L: Unknown variable: S
+// CHECK-L: Unknown variable: M.S
 M.S
 
 /*CHECK-L: M.S(M.Z) : Nat*/
 // CHECK-L: S(Z) : Nat
 M.length(M.Cons(1, M.Nil))
 
-/* CHECK-L: Unknown variable: M.add */
-// CHECK-L: Unknown variable: add
+// TODO: Improve the error mesage - really confusing right now as only the last
+// part of the name is printed, so we get `expected List but got List`
+
+// CHECK-L: TypeError
+M.length(M.Cons(1, Nil))
+
+// CHECK-L: Unknown variable: M.add
 M.add

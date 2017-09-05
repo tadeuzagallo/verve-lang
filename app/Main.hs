@@ -90,12 +90,12 @@ runAndPrintStmts file = do
 execFile :: String -> String -> IO (Result (EvalCtx, [String]))
 execFile modName file = do
   result <- parseFile file
-  either (return . Left) (runModule initEvalCtx file modName) result
+  either (return . Left) (runModule file modName) result
 
-runModule :: EvalCtx -> String -> String -> Module -> IO (Result (EvalCtx, [String]))
-runModule ctx file modName (Module imports stmts) = do
-  ctx' <- resolveImports ctx file imports
-  either (return . Left) (\c -> foldM aux (c, []) stmts >>= return . Right) ctx'
+runModule :: String -> String -> Module -> IO (Result (EvalCtx, [String]))
+runModule file modName (Module imports stmts) = do
+  ctx <- resolveImports initEvalCtx file imports
+  either (return . Left) (\c -> foldM aux (c, []) stmts >>= return . Right) ctx
   where
     aux :: (EvalCtx, [String]) -> Stmt -> IO (EvalCtx, [String])
     aux (ctx, msgs) stmt =
@@ -109,18 +109,23 @@ resolveImports :: EvalCtx -> String -> [Import] -> IO (Result EvalCtx)
 resolveImports ctx _ [] =
   return . return $ ctx
 
-resolveImports ctx file (imp@(Import _ mod _ _) : imports) = do
+resolveImports ctx file (imp@(Import _ mod _ _) : remainingImports) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
   res <- execFile (intercalate "." mod) path
-  either (return . Left) (\(c, _) -> resolveImports (importModule imp ctx c) file imports) res
+  either (return . Left) processCtx res
+    where
+      processCtx (newCtx, _output) =
+        let ctx' = importModule imp ctx newCtx
+         in resolveImports ctx' file remainingImports
 
 importModule :: Import -> EvalCtx -> EvalCtx -> EvalCtx
-importModule imp (prevNenv, prevRnEnv, prevCtx, prevEnv) (impNenv, _, impCtx, impEnv) =
-  ( Naming.nImportModule imp prevNenv impNenv
-  , renameImport prevRnEnv imp
-  , tImportModule imp prevCtx impCtx
-  , iImportModule imp prevEnv impEnv
-  )
+importModule imp (prevNenv, prevRnEnv, prevCtx, prevEnv) (impNenv, impRnEnv, impCtx, impEnv) =
+  let (rnEnv', renamedImports) = renameImport prevRnEnv impRnEnv imp
+   in ( Naming.nImportModule imp prevNenv impNenv
+      , rnEnv'
+      , tImportModule renamedImports prevCtx impCtx
+      , iImportModule imp prevEnv impEnv
+      )
 
 modNameFromFile :: FilePath -> FilePath
 modNameFromFile file =

@@ -87,7 +87,7 @@ builtins =
   , "int_mul"
   , "int_div"
   , "int_print"
-  ] 
+  ]
 
 data RnState = RnState { modName :: String }
 
@@ -110,6 +110,7 @@ addLocal env name = do
   let env' = RnEnv { getBinds = getBinds' }
   return (env', joinName (mod, name))
 
+
 addInternal :: RnEnv -> String -> Rn RnEnv
 addInternal env name = do
   let getBinds' = ((Nothing, name), Internal name) : getBinds env
@@ -124,7 +125,7 @@ joinName (mod, n) = mod ++ "." ++ n
 lookupIdent :: [String] -> RnEnv -> Rn String
 lookupIdent [] _ = undefined
 lookupIdent [x] env = lookupRdrName (Nothing, x) env
-lookupIdent xs env = 
+lookupIdent xs env =
   let mod = intercalate "." $ init xs
       name = last xs
    in lookupRdrName (Just mod, name) env
@@ -154,8 +155,41 @@ renameStmt :: String -> RnEnv -> Stmt -> Result (RnEnv, Stmt)
 renameStmt modName env stmt =
   runRn modName $ r_stmt env stmt
 
-renameImport :: RnEnv -> Import -> RnEnv
-renameImport env _imp = env
+
+renameImport :: RnEnv -> RnEnv -> Import -> (RnEnv, [String])
+renameImport env impEnv (Import isGlobal mod alias items) =
+  let (envBinds, renamedImports) = binds
+   in (RnEnv { getBinds = envBinds ++ getBinds env }, renamedImports)
+  where
+    binds =
+      let f b@(External (m, n)) = (((modAlias, n), b), joinName (m, n))
+          f _ = undefined
+       in unzip $ map f filteredNames
+
+    filteredNames =
+      let f = maybe (const True) mkFilter items
+       in filter f unfilteredNames
+
+    mkFilter items =
+      let items' = concatMap getItemNames items
+          f (External (_, n)) = elem n items'
+          f _ = undefined
+       in f
+
+    getItemNames (ImportValue v) = [v]
+    getItemNames (ImportType n vs) = n : vs
+
+    unfilteredNames =
+      let f (Internal _) = False
+          f (External (m, _)) = m == modName
+       in filter f $ map snd $ getBinds impEnv
+
+    modName = intercalate "." mod
+
+    modAlias =
+      if isGlobal
+         then Nothing
+         else Just $ maybe modName id alias
 
 
 -- ABSYN RENAMERS
@@ -187,7 +221,7 @@ r_stmt env (Let name expr) = do
 r_stmt env (Class name vars methods) = do
   (envWithClass, name') <- addLocal env name
   (_, vars') <- r_fnParams envWithClass vars
-  envWithSelf <- addInternal env "self" 
+  envWithSelf <- addInternal env "self"
   ((_, envWithoutSelf), methods') <- foldAcc r_method (envWithSelf, envWithClass) methods
   return (envWithoutSelf, Class name' vars' methods')
 
