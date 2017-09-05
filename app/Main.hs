@@ -18,15 +18,13 @@ import System.Console.Haskeline
 import System.Environment (getArgs)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
 
-import Debug.Trace
-
 main :: IO ()
 main = do
   args <- getArgs
   case args of
     [] -> repl
-    "--print-statements":file:_ -> runAndPrintStmts file
-    file:_ -> runFile file
+    "--print-statements":file:_ -> runFile True file
+    file:_ -> runFile False file
 
 type EvalCtx = (Naming.Env, RnEnv, Ctx, Env)
 
@@ -64,28 +62,19 @@ repl = runInputT defaultSettings $ loop initEvalCtx
       stmt <- parseStmt "(stdin)" input
       evalStmt "" ctx stmt
 
-runFile :: String -> IO ()
-runFile file = do
-  result <- parseFile file
-  -- TODO: add this as `Error::runError`
-  either report putStrLn (run result)
-  where
-    run :: (Result Module) -> Result String
-    run result = do
-      absyn <- result
-      balanced <- Naming.balance absyn
-      (typed, ty) <- infer balanced
-      let core = desugar typed
-      val <- trace (show core) eval core
-      -- TODO: move this printing into it's own function
-      return $ ppr (val, ty)
-
-runAndPrintStmts :: String -> IO ()
-runAndPrintStmts file = do
+runFile :: Bool -> String -> IO ()
+runFile shouldPrint file = do
   -- TODO: add this as `Error::runError`
   let mod = modNameFromFile file
   result <- execFile mod file
-  either report (mapM_ putStrLn . reverse . snd) result
+  either report printOutput result
+    where
+      printOutput (_ctx, []) = return ()
+      printOutput (_ctx, out) =
+        if shouldPrint
+           then mapM_ putStrLn (reverse out)
+           else putStrLn (head out)
+
 
 execFile :: String -> String -> IO (Result (EvalCtx, [String]))
 execFile modName file = do
