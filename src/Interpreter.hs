@@ -8,9 +8,10 @@ module Interpreter
   , iImportModule
   ) where
 
-import CoreAbsyn
 import Absyn.Meta (Literal(..), Name, Import(..))
+import CoreAbsyn
 import Error
+import PrettyPrint
 import Typing.Types (Type)
 
 import Control.Monad (foldM)
@@ -44,16 +45,25 @@ data Value
   | VRecord [(String, Value)]
 
 instance Show Value where
-  show (VLit v) = show v
   show (VType t) = show t
   show (VNeutral n) = show n
-  show (VLam _) = "<function>"
-  show VVoid = "()"
-  show (VRecord fields) =
-    "{" ++ fields' ++ "}"
-      where
-        fields' = intercalate ", " $ map showField fields
-        showField (key, value) = key ++ ": " ++ show value
+  show v = showValue show v
+
+instance PrettyPrint Value where
+  ppr (VType t) = ppr t
+  ppr (VNeutral n) = ppr n
+  ppr v = showValue ppr v
+
+showValue _ (VType _) = undefined
+showValue _ (VNeutral _) = undefined
+showValue _  VVoid = "()"
+showValue _ (VLam _) = "<function>"
+showValue _ (VLit v) = show v
+showValue pv (VRecord fields) =
+  "{" ++ fields' ++ "}"
+    where
+      fields' = intercalate ", " $ map showField fields
+      showField (key, value) = key ++ ": " ++ pv value
 
 data Neutral
   = NFree Name
@@ -61,7 +71,15 @@ data Neutral
 
 instance Show Neutral where
   show (NFree n) = n
-  show (NApp n v) = show n ++ "(" ++ show v ++ ")"
+  show app = showNeutral show show app
+
+instance PrettyPrint Neutral where
+  ppr (NFree n) = pprName n
+  ppr app = showNeutral ppr ppr app
+
+showNeutral :: (Neutral -> String) -> (Value -> String) -> Neutral -> String
+showNeutral _ _ (NFree _) = undefined
+showNeutral pn pv (NApp n v) = pn n ++ "(" ++ pv v ++ ")"
 
 builtins :: [(String, Value)]
 builtins =

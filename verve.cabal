@@ -28,6 +28,7 @@ library
                        Typing.Ctx
                        Typing.TypeChecker
                        Renamer
+                       PrettyPrint
 
   other-modules:       Absyn.Base
                        Absyn.Meta

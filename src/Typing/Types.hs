@@ -6,7 +6,6 @@ module Typing.Types
   , freshVar
   , fv
 
-
   -- BASE TYPES
   , bool
   , int
@@ -26,6 +25,7 @@ module Typing.Types
   , isHole
   ) where
 
+import PrettyPrint
 import Typing.State
 
 import Data.List (intercalate, union)
@@ -44,6 +44,9 @@ instance Ord Var where
 
 instance Show Var where
   show (TV v _) = v
+
+instance PrettyPrint Var where
+  ppr (TV v _) = pprName v
 
 newVar :: String -> Tc Var
 newVar name = do
@@ -69,37 +72,54 @@ data Type
   | Type
   deriving (Eq)
 
+printType :: (Type  -> String) -> (Var -> String) -> Type -> String
+printType p _ t@(Con _) = p t
+printType p _ t@(Var _ _) = p t
+printType p _ t@(Cls _ _) = p t
+printType p _ t@(Intf _ _ _) = p t
+printType _ _ Type = "Type"
+printType _ _ Top = "⊤"
+printType _ _ Bot = "⊥"
+
+printType f pv (Fun gs [v] t2) | v == void =
+  printType f pv (Fun gs [] t2)
+
+printType f printVar (Fun gs t1 t2) =
+  printf "%s(%s) -> %s"
+    (if null gs then "" else printf "∀%s. " (intercalate " " $ map var gs))
+    (intercalate ", " $ map (printType f printVar) t1)
+    (printType f printVar t2)
+      where
+        var :: BoundVar -> String
+        var (v, []) = printVar v
+        var (v, [t]) = printf "(%s: %s)" (printVar v) (printType f printVar t)
+        var (v, ts) = printf "(%s: (%s))" (printVar v) (intercalate ", " $ map (printType f printVar) ts)
+
+printType f v (Rec fields) =
+  "{" ++ fields' ++ "}"
+    where
+      fields' = intercalate ", " $ map showField fields
+      showField (key, ty) = key ++ ": " ++ printType f v ty
+
+printType f v (TyAbs params ty) =
+  "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v ty
+
+printType f v (TyApp ty args) =
+  printType f v ty ++ "<" ++ intercalate ", " (map (printType f v) args) ++ ">"
+
 instance Show Type where
   show (Con t) = t
   show (Var v _) = show v
   show (Cls t _) = t
   show (Intf t _ _) = t
-  show Type = "Type"
-  show Top = "⊤"
-  show Bot = "⊥"
+  show t = printType show show t
 
-  show (Fun gs [v] t2) | v == void = show (Fun gs [] t2)
-  show (Fun gs t1 t2) =
-    printf "%s(%s) -> %s"
-      (if null gs then "" else printf "∀%s. " (intercalate " " $ map var gs))
-      (intercalate ", " $ map show t1)
-      (show t2)
-        where
-          var (v, []) = show v
-          var (v, [t]) = printf "(%s: %s)" (show v) (show t)
-          var (v, ts) = printf "(%s: (%s))" (show v) (intercalate ", " $ map show ts)
-
-  show (Rec fields) =
-    "{" ++ fields' ++ "}"
-      where
-        fields' = intercalate ", " $ map showField fields
-        showField (key, value) = key ++ ": " ++ show value
-
-  show (TyAbs params ty) =
-    "∀" ++ (intercalate " " $ map show params)  ++ "." ++ show ty
-
-  show (TyApp ty args) =
-    show ty ++ "<" ++ intercalate ", " (map show args) ++ ">"
+instance PrettyPrint Type where
+  ppr (Con t) = pprName t
+  ppr (Var v _) = ppr v
+  ppr (Cls t _) = pprName t
+  ppr (Intf t _ _) = pprName t
+  ppr t = printType ppr ppr t
 
 -- Free Type Variables
 fv :: Type -> [Var]

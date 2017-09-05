@@ -7,6 +7,7 @@ import Renamer
 import Interpreter
 import Typing.Ctx
 import Typing.TypeChecker
+import PrettyPrint
 
 import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
@@ -15,7 +16,6 @@ import Data.List (intercalate)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Environment (getArgs)
-import Text.Printf (printf)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
 
 import Debug.Trace
@@ -40,8 +40,7 @@ evalStmt modName (nenv, rnEnv, ctx, env) stmt = do
   (ctx', typed, ty) <- inferStmt ctx renamed
   let core = desugarStmt typed
   (env', val) <- evalWithEnv env core
-  let output = printf "%s : %s" (show val) (show ty)
-  return ((nenv', rnEnv', ctx', env'), output)
+  return ((nenv', rnEnv', ctx', env'), ppr (val, ty))
 
 repl :: IO ()
 repl = runInputT defaultSettings $ loop initEvalCtx
@@ -79,7 +78,7 @@ runFile file = do
       let core = desugar typed
       val <- trace (show core) eval core
       -- TODO: move this printing into it's own function
-      return $ printf "%s : %s" (show val) (show ty)
+      return $ ppr (val, ty)
 
 runAndPrintStmts :: String -> IO ()
 runAndPrintStmts file = do

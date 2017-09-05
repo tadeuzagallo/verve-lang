@@ -17,7 +17,10 @@ import qualified Control.Monad.Except as Except (throwError)
 
 data RenamerError
   = UnknownVariable String
-  deriving (Show)
+
+instance Show RenamerError where
+  show (UnknownVariable x) =
+    "Unknown variable: " ++ x
 
 instance ErrorT RenamerError where
   kind _ = "RenamerError"

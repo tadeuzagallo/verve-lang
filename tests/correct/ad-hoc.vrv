@@ -33,10 +33,6 @@ interface Read<T> {
   fn read() -> T
 }
 
-enum Bool {
-  True
-  False
-}
 implementation Read<Int> {
   fn read() -> Int {
     17
@@ -53,7 +49,7 @@ fn id<T>(x: T) -> T { x }
 /*id<Int>(read()) / / CHECK: 17 : Int*/
 /*id<Bool>(read()) / / CHECK: True : Bool*/
 
-// (ideally) exhaustive check of use cases 
+// (ideally) exhaustive check of use cases
 
 "direct"
 to_int(4) // CHECK-L: 4 : Int

@@ -4,6 +4,7 @@ module Typing.TypeError
 
 import Absyn.Meta
 import Error
+import PrettyPrint
 import Typing.Types
 import Typing.Kinds
 
@@ -33,10 +34,10 @@ instance Show TypeError where
     err
 
   show (UnknownVariable x) =
-    "Unknown variable: " ++ x
+    "Unknown variable: " ++ pprName x
 
   show (UnknownType x) =
-    "Unknown type: " ++ x
+    "Unknown type: " ++ pprName x
 
   show (UnknownModule x) =
     "Unknown module: " ++ x
@@ -51,28 +52,28 @@ instance Show TypeError where
     "Failed to infer type arguments for function call"
 
   show (TypeError expected actual) =
-    "Expected a value of type `" ++ show expected ++ "`, but found `" ++ show actual ++ "`"
+    "Expected a value of type `" ++ ppr expected ++ "`, but found `" ++ ppr actual ++ "`"
 
   show (UnknownField ty field) =
-    "Trying to access unknown property `" ++ field ++ "` of object of type `" ++ show ty ++ "`"
+    "Trying to access unknown property `" ++ field ++ "` of object of type `" ++ ppr ty ++ "`"
 
   show (MissingImplementation name) =
-    "Implementation is missing method `" ++ name ++ "`"
+    "Implementation is missing method `" ++ pprName name ++ "`"
 
   show (ExtraneousImplementation name) =
-    "Implementation contains method `" ++ name ++ "` which is not part of the interface"
+    "Implementation contains method `" ++ pprName name ++ "` which is not part of the interface"
 
   show (InterfaceExpected ty) =
-    "Expected an interface, but found type `" ++ show ty ++ "`"
+    "Expected an interface, but found type `" ++ ppr ty ++ "`"
 
   show (ImplementingNonInterface name actualTy) =
-    "Cannot have an implementation of `" ++ name ++ "` because it's not an interface. " ++ name  ++ " has type `" ++ show actualTy ++ "`."
+    "Cannot have an implementation of `" ++ pprName name ++ "` because it's not an interface. " ++ pprName name  ++ " has type `" ++ ppr actualTy ++ "`."
 
   show (MissingInstance intf ty) =
-    "No instance of `" ++ intf ++ "` for type `" ++ show ty ++  "`"
+    "No instance of `" ++ pprName intf ++ "` for type `" ++ ppr ty ++  "`"
 
   show (ImplementationError intfName ty) =
-    "Implementation of `" ++ intfName ++ "` for type `" ++ show ty ++ "` does not use all the type variables it introduces and/or uses concrete types."
+    "Implementation of `" ++ pprName intfName ++ "` for type `" ++ ppr ty ++ "` does not use all the type variables it introduces and/or uses concrete types."
 
   show (KindError ty expectedKind actualKind) =
-    "Type `" ++ show ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
+    "Type `" ++ ppr ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
