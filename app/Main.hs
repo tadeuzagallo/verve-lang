@@ -8,7 +8,6 @@ import Interpreter
 import Typing.Ctx
 import Typing.TypeChecker
 import PrettyPrint
-
 import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
 import Data.Char (toUpper)
@@ -21,28 +20,49 @@ import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileNam
 
 type EvalCtx = (Naming.Env, RnEnv, Ctx, Env)
 
+data Config = Config
+  { dumpCore :: Bool
+  , printStatements :: Bool
+  }
+
+defaultConfig :: Config
+defaultConfig = Config { dumpCore = False
+                       , printStatements = False
+                       }
 
 main :: IO ()
 main = do
   args <- getArgs
   case args of
     [] -> repl
-    "--print-statements":file:_ -> runFile True file
-    file:_ -> runFile False file
+
+    "--print-statements":file:_ ->
+      let config = defaultConfig { printStatements = True }
+       in runFile config file
+
+    "--dump-core":file:_ ->
+      let config = defaultConfig { dumpCore = True }
+       in runFile config file
+
+    file:_ ->
+      runFile defaultConfig file
 
 
 initEvalCtx :: EvalCtx
 initEvalCtx = (Naming.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
 
 
-evalStmt ::  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
-evalStmt modName (nenv, rnEnv, ctx, env) stmt = do
+evalStmt :: Config ->  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
+evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
   (nenv', balanced) <- Naming.balanceStmt nenv stmt
   (rnEnv', renamed) <- renameStmt modName rnEnv balanced
   (ctx', typed, ty) <- inferStmt ctx renamed
   let core = desugarStmt typed
   (env', val) <- evalWithEnv env core
-  return ((nenv', rnEnv', ctx', env'), ppr (val, ty))
+  let out = if dumpCore config
+              then show core
+              else ppr (val, ty)
+  return ((nenv', rnEnv', ctx', env'), out)
 
 
 repl :: IO ()
@@ -65,37 +85,37 @@ repl = runInputT defaultSettings $ loop initEvalCtx
     result :: EvalCtx -> String -> Result (EvalCtx, String)
     result ctx input = do
       stmt <- parseStmt "(stdin)" input
-      evalStmt "REPL" ctx stmt
+      evalStmt defaultConfig "REPL" ctx stmt
 
 
-runFile :: Bool -> String -> IO ()
-runFile shouldPrint file = do
+runFile :: Config -> String -> IO ()
+runFile config file = do
   -- TODO: add this as `Error::runError`
   let mod = modNameFromFile file
-  result <- execFile shouldPrint mod file
+  result <- execFile config mod file
   either (mapM_ report) printOutput result
     where
       printOutput (_ctx, []) = return ()
       printOutput (_ctx, out) =
-        if shouldPrint
+        if printStatements config || dumpCore config
            then mapM_ putStrLn (reverse out)
            else putStrLn (head out)
 
 
-execFile :: Bool -> String -> String -> IO (Either [Error] (EvalCtx, [String]))
-execFile verbose modName file = do
+execFile :: Config -> String -> String -> IO (Either [Error] (EvalCtx, [String]))
+execFile config modName file = do
   result <- parseFile file
-  either (return . Left) (runModule verbose file modName) result
+  either (return . Left) (runModule config file modName) result
 
 
-runModule :: Bool -> String -> String -> Module -> IO (Either [Error] (EvalCtx, [String]))
-runModule verbose file modName (Module imports stmts) = do
+runModule :: Config -> String -> String -> Module -> IO (Either [Error] (EvalCtx, [String]))
+runModule config file modName (Module imports stmts) = do
   ctx <- resolveImports initEvalCtx file imports
   either (return . Left) execModule ctx
   where
     aux :: (EvalCtx, [Either Error String]) -> Stmt -> IO (EvalCtx, [Either Error String])
     aux (ctx, msgs) stmt =
-      case evalStmt modName ctx stmt of
+      case evalStmt config modName ctx stmt of
         Left err -> do
           return (ctx, Left err : msgs)
         Right (ctx', out) -> do
@@ -105,13 +125,15 @@ runModule verbose file modName (Module imports stmts) = do
     execModule ctx = do
       (ctx', output) <- foldM aux (ctx, []) stmts
       let (errMessages, outMessages) = foldl part ([], []) output
-      return $ case errMessages of
-                 [] -> Right (ctx', reverse outMessages)
-                 _ -> Left (reverse errMessages)
+      if dumpCore config
+         then return $ Right (ctx', reverse $ outMessages ++ map showError errMessages)
+         else return $ case errMessages of
+                         [] -> Right (ctx', reverse outMessages)
+                         _ -> Left (reverse errMessages)
 
     part :: ([Error], [String]) -> Either Error String -> ([Error], [String])
     part (errs, succs) (Left err) =
-      if verbose
+      if printStatements config
          then (errs, showError err : succs)
          else (err : errs, succs)
     part (errs, succs) (Right suc) = (errs, suc : succs)
@@ -123,7 +145,7 @@ resolveImports ctx _ [] =
 
 resolveImports ctx file (imp@(Import _ mod _ _) : remainingImports) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
-  res <- execFile False (intercalate "." mod) path
+  res <- execFile defaultConfig (intercalate "." mod) path
   either (return . Left) processCtx res
     where
       processCtx (newCtx, _output) =
