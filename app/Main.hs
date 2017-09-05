@@ -3,17 +3,20 @@ import Error
 import Parser
 import qualified Naming
 import Desugar
+import Renamer
 import Interpreter
 import Typing.Ctx
 import Typing.TypeChecker
 
 import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
+import Data.Char (toUpper)
+import Data.List (intercalate)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Environment (getArgs)
 import Text.Printf (printf)
-import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath)
+import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
 
 import Debug.Trace
 
@@ -25,19 +28,20 @@ main = do
     "--print-statements":file:_ -> runAndPrintStmts file
     file:_ -> runFile file
 
-type EvalCtx = (Naming.Env, Ctx, Env)
+type EvalCtx = (Naming.Env, RnEnv, Ctx, Env)
 
 initEvalCtx :: EvalCtx
-initEvalCtx = (Naming.defaultEnv, defaultCtx, defaultEnv)
+initEvalCtx = (Naming.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
 
-evalStmt ::  EvalCtx -> Stmt -> Result (EvalCtx, String)
-evalStmt (nenv, ctx, env) stmt = do
+evalStmt ::  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
+evalStmt modName (nenv, rnEnv, ctx, env) stmt = do
   (nenv', balanced) <- Naming.balanceStmt nenv stmt
-  (ctx', typed, ty) <- inferStmt ctx balanced
+  (rnEnv', renamed) <- renameStmt modName rnEnv balanced
+  (ctx', typed, ty) <- inferStmt ctx renamed
   let core = desugarStmt typed
   (env', val) <- evalWithEnv env core
   let output = printf "%s : %s" (show val) (show ty)
-  return ((nenv', ctx', env'), output)
+  return ((nenv', rnEnv', ctx', env'), output)
 
 repl :: IO ()
 repl = runInputT defaultSettings $ loop initEvalCtx
@@ -59,7 +63,7 @@ repl = runInputT defaultSettings $ loop initEvalCtx
     result :: EvalCtx -> String -> Result (EvalCtx, String)
     result ctx input = do
       stmt <- parseStmt "(stdin)" input
-      evalStmt ctx stmt
+      evalStmt "" ctx stmt
 
 runFile :: String -> IO ()
 runFile file = do
@@ -80,22 +84,23 @@ runFile file = do
 runAndPrintStmts :: String -> IO ()
 runAndPrintStmts file = do
   -- TODO: add this as `Error::runError`
-  result <- execFile file
+  let mod = modNameFromFile file
+  result <- execFile mod file
   either report (mapM_ putStrLn . reverse . snd) result
 
-execFile :: String -> IO (Result (EvalCtx, [String]))
-execFile file = do
+execFile :: String -> String -> IO (Result (EvalCtx, [String]))
+execFile modName file = do
   result <- parseFile file
-  either (return . Left) (runModule initEvalCtx file) result
+  either (return . Left) (runModule initEvalCtx file modName) result
 
-runModule :: EvalCtx -> String -> Module -> IO (Result (EvalCtx, [String]))
-runModule ctx file (Module imports stmts) = do
+runModule :: EvalCtx -> String -> String -> Module -> IO (Result (EvalCtx, [String]))
+runModule ctx file modName (Module imports stmts) = do
   ctx' <- resolveImports ctx file imports
   either (return . Left) (\c -> foldM aux (c, []) stmts >>= return . Right) ctx'
   where
     aux :: (EvalCtx, [String]) -> Stmt -> IO (EvalCtx, [String])
     aux (ctx, msgs) stmt =
-      case evalStmt ctx stmt of
+      case evalStmt modName ctx stmt of
         Left err -> do
           return (ctx, showError err : msgs)
         Right (ctx', out) -> do
@@ -107,12 +112,19 @@ resolveImports ctx _ [] =
 
 resolveImports ctx file (imp@(Import _ mod _ _) : imports) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
-  res <- execFile path
+  res <- execFile (intercalate "." mod) path
   either (return . Left) (\(c, _) -> resolveImports (importModule imp ctx c) file imports) res
 
 importModule :: Import -> EvalCtx -> EvalCtx -> EvalCtx
-importModule imp (prevNenv, prevCtx, prevEnv) (impNenv, impCtx, impEnv) =
+importModule imp (prevNenv, prevRnEnv, prevCtx, prevEnv) (impNenv, _, impCtx, impEnv) =
   ( Naming.nImportModule imp prevNenv impNenv
+  , renameImport prevRnEnv imp
   , tImportModule imp prevCtx impCtx
   , iImportModule imp prevEnv impEnv
   )
+
+modNameFromFile :: FilePath -> FilePath
+modNameFromFile file =
+  case dropExtension $ takeFileName file of
+    [] -> undefined
+    x:xs -> toUpper x : xs

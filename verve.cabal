@@ -27,6 +27,7 @@ library
                        Naming
                        Typing.Ctx
                        Typing.TypeChecker
+                       Renamer
 
   other-modules:       Absyn.Base
                        Absyn.Meta
