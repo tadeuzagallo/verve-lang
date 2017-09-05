@@ -3,6 +3,8 @@ module CoreAbsyn where
 import Absyn.Typed (Id, Literal)
 import Typing.Types (Type)
 
+import qualified Typing.Types as T (Type(Type))
+
 data Expr
   = Void
   | Lit Literal
@@ -19,41 +21,74 @@ type Bind = (Id, Expr)
 type Case = (Pattern, Expr)
 
 instance Show Expr where
-  show = showExpr Top
+  show = printOut . showExpr Top
+
+data Out
+  = Str String
+  | Indent
+  | Dedent
+  | LineBreak
+
+printOut :: [Out] -> String
+printOut out = printOutAux 0 out
+
+printOutAux :: Int -> [Out] -> String
+printOutAux _ [] = ""
+printOutAux d (Str s : out) = s ++ " " ++ printOutAux d out
+printOutAux d (Indent : out) = printOutAux (d + 1) out
+printOutAux d (Dedent : out) = printOutAux (d - 1) out
+printOutAux d (LineBreak : out) = "\n" ++ replicate (d * 2) ' ' ++ printOutAux d out
 
 data Ctx = Top | Bot
-showExpr :: Ctx -> Expr -> String
-showExpr _ Void = "()"
-showExpr _ (Lit l) = show l
-showExpr _ (Var id) = showId id
-showExpr _ (Type ty) = "@" ++ show ty
+
+showExpr :: Ctx -> Expr -> [Out]
+showExpr _ Void = [Str "()"]
+showExpr _ (Lit l) = [Str $ show l]
+showExpr _ (Var id) = [showIdName id]
+showExpr _ (Type ty) = [Str $ "@" ++ show ty]
 
 showExpr _ (Record fields) =
-  let showField (id, expr) = "\t" ++ showId id ++ " = " ++ showExpr Top expr
-   in "{\n" ++ unlines (map showField fields) ++ "}"
+  let showField (id, expr) = [showIdName id,  Str "="] ++ showExpr Top expr ++ [LineBreak]
+   in [Str "{", Indent, LineBreak] ++ concatMap showField fields ++ [Dedent, LineBreak, Str "}"]
 
-showExpr Top (App f arg) = showExpr Top f ++ " " ++ showExpr Bot arg
+showExpr Top (App (Var ("#fix", _)) (Lam _ body)) =
+  showExpr Top body
 
-showExpr Top (Lam id body) = "λ" ++ showId id ++ ". " ++ showExpr Top body
+showExpr Top (App f arg) =
+  showExpr Top f ++ showExpr Bot arg
+
+showExpr Top lam@(Lam _ _) =
+  [Str "λ"] ++ aux lam
+  where
+    aux (Lam (name, T.Type) body) = [Str $ "@" ++ name] ++ aux body
+    aux (Lam id body) = [showIdName id] ++ aux body
+    aux expr = [Str "-> {", Indent, LineBreak] ++ showExpr Top expr ++ [Dedent, LineBreak, Str "}"]
 
 showExpr Top (Let bind expr) =
-  unlines (map showBind bind) ++ showExpr Top expr
+  concatMap showBind bind ++ showExpr Top expr
 
 showExpr Top (Match expr cases) =
-  "case " ++ show expr ++ " of\n" ++ unlines (map showCase cases)
+  [Str "case", Str $ show expr, Str "of {", Indent, LineBreak] ++ concatMap showCase cases ++ [Dedent, LineBreak, Str "}"]
 
-showExpr Bot expr = "(" ++ showExpr Top expr ++ ")"
+showExpr Bot expr = [Str "("] ++  showExpr Top expr ++ [Str ")"]
 
-showId :: Id -> String
-showId (v, _) = v
+showId :: Id -> Out
+showId (v, ty) = Str $ v ++ " : " ++ show ty
 
-showBind :: Bind -> String
+showIdName :: Id -> Out
+showIdName ("#ignore", _) = Str "_"
+showIdName (n, _) = Str n
+
+showBind :: Bind -> [Out]
 showBind (id, expr) =
-  "let " ++ showId id ++ " = " ++ show expr
+  [Str "let", showIdName id] ++ aux expr
+    where
+      aux (Lam id body) = [showIdName id] ++ aux body
+      aux expr = [Str "="] ++ showExpr Top expr ++ [LineBreak]
 
-showCase :: Case -> String
+showCase :: Case -> [Out]
 showCase (pat, expr) =
-  "\t" ++ show pat ++ " -> " ++ show expr
+  [Str $ show pat, Str "->", Str $ show expr, LineBreak]
 
 data Pattern
   = PatDefault
@@ -67,6 +102,6 @@ instance Show Pattern where
 showPat :: Ctx -> Pattern -> String
 showPat _ PatDefault = "_"
 showPat _ (PatLiteral l) = show l
-showPat _ (PatVar id) = showId id
-showPat Top (PatCtor id pats) = showId id ++ " " ++ unwords (reverse $ map (showPat Bot) pats)
+showPat _ (PatVar (name, _ )) = name
+showPat Top (PatCtor (name, _) pats) = name ++ " " ++ unwords (reverse $ map (showPat Bot) pats)
 showPat Bot pat@(PatCtor _ _) = "(" ++ showPat Top  pat ++ ")"
