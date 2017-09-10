@@ -8,8 +8,9 @@ module Typing.Ctx
   , getValueType
   , addInstance
   , getInstances
+  , addInterface
+  , getInterface
   , tImportModule
-  , getModule
   ) where
 
 import Typing.State
@@ -21,8 +22,8 @@ import qualified Typing.Types as Types (list)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
-               , instances :: [(String, [(Type, [(Var, [Type])])])]
-               , modules :: [(String, Ctx)]
+               , instances :: [(String, [(Type, [BoundVar])])]
+               , interfaces :: [(String, Intf)]
                } deriving (Eq)
 
 getType :: String -> Ctx -> Tc Type
@@ -43,13 +44,13 @@ addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
 
-getInstances :: String -> Ctx -> Tc [(Type, [(Var, [Type])])]
+getInstances :: String -> Ctx -> Tc [(Type, [BoundVar])]
 getInstances n ctx =
   case lookup n (instances ctx) of
     Nothing -> return []
     Just insts -> return insts
 
-addInstance :: Ctx -> (String, (Type, [(Var, [Type])])) -> Tc Ctx
+addInstance :: Ctx -> (String, (Type, [BoundVar])) -> Tc Ctx
 addInstance ctx (n, inst) = do
   insts <- getInstances n ctx
   return $ ctx { instances = update n (inst : insts) (instances ctx) }
@@ -79,7 +80,7 @@ defaultCtx =
                  , ("Cons", forall [T] $ [var T, list T] ~> list T)
                  ]
       , instances = []
-      , modules = []
+      , interfaces = []
       }
 
 -- HELPERS
@@ -98,14 +99,17 @@ forall vs ty =
 var :: FakeVar -> Type
 var name = Var (tyvar name) []
 
+getInterface :: String -> Ctx -> Tc Intf
+getInterface n ctx =
+  case lookup n (interfaces ctx) of
+    Nothing -> throwError (UnknownInterface n)
+    Just t -> return t
+
+addInterface :: Ctx -> (String, Intf) -> Ctx
+addInterface ctx (n, ty) = ctx { interfaces = (n, ty) : interfaces ctx }
+
+
 -- MODULE IMPORTATION
-
-getModule :: String -> Ctx -> Tc Ctx
-getModule n ctx =
-  case lookup n (modules ctx) of
-    Nothing -> throwError (UnknownModule n)
-    Just ctx -> return ctx
-
 tImportModule :: [String] -> Ctx -> Ctx -> Ctx
 tImportModule items prevCtx impCtx =
   prevCtx { values = filterImports (values impCtx) ++ values prevCtx

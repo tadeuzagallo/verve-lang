@@ -47,15 +47,12 @@ applySubst s (TyAbs gen ty) =
    in TyAbs gen (applySubst s' ty)
 applySubst s (TyApp t1 t2) =
   TyApp (applySubst s t1) (map (applySubst s) t2)
-applySubst s (Intf name param methods) =
-  let s' = filterSubst ((/=) param) s
-   in Intf name param (map (fmap $ applySubst s') methods)
 
 filterSubst :: (Var -> Bool) -> Substitution -> Substitution
 filterSubst f (Substitution s) =
   Substitution $ filter (f . fst) s
 
-freshBound :: (Var, [Type]) -> Tc (Var, [Type])
+freshBound :: BoundVar -> Tc BoundVar
 freshBound (var, bounds) = do
   var' <- freshVar var
   return (var', bounds)

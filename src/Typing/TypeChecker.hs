@@ -58,7 +58,7 @@ resolveType ctx (U.TApp t1 t2) = do
 resolveType _ U.TVoid = return void
 resolveType _ U.TPlaceholder = undefined
 
-resolveGenerics :: Ctx -> [(Name, [U.Type])] -> Tc [(Name, [Type])]
+resolveGenerics :: Ctx -> [(Name, [String])] -> Tc [(Name, [Intf])]
 resolveGenerics ctx gen =
   mapM resolve gen
     where
@@ -66,13 +66,10 @@ resolveGenerics ctx gen =
         bounds' <- mapM resolveConstraint bounds
         return (name, bounds')
 
-      resolveConstraint ty = do
-        ty' <- resolveType ctx ty
-        case ty' of
-          Intf _ _  _ -> return ty'
-          _ -> throwError $ InterfaceExpected ty'
+      resolveConstraint intf = do
+        getInterface intf ctx
 
-addGenerics :: Ctx -> [(Name, [Type])] -> Tc (Ctx, [BoundVar])
+addGenerics :: Ctx -> [(Name, [Intf])] -> Tc (Ctx, [BoundVar])
 addGenerics ctx generics =
   foldM aux (ctx, []) generics
     where
@@ -165,9 +162,9 @@ i_stmt ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
   (methods', methodsTy) <- unzip <$> mapM (i_fnDecl ctx') methods
   let ty = Intf name param' methodsTy
-  let intf = Interface (name, ty) param methods'
+  let intf = Interface (name, void) param methods'
   let ctx' = foldl (aux ty param') ctx methodsTy
-  return (addType ctx' (name, ty), intf, ty)
+  return (addInterface ctx' (name, ty), intf, void)
     where
       aux intf param ctx (name, Fun gen params retType) =
         let ty = Fun ((param, [intf]) : gen) params retType
@@ -175,11 +172,7 @@ i_stmt ctx (Interface name param methods) = do
       aux _ _ _ _ = undefined
 
 i_stmt ctx (Implementation implName generics ty methods) = do
-  Intf _ param intfMethods <-
-    getType implName ctx >>= \ty ->
-      case ty of
-        Intf _ _ _ -> return ty
-        _ -> throwError (ImplementingNonInterface implName ty)
+  Intf _ param intfMethods <- getInterface implName ctx
   generics' <- resolveGenerics ctx generics
   (ctx', genericVars) <- addGenerics ctx generics'
   ty' <- resolveType ctx' ty
@@ -287,11 +280,8 @@ i_expr ctx (Ident [i] _) = do
   ty <- getValueType i ctx
   return (Ident [i] ty, ty)
 
-i_expr ctx (Ident (i:is) ty) = do
-  ctx' <- getModule i ctx
-  (Ident _ _, ty) <- i_expr ctx' (Ident is ty)
-  return (Ident (i:is) ty, ty)
-
+-- TODO: Clear this up - should be handled by the renamer now
+i_expr _ (Ident (_:_) _) = undefined
 i_expr _ (Ident [] _) = undefined
 
 
@@ -374,7 +364,7 @@ i_expr ctx (List items) = do
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn
 
-adjustTypeArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc ([Type], [(Type, Type)])
+adjustTypeArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc ([Type], [(Type, Maybe Intf)])
 adjustTypeArgs ctx gen skippedVars typeArgs = do
   constrArgs <- concat <$> zipWithM findConstrArgs gen typeArgs'
   return ([], constrArgs)
@@ -387,25 +377,22 @@ adjustTypeArgs ctx gen skippedVars typeArgs = do
            else ty
 
       findConstrArgs (_, []) tyArg = do
-        return [(tyArg, Type)]
+        return [(tyArg, Nothing)]
 
       findConstrArgs (_, bounds) tyArg = do
         concat <$> mapM (boundsCheck ctx tyArg) bounds
 
-boundsCheck :: Ctx -> Type -> Type -> Tc [(Type, Type)]
+boundsCheck :: Ctx -> Type -> Intf -> Tc [(Type, Maybe Intf)]
 boundsCheck ctx t1 t2@(Intf name _ _) = do
   args <- boundsCheck' ctx t1 t2
   if null args
      then throwError $ MissingInstance name t1
      else return args
 
-boundsCheck _ _ ty =
-  throwError $ InterfaceExpected ty
-
-boundsCheck' :: Ctx -> Type -> Type -> Tc [(Type, Type)]
+boundsCheck' :: Ctx -> Type -> Intf -> Tc [(Type, Maybe Intf)]
 boundsCheck' _ v@(Var _ bounds) intf = do
   return $ if intf `elem` bounds
-              then [(v, intf), (v, Type)]
+              then [(v, Just intf), (v, Nothing)]
               else []
 
 boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
@@ -413,7 +400,7 @@ boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
   case lookup ty instances of
     Nothing -> return []
     Just vars ->
-      ([(ty, intf), (ty, Type)] ++) <$> (concat <$> zipWithM (\arg (_, bounds) ->
+      ([(ty, Just intf), (ty, Nothing)] ++) <$> (concat <$> zipWithM (\arg (_, bounds) ->
         concat <$> mapM (boundsCheck ctx arg) bounds
            ) args vars)
 
@@ -421,16 +408,13 @@ boundsCheck' ctx (TyAbs params ty) intf =
   boundsCheck' ctx (params \\ ty) intf
 
 boundsCheck' _ Bot intf =
-  return [(Bot, intf), (Bot, Type)]
+  return [(Bot, Just intf), (Bot, Nothing)]
 
 boundsCheck' ctx ty intf@(Intf name _ _) = do
   instances <- getInstances name ctx
   case lookup ty instances of
-    Just [] -> return [(ty, intf), (ty, Type)]
+    Just [] -> return [(ty, Just intf), (ty, Nothing)]
     _ -> return []
-
-boundsCheck' _ _ _ =
-  return []
 
 normalizeFnType :: Type -> Type
 normalizeFnType (Fun gen params (Fun [] params' retTy)) =

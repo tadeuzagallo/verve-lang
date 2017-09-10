@@ -19,13 +19,13 @@ data Type
   | TPlaceholder
   deriving (Show)
 
-type Module = BaseModule Name Type
-type Stmt = BaseStmt Name Type
+type Module = BaseModule Name Type Name
+type Stmt = BaseStmt Name Type Name
 type DataCtor = BaseDataCtor Name Type
 type Param = BaseParam Type
-type Generics = BaseGenerics Type
-type Function = BaseFunction Name Type
-type FunctionDecl = BaseFunctionDecl Name Type
-type Expr = BaseExpr Name Type
-type Case = BaseCase Name Type
+type Generics = BaseGenerics Name
+type Function = BaseFunction Name Type Name
+type FunctionDecl = BaseFunctionDecl Name Type Name
+type Expr = BaseExpr Name Type Name
+type Case = BaseCase Name Type Name
 type Pattern = BasePattern Name

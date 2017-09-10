@@ -11,7 +11,7 @@ import Typing.Kinds
 data TypeError
   = UnknownVariable String
   | UnknownType String
-  | UnknownModule String
+  | UnknownInterface String
   | ArityMismatch
   | TypeArityMismatch
   | InferenceFailure
@@ -39,8 +39,8 @@ instance Show TypeError where
   show (UnknownType x) =
     "Unknown type: " ++ pprName x
 
-  show (UnknownModule x) =
-    "Unknown module: " ++ x
+  show (UnknownInterface x) =
+    "Unknown interface: " ++ x
 
   show ArityMismatch =
     "Invalid function call: too many arguments"

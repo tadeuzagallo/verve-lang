@@ -54,4 +54,4 @@ enum Maybe<T> {
 implementation Intish< Maybe<Int> > {
 }
 
-fn f<T: Int>(x: T) { } // CHECK-L: Expected an interface, but found type `Int`
+fn f<T: Int>(x: T) { } // CHECK-L: Unknown interface: Int

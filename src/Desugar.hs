@@ -82,7 +82,7 @@ d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
       select' = CA.App select (mk_var "#dict")
    in (name, CA.Lam ("#dict", void) (CA.Lam (ignore Type) select'))
 
-d_implMethod :: [(Name, [Type])] -> Function -> CA.Bind
+d_implMethod :: [(Name, [Intf])] -> Function -> CA.Bind
 d_implMethod gen fn =
   let fn' = fn { generics = gen ++ generics fn }
    in (name fn, d_fnNoFix fn')
@@ -115,13 +115,15 @@ d_expr (Call callee constraints types args) =
       mkTypeApp (app, holes) ty =
         (CA.App app $ CA.Type ty, holes)
 
-      mkConstraint :: ([CA.Expr], [Id]) -> (Type, Type) -> ([CA.Expr], [Id])
+      mkConstraint :: ([CA.Expr], [Id]) -> (Type, Maybe Intf) -> ([CA.Expr], [Id])
       mkConstraint (constraints, holes) (typeArg, _) | isHole typeArg =
         let holeName = "#constr_hole" ++ show (length holes)
          in (constraints ++ [mk_var holeName], (holeName, void) : holes)
-      mkConstraint (constraints, holes) (typeArg, Type) =
+
+      mkConstraint (constraints, holes) (typeArg, Nothing) =
         (constraints ++ [CA.Type typeArg], holes)
-      mkConstraint (constraints, holes) (typeArg, typeBound) =
+
+      mkConstraint (constraints, holes) (typeArg, Just typeBound) =
         let constr = mk_var ("#" ++ show typeBound ++ show typeArg)
          in (constraints ++ [constr], holes)
 

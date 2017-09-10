@@ -1,5 +1,6 @@
 module Typing.Types
   ( Type(..)
+  , Intf(..)
   , Var()
   , BoundVar
   , newVar
@@ -56,70 +57,75 @@ newVar name = do
 freshVar :: Var -> Tc Var
 freshVar (TV name _) = newVar name
 
-type BoundVar = (Var, [Type])
-
 data Type
   = Con String
-  | Var Var [Type]
+  | Var Var [Intf]
   | Fun [BoundVar] [Type] Type
   | Rec [(String, Type)]
   | Cls String [(String, Type)]
   | TyAbs [Var] Type
   | TyApp Type [Type]
-  | Intf String Var [(String, Type)]
   | Top
   | Bot
   | Type
   deriving (Eq)
 
-printType :: (Type  -> String) -> (Var -> String) -> Type -> String
-printType p _ t@(Con _) = p t
-printType p _ t@(Var _ _) = p t
-printType p _ t@(Cls _ _) = p t
-printType p _ t@(Intf _ _ _) = p t
-printType _ _ Type = "Type"
-printType _ _ Top = "⊤"
-printType _ _ Bot = "⊥"
+type BoundVar = (Var, [Intf])
 
-printType f pv (Fun gs [v] t2) | v == void =
-  printType f pv (Fun gs [] t2)
+data Intf = Intf String Var [(String, Type)]
+  deriving (Eq)
 
-printType f printVar (Fun gs t1 t2) =
+instance Show Intf where
+  show (Intf name _ _) = name
+
+instance PrettyPrint Intf where
+  ppr (Intf name _ _) = pprName name
+
+printType :: (Type  -> String) -> (Var -> String) -> (Intf -> String) -> Type -> String
+printType p _ _ t@(Con _) = p t
+printType p _ _ t@(Var _ _) = p t
+printType p _ _ t@(Cls _ _) = p t
+printType _ _ _ Type = "Type"
+printType _ _ _ Top = "⊤"
+printType _ _ _ Bot = "⊥"
+
+printType f pv pi (Fun gs [v] t2) | v == void =
+  printType f pv pi(Fun gs [] t2)
+
+printType f printVar printIntf (Fun gs t1 t2) =
   printf "%s(%s) -> %s"
     (if null gs then "" else printf "∀%s. " (intercalate " " $ map var gs))
-    (intercalate ", " $ map (printType f printVar) t1)
-    (printType f printVar t2)
+    (intercalate ", " $ map (printType f printVar printIntf) t1)
+    (printType f printVar printIntf t2)
       where
         var :: BoundVar -> String
         var (v, []) = printVar v
-        var (v, [t]) = printf "(%s: %s)" (printVar v) (printType f printVar t)
-        var (v, ts) = printf "(%s: (%s))" (printVar v) (intercalate ", " $ map (printType f printVar) ts)
+        var (v, [t]) = printf "(%s: %s)" (printVar v) (printIntf t)
+        var (v, ts) = printf "(%s: (%s))" (printVar v) (intercalate ", " $ map printIntf ts)
 
-printType f v (Rec fields) =
+printType f v i (Rec fields) =
   "{" ++ fields' ++ "}"
     where
       fields' = intercalate ", " $ map showField fields
-      showField (key, ty) = key ++ ": " ++ printType f v ty
+      showField (key, ty) = key ++ ": " ++ printType f v i ty
 
-printType f v (TyAbs params ty) =
-  "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v ty
+printType f v i (TyAbs params ty) =
+  "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
 
-printType f v (TyApp ty args) =
-  printType f v ty ++ "<" ++ intercalate ", " (map (printType f v) args) ++ ">"
+printType f v i (TyApp ty args) =
+  printType f v i ty ++ "<" ++ intercalate ", " (map (printType f v i) args) ++ ">"
 
 instance Show Type where
   show (Con t) = t
   show (Var v _) = show v
   show (Cls t _) = t
-  show (Intf t _ _) = t
-  show t = printType show show t
+  show t = printType show show show t
 
 instance PrettyPrint Type where
   ppr (Con t) = pprName t
   ppr (Var v _) = ppr v
   ppr (Cls t _) = pprName t
-  ppr (Intf t _ _) = pprName t
-  ppr t = printType ppr ppr t
+  ppr t = printType ppr ppr ppr t
 
 -- Free Type Variables
 fv :: Type -> [Var]
@@ -143,8 +149,6 @@ fv (TyAbs gen ty) =
   fv ty Data.List.\\ gen
 fv (TyApp ty args) =
  foldl union [] (map fv args) `union` fv ty
-fv (Intf _ param methods) =
-  (foldl union [] $ map (fv . snd) methods) Data.List.\\ [param]
 
 bool :: Type
 bool = Con "Bool"

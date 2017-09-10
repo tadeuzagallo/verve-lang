@@ -178,13 +178,13 @@ p_function = do
   body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 
-p_generics :: Parser [(Name, [Type])]
+p_generics :: Parser [(Name, [String])]
 p_generics = angles $ commaSep p_genericParam
 
-p_genericParam :: Parser (Name, [Type])
+p_genericParam :: Parser (Name, [String])
 p_genericParam = do
   var <- ucid
-  bounds <- option [] (symbol ":" *>  (parens (commaSep1 p_type) <|> (p_type >>= return . (:[]) )))
+  bounds <- option [] (symbol ":" *>  (parens (commaSep1 ucid) <|> (ucid >>= return . (:[]) )))
   return (var, bounds)
 
 p_typedName :: Parser Param

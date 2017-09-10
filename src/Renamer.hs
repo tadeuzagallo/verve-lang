@@ -390,10 +390,10 @@ r_generics :: RnEnv -> Generics -> Rn (RnEnv, Generics)
 r_generics = foldAcc r_generic
 
 
-r_generic :: RnEnv -> (Name, [Type]) -> Rn (RnEnv, (Name, [Type]))
+r_generic :: RnEnv -> (Name, [Name]) -> Rn (RnEnv, (Name, [Name]))
 r_generic env (name, bounds) = do
   envWithTypeVar <- addInternal env name
-  bounds' <- mapM (r_type env) bounds
+  bounds' <- mapM (flip lookupIdent env . (:[])) bounds
   return (envWithTypeVar, (name, bounds'))
 
 

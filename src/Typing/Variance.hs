@@ -37,11 +37,6 @@ variance v (TyAbs gen ty)
 variance v (TyApp ty args) =
   let vars = map (variance v) args
    in foldl joinVariance (variance v ty) vars
-variance v (Intf _ param methods)
-  | v == param = Bivariant
-  | otherwise =
-    let methods' = map (variance v . snd) methods
-     in foldl joinVariance Bivariant methods'
 
 invertVariance :: Variance -> Variance
 invertVariance Covariant = Contravariant

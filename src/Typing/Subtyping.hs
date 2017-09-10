@@ -113,11 +113,6 @@ v // (TyAbs gen ty) =
 v // (TyApp ty args) =
   TyApp (v // ty) (map ((//) v) args)
 
-v // (Intf name param methods) =
-  let v' = v Data.List.\\ [param]
-      methods' = map (fmap $ (//) v') methods
-   in Intf name param methods'
-
 -- Eliminate Down: S ⇓V T
 (\\) :: [Var] -> Type -> Type
 -- VD-Top
@@ -158,8 +153,3 @@ v \\ (TyAbs gen ty) =
 
 v \\ (TyApp ty args) =
   TyApp (v \\ ty) (map ((\\) v) args)
-
-v \\ (Intf name param methods) =
-  let v' = v Data.List.\\ [param]
-      methods' = map (fmap $ (\\) v') methods
-   in Intf name param methods'
