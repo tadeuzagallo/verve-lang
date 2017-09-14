@@ -294,8 +294,8 @@ i_expr ctx (BinOp _ _ lhs op rhs) = do
   (lhs', lhsTy) <- i_expr ctx lhs
   (rhs', rhsTy) <- i_expr ctx rhs
   (retType', typeArgs)  <- inferTyArgs [lhsTy, rhsTy] tyOp
-  (typeArgs', constraintArgs) <- adjustTypeArgs ctx gen [] typeArgs
-  return (BinOp constraintArgs typeArgs' lhs' (op, tyOp) rhs', retType')
+  constraintArgs <- inferConstraintArgs ctx gen [] typeArgs
+  return (BinOp constraintArgs typeArgs lhs' (op, tyOp) rhs', retType')
 
 i_expr ctx (Match expr cases) = do
   (expr', ty) <- i_expr ctx expr
@@ -311,21 +311,21 @@ i_expr ctx (Call fn constraintArgs types []) =
 i_expr ctx (Call fn _ types args) = do
   (fn', tyFn) <- i_expr ctx fn
   (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
-  types' <- mapM (resolveType ctx) types
   let tyFn' = normalizeFnType tyFn
   (tyFn''@(Fun gen _ retType), skippedVars) <- adjustFnType (null types) tyArgs tyFn'
   (retType', typeArgs)  <-
-        case (tyFn'', types') of
+        case (tyFn'', types) of
           (Fun (_:_) _ _, []) ->
             inferTyArgs tyArgs tyFn''
           (Fun gen params _, _) -> do
+            types' <- mapM (resolveType ctx) types
             let s = zipSubst (map fst gen) types'
             let params' = map (applySubst s) params
             zipWithM_ (<:!) tyArgs params'
             return (applySubst s retType, types')
           _ -> undefined
-  (typeArgs', constraintArgs) <- adjustTypeArgs ctx gen skippedVars typeArgs
-  return (Call fn' constraintArgs typeArgs' args', retType')
+  constraintArgs <- inferConstraintArgs ctx gen skippedVars typeArgs
+  return (Call fn' constraintArgs typeArgs args', retType')
 
 i_expr ctx (Record fields) = do
   (exprs, types) <- mapM (i_expr ctx . snd) fields >>= return . unzip
@@ -364,10 +364,9 @@ i_expr ctx (List items) = do
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn
 
-adjustTypeArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc ([Type], [(Type, Maybe Intf)])
-adjustTypeArgs ctx gen skippedVars typeArgs = do
-  constrArgs <- concat <$> zipWithM findConstrArgs gen typeArgs'
-  return ([], constrArgs)
+inferConstraintArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc [(Type, Maybe Intf)]
+inferConstraintArgs ctx gen skippedVars typeArgs = do
+  concat <$> zipWithM findConstrArgs gen typeArgs'
     where
       typeArgs' = zipWith findHoles gen typeArgs
 

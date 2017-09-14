@@ -112,8 +112,7 @@ d_expr (Call callee constraints types args) =
       mkTypeApp (app, holes) ty | isHole ty =
         let holeName = "#hole" ++ show (length holes)
          in (CA.App app $ mk_var holeName, (holeName, void) : holes)
-      mkTypeApp (app, holes) ty =
-        (CA.App app $ CA.Type ty, holes)
+      mkTypeApp acc _ = acc
 
       mkConstraint :: ([CA.Expr], [Id]) -> (Type, Maybe Intf) -> ([CA.Expr], [Id])
       mkConstraint (constraints, holes) (typeArg, _) | isHole typeArg =
