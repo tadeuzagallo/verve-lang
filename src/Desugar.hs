@@ -98,27 +98,19 @@ d_expr (Call callee constraints types []) = d_expr (Call callee constraints type
 d_expr (BinOp constrArgs tyArgs lhs (name, ty) rhs) =
   d_expr (Call (Ident [name] ty) constrArgs tyArgs [lhs, rhs])
 
-d_expr (Call callee constraints types args) =
+d_expr (Call callee constraints _ args) =
   let (constraints', constraintHoles) = foldl mkConstraint ([], []) constraints
       app = foldl CA.App (d_expr callee) constraints'
-      (app', holes) = foldl mkTypeApp (app, []) types
-      app'' = foldl mkApp app' args
-      app''' = foldl (flip CA.Lam) app'' holes
-   in foldl (flip CA.Lam) app''' constraintHoles
+      app' = foldl mkApp app args
+   in foldl (flip CA.Lam) app' constraintHoles
     where
       mkApp :: CA.Expr -> Expr -> CA.Expr
       mkApp callee arg =
         CA.App callee (d_expr arg)
 
-      mkTypeApp :: (CA.Expr, [Id]) -> Type -> (CA.Expr, [Id])
-      mkTypeApp (app, holes) ty | isHole ty =
-        let holeName = "#hole" ++ show (length holes)
-         in (CA.App app $ mk_var holeName, (holeName, void) : holes)
-      mkTypeApp acc _ = acc
-
       mkConstraint :: ([CA.Expr], [Id]) -> (Type, Maybe Intf) -> ([CA.Expr], [Id])
       mkConstraint (constraints, holes) (typeArg, _) | isHole typeArg =
-        let holeName = "#constr_hole" ++ show (length holes)
+        let holeName = "#hole" ++ show (length holes)
          in (constraints ++ [mk_var holeName], (holeName, void) : holes)
 
       mkConstraint (constraints, holes) (typeArg, Nothing) =
