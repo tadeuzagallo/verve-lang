@@ -16,6 +16,7 @@ import Typing.Types (Type)
 
 import Control.Monad (foldM)
 import Control.Monad.Fix (mfix)
+import Data.Bifunctor (first)
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import System.IO.Unsafe (unsafePerformIO)
@@ -176,12 +177,24 @@ e_cases env val ((pattern, expr):cases) =
 
 e_pattern :: Env -> Value -> Pattern -> Maybe Env
 e_pattern env _ PatDefault = Just env
+
 e_pattern env val (PatVar (name, _)) =
   Just (addValue env (name, val))
+
 e_pattern env (VLit l) (PatLiteral l') =
   if l == l'
      then Just env
      else Nothing
+
+e_pattern env (VRecord vFields) (PatRecord patFields) =
+  foldM aux env vFields
+  where
+    vFields' = map (first fst) patFields
+
+    aux env (key, val) = do
+      pat <- lookup key vFields'
+      e_pattern env val pat
+
 e_pattern env (VNeutral n) (PatCtor (name, _) pats) =
   aux env n pats
     where

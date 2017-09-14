@@ -347,9 +347,19 @@ p_caseBody first = do
 p_pattern :: Parser Pattern
 p_pattern = choice [ symbol "_" >> return PatDefault
                    , p_literal >>= return . PatLiteral
+                   , p_patRecord
                    , p_patCtor >>= return . uncurry PatCtor
                    , lcid >>= return . PatVar
                    ]
+
+p_patRecord :: Parser Pattern
+p_patRecord =
+  let field = do
+        key <- lcid
+        symbol ":"
+        value <- p_pattern
+        return (key, value)
+   in PatRecord <$> braces (commaSep field)
 
 p_patCtor :: Parser (Name, [Pattern])
 p_patCtor = do

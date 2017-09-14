@@ -70,3 +70,22 @@ half(S(Z)) // CHECK-L: Z : Nat
 half(S(S(Z))) // CHECK-L: S(Z) : Nat
 half(S(S(S(Z)))) // CHECK-L: S(Z) : Nat
 half(S(S(S(S(Z))))) // CHECK-L: S(S(Z)) : Nat
+
+/* RECORD MATCHING */
+
+// Nested literal pattern
+match { x: 42 } {
+  case { x: 42 }: True
+  case { x: _ }: False
+} // CHECK-L: True : Bool
+
+// Test correct match
+match { x: 13, y: 13 } {
+  case { x: _, y: 42 }: True
+  case { x: _, y: _ }: False
+} // CHECK-L: False : Bool
+
+// Nested variable binding
+match { x: W(42) } {
+  case { x: W(x) }: x
+} // CHECK-L: 42 : Int

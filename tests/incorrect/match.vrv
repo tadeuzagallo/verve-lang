@@ -5,14 +5,31 @@ enum Bool {
   False
 }
 
-enum PairT<T, U> {
+enum Pair<T, U> {
   Pair(T, U)
 }
 
 match Pair(2, True) {
   case True: 
-} // CHECK: Expected a value of type `PairT<Int, Bool>`, but found `Bool`
+} // CHECK: Expected a value of type `Pair<Int, Bool>`, but found `Bool`
 
 match Pair(3, False) {
   case Int(x): False
 } // CHECK: Unknown variable: Int
+
+/* RECORD MATCHING */
+
+// Test type mismatch: uknown field
+match { x: 13 } {
+  case { y: _ }: False
+} // CHECK-L Matching against field `y`, which is not included in the type of the value being matched, `{x: Int}`
+
+// Nested type error
+match { x: Pair(42, 13) } {
+  case { x: Pair(_, "") }: 0
+} // CHECK-L: Expected a value of type `Int`, but found `String`
+
+// Value is not a record
+match Pair(1, 2) {
+  case { x: Pair(_, "") }: 0
+} // Using a record pattern, but value being matched has type `Match.Wrap`

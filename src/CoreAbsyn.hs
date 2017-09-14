@@ -5,6 +5,8 @@ import Typing.Types (Type)
 
 import qualified Typing.Types as T (Type(Type))
 
+import Data.List (intercalate)
+
 data Expr
   = Void
   | Lit Literal
@@ -94,14 +96,30 @@ data Pattern
   = PatDefault
   | PatLiteral Literal
   | PatVar Id
+  | PatRecord [(Id, Pattern)]
   | PatCtor Id [Pattern]
 
 instance Show Pattern where
   show = showPat Top
 
 showPat :: Ctx -> Pattern -> String
-showPat _ PatDefault = "_"
-showPat _ (PatLiteral l) = show l
-showPat _ (PatVar (name, _ )) = name
-showPat Top (PatCtor (name, _) pats) = name ++ " " ++ unwords (reverse $ map (showPat Bot) pats)
-showPat Bot pat@(PatCtor _ _) = "(" ++ showPat Top  pat ++ ")"
+showPat _ PatDefault =
+  "_"
+
+showPat _ (PatLiteral l) =
+  show l
+
+showPat _ (PatVar (name, _ )) =
+  name
+
+showPat _ (PatRecord fields) =
+  "{" ++ intercalate ", " (map showField fields) ++ "}"
+    where
+      showField ((key, _), pat) =
+        key ++ ": " ++ showPat Top pat
+
+showPat Top (PatCtor (name, _) pats) =
+  name ++ " " ++ unwords (reverse $ map (showPat Bot) pats)
+
+showPat Bot pat@(PatCtor _ _) =
+  "(" ++ showPat Top  pat ++ ")"

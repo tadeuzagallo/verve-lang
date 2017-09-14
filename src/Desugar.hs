@@ -7,6 +7,8 @@ import Absyn.Typed
 import Typing.Types
 import qualified CoreAbsyn as CA
 
+import Data.Bifunctor (second)
+
 desugar :: Module -> CA.Expr
 desugar = d_stmts . stmts
 
@@ -166,6 +168,9 @@ d_pattern :: Pattern -> CA.Pattern
 d_pattern PatDefault = CA.PatDefault
 d_pattern (PatLiteral l) = CA.PatLiteral l
 d_pattern (PatVar v) = CA.PatVar v
+
+d_pattern (PatRecord fields) = CA.PatRecord $ map (second d_pattern) fields
+
 d_pattern (PatCtor name pats) = CA.PatCtor name (map d_pattern pats)
 
 ignore :: Type -> Id

@@ -446,16 +446,36 @@ i_case ctx ty (Case pattern caseBody) = do
   (caseBody', ty) <- i_stmts ctx' caseBody
   return (Case pattern' caseBody', ty)
 
+-- TODO: Ctx should come first in the tuple
 c_pattern :: Ctx -> Type -> U.Pattern -> Tc (T.Pattern, Ctx)
 c_pattern ctx _ PatDefault = return (PatDefault, ctx)
+
 c_pattern ctx ty (PatLiteral l) = do
   let litTy = i_lit l
   litTy <:! ty
   return (PatLiteral l, ctx)
+
 c_pattern ctx ty (PatVar v) =
   let pat = PatVar (v, ty)
       ctx' = addValueType ctx (v, ty)
    in return (pat, ctx')
+
+c_pattern ctx ty@(Rec tyFields) (PatRecord fields) = do
+  (fields', ctx') <- foldM aux ([], ctx) fields
+  return (PatRecord $ reverse fields', ctx')
+    where
+      aux :: ([(T.Id, T.Pattern)], Ctx) -> (Name, U.Pattern) -> Tc ([(T.Id, T.Pattern)], Ctx)
+      aux (fields, ctx) (key, pat) = do
+        case lookup key tyFields of
+          Just ty -> do
+            (pat', ctx') <- c_pattern ctx ty pat
+            return (((key, ty), pat') : fields, ctx')
+          Nothing ->
+            throwError . GenericError $ "Matching against field `" ++ key ++ "`, which is not included in the type of the value being matched, `" ++ show ty ++ "`"
+
+c_pattern _ ty (PatRecord _) = do
+  throwError . GenericError $ "Using a record pattern, but value being matched has type `" ++ show ty ++ "`"
+
 c_pattern ctx ty (PatCtor name vars) = do
   ctorTy <- getValueType name ctx
   let (fnTy, params, retTy) = case ctorTy of
