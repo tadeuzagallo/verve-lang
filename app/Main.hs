@@ -93,7 +93,7 @@ runFile config file = do
   -- TODO: add this as `Error::runError`
   let mod = modNameFromFile file
   result <- execFile config mod file
-  either (mapM_ report) printOutput result
+  either (mapM_ report . reverse) printOutput result
     where
       printOutput (_ctx, []) = return ()
       printOutput (_ctx, out) =
