@@ -6,8 +6,8 @@ module Typing.Ctx
   , getType
   , addValueType
   , getValueType
-  , addInstance
-  , getInstances
+  , addImplementation
+  , getImplementations
   , addInterface
   , getInterface
   , tImportModule
@@ -22,7 +22,7 @@ import qualified Typing.Types as Types (list)
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
-               , instances :: [(String, [(Type, [BoundVar])])]
+               , implementations :: [(String, [(Type, [BoundVar])])]
                , interfaces :: [(String, Intf)]
                } deriving (Eq)
 
@@ -44,16 +44,16 @@ addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
 addValueType :: Ctx -> (String, Type) -> Ctx
 addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
 
-getInstances :: String -> Ctx -> Tc [(Type, [BoundVar])]
-getInstances n ctx =
-  case lookup n (instances ctx) of
+getImplementations :: String -> Ctx -> Tc [(Type, [BoundVar])]
+getImplementations n ctx =
+  case lookup n (implementations ctx) of
     Nothing -> return []
     Just insts -> return insts
 
-addInstance :: Ctx -> (String, (Type, [BoundVar])) -> Tc Ctx
-addInstance ctx (n, inst) = do
-  insts <- getInstances n ctx
-  return $ ctx { instances = update n (inst : insts) (instances ctx) }
+addImplementation :: Ctx -> (String, (Type, [BoundVar])) -> Tc Ctx
+addImplementation ctx (n, inst) = do
+  insts <- getImplementations n ctx
+  return $ ctx { implementations = update n (inst : insts) (implementations ctx) }
     where
       update key value [] = [(key, value)]
       update key value ((k,_):rest) | k == key = (key, value) : rest
@@ -79,7 +79,7 @@ defaultCtx =
                  , ("Nil", forall [T] $ list T)
                  , ("Cons", forall [T] $ [var T, list T] ~> list T)
                  ]
-      , instances = []
+      , implementations = []
       , interfaces = []
       }
 
@@ -114,7 +114,7 @@ tImportModule :: [String] -> Ctx -> Ctx -> Ctx
 tImportModule items prevCtx impCtx =
   prevCtx { values = filterImports (values impCtx) ++ values prevCtx
           , types = filterImports (types impCtx) ++ types prevCtx
-          , instances = instances impCtx
+          , implementations = implementations impCtx
           }
 
  where

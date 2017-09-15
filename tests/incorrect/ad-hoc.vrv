@@ -5,7 +5,7 @@ interface Intish<T> {
 }
 
 fn g'<T>(x: T) -> Int {
-  to_int(x) // CHECK-L: No instance of `Intish` for type `T`
+  to_int(x) // CHECK-L: No implementation of `Intish` for type `T`
 }
 
 implementation Intish<Int> {

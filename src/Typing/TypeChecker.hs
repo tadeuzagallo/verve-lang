@@ -186,13 +186,13 @@ i_stmt ctx (Implementation implName generics ty methods) = do
   return (ctx', impl, void)
   where
     extendCtx ctx (TyApp ty args) genericVars@(_:_) | vars  `intersect` args == vars =
-      addInstance ctx (implName, (ty, genericVars))
+      addImplementation ctx (implName, (ty, genericVars))
         where
           vars = map (uncurry Var) genericVars
     extendCtx _ ty@(TyApp _ _) [] =
       throwError (ImplementationError implName ty)
     extendCtx ctx ty [] =
-      addInstance ctx (implName, (ty, []))
+      addImplementation ctx (implName, (ty, []))
     extendCtx _ ty _ =
       throwError (ImplementationError implName ty)
 
@@ -203,7 +203,7 @@ checkCompleteInterface substs intf impl = do
     aux :: (Name, Type) -> Tc ()
     aux (methodName, methodTy) =
       case lookup methodName impl of
-        Nothing -> throwError $ MissingImplementation methodName
+        Nothing -> throwError $ ImplementationMissingMethod methodName
         Just ty -> ty <:! (applySubst substs methodTy)
 
 checkExtraneousMethods :: [(Name, Type)] -> [(Name, Type)] -> Tc ()
@@ -385,7 +385,7 @@ boundsCheck :: Ctx -> Type -> Intf -> Tc [ConstraintArg]
 boundsCheck ctx t1 t2@(Intf name _ _) = do
   args <- boundsCheck' ctx t1 t2
   if null args
-     then throwError $ MissingInstance name t1
+     then throwError $ MissingImplementation name t1
      else return args
 
 boundsCheck' :: Ctx -> Type -> Intf -> Tc [ConstraintArg]
@@ -395,8 +395,8 @@ boundsCheck' _ v@(Var _ bounds) intf = do
               else []
 
 boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
-  instances <- getInstances name ctx
-  case lookup ty instances of
+  implementations <- getImplementations name ctx
+  case lookup ty implementations of
     Nothing -> return []
     Just vars -> do
       let aux arg (_, bounds) =
@@ -411,8 +411,8 @@ boundsCheck' _ Bot intf =
   return [CABound Bot intf]
 
 boundsCheck' ctx ty intf@(Intf name _ _) = do
-  instances <- getInstances name ctx
-  case lookup ty instances of
+  implementations <- getImplementations name ctx
+  case lookup ty implementations of
     Just [] -> return [CABound ty intf]
     _ -> return []
 

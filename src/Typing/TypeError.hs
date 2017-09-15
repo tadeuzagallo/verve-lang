@@ -18,10 +18,10 @@ data TypeError
   | TypeError Type Type
   | UnknownField Type String
   | GenericError String
-  | MissingImplementation Name
+  | ImplementationMissingMethod Name
   | ExtraneousImplementation Name
   | InterfaceExpected Type
-  | MissingInstance String Type
+  | MissingImplementation String Type
   | ImplementationError String Type
   | ImplementingNonInterface String Type
   | KindError Type Kind Kind
@@ -57,7 +57,7 @@ instance Show TypeError where
   show (UnknownField ty field) =
     "Trying to access unknown property `" ++ field ++ "` of object of type `" ++ ppr ty ++ "`"
 
-  show (MissingImplementation name) =
+  show (ImplementationMissingMethod name) =
     "Implementation is missing method `" ++ pprName name ++ "`"
 
   show (ExtraneousImplementation name) =
@@ -69,8 +69,8 @@ instance Show TypeError where
   show (ImplementingNonInterface name actualTy) =
     "Cannot have an implementation of `" ++ pprName name ++ "` because it's not an interface. " ++ pprName name  ++ " has type `" ++ ppr actualTy ++ "`."
 
-  show (MissingInstance intf ty) =
-    "No instance of `" ++ pprName intf ++ "` for type `" ++ ppr ty ++  "`"
+  show (MissingImplementation intf ty) =
+    "No implementation of `" ++ pprName intf ++ "` for type `" ++ ppr ty ++  "`"
 
   show (ImplementationError intfName ty) =
     "Implementation of `" ++ pprName intfName ++ "` for type `" ++ ppr ty ++ "` does not use all the type variables it introduces and/or uses concrete types."
