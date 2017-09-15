@@ -1,6 +1,7 @@
 module Typing.Types
   ( Type(..)
   , Intf(..)
+  , ConstraintArg(..)
   , Var()
   , BoundVar
   , newVar
@@ -190,3 +191,9 @@ mkHole (_, bounds) = Var holeVar bounds
 isHole :: Type -> Bool
 isHole (Var tv _) | tv == holeVar = True
 isHole _ = False
+
+data ConstraintArg
+  = CAType Type
+  | CABound Type Intf
+  | CAPoly Type Intf [ConstraintArg]
+  deriving (Show)

@@ -364,7 +364,7 @@ i_expr ctx (List items) = do
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn
 
-inferConstraintArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc [(Type, Maybe Intf)]
+inferConstraintArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc [ConstraintArg]
 inferConstraintArgs ctx gen skippedVars typeArgs = do
   concat <$> zipWithM findConstrArgs gen typeArgs'
     where
@@ -376,43 +376,44 @@ inferConstraintArgs ctx gen skippedVars typeArgs = do
            else ty
 
       findConstrArgs (_, []) tyArg = do
-        return [(tyArg, Nothing)]
+        return [CAType tyArg]
 
       findConstrArgs (_, bounds) tyArg = do
         concat <$> mapM (boundsCheck ctx tyArg) bounds
 
-boundsCheck :: Ctx -> Type -> Intf -> Tc [(Type, Maybe Intf)]
+boundsCheck :: Ctx -> Type -> Intf -> Tc [ConstraintArg]
 boundsCheck ctx t1 t2@(Intf name _ _) = do
   args <- boundsCheck' ctx t1 t2
   if null args
      then throwError $ MissingInstance name t1
      else return args
 
-boundsCheck' :: Ctx -> Type -> Intf -> Tc [(Type, Maybe Intf)]
+boundsCheck' :: Ctx -> Type -> Intf -> Tc [ConstraintArg]
 boundsCheck' _ v@(Var _ bounds) intf = do
   return $ if intf `elem` bounds
-              then [(v, Just intf), (v, Nothing)]
+              then [CABound v intf]
               else []
 
 boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
   instances <- getInstances name ctx
   case lookup ty instances of
     Nothing -> return []
-    Just vars ->
-      ([(ty, Just intf), (ty, Nothing)] ++) <$> (concat <$> zipWithM (\arg (_, bounds) ->
-        concat <$> mapM (boundsCheck ctx arg) bounds
-           ) args vars)
+    Just vars -> do
+      let aux arg (_, bounds) =
+            concat <$> mapM (boundsCheck ctx arg) bounds
+      args <- concat <$> zipWithM aux args vars
+      return [CAPoly ty intf args]
 
 boundsCheck' ctx (TyAbs params ty) intf =
   boundsCheck' ctx (params \\ ty) intf
 
 boundsCheck' _ Bot intf =
-  return [(Bot, Just intf), (Bot, Nothing)]
+  return [CABound Bot intf]
 
 boundsCheck' ctx ty intf@(Intf name _ _) = do
   instances <- getInstances name ctx
   case lookup ty instances of
-    Just [] -> return [(ty, Just intf), (ty, Nothing)]
+    Just [] -> return [CABound ty intf]
     _ -> return []
 
 normalizeFnType :: Type -> Type

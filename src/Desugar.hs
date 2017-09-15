@@ -51,9 +51,10 @@ d_stmts (Interface _ _ methods : ss) =
   CA.Let (map d_intfMethod methods) (d_stmts ss)
 
 d_stmts (Implementation (name, _) generics ty methods : ss) =
-  let dict = CA.Record (map (d_implMethod generics) methods)
+  let dict = CA.Record (map d_implMethod methods)
       dictName = ("#" ++ name ++ print ty, void)
-      fixedDict = CA.App (mk_var "#fix") (CA.Lam dictName dict)
+      dictLam = foldr CA.Lam dict (mkConstraints generics)
+      fixedDict = CA.App (mk_var "#fix") (CA.Lam dictName dictLam)
    in CA.Let [(dictName, fixedDict)] (d_stmts ss)
   where
     print (TyApp ty _) = print ty
@@ -65,9 +66,13 @@ d_fnNoFix fn@(Function { params=[] }) =
 
 d_fnNoFix fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
-   in foldr CA.Lam fn' (concatMap constraints $ generics fn)
+   in foldr CA.Lam fn' (mkConstraints $ generics fn)
+
+mkConstraints :: Generics -> [Id]
+mkConstraints gen =
+  concatMap aux gen
   where
-    constraints (varName, bounds) =
+    aux (varName, bounds) =
       map (\bound -> ("#" ++ show bound ++ varName, void)) bounds ++ [(varName, Type)]
 
 d_fn :: Function -> CA.Expr
@@ -84,10 +89,15 @@ d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
       select' = CA.App select (mk_var "#dict")
    in (name, CA.Lam ("#dict", void) (CA.Lam (ignore Type) select'))
 
-d_implMethod :: [(Name, [Intf])] -> Function -> CA.Bind
-d_implMethod gen fn =
-  let fn' = fn { generics = gen ++ generics fn }
-   in (name fn, d_fnNoFix fn')
+d_implMethod :: Function -> CA.Bind
+d_implMethod fn =
+   (name fn, d_fnNoFix fn)
+
+data Constraint
+  = CHole
+  | CType Type
+  | CDict Type Intf
+  | CApp Constraint [Constraint]
 
 d_expr :: Expr -> CA.Expr
 d_expr VoidExpr = CA.Void
@@ -99,7 +109,7 @@ d_expr (BinOp constrArgs tyArgs lhs (name, ty) rhs) =
   d_expr (Call (Ident [name] ty) constrArgs tyArgs [lhs, rhs])
 
 d_expr (Call callee constraints _ args) =
-  let (constraints', constraintHoles) = foldl mkConstraint ([], []) constraints
+  let (constraints', constraintHoles) = mkConstraints constraints
       app = foldl CA.App (d_expr callee) constraints'
       app' = foldl mkApp app args
    in foldl (flip CA.Lam) app' constraintHoles
@@ -108,17 +118,47 @@ d_expr (Call callee constraints _ args) =
       mkApp callee arg =
         CA.App callee (d_expr arg)
 
-      mkConstraint :: ([CA.Expr], [Id]) -> (Type, Maybe Intf) -> ([CA.Expr], [Id])
-      mkConstraint (constraints, holes) (typeArg, _) | isHole typeArg =
-        let holeName = "#hole" ++ show (length holes)
-         in (constraints ++ [mk_var holeName], (holeName, void) : holes)
+      mkConstraints :: [ConstraintArg] -> ([CA.Expr], [Id])
+      mkConstraints cs = foldl aux ([], []) $ concatMap mkConstraint cs
+        where
+          aux (args, holes) CHole =
+            let holeName = "#hole" ++ show (length holes)
+             in (args ++ [mk_var holeName], (holeName, void) : holes)
 
-      mkConstraint (constraints, holes) (typeArg, Nothing) =
-        (constraints ++ [CA.Type typeArg], holes)
+          aux (args, holes) (CType typeArg) =
+            (args ++ [CA.Type typeArg], holes)
 
-      mkConstraint (constraints, holes) (typeArg, Just typeBound) =
-        let constr = mk_var ("#" ++ show typeBound ++ show typeArg)
-         in (constraints ++ [constr], holes)
+          aux (args, holes) (CDict typeArg typeBound) =
+            let constr = mk_var ("#" ++ show typeBound ++ show typeArg)
+             in (args ++ [constr], holes)
+
+          aux (args, holes) (CApp typeArg nestedArgs) =
+            let (nestedArgs', holes') = foldl aux ([], holes) nestedArgs
+             in case aux ([], holes') typeArg of
+                  ([typeArg'], holes'') ->
+                    let app = foldl CA.App typeArg' nestedArgs'
+                     in (args ++ [app], holes'')
+                  _ -> undefined
+
+      mkConstraint :: ConstraintArg -> [Constraint]
+      mkConstraint (CAType typeArg) =
+        [mkTypeArg typeArg]
+
+      mkConstraint (CABound typeArg typeBound) =
+        [mkTypeBound (typeArg, typeBound), mkTypeArg typeArg]
+
+      mkConstraint (CAPoly typeArg typeBound args) =
+        let typeBound' = mkTypeBound (typeArg, typeBound)
+            args' = concatMap mkConstraint args
+         in [CApp typeBound' args', mkTypeArg typeArg]
+
+      mkTypeArg :: Type -> Constraint
+      mkTypeArg t | isHole t = CHole
+      mkTypeArg t = CType t
+
+      mkTypeBound :: (Type, Intf) -> Constraint
+      mkTypeBound (typeArg, _) | isHole typeArg = CHole
+      mkTypeBound (typeArg, typeBound) = CDict typeArg typeBound
 
 d_expr (Match expr cases) = CA.Match (d_expr expr) (map d_case cases)
 

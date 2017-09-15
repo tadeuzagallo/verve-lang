@@ -1,6 +1,7 @@
 module Absyn.Base where
-  
+
 import Absyn.Meta
+import Typing.Types (ConstraintArg)
 
 data BaseModule a b c = Module
   { imports :: [Import]
@@ -66,11 +67,11 @@ data BaseExpr a b c
        , ifElseBody :: [BaseStmt a b c]
        }
   | Call { callee :: BaseExpr a b c
-         , constraintArgs :: [(b, Maybe c)]
+         , constraintArgs :: [ConstraintArg]
          , typeArgs :: [b]
          , args :: [BaseExpr a b c]
          }
-  | BinOp { opConstraintArgs :: [(b, Maybe c)]
+  | BinOp { opConstraintArgs :: [ConstraintArg]
           , opTypeArgs :: [b]
           , lhs :: BaseExpr a b c
           , op :: a
