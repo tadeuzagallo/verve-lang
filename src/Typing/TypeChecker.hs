@@ -196,6 +196,16 @@ i_stmt ctx (Implementation implName generics ty methods) = do
     extendCtx _ ty _ =
       throwError (ImplementationError implName ty)
 
+i_stmt ctx (TypeAlias aliasName aliasVars aliasType) = do
+  (ctx', aliasVars') <- addGenerics ctx (defaultBounds aliasVars)
+  aliasType' <- resolveType ctx' aliasType
+  let aliasType'' = case aliasVars' of
+                [] -> aliasType'
+                _  -> TyAbs (map fst aliasVars') aliasType'
+  let alias = TypeAlias aliasName aliasVars aliasType''
+  return (addType ctx (aliasName, aliasType''), alias, Type)
+
+
 checkCompleteInterface :: Substitution -> [(Name, Type)] -> [(Name, Type)] -> Tc ()
 checkCompleteInterface substs intf impl = do
   mapM_ aux intf

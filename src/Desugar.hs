@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Desugar
   ( desugar
   , desugarStmt
@@ -35,6 +36,8 @@ d_stmts (FnStmt fn:ss) =
   CA.Let [(name fn, d_fn fn)] (d_stmts ss)
 d_stmts (Enum name _ _ : ss) =
   CA.Let [(ignore Type, CA.Var name)] (d_stmts ss)
+d_stmts (TypeAlias { aliasName, aliasType } : ss) =
+  CA.Let [((aliasName, Type), CA.Type aliasType)] (d_stmts ss)
 d_stmts (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody : ss) =
   let fn = d_fn (Function { name = opName
                           , generics = opGenerics

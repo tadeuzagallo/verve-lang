@@ -33,6 +33,10 @@ data BaseStmt a b c
                    , implGenerics :: BaseGenerics c
                    , implType :: b
                    , implMethods :: [BaseFunction a b c]}
+  | TypeAlias { aliasName :: Name
+              , aliasVars :: [Name]
+              , aliasType :: b
+              }
    deriving (Show)
 
 type BaseDataCtor a b = (a, Maybe [b])

@@ -1,0 +1,53 @@
+// RUN: %verve | %check
+
+type T = Int
+
+// CHECK-L: (Int) -> Int
+fn f(x: Int) -> T { x }
+
+// CHECK: 42 : Int
+f(42)
+
+type R = { x : Int, f : (Int) -> Int }
+
+fn g(x: R) -> Int {
+  (x.f)(x.x)
+}
+
+// CHECK: 84 : Int
+g({ x: 42, f: fn f(x: Int) -> Int { int_mul(x, 2) } })
+
+type P<T> = { x: T }
+
+// CHECK-L: ∀U. ({x: U}) -> U
+fn h<U>(x: P<U>) -> U { x.x }
+
+// CHECK: 42 : Int
+h({x: 42})
+
+// CHECK: 13 : Int
+h({ x: h })({ x: h })({ x: 13 })
+
+type T = List<Int>
+
+// CHECK-L: (List<Int>) -> List<Int>
+fn f(x: T) -> T { x }
+
+// CHECK-L: List<Int>
+f([1])
+
+
+type T<U> = List<U>
+
+// CHECK-L: (List<String>) -> List<String>
+fn f(x: T<String>) -> T<String> { x }
+
+// CHECK-L: List<String>
+f([""])
+
+
+// CHECK-L: ∀U. (List<U>) -> List<U>
+fn f<U>(x: T<U>) -> T<U> { x }
+
+// CHECK-L: List<{}>
+f([{}])

@@ -250,6 +250,12 @@ r_stmt env (Implementation name gen ty implMethods) = do
   (_, implMethods') <- foldAcc r_fnNonRec envWithGen implMethods
   return (env, Implementation name' gen' ty' implMethods')
 
+r_stmt env (TypeAlias aliasName aliasVars aliasType) = do
+  (envWithAlias, aliasName') <- addLocal env aliasName
+  envWithVars <- foldM addInternal envWithAlias aliasVars
+  aliasType' <- r_type envWithVars aliasType
+  return (envWithAlias, TypeAlias aliasName' aliasVars aliasType')
+
 
 r_expr :: RnEnv -> Expr -> Rn Expr
 r_expr _ VoidExpr =

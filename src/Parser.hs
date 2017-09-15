@@ -55,6 +55,7 @@ p_stmt = choice [ p_enum
                 , p_class
                 , p_interface
                 , p_implementation
+                , p_typeAlias
                 , p_function >>= return . FnStmt
                 , p_expr True >>= return . Expr
                 ] <?> "statement"
@@ -169,6 +170,15 @@ p_implementation = do
   implType <- angles p_type
   implMethods <- p_body p_function
   return $ Implementation { implName, implGenerics, implType, implMethods }
+
+p_typeAlias :: Parser Stmt
+p_typeAlias = do
+  reserved "type"
+  aliasName <- ucid
+  aliasVars <- option [] (angles . commaSep $ ucid)
+  symbol "="
+  aliasType <- p_type
+  return TypeAlias { aliasName, aliasVars, aliasType }
 
 p_function :: Parser Function
 p_function = do
