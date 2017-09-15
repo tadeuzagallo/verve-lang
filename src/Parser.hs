@@ -9,7 +9,7 @@ import Absyn.Untyped
 import Error
 import Lexer
 
-import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepBy1, sepBy, sepEndBy, endBy, skipMany1, lookAhead)
+import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepBy1, sepBy, sepEndBy, endBy, skipMany1, lookAhead, many)
 import Text.Parsec.String (Parser, parseFromFile)
 
 parseFile :: String -> IO (Either [Error] Module)
@@ -131,10 +131,12 @@ p_class :: Parser Stmt
 p_class = do
   reserved "class"
   className <- ucid
-  (classVars, classMethods) <-
-    braces $ (,)
-    <$> p_classVar `sepEndBy` p_separator
-    <*> p_function `sepEndBy` p_separator
+  (classVars, classMethods) <- braces $ do
+    vars <- option [] $ (:) <$> p_classVar <*> many (try $ p_separator *> p_classVar)
+    fns <- if null vars
+              then p_function `sepEndBy` p_separator
+              else many (try $ p_separator *> p_function)
+    return (vars, fns)
   return $ Class { className, classVars, classMethods }
 
 p_classVar :: Parser (Name, Type)
