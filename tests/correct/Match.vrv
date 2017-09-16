@@ -119,3 +119,24 @@ fn extract(l: StdList<Int>) -> Int {
 extract([1]) // CHECK-L: 1 : Int
 extract([1, 2]) // CHECK-L: 2 : Int
 extract([1, 2, 3]) // CHECK-L: 3 : Int
+
+fn null<T>(l: StdList<T>) -> Bool {
+  match l {
+    case []: True
+    case [...]: False
+  }
+}
+null([]) // CHECK-L: True : Bool
+null([1]) // CHECK-L: False : Bool
+null([1, 2, 3]) // CHECK-L: False : Bool
+
+fn stdLength<T>(l: StdList<T>) -> Int {
+  match l {
+    case []: 0
+    case [_, ...rest]: int_add(1, stdLength(rest))
+  }
+}
+
+stdLength([]) // CHECK-L: 0 : Int
+stdLength([1]) // CHECK-L: 1 : Int
+stdLength([1, 2, 3]) // CHECK-L: 3 : Int

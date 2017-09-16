@@ -206,11 +206,15 @@ d_pattern (PatVar v) = CA.PatVar v
 
 d_pattern (PatRecord fields) = CA.PatRecord $ map (second d_pattern) fields
 
-d_pattern (PatList pats) =
-  let aux pat tail =
+d_pattern (PatList pats rest) =
+  let init = case rest of
+               NoRest -> CA.PatCtor ("Nil", void) []
+               DiscardRest -> CA.PatDefault
+               NamedRest n -> CA.PatVar n
+      aux pat tail =
         let pat' = d_pattern pat
          in CA.PatCtor ("Cons", void) [tail, pat']
-   in foldr aux (CA.PatCtor ("Nil", void) []) (reverse pats)
+   in foldr aux init (reverse pats)
 
 d_pattern (PatCtor name pats) = CA.PatCtor name (map d_pattern pats)
 

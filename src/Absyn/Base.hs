@@ -96,6 +96,12 @@ data BasePattern a
   | PatLiteral Literal
   | PatVar a
   | PatRecord [(a, BasePattern a)]
-  | PatList [BasePattern a]
+  | PatList [BasePattern a] (BasePatternRest a)
   | PatCtor a [BasePattern a]
+  deriving (Show)
+
+data BasePatternRest a
+  = NoRest
+  | DiscardRest
+  | NamedRest a
   deriving (Show)

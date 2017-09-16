@@ -376,7 +376,20 @@ p_patRecord =
 
 p_patList :: Parser Pattern
 p_patList = do
-  PatList <$> brackets (commaSep p_pattern)
+  let fields =
+        option ([], NoRest) (field <|> rest)
+
+      field = do
+        pat <- p_pattern
+        (pats, rest) <- option ([], NoRest) (comma *> fields)
+        return (pat : pats, rest)
+
+      rest = do
+        symbol "..."
+        rest <- option DiscardRest (NamedRest <$> lcid)
+        return ([], rest)
+
+   in uncurry PatList <$> brackets fields
 
 p_patCtor :: Parser (Name, [Pattern])
 p_patCtor = do

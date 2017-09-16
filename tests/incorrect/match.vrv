@@ -33,3 +33,15 @@ match { x: Pair(42, 13) } {
 match Pair(1, 2) {
   case { x: Pair(_, "") }: 0
 } // Using a record pattern, but value being matched has type `Match.Wrap`
+
+/* LIST MATCHING */
+
+// Value is not a list
+match Pair(1, 2) {
+  case [x,]: 0
+} // Using a list pattern, but value being matched has type `Match.Wrap`
+
+// Nested type error
+match [Pair(42, 13)] {
+  case [Pair(_, ""), ...]: 0
+} // CHECK-L: Expected a value of type `Int`, but found `String`
