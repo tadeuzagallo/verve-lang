@@ -12,6 +12,7 @@ category:            programming-language
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
+data-files:          lib/*.vrv
 
 library
   hs-source-dirs:      src

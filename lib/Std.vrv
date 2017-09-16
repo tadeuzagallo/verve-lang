@@ -1,0 +1,85 @@
+enum Optional<T> {
+  None
+  Some(T)
+}
+
+enum Either<T, U> {
+  Left(T)
+  Right(U)
+}
+
+interface Num<T> {
+  fn num_add(x: T, y: T) -> T
+  fn num_sub(x: T, y: T) -> T
+  fn num_mul(x: T, y: T) -> T
+  fn num_div(x: T, y: T) -> T
+}
+
+operator<T: Num> (x: T) + (y: T) -> T {
+  num_add(x, y)
+}
+operator<T: Num> (x: T) - (y: T) -> T {
+  num_sub(x, y)
+}
+#prec(higher(+))
+operator<T: Num> (x: T) * (y: T) -> T {
+  num_mul(x, y)
+}
+#prec(equal(*))
+operator<T: Num> (x: T) / (y: T) -> T {
+  num_div(x, y)
+}
+
+implementation Num<Int> {
+  fn num_add(x: Int, y: Int) -> Int { int_add(x, y) }
+  fn num_sub(x: Int, y: Int) -> Int { int_sub(x, y) }
+  fn num_mul(x: Int, y: Int) -> Int { int_mul(x, y) }
+  fn num_div(x: Int, y: Int) -> Int { int_div(x, y) }
+}
+
+interface Printable<T> {
+  fn to_string(x: T) -> String
+}
+
+fn print<T: Printable>(x: T) {
+  string_print(to_string(x))
+}
+
+implementation Printable<String> {
+  fn to_string(s: String) -> String {
+    s
+  }
+}
+
+/*implementation Printable<Int> {*/
+  /*fn to_string(i: Int) {*/
+    /*int_to_string(i)*/
+  /*}*/
+/*}*/
+
+// LIST HELPERS
+fn map<T, U>(f: (T) -> U, list: List<T>) -> List<U> {
+  match list {
+    case []: []
+    // TODO: replace with value-rest
+    case [x, ...rest]: Cons(f(x), map(f, rest))
+  }
+}
+
+fn reduce<T, U>(f: (U, T) -> U, init: U, list: List<T>) -> U {
+  match list {
+    case []: init
+    case [x, ...rest]:
+      let init' = f(init, x)
+      reduce(f, init', rest)
+  }
+}
+
+fn forEach<T>(f: (T) -> Void, list: List<T>) {
+  match list {
+    case []:
+    case [x, ...rest]:
+      f(x)
+      forEach(f, rest)
+  }
+}

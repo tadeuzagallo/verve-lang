@@ -8,10 +8,12 @@ import Interpreter
 import Typing.Ctx
 import Typing.TypeChecker
 import PrettyPrint
+
 import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
 import Data.Char (toUpper)
 import Data.List (intercalate)
+import Paths_verve (getDataFileName)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Environment (getArgs)
@@ -20,36 +22,48 @@ import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileNam
 
 type EvalCtx = (Naming.Env, RnEnv, Ctx, Env)
 
+initEvalCtx :: EvalCtx
+initEvalCtx = (Naming.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
+
+
 data Config = Config
   { dumpCore :: Bool
   , printStatements :: Bool
+  , evalCtx :: EvalCtx
   }
 
 defaultConfig :: Config
 defaultConfig = Config { dumpCore = False
                        , printStatements = False
+                       , evalCtx = initEvalCtx
                        }
+
+
+loadPrelude :: IO EvalCtx
+loadPrelude = do
+  prelude <- getDataFileName "lib/Std.vrv"
+  result <- execFile defaultConfig "Std" prelude
+  return $ either undefined fst result
+
 
 main :: IO ()
 main = do
   args <- getArgs
+  ctx <- loadPrelude
+  let config = defaultConfig { evalCtx = ctx }
   case args of
-    [] -> repl
+    [] -> repl config
 
     "--print-statements":file:_ ->
-      let config = defaultConfig { printStatements = True }
-       in runFile config file
+      let config' = config { printStatements = True }
+       in runFile config' file
 
     "--dump-core":file:_ ->
-      let config = defaultConfig { dumpCore = True }
-       in runFile config file
+      let config' = config { dumpCore = True }
+       in runFile config' file
 
     file:_ ->
-      runFile defaultConfig file
-
-
-initEvalCtx :: EvalCtx
-initEvalCtx = (Naming.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
+      runFile config file
 
 
 evalStmt :: Config ->  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
@@ -65,8 +79,8 @@ evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
   return ((nenv', rnEnv', ctx', env'), out)
 
 
-repl :: IO ()
-repl = runInputT defaultSettings $ loop initEvalCtx
+repl :: Config -> IO ()
+repl config = runInputT defaultSettings $ loop (evalCtx config)
   where
     loop :: EvalCtx -> InputT IO ()
     loop ctx = do
@@ -110,7 +124,7 @@ execFile config modName file = do
 
 runModule :: Config -> String -> String -> Module -> IO (Either [Error] (EvalCtx, [String]))
 runModule config file modName (Module imports stmts) = do
-  ctx <- resolveImports initEvalCtx file imports
+  ctx <- resolveImports (evalCtx config) file imports
   either (return . Left) execModule ctx
   where
     aux :: (EvalCtx, [Either Error String]) -> Stmt -> IO (EvalCtx, [Either Error String])

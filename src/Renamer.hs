@@ -86,7 +86,7 @@ builtins =
   , "int_sub"
   , "int_mul"
   , "int_div"
-  , "int_print"
+  , "string_print"
   ]
 
 data RnState = RnState { modName :: String }
