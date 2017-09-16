@@ -29,6 +29,8 @@ match Pair(2, True) {
   case Pair(_, y): y
 } // CHECK: True : Bool
 
+type StdList = List
+
 enum List<T> {
   Nil
   Cons(T, List<T>)
@@ -89,3 +91,31 @@ match { x: 13, y: 13 } {
 match { x: W(42) } {
   case { x: W(x) }: x
 } // CHECK-L: 42 : Int
+
+
+/* LIST MATCHING */
+
+// Test empty list
+match [] {
+  case []: True
+  case [_]: False
+} // CHECK-L: True : Bool
+
+// Test non-empty list
+match [42] {
+  case []: True
+  case [_]: False
+} // CHECK-L: False : Bool
+
+// Test extracting items
+fn extract(l: StdList<Int>) -> Int {
+  match l {
+    case [_, _, z]: z
+    case [_, y]: y
+    case [x]: x
+  }
+}
+
+extract([1]) // CHECK-L: 1 : Int
+extract([1, 2]) // CHECK-L: 2 : Int
+extract([1, 2, 3]) // CHECK-L: 3 : Int

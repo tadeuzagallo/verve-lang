@@ -96,5 +96,6 @@ data BasePattern a
   | PatLiteral Literal
   | PatVar a
   | PatRecord [(a, BasePattern a)]
+  | PatList [BasePattern a]
   | PatCtor a [BasePattern a]
   deriving (Show)

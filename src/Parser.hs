@@ -360,6 +360,7 @@ p_pattern :: Parser Pattern
 p_pattern = choice [ symbol "_" >> return PatDefault
                    , p_literal >>= return . PatLiteral
                    , p_patRecord
+                   , p_patList
                    , p_patCtor >>= return . uncurry PatCtor
                    , lcid >>= return . PatVar
                    ]
@@ -372,6 +373,10 @@ p_patRecord =
         value <- p_pattern
         return (key, value)
    in PatRecord <$> braces (commaSep field)
+
+p_patList :: Parser Pattern
+p_patList = do
+  PatList <$> brackets (commaSep p_pattern)
 
 p_patCtor :: Parser (Name, [Pattern])
 p_patCtor = do

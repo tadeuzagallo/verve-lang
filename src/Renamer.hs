@@ -338,6 +338,10 @@ r_pat env (PatRecord fields) = do
       (env', pat') <- r_pat env pat
       return (env', (key, pat'))
 
+r_pat env (PatList pats) = do
+  (env', pats') <- foldAcc r_pat env pats
+  return (env', PatList $ reverse pats')
+
 r_pat env (PatCtor name args) = do
   name' <- lookupIdent [name] env
   (env', args') <- foldAcc r_pat env args

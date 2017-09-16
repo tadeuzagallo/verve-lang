@@ -491,6 +491,24 @@ c_pattern ctx ty@(Rec tyFields) (PatRecord fields) = do
 c_pattern _ ty (PatRecord _) = do
   throwError . GenericError $ "Using a record pattern, but value being matched has type `" ++ show ty ++ "`"
 
+c_pattern ctx ty (PatList pats) = do
+  itemTy <- getItemTy ty
+  (pats', ctx') <- foldM (aux itemTy) ([], ctx) pats
+  return (PatList $ reverse pats', ctx')
+  where
+    getItemTy (TyAbs vars ty) =
+      return $ vars // ty
+
+    getItemTy (TyApp (Con "List") [ty]) =
+      return ty
+
+    getItemTy _ =
+      throwError . GenericError $ "Using a list pattern, but value being matched has type `" ++ show ty ++ "`"
+
+    aux ty (pats, ctx) pat = do
+      (pat', ctx') <- c_pattern ctx ty pat
+      return (pat' : pats, ctx')
+
 c_pattern ctx ty (PatCtor name vars) = do
   ctorTy <- getValueType name ctx
   let (fnTy, params, retTy) = case ctorTy of
