@@ -69,9 +69,9 @@ s /\ t | t <: s = t
 _ /\ _ = Bot
 
 
--- VARIABLE ELIMITATION
+-- VARIABLE ELIMINATION
 
--- Elimnate Up: S ⇑V T
+-- Eliminate Up: S ⇑V T
 (//) :: [Var] -> Type -> Type
 
 -- VU-Top
