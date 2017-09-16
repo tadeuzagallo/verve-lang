@@ -82,7 +82,7 @@ data BaseExpr a b c
           , rhs :: BaseExpr a b c
           }
   | Record [(a, BaseExpr a b c)]
-  | List [BaseExpr a b c]
+  | List b [BaseExpr a b c]
   | FieldAccess (BaseExpr a b c) b a
   | FnExpr (BaseFunction a b c)
   deriving (Show)

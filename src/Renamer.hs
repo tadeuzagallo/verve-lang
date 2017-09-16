@@ -302,9 +302,9 @@ r_expr env (Record fields) = do
   fields' <- mapM (sequence . fmap (r_expr env)) fields
   return (Record fields')
 
-r_expr env (List items) = do
+r_expr env (List ty items) = do
   items' <- mapM (r_expr env) items
-  return (List items')
+  return (List ty items')
 
 r_expr env (FieldAccess expr ty field) = do
   expr' <- r_expr env expr

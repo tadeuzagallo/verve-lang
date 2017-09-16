@@ -185,13 +185,13 @@ d_expr (If ifCond ifBody elseBody) =
                            , (CA.PatCtor ("False", bool) [], d_stmts elseBody)
                            ]
 
-d_expr (List items) =
+d_expr (List ty items) =
   aux items
     where
       aux [] = nil
       aux (x:xs) = cons (d_expr x) (aux xs)
       nil = CA.Var ("Nil", void)
-      cons head tail = CA.App (CA.App (CA.Var ("Cons", void)) head) tail
+      cons head tail = CA.App (CA.App (CA.App (CA.Var ("Cons", void)) (CA.Type ty)) head) tail
 
 d_expr (FnExpr fn) =
   d_fn fn

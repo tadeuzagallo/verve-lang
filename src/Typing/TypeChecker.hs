@@ -364,12 +364,16 @@ i_expr ctx (If ifCond ifBody elseBody) = do
   (elseBody', elseTy) <- i_stmts ctx elseBody
   return (If ifCond' ifBody' elseBody', ifTy \/ elseTy)
 
-i_expr ctx (List items) = do
+i_expr ctx (List _ items) = do
   (items', itemsTy) <- unzip <$> mapM (i_expr ctx) items
-  ty <- case itemsTy of
-          [] -> getValueType "Nil" ctx
-          x:xs -> return . list $ foldl (\/) x xs
-  return (List items', ty)
+  (ty, itemTy) <- case itemsTy of
+                    [] -> do
+                      nilTy <- getValueType "Nil" ctx
+                      return (nilTy, Bot)
+                    x:xs ->
+                      let ty = foldl (\/) x xs
+                       in return (list ty, ty)
+  return (List itemTy items', ty)
 
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn

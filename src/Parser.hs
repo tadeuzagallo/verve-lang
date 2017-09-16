@@ -286,7 +286,7 @@ p_record =
 
 p_list :: Parser Expr
 p_list =
-  List <$> (brackets . commaSep $ p_expr True)
+  List TPlaceholder <$> (brackets . commaSep $ p_expr True)
 
 p_call :: Expr -> Parser Expr
 p_call callee = do
