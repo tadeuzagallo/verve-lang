@@ -24,7 +24,7 @@ module Lexer
   , anySpace
   ) where
 
-import Text.Parsec ((<|>), sepEndBy1, sepEndBy, many, many1, between, try, skipMany, choice, unexpected)
+import Text.Parsec ((<|>), sepEndBy1, sepEndBy, many, many1, between, try, skipMany, choice, unexpected, parserFail)
 import Text.Parsec.Char (lower, upper, alphaNum, oneOf, noneOf, char, anyChar, string, digit, satisfy, endOfLine)
 import Text.Parsec.String (Parser)
 
@@ -56,11 +56,14 @@ oneLineComment = do
 multiLineComment :: Parser ()
 multiLineComment = do
   ignore . try . string $ "/*"
-  ignore content
-  return ()
+  content
     where
-      content :: Parser String
-      content = try (string "*/") <|> (anyChar >> content)
+      content :: Parser ()
+      content = choice [ multiLineComment >> content
+                       , ignore $ try (string "*/")
+                       , ignore $ (anyChar >> content)
+                       , parserFail "unterminated multiline comment"
+                       ]
 
 -- Literals
 naturalOrFloat :: Parser (Either Integer Double)
