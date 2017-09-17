@@ -1,4 +1,4 @@
-// RUN: %verve | %check
+// RUN: %not %verve | %check
 
 interface Intish<T> {
   fn to_int(x: T) -> Int
@@ -55,3 +55,26 @@ implementation Intish< Maybe<Int> > {
 }
 
 fn f<T: Int>(x: T) { } // CHECK-L: Unknown interface: Int
+
+enum Pair<A, B> {
+  Pair(A, B)
+}
+
+implementation<T: Intish, U: Intish> Intish<Pair<T, U>> {
+  fn to_int(p: Pair<T, U>) -> Int {
+    match p {
+      case Pair(a, b): int_add(to_int(a), to_int(b))
+    }
+  }
+}
+
+to_int(Pair(42, "")) // CHECK-L: No implementation of `Intish` for type `String`
+to_int(Pair(False)) // CHECK-L: No implementation of `Intish`
+
+implementation<T: Intish, U> Intish<Pair<T, U>> { fn to_int(p: Pair<T, U>) -> Int {
+    match p {
+      case Pair(a, b): int_add(to_int(a), to_int(b))
+      // CHECK-L: No implementation of `Intish` for type `U`
+    }
+  }
+}

@@ -17,8 +17,8 @@ import Paths_verve (getDataFileName)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Environment (getArgs)
+import System.Exit (exitFailure)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
-
 
 type EvalCtx = (Naming.Env, RnEnv, Ctx, Env)
 
@@ -107,13 +107,17 @@ runFile config file = do
   -- TODO: add this as `Error::runError`
   let mod = modNameFromFile file
   result <- execFile config mod file
-  either (mapM_ report . reverse) printOutput result
+  either reportError printOutput result
     where
+      reportError errors = do
+        mapM_ report (reverse errors)
+        exitFailure
+
       printOutput (_ctx, []) = return ()
       printOutput (_ctx, out) =
-        if printStatements config || dumpCore config
+        if dumpCore config
            then mapM_ putStrLn (reverse out)
-           else putStrLn (head out)
+           else putStrLn (last out)
 
 
 execFile :: Config -> String -> String -> IO (Either [Error] (EvalCtx, [String]))
@@ -138,19 +142,27 @@ runModule config file modName (Module imports stmts) = do
     execModule :: EvalCtx -> IO (Either [Error] (EvalCtx, [String]))
     execModule ctx = do
       (ctx', output) <- foldM aux (ctx, []) stmts
-      let (errMessages, outMessages) = foldl part ([], []) output
-      if dumpCore config
-         then return $ Right (ctx', reverse $ outMessages ++ map showError errMessages)
-         else return $ case errMessages of
-                         [] -> Right (ctx', reverse outMessages)
-                         _ -> Left (reverse errMessages)
+      (errMessages, outMessages) <- foldM part ([], []) (reverse output)
+      return $ case errMessages of
+        [] ->
+          Right (ctx', reverse outMessages)
+        _ | dumpCore config ->
+          {-Left (reverse $ outMessages ++ map showError errMessages)-}
+          Left (reverse errMessages)
+        _ | printStatements config ->
+          Left []
+        _ ->
+          Left (reverse errMessages)
 
-    part :: ([Error], [String]) -> Either Error String -> ([Error], [String])
-    part (errs, succs) (Left err) =
+    part :: ([Error], [String]) -> Either Error String -> IO ([Error], [String])
+    part (errs, succs) (Left err) = do
       if printStatements config
-         then (errs, showError err : succs)
-         else (err : errs, succs)
-    part (errs, succs) (Right suc) = (errs, suc : succs)
+         then (putStrLn $ showError err) >> return (err : errs, succs)
+         else return (err : errs, succs)
+    part acc@(errs, succs) (Right suc) = do
+      if printStatements config || dumpCore config
+         then (putStrLn suc) >> return acc
+         else return (errs, suc : succs)
 
 
 resolveImports :: EvalCtx -> String -> [Import] -> IO (Either [Error] EvalCtx)

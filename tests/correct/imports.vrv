@@ -1,4 +1,4 @@
-// RUN: %verve | %check
+// RUN: %not %verve | %check
 
 global import Enum
 global import Match { Nat(Z) }
