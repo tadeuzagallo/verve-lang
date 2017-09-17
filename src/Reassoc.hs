@@ -1,8 +1,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Naming
-  ( balance
-  , balanceStmt
+module Reassoc
+  ( reassoc
+  , reassocStmt
   , Env
   , defaultEnv
   , nImportModule
@@ -46,13 +46,13 @@ getOpInfo name (Env env) =
 getPrec :: Name -> Env -> Result PrecInt
 getPrec name env = snd <$> getOpInfo name env
 
-balance :: Module -> Result Module
-balance (Module imports stmts) = do
+reassoc :: Module -> Result Module
+reassoc (Module imports stmts) = do
   (_, stmts') <- n_stmts defaultEnv stmts
   return $ Module imports stmts'
 
-balanceStmt :: Env -> Stmt -> Result (Env, Stmt)
-balanceStmt = n_stmt
+reassocStmt :: Env -> Stmt -> Result (Env, Stmt)
+reassocStmt = n_stmt
 
 n_stmts :: Env -> [Stmt] -> Result (Env, [Stmt])
 n_stmts env stmts = do

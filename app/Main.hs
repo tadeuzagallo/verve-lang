@@ -1,7 +1,7 @@
 import Absyn.Untyped
 import Error
 import Parser
-import qualified Naming
+import qualified Reassoc
 import Desugar
 import Renamer
 import Interpreter
@@ -20,10 +20,10 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
 
-type EvalCtx = (Naming.Env, RnEnv, Ctx, Env)
+type EvalCtx = (Reassoc.Env, RnEnv, Ctx, Env)
 
 initEvalCtx :: EvalCtx
-initEvalCtx = (Naming.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
+initEvalCtx = (Reassoc.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
 
 
 data Config = Config
@@ -68,7 +68,7 @@ main = do
 
 evalStmt :: Config ->  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
 evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
-  (nenv', balanced) <- Naming.balanceStmt nenv stmt
+  (nenv', balanced) <- Reassoc.reassocStmt nenv stmt
   (rnEnv', renamed) <- renameStmt modName rnEnv balanced
   (ctx', typed, ty) <- inferStmt ctx renamed
   let core = desugarStmt typed
@@ -182,7 +182,7 @@ resolveImports ctx file (imp@(Import _ mod _ _) : remainingImports) = do
 importModule :: Import -> EvalCtx -> EvalCtx -> EvalCtx
 importModule imp (prevNenv, prevRnEnv, prevCtx, prevEnv) (impNenv, impRnEnv, impCtx, impEnv) =
   let (rnEnv', renamedImports) = renameImport prevRnEnv impRnEnv imp
-   in ( Naming.nImportModule imp prevNenv impNenv
+   in ( Reassoc.nImportModule imp prevNenv impNenv
       , rnEnv'
       , tImportModule renamedImports prevCtx impCtx
       , iImportModule imp prevEnv impEnv
