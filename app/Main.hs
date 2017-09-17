@@ -180,12 +180,12 @@ resolveImports ctx file (imp@(Import _ mod _ _) : remainingImports) = do
 
 
 importModule :: Import -> EvalCtx -> EvalCtx -> EvalCtx
-importModule imp (prevNenv, prevRnEnv, prevCtx, prevEnv) (impNenv, impRnEnv, impCtx, impEnv) =
+importModule imp (_prevNenv, prevRnEnv, prevCtx, _prevEnv) (impNenv, impRnEnv, impCtx, impEnv) =
   let (rnEnv', renamedImports) = renameImport prevRnEnv impRnEnv imp
-   in ( Reassoc.nImportModule imp prevNenv impNenv
+   in ( impNenv
       , rnEnv'
       , tImportModule renamedImports prevCtx impCtx
-      , iImportModule imp prevEnv impEnv
+      , impEnv
       )
 
 

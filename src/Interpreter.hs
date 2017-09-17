@@ -5,10 +5,9 @@ module Interpreter
   , evalWithEnv
   , Env
   , defaultEnv
-  , iImportModule
   ) where
 
-import Absyn.Meta (Literal(..), Name, Import(..))
+import Absyn.Meta (Literal(..), Name)
 import CoreAbsyn
 import Error
 import PrettyPrint
@@ -215,8 +214,3 @@ e_bind :: Env -> Bind -> EvalResultT Env
 e_bind env ((name, _), exp) = do
   exp' <- e_expr env exp
   return $ addValue env (name, exp')
-
--- MODULE IMPORTATION
-
-iImportModule :: Import -> Env -> Env -> Env
-iImportModule _ _ c = c

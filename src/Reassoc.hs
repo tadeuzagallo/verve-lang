@@ -5,7 +5,6 @@ module Reassoc
   , reassocStmt
   , Env
   , defaultEnv
-  , nImportModule
   ) where
 
 import Absyn.Untyped
@@ -121,8 +120,3 @@ comparePrec env l r = do
     (EQ, AssocLeft, AssocLeft) -> return PLeft
     (EQ, AssocRight, AssocRight) -> return PRight
     (EQ, _, _) -> mkError $ PrecedenceError l r
-
--- MODULE IMPORTATION
-
-nImportModule :: Import -> Env -> Env -> Env
-nImportModule _ _ c = c
