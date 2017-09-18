@@ -49,7 +49,12 @@ p_importItem = do
          ]
 
 p_stmt :: Parser Stmt
-p_stmt = choice [ p_enum
+p_stmt = choice [ p_decl >>= return . Decl
+                , p_expr True >>= return . Expr
+                ] <?> "statement"
+
+p_decl :: Parser Decl
+p_decl = choice [ p_enum
                 , p_operator
                 , p_let
                 , p_class
@@ -57,10 +62,9 @@ p_stmt = choice [ p_enum
                 , p_implementation
                 , p_typeAlias
                 , p_function >>= return . FnStmt
-                , p_expr True >>= return . Expr
-                ] <?> "statement"
+                ]
 
-p_enum :: Parser Stmt
+p_enum :: Parser Decl
 p_enum = do
   reserved "enum"
   name <- ucid
@@ -74,7 +78,7 @@ p_constructor = do
   args <- optionMaybe . parens . commaSep $ p_type
   return $ (name, args)
 
-p_operator :: Parser Stmt
+p_operator :: Parser Decl
 p_operator = do
   maybeOpAssoc <- optionMaybe p_opAssoc
   opPrec <- option defaultPrec p_opPrec
@@ -120,7 +124,7 @@ p_opAssoc = do
       assocChoice = choice . map assoc
       assoc a = try (reserved $ show a) *> return a
 
-p_let :: Parser Stmt
+p_let :: Parser Decl
 p_let = do
   reserved "let"
   name <- lcid
@@ -128,7 +132,7 @@ p_let = do
   expr <- p_expr True
   return $ Let name expr
 
-p_class :: Parser Stmt
+p_class :: Parser Decl
 p_class = do
   reserved "class"
   className <- ucid
@@ -145,7 +149,7 @@ p_classVar = do
   reserved "let"
   p_typedName
 
-p_interface :: Parser Stmt
+p_interface :: Parser Decl
 p_interface = do
   reserved "interface"
   intfName <- ucid
@@ -162,7 +166,7 @@ p_fnDecl = do
   fnDeclRetType <- option TVoid p_retType
   return $ FunctionDecl {fnDeclName, fnDeclGenerics, fnDeclParams, fnDeclRetType}
 
-p_implementation :: Parser Stmt
+p_implementation :: Parser Decl
 p_implementation = do
   reserved "implementation"
   implGenerics <- option [] p_generics
@@ -171,7 +175,7 @@ p_implementation = do
   implMethods <- p_body p_function
   return $ Implementation { implName, implGenerics, implType, implMethods }
 
-p_typeAlias :: Parser Stmt
+p_typeAlias :: Parser Decl
 p_typeAlias = do
   reserved "type"
   aliasName <- ucid

@@ -104,12 +104,16 @@ i_stmt :: Ctx -> U.Stmt -> Tc (Ctx, T.Stmt, Type)
 i_stmt ctx (Expr expr) = do
   (expr', ty) <- i_expr ctx expr
   return (ctx, Expr expr', ty)
+i_stmt ctx (Decl decl) = do
+  (ctx', decl', ty) <- i_decl ctx decl
+  return (ctx', Decl decl', ty)
 
-i_stmt ctx (FnStmt fn) = do
+i_decl :: Ctx -> U.Decl -> Tc (Ctx, T.Decl, Type)
+i_decl ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addValueType ctx (name fn, ty), FnStmt fn', ty)
 
-i_stmt ctx (Enum name generics ctors) = do
+i_decl ctx (Enum name generics ctors) = do
   (ctx', generics') <- addGenerics ctx (defaultBounds generics)
   let mkEnumTy ty = case (ty, generics') of
                 (Nothing, []) -> Con name
@@ -121,7 +125,7 @@ i_stmt ctx (Enum name generics ctors) = do
   (ctx''', ctors') <- foldrM (i_ctor ctx'' mkEnumTy) (ctx, []) ctors
   return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'), Type)
 
-i_stmt ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
+i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
   opGenerics' <- resolveGenerics ctx opGenerics
   (ctx', opGenericVars) <- addGenerics ctx opGenerics'
   opLhs' <- resolveId ctx' opLhs
@@ -141,13 +145,13 @@ i_stmt ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
                      , opBody = opBody' }
   return (addValueType ctx (opName, ty), op', ty)
 
-i_stmt ctx (Let var expr) = do
+i_decl ctx (Let var expr) = do
   (expr', exprTy) <- i_expr ctx expr
   let ctx' = addValueType ctx (var, exprTy)
   let let' = Let (var, exprTy) expr'
   return (ctx', let', exprTy)
 
-i_stmt ctx (Class name vars methods) = do
+i_decl ctx (Class name vars methods) = do
   vars' <- mapM (resolveId ctx) vars
   let classTy = Cls name vars'
   let ctorTy = [Rec vars'] ~> classTy
@@ -158,7 +162,7 @@ i_stmt ctx (Class name vars methods) = do
   let class' = Class (name, classTy) vars' methods'
   return (ctx''', class', Type)
 
-i_stmt ctx (Interface name param methods) = do
+i_decl ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
   (methods', methodsTy) <- unzip <$> mapM (i_fnDecl ctx') methods
   let ty = Intf name param' methodsTy
@@ -171,7 +175,7 @@ i_stmt ctx (Interface name param methods) = do
          in addValueType ctx (name, ty)
       aux _ _ _ _ = undefined
 
-i_stmt ctx (Implementation implName generics ty methods) = do
+i_decl ctx (Implementation implName generics ty methods) = do
   Intf _ param intfMethods <- getInterface implName ctx
   generics' <- resolveGenerics ctx generics
   (ctx', genericVars) <- addGenerics ctx generics'
@@ -196,7 +200,7 @@ i_stmt ctx (Implementation implName generics ty methods) = do
     extendCtx _ ty _ =
       throwError (ImplementationError implName ty)
 
-i_stmt ctx (TypeAlias aliasName aliasVars aliasType) = do
+i_decl ctx (TypeAlias aliasName aliasVars aliasType) = do
   (ctx', aliasVars') <- addGenerics ctx (defaultBounds aliasVars)
   aliasType' <- resolveType ctx' aliasType
   let aliasType'' = case aliasVars' of

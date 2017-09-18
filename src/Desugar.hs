@@ -21,44 +21,46 @@ d_stmts [] = CA.Void
 -- terminators
 d_stmts ([Expr e]) =
   d_expr e
-d_stmts ([FnStmt fn]) =
+d_stmts ([Decl (FnStmt fn)]) =
   let fn' = d_fn fn
    in CA.Let [(name fn, fn')] (CA.Var $ name fn)
-d_stmts ([Let var expr]) =
+d_stmts ([Decl (Let var expr)]) =
   CA.Let [(var, d_expr expr)] (CA.Var var)
 
--- intermediaries
-d_stmts (Let var expr : ss) =
-  CA.Let [(var, d_expr expr)] (d_stmts ss)
+d_stmts (Decl decl : ss) =
+  CA.Let (d_decl decl) (d_stmts ss)
 d_stmts (Expr e:ss) =
   CA.Let [(ignore void, d_expr e)] (d_stmts ss)
-d_stmts (FnStmt fn:ss) =
-  CA.Let [(name fn, d_fn fn)] (d_stmts ss)
-d_stmts (Enum name _ _ : ss) =
-  CA.Let [(ignore Type, CA.Var name)] (d_stmts ss)
-d_stmts (TypeAlias { aliasName, aliasType } : ss) =
-  CA.Let [((aliasName, Type), CA.Type aliasType)] (d_stmts ss)
-d_stmts (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody : ss) =
+
+d_decl :: Decl -> [CA.Bind]
+d_decl (Let var expr) =
+  [(var, d_expr expr)]
+d_decl (FnStmt fn) =
+  [(name fn, d_fn fn)]
+d_decl (Enum name _ _) =
+  [(ignore Type, CA.Var name)]
+d_decl (TypeAlias { aliasName, aliasType }) =
+  [((aliasName, Type), CA.Type aliasType)]
+d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) =
   let fn = d_fn (Function { name = opName
                           , generics = opGenerics
                           , params = [opLhs, opRhs]
                           , retType = opRetType
                           , body = opBody
                           })
-   in CA.Let [(opName, fn)] (d_stmts ss)
-d_stmts (Class _ _ methods : ss) =
-  let methods' = map (\fn -> (name fn, d_fn fn)) methods
-   in CA.Let methods' (d_stmts ss)
+   in [(opName, fn)]
+d_decl (Class _ _ methods) =
+  map (\fn -> (name fn, d_fn fn)) methods
 
-d_stmts (Interface _ _ methods : ss) =
-  CA.Let (map d_intfMethod methods) (d_stmts ss)
+d_decl (Interface _ _ methods) =
+  map d_intfMethod methods
 
-d_stmts (Implementation (name, _) generics ty methods : ss) =
+d_decl (Implementation (name, _) generics ty methods) =
   let dict = CA.Record (map d_implMethod methods)
       dictName = ("#" ++ name ++ print ty, void)
       dictLam = foldr CA.Lam dict (mkConstraints generics)
       fixedDict = CA.App (mk_var "#fix") (CA.Lam dictName dictLam)
-   in CA.Let [(dictName, fixedDict)] (d_stmts ss)
+   in [(dictName, fixedDict)]
   where
     print (TyApp ty _) = print ty
     print ty = show ty

@@ -63,24 +63,30 @@ n_stmts env stmts = do
         return (env', stmt' : stmts)
 
 n_stmt :: Env -> Stmt -> Result (Env, Stmt)
-n_stmt env op@(Operator { opAssoc, opPrec, opName, opBody }) = do
+n_stmt env (Expr expr) = do
+  expr' <- n_expr env expr
+  return (env, Expr expr')
+n_stmt env (Decl decl) = do
+  (env', decl') <- n_decl env decl
+  return (env', Decl decl')
+
+-- TODO: Remove catch all case
+n_decl :: Env -> Decl -> Result (Env, Decl)
+n_decl env op@(Operator { opAssoc, opPrec, opName, opBody }) = do
   opPrec' <- prec env opPrec
   let env' = addOpInfo env (opName, (opAssoc, opPrec'))
   (_, opBody') <- n_stmts env' opBody
   return (env', op { opBody = opBody' })
-n_stmt env (FnStmt fn) = do
+n_decl env (FnStmt fn) = do
   fn' <- n_fn env fn
   return (env, FnStmt fn')
-n_stmt env (Let x expr) = do
+n_decl env (Let x expr) = do
   expr' <- n_expr env expr
   return (env, Let x expr')
-n_stmt env (Class name vars methods) = do
+n_decl env (Class name vars methods) = do
   methods' <- mapM (n_fn env) methods
   return (env, Class name vars methods')
-n_stmt env (Expr expr) = do
-  expr' <- n_expr env expr
-  return (env, Expr expr')
-n_stmt env stmt = return (env, stmt)
+n_decl env stmt = return (env, stmt)
 
 prec :: Env -> Precedence -> Result PrecInt
 prec _ (PrecValue n) = return n

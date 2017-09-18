@@ -9,8 +9,12 @@ data BaseModule a b c = Module
   }
 
 data BaseStmt a b c
-  = FnStmt (BaseFunction a b c)
+  = Decl (BaseDecl a b c)
   | Expr (BaseExpr a b c)
+  deriving (Show)
+
+data BaseDecl a b c
+  = FnStmt (BaseFunction a b c)
   | Enum a [Name] [BaseDataCtor a b]
   | Let a (BaseExpr a b c)
   | Class { className :: a

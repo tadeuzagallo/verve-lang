@@ -203,29 +203,34 @@ r_stmt env (Expr expr) = do
   expr' <- r_expr env expr
   return (env, Expr expr')
 
-r_stmt env (Enum name gen ctors) = do
+r_stmt env (Decl decl) = do
+  (env', decl') <- r_decl env decl
+  return (env', Decl decl')
+
+r_decl ::RnEnv -> Decl -> Rn (RnEnv, Decl)
+r_decl env (Enum name gen ctors) = do
   (envWithType, name') <- addLocal env name
   envWithGenerics <- foldM addInternal envWithType gen
   (envWithCtors, ctors') <- r_ctors envWithGenerics ctors
   return (envWithCtors, Enum name' gen ctors')
 
-r_stmt env (FnStmt fn) = do
+r_decl env (FnStmt fn) = do
   (env', fn') <- r_fn env fn
   return (env', FnStmt fn')
 
-r_stmt env (Let name expr) = do
+r_decl env (Let name expr) = do
   envWithVar <- addInternal env name
   expr' <- r_expr envWithVar expr
   return (envWithVar, Let name expr')
 
-r_stmt env (Class name vars methods) = do
+r_decl env (Class name vars methods) = do
   (envWithClass, name') <- addLocal env name
   (_, vars') <- r_fnParams envWithClass vars
   envWithSelf <- addInternal env "self"
   ((_, envWithoutSelf), methods') <- foldAcc r_method (envWithSelf, envWithClass) methods
   return (envWithoutSelf, Class name' vars' methods')
 
-r_stmt env (Operator assoc prec gen lhs op rhs retType body) = do
+r_decl env (Operator assoc prec gen lhs op rhs retType body) = do
   prec' <- r_prec env prec
   (envWithOp, op') <- addLocal env op
   (envWithGen, gen') <- r_generics envWithOp gen
@@ -237,20 +242,20 @@ r_stmt env (Operator assoc prec gen lhs op rhs retType body) = do
   let op = Operator assoc prec' gen' lhs' op' rhs' retType' body'
    in return (envWithOp, op)
 
-r_stmt env (Interface name param methods) = do
+r_decl env (Interface name param methods) = do
   (envWithIntf, name') <- addLocal env name
   envWithParam <- addInternal env param
   ((_, envWithoutParam), methods') <- foldAcc r_fnDecl (envWithParam, envWithIntf) methods
   return (envWithoutParam, Interface name' param methods')
 
-r_stmt env (Implementation name gen ty implMethods) = do
+r_decl env (Implementation name gen ty implMethods) = do
   name' <- lookupIdent [name] env
   (envWithGen, gen') <- r_generics env gen
   ty' <- r_type envWithGen ty
   (_, implMethods') <- foldAcc r_fnNonRec envWithGen implMethods
   return (env, Implementation name' gen' ty' implMethods')
 
-r_stmt env (TypeAlias aliasName aliasVars aliasType) = do
+r_decl env (TypeAlias aliasName aliasVars aliasType) = do
   (envWithAlias, aliasName') <- addLocal env aliasName
   envWithVars <- foldM addInternal envWithAlias aliasVars
   aliasType' <- r_type envWithVars aliasType
