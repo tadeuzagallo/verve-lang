@@ -110,7 +110,7 @@ runFile config file = do
   either reportError printOutput result
     where
       reportError errors = do
-        mapM_ report (reverse errors)
+        mapM_ report errors
         exitFailure
 
       printOutput (_ctx, []) = return ()
