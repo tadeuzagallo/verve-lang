@@ -1,5 +1,6 @@
 module Typing.Constraint
   ( inferTyArgs
+  , inferTyAbs
   ) where
 
 import Typing.State
@@ -20,11 +21,23 @@ inferTyArgs args (Fun gen params retType) = do
   let initialCs = map (flip (Constraint Bot) Top) vars
   cs <- zipWithM (constraintGen [] vars) args params
   let cs' = initialCs `meet` foldl meet [] cs
-  substs <- mapM (getSubst retType) cs'
-  let typeArgs = map (fromJust . flip lookup substs . fst) gen
+  substs <- mapM (getSubst False retType) cs'
+  let typeArgs = map (fromJust . flip lookup substs) vars
   return (applySubst (mkSubsts substs) retType, typeArgs)
 
 inferTyArgs _ _ = undefined
+
+inferTyAbs :: Type -> Type -> Tc [Type]
+inferTyAbs (Fun gen params ret) expected = do
+  let vars = map fst gen
+  let ty = (Fun [] params ret)
+  let initialCs = map (flip (Constraint Bot) Top) vars
+  cs <- constraintGen [] vars ty expected
+  let cs' = initialCs `meet` cs
+  substs <- mapM (getSubst True ty) cs'
+  return $ map (fromJust . flip lookup substs) vars
+
+inferTyAbs _ _ = undefined
 
 -- Constraint Solving
 data Constraint
@@ -90,9 +103,13 @@ meet c d =
       mergeC (Constraint s x t) (Constraint u _ v) =
         Constraint (s \/ u) x (t /\ v)
 
-getSubst :: Type -> Constraint -> Tc (Var, Type)
-getSubst r (Constraint s x t) =
-  case variance x r of
+getSubst :: Bool -> Type -> Constraint -> Tc (Var, Type)
+getSubst flip r (Constraint s x t) = do
+  let v = variance x r
+  let v' = if flip
+             then invertVariance v
+             else v
+  case v' of
     Bivariant -> return (x, s)
     Covariant -> return (x, s)
     Contravariant -> return (x, t)

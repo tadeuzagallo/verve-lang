@@ -20,7 +20,7 @@ import Typing.Subtyping
 import Typing.TypeError
 import Typing.Types
 
-import Control.Monad (foldM, when, zipWithM, zipWithM_)
+import Control.Monad (foldM, when, zipWithM)
 import Data.Bifunctor (first)
 import Data.Foldable (foldrM)
 import Data.List (intersect, union)
@@ -298,9 +298,6 @@ i_expr ctx (Ident [i] _) = do
 i_expr _ (Ident (_:_) _) = undefined
 i_expr _ (Ident [] _) = undefined
 
-
-i_expr _ VoidExpr = return (VoidExpr, void)
-
 i_expr ctx (ParenthesizedExpr expr) = i_expr ctx expr
 
 i_expr ctx (BinOp _ _ lhs op rhs) = do
@@ -324,19 +321,20 @@ i_expr ctx (Call fn constraintArgs types []) =
 
 i_expr ctx (Call fn _ types args) = do
   (fn', tyFn) <- i_expr ctx fn
-  (args', tyArgs) <- mapM (i_expr ctx) args >>= return . unzip
   let tyFn' = normalizeFnType tyFn
-  (tyFn''@(Fun gen _ retType), skippedVars) <- adjustFnType (null types) tyArgs tyFn'
-  (retType', typeArgs)  <-
+  (tyFn''@(Fun gen _ retType), skippedVars) <- adjustFnType (null types) args tyFn'
+  (retType', args', typeArgs)  <-
         case (tyFn'', types) of
-          (Fun (_:_) _ _, []) ->
-            inferTyArgs tyArgs tyFn''
+          (Fun (_:_) _ _, []) -> do
+            (args', argsTy) <- unzip <$> mapM (i_expr ctx) args
+            (retType, typeArgs) <- inferTyArgs argsTy tyFn''
+            return (retType, args', typeArgs)
           (Fun gen params _, _) -> do
             types' <- mapM (resolveType ctx) types
             let s = zipSubst (map fst gen) types'
             let params' = map (applySubst s) params
-            zipWithM_ (<:!) tyArgs params'
-            return (applySubst s retType, types')
+            args' <- zipWithM (instSubtype ctx) args params'
+            return (applySubst s retType, args', types')
           _ -> undefined
   constraintArgs <- inferConstraintArgs ctx gen skippedVars typeArgs
   return (Call fn' constraintArgs typeArgs args', retType')
@@ -381,6 +379,24 @@ i_expr ctx (List _ items) = do
 
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn
+
+-- Expressions generated during type checking
+i_expr _ VoidExpr = return (VoidExpr, void)
+
+i_expr _ (TypeCall {}) = undefined
+
+instSubtype :: Ctx -> U.Expr -> Type -> Tc T.Expr
+instSubtype ctx arg ty = do
+  (arg', argTy) <- i_expr ctx arg
+  arg'' <- case (argTy, ty) of
+             (Fun gen@(_:_) _ _, Fun [] _ _) -> do
+               typeArgs <- inferTyAbs argTy ty
+               constraintArgs <- inferConstraintArgs ctx gen [] typeArgs
+               return $ TypeCall arg' constraintArgs
+             _ -> do
+               argTy <:! ty
+               return arg'
+  return arg''
 
 inferConstraintArgs :: Ctx -> [BoundVar] -> [BoundVar] -> [Type] -> Tc [ConstraintArg]
 inferConstraintArgs ctx gen skippedVars typeArgs = do

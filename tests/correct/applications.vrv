@@ -11,13 +11,13 @@ fn id<T>(x: T) -> T { x }
 
 fn g(h: (Int) -> Int) {}
 g(f)
-/*g(id)*/
+g(id)
 g(fn x(x: Int) -> Int { x })
-/*g(fn x<T>(x: T) -> T { x })*/
+g(fn x<T>(x: T) -> T { x })
 
 fn h(x: (Int) -> Int) -> Int { x(42) }
 h(f)
-/*h(id)*/
+h(id)
 
 fn apply<T>(f: (T) -> T, x: T) -> T { f(x) }
 apply<Int>(f, 42)

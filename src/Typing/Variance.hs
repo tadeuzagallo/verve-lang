@@ -1,6 +1,7 @@
 module Typing.Variance
   ( Variance(..)
   , variance
+  , invertVariance
   ) where
 
 import Typing.Types
