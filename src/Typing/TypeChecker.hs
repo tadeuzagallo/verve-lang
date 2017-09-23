@@ -325,9 +325,12 @@ i_expr ctx (Call fn _ types args) = do
   (tyFn''@(Fun gen _ retType), skippedVars) <- adjustFnType (null types) args tyFn'
   (retType', args', typeArgs)  <-
         case (tyFn'', types) of
-          (Fun (_:_) _ _, []) -> do
-            (args', argsTy) <- unzip <$> mapM (i_expr ctx) args
+          (Fun (_:_) params _, []) -> do
+            (_, argsTy) <- unzip <$> mapM (i_expr ctx) args
             (retType, typeArgs) <- inferTyArgs argsTy tyFn''
+            let s = zipSubst (map fst gen) typeArgs
+            let params' = map (applySubst s) params
+            args' <- zipWithM (instSubtype ctx) args params'
             return (retType, args', typeArgs)
           (Fun gen params _, _) -> do
             types' <- mapM (resolveType ctx) types

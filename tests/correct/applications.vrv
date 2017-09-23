@@ -37,3 +37,7 @@ fn g(x: Int) { }
 apply'(g, 3)
 fn h(x: Unit) -> Int { 13 }
 apply'(h, Unit)
+
+fn f<T: Printable>(f: (String) -> String, x: T) -> String { f(to_string(x)) }
+f<String>(to_string, "4") // CHECK-L: "4" : String
+f(to_string, "4") // CHECK-L: "4" : String

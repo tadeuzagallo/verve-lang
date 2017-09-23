@@ -1,0 +1,34 @@
+// RUN: %verve | %check
+enum Shape {
+  Square(Int)
+  Rectangle(Int, Int)
+}
+
+interface Area<U> {
+  fn area(x: U) -> Int
+}
+
+implementation Area<Shape> {
+  fn area(s: Shape) -> Int {
+    match s {
+      case Square(x): x * x
+      case Rectangle(x, y): x * y
+    }
+  }
+}
+
+Square(10).area() // CHECK-L: 100 : Int
+Rectangle(4, 5).area() // CHECK-L: 20 : Int
+
+class House {
+  let rooms : List<Shape>
+}
+
+implementation Area<House> {
+  fn area(h: House) -> Int {
+    reduce((+), 0, map(area, h.rooms))
+  }
+}
+
+House { rooms: [Square(10), Rectangle(4, 5)] }.area()
+// CHECK-L: 120 : Int

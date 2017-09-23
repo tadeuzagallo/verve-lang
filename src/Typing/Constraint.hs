@@ -84,6 +84,9 @@ constraintGen v x (Rec f1) (Rec f2) | map fst f2 `intersect` map fst f1 == map f
       aux (key, v2) =
         constraintGen v x (fromJust $ lookup key f1) v2
 
+constraintGen v x (Fun gen@(_:_) params ret) f2@(Fun [] _ _) = do
+  constraintGen v x (map fst gen \\ Fun [] params ret) f2
+
 constraintGen _v _x actual expected =
   throwError $ TypeError expected actual
 
