@@ -68,9 +68,9 @@ main = do
 
 evalStmt :: Config ->  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
 evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
-  (nenv', balanced) <- Reassoc.reassocStmt nenv stmt
-  (rnEnv', renamed) <- renameStmt modName rnEnv balanced
-  (ctx', typed, ty) <- inferStmt ctx renamed
+  (rnEnv', renamed) <- renameStmt modName rnEnv stmt
+  (nenv', balanced) <- Reassoc.reassocStmt nenv renamed
+  (ctx', typed, ty) <- inferStmt ctx balanced
   let core = desugarStmt typed
   (env', val) <- evalWithEnv env core
   let out = if dumpCore config
