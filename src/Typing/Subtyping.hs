@@ -26,8 +26,20 @@ _ <: Top = True
 Bot <: _ = True
 
 -- S-Fun
-(Fun v1 p1 t1) <: (Fun v2 p2 t2) =
-  v1 == v2 && all (uncurry (<:)) (zip p2 p1) && t1 <: t2
+(Fun v1 p1 t1) <: (Fun v2 p2 t2) | v1 == v2 =
+  all (uncurry (<:)) (zip p2 p1) && t1 <: t2
+
+-- α-equivalence of functions
+(Fun v1 p1 t1) <: f2@(Fun v2 _ _)
+  | map snd v1 == map snd v2 =
+    let s = zipSubst (map fst v1) (map (uncurry Var) v2)
+     in applySubst s (Fun v2 p1 t1) <: f2
+
+-- α-equivalence of type constructors
+(TyAbs v1 t1) <: t2@(TyAbs v2 _)
+  | length v1 == length v2 =
+    let s = zipSubst v1 (map (flip Var []) v2)
+     in applySubst s (TyAbs v2 t1) <: t2
 
 _t1@(TyAbs gen t12) <: t2@(TyApp _t21 args) =
   let t1' = applySubst (zipSubst gen args) t12
