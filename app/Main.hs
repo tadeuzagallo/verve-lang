@@ -16,6 +16,7 @@ import Data.List (intercalate)
 import Paths_verve (getDataFileName)
 import System.Console.Haskeline
        (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
+import System.Directory (getCurrentDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
@@ -106,7 +107,8 @@ runFile :: Config -> String -> IO ()
 runFile config file = do
   -- TODO: add this as `Error::runError`
   let mod = modNameFromFile file
-  result <- execFile config mod file
+  pwd <- getCurrentDirectory
+  result <- execFile config mod (pwd </> file)
   either reportError printOutput result
     where
       reportError errors = do

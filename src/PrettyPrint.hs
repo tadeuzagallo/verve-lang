@@ -1,4 +1,4 @@
-module PrettyPrint 
+module PrettyPrint
   ( PrettyPrint(..)
   , pprName
   ) where

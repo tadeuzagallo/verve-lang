@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+pushd "$(dirname "$(readlink "$0")")" &> /dev/null
+VERVE=$(stack path --local-install-root)/bin/verve
+popd &> /dev/null
+"$VERVE" "$@"
