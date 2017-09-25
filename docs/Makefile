@@ -23,4 +23,4 @@ watch: Makefile
 	@sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 publish: html
-	gh-pages -d _build/html -b gh-pages -r git@github.com:tadeuzagallo/verve-lang
+	gh-pages -d _build/html -b gh-pages -r git@github.com:tadeuzagallo/verve-lang --dotfiles
