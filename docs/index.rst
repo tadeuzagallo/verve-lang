@@ -1,7 +1,7 @@
 An Introduction to Verve
 ========================
 
-Verve is a functional language that aims to be friendly for functional programming newcomers.
+Verve is a functional language for the working hacker.
 
 .. toctree::
   :titlesonly:
