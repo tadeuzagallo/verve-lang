@@ -2,6 +2,15 @@
 {% block extrahead %}
     <link href="{{ pathto("_static/prism.css", True) }}" rel="stylesheet" type="text/css">
     <link href="{{ pathto("_static/style.css", True) }}" rel="stylesheet" type="text/css">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-47264623-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments)};
+      gtag('js', new Date());
+
+      gtag('config', 'UA-47264623-3');
+    </script>
 {% endblock %}
 
 {% block footer %}
