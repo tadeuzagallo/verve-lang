@@ -5,7 +5,7 @@ In order to use an enum value we need to determine which option was used to crea
 
 Using the example enum from last page we can implement a function :code:`area`.
 
-.. code-block:: rust
+.. prismjs:: verve
 
   fn area(shape: Shape) -> Int {
     match shape {

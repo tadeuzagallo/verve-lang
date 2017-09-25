@@ -3,7 +3,7 @@ Functions
 
 Functions are defined using the keyword :code:`fn` and must have explicit type annotations.
 
-.. code-block:: rust
+.. prismjs:: verve
 
   fn double(x: Int) -> Int {
     x * x
@@ -11,7 +11,7 @@ Functions are defined using the keyword :code:`fn` and must have explicit type a
 
 Functions can be called using C-style function calls:
 
-.. code-block:: rust
+.. prismjs:: verve
 
   double(42)
 
@@ -20,7 +20,7 @@ Currying
 
 All the functions are automatically curried, which means that both of the following are equivalent.
 
-.. code-block:: rust
+.. prismjs:: verve
 
   fn add(x: Int, y: Int) -> Int {
     x + y
@@ -34,7 +34,7 @@ All the functions are automatically curried, which means that both of the follow
 
 Both of the :code:`add` functions defined above can be called in any of the following ways.
 
-.. code-block:: rust
+.. prismjs:: verve
 
   add(3, 5)
 

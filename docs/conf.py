@@ -16,9 +16,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- General configuration ------------------------------------------------
@@ -47,7 +47,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Verve Programming Language'
+project = u'The Verve Programming Language'
 copyright = u'2017, Tadeu Zagallo'
 author = u'Tadeu Zagallo'
 
@@ -70,7 +70,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'sphinx_rtd_theme']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
@@ -84,7 +84,6 @@ todo_include_todos = True
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -154,14 +153,17 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-import sphinx_rtd_theme
-
 html_theme = "sphinx_rtd_theme"
 
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme_path = ["./sphinx_rtd_theme"]
 
 html_theme_options = {
     'collapse_navigation': False,
     'display_version': False,
     'navigation_depth': 2,
+    'logo_only': True,
 }
+
+html_logo = '_static/logo-white.svg'
+html_favicon = '_static/favicon.png'
+extensions = ['code']

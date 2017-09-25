@@ -5,7 +5,7 @@ As types get more complicated, it not just becomes annoying to have to type real
 
 Just like we avoid magic numbers, it can be useful to give names to types.
 
-.. code-block:: rust
+.. prismjs:: verve
 
   type Callback = (Int) -> Int
 

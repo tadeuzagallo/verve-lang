@@ -8,5 +8,17 @@ Verve is a functional language that aims to be friendly for functional programmi
   :hidden:
 
   Introduction <self>
-  reference/index
-  future
+  reference/primitives
+  reference/variables
+  reference/if
+  reference/functions
+  reference/operators
+  reference/comments
+  reference/enums
+  reference/match
+  reference/records
+  reference/type_aliases
+  reference/classes
+  reference/generics
+  reference/interfaces
+  reference/imports

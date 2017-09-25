@@ -3,7 +3,7 @@ Records
 
 Records provide a more flexible way of dealing with data.
 
-.. code-block:: rust
+.. prismjs:: verve
 
   fn f(x: { title: String, description: String }) {
     print(x.title)

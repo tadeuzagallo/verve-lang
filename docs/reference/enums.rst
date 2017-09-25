@@ -3,7 +3,7 @@ Enums
 
 Enums in Verve are a little bit different from C-style enums. Instead of being only a tag, it can also contain values attached to each option.
 
-.. code-block:: swift
+.. prismjs:: verve
 
   enum Shape {
     Square(Int) // side

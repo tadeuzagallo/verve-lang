@@ -1,0 +1,10 @@
+{% extends "!layout.html" %}
+{% block extrahead %}
+    <link href="{{ pathto("_static/prism.css", True) }}" rel="stylesheet" type="text/css">
+    <link href="{{ pathto("_static/style.css", True) }}" rel="stylesheet" type="text/css">
+{% endblock %}
+
+{% block footer %}
+    <script src="{{ pathto("_static/prism.js", True) }}"></script>
+    <script src="{{ pathto("_static/prism-verve.js", True) }}"></script>
+{% endblock %}

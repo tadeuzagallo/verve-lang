@@ -1,0 +1,87 @@
+.wy-nav-content-wrap {
+  background-color: #ffffff;
+}
+
+.wy-nav-side {
+  background-color: #fafafa;
+  box-shadow: 0 4px 5px 0 rgba(0, 0, 0, 0.14), 0 1px 10px 0 rgba(0, 0, 0, 0.12), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+}
+
+.wy-side-nav-search {
+  background-color: #5B449D;
+}
+
+.wy-menu-vertical a:hover {
+  background-color: #8E77D0;
+  color: white;
+}
+
+.wy-menu-vertical li.current {
+  background-color: #f0f0f0;
+}
+
+.wy-menu-vertical li.current a {
+  color: #a0a0a0;
+}
+
+.wy-menu-vertical li.toctree-l2.current > a {
+  background-color: #f0f0f0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.wy-menu-vertical li.toctree-l2.current > a:hover {
+  background-color: none;
+}
+
+.wy-menu-vertical li.on a, .wy-menu-vertical li.current > a {
+  color: #8E77D0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.wy-form input[type=text] {
+  /*border-radius: 3px;*/
+  /*border-width: 0px;*/
+    padding: 8px 4px 8px 32px;
+    background-image: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 490 490" width="16" height="16"><path fill="none" stroke="%237447c5" stroke-width="36" stroke-linecap="round" d="M280 278a153 153 0 1 0-2 2l170 170m-91-117l110 110-26 26-110-110"/></svg>');
+    background-position: 10px;
+    background-repeat: no-repeat;
+    background-color: #58319d!important;
+    border: 1px solid #7447c5;
+    border-bottom-color: #825acb;
+    border-radius: 5px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,.2);
+    color: #d1c3ea;
+    outline: none;
+}
+
+.wy-form input[type=text]::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+  color: #825acb;
+}
+.wy-form input[type=text]::-moz-placeholder { /* Firefox 19+ */
+  color: #825acb;
+}
+.wy-form input[type=text]:-ms-input-placeholder { /* IE 10+ */
+  color: #825acb;
+}
+.wy-form input[type=text]:-moz-placeholder { /* Firefox 18- */
+  color: #825acb;
+}
+
+pre[class*="language-"] {
+  background-color: #f4f4f6;
+}
+
+code[class*="language-"] {
+  border: 0;
+  padding: 0;
+}
+
+.token.function {
+  color: #5B449D;
+}
+
+.token.operator {
+  background: none !important;
+}
