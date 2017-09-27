@@ -26,7 +26,6 @@ type DataCtor = BaseDataCtor Name Type
 type Param = BaseParam Type
 type Generics = BaseGenerics Name
 type Function = BaseFunction Name Type Name
-type FunctionDecl = BaseFunctionDecl Name Type Name
 type Expr = BaseExpr Name Type Name
 type Case = BaseCase Name Type Name
 type Pattern = BasePattern Name

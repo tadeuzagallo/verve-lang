@@ -9,10 +9,10 @@ enum Either<T, U> {
 }
 
 interface Num<T> {
-  fn num_add(x: T, y: T) -> T
-  fn num_sub(x: T, y: T) -> T
-  fn num_mul(x: T, y: T) -> T
-  fn num_div(x: T, y: T) -> T
+  let num_add : (T, T) -> T
+  let num_sub : (T, T) -> T
+  let num_mul : (T, T) -> T
+  let num_div : (T, T) -> T
 }
 
 operator<T: Num> (x: T) + (y: T) -> T {
@@ -38,7 +38,7 @@ implementation Num<Int> {
 }
 
 interface Printable<T> {
-  fn to_string(x: T) -> String
+  let to_string : (T) -> String
 }
 
 fn print<T: Printable>(x: T) {

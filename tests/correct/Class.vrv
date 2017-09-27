@@ -17,7 +17,7 @@ fn area_(s: Square) -> Int {
 x.area_() // CHECK-L: 42 : Int
 
 interface Shape<T> {
-  fn area(s: T) -> Int
+  let area : (T) -> Int
 }
 
 implementation Shape<Square> {

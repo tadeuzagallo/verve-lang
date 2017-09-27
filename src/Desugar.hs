@@ -82,8 +82,8 @@ mkConstraints gen =
 mk_var :: String -> CA.Expr
 mk_var v = CA.Var (v, void)
 
-d_intfMethod :: FunctionDecl -> CA.Bind
-d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
+d_intfMethod :: Param -> CA.Bind
+d_intfMethod name@(s_name, _) =
   let select = CA.App (mk_var "#fieldAccess") (CA.Lit (String s_name))
       select' = CA.App select (mk_var "#dict")
    in (name, CA.Lam ("#dict", void) (CA.Lam (ignore Type) select'))

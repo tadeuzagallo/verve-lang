@@ -1,7 +1,7 @@
 // RUN: %not %verve | %check
 
 interface Intish<T> {
-  fn to_int(x: T) -> Int
+  let to_int : (T) -> Int
 }
 
 fn g'<T>(x: T) -> Int {
@@ -32,7 +32,7 @@ implementation Intish<Bool> {
 }
 
 interface Math<T> {
-  fn add(x: T, y: T) -> Int
+  let add : (T, T) -> Int
 }
 
 implementation Math<Bool> {

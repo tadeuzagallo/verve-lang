@@ -32,7 +32,7 @@ data BaseDecl a b c
              }
   | Interface { intfName :: a
               , intfParam :: Name
-              , intfMethods :: [BaseFunctionDecl a b c]}
+              , intfMethods :: [BaseParam b]}
   | Implementation { implName :: a
                    , implGenerics :: BaseGenerics c
                    , implType :: b
@@ -53,13 +53,6 @@ data BaseFunction a b c = Function
   , params :: [BaseParam b]
   , retType :: b
   , body :: [BaseStmt a b c]
-  } deriving (Show)
-
-data BaseFunctionDecl a b c = FunctionDecl
-  { fnDeclName :: a
-  , fnDeclGenerics :: BaseGenerics c
-  , fnDeclParams :: [BaseParam b]
-  , fnDeclRetType :: b
   } deriving (Show)
 
 data BaseExpr a b c

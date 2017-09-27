@@ -137,15 +137,15 @@ p_class = do
   reserved "class"
   className <- ucid
   (classVars, classMethods) <- braces $ do
-    vars <- option [] $ (:) <$> p_classVar <*> many (try $ p_separator *> p_classVar)
+    vars <- option [] $ (:) <$> p_varDecl <*> many (try $ p_separator *> p_varDecl)
     fns <- if null vars
               then p_function `sepEndBy` p_separator
               else many (try $ p_separator *> p_function)
     return (vars, fns)
   return $ Class { className, classVars, classMethods }
 
-p_classVar :: Parser (Name, Type)
-p_classVar = do
+p_varDecl :: Parser (Name, Type)
+p_varDecl = do
   reserved "let"
   p_typedName
 
@@ -154,17 +154,8 @@ p_interface = do
   reserved "interface"
   intfName <- ucid
   intfParam <- angles ucid
-  intfMethods <- p_body p_fnDecl
+  intfMethods <- p_body p_varDecl
   return $ Interface { intfName, intfParam, intfMethods }
-
-p_fnDecl :: Parser FunctionDecl
-p_fnDecl = do
-  reserved "fn"
-  fnDeclName <- lcid
-  fnDeclGenerics <- option [] p_generics
-  fnDeclParams <- parens $ commaSep p_typedName
-  fnDeclRetType <- option TVoid p_retType
-  return $ FunctionDecl {fnDeclName, fnDeclGenerics, fnDeclParams, fnDeclRetType}
 
 p_implementation :: Parser Decl
 p_implementation = do
@@ -186,11 +177,11 @@ p_typeAlias = do
 
 p_function :: Parser Function
 p_function = do
-  FunctionDecl { fnDeclName = name
-               , fnDeclGenerics = generics
-               , fnDeclParams = params
-               , fnDeclRetType = retType
-               } <- p_fnDecl
+  reserved "fn"
+  name <- lcid
+  generics <- option [] p_generics
+  params <- parens $ commaSep p_typedName
+  retType <- option TVoid p_retType
   body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 

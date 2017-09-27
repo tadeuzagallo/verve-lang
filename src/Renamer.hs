@@ -244,8 +244,7 @@ r_decl env (Operator assoc prec gen lhs op rhs retType body) = do
 
 r_decl env (Interface name param methods) = do
   (envWithIntf, name') <- addLocal env name
-  envWithParam <- addInternal env param
-  ((_, envWithoutParam), methods') <- foldAcc r_fnDecl (envWithParam, envWithIntf) methods
+  (envWithoutParam, methods') <- foldAcc (r_intfField param) envWithIntf methods
   return (envWithoutParam, Interface name' param methods')
 
 r_decl env (Implementation name gen ty implMethods) = do
@@ -468,12 +467,9 @@ r_methodImp env name' fn = do
   envWithSelf <- addInternal env "self"
   r_fnBase name' envWithSelf fn
 
-r_fnDecl :: (RnEnv, RnEnv) -> FunctionDecl -> Rn ((RnEnv, RnEnv), FunctionDecl)
-r_fnDecl (envWithParam, envWithoutParam) (FunctionDecl name gen params retType) = do
-  (envWithParam', name') <- addLocal envWithParam name
-  (envWithoutParam', _) <- addLocal envWithoutParam name
-  (envWithGenerics, gen') <- r_generics envWithParam' gen
-  (envWithParams, params') <- r_fnParams envWithGenerics params
-  retType' <- r_type envWithParams retType
-  let fnDecl = FunctionDecl name' gen' params' retType'
-   in return ((envWithParam', envWithoutParam'), fnDecl)
+r_intfField :: String -> RnEnv -> Param -> Rn (RnEnv, Param)
+r_intfField param env (name, ty) = do
+  envWithParam <- addInternal env param
+  ty' <- r_type envWithParam ty
+  (envWithField, name') <- addLocal env name
+  return (envWithField, (name', ty'))

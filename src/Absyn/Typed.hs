@@ -1,4 +1,4 @@
-module Absyn.Typed 
+module Absyn.Typed
   ( module Absyn.Meta
   , module Absyn.Typed
   , module Absyn.Base
@@ -18,7 +18,6 @@ type DataCtor = BaseDataCtor Id Type
 type Param = BaseParam Type
 type Generics = BaseGenerics Intf
 type Function = BaseFunction Id Type Intf
-type FunctionDecl = BaseFunctionDecl Id Type Intf
 type Expr = BaseExpr Id Type Intf
 type Case = BaseCase Id Type Intf
 type Pattern = BasePattern Id

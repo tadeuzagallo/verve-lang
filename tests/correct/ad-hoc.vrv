@@ -1,7 +1,7 @@
 // RUN: %verve | %check
 
 interface Intish<T> {
-  fn to_int(x: T) -> Int
+  let to_int : (T) -> Int
 }
 
 implementation Intish<Int> {
@@ -30,7 +30,7 @@ fn f<T: Intish>(x: T) -> Int {
 f(32) // CHECK: 32 : Int
 
 interface Read<T> {
-  fn read() -> T
+  let read : () -> T
 }
 
 implementation Read<Int> {

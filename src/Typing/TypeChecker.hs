@@ -156,10 +156,10 @@ i_decl ctx cls@(Class {}) = do
 
 i_decl ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
-  (methods', methodsTy) <- unzip <$> mapM (i_fnDecl ctx') methods
-  let ty = Intf name param' methodsTy
+  methods' <- mapM (resolveId ctx') methods
+  let ty = Intf name param' methods'
   let intf = Interface (name, void) param methods'
-  let ctx' = foldl (aux ty param') ctx methodsTy
+  let ctx' = foldl (aux ty param') ctx methods'
   return (addInterface ctx' (name, ty), intf, void)
     where
       aux intf param ctx (name, Fun gen params retType) =
@@ -221,14 +221,6 @@ checkExtraneousMethods intf impl = do
       case lookup methodName intf of
         Nothing -> throwError $ ExtraneousImplementation methodName
         Just _ -> return ()
-
-i_fnDecl :: Ctx -> U.FunctionDecl -> Tc (T.FunctionDecl, (Name, Type))
-i_fnDecl ctx (FunctionDecl name gen params retType) = do
-  gen' <- resolveGenerics ctx gen
-  (ctx', genVars) <- addGenerics ctx gen'
-  (ty, params', retType') <- fnTy ctx' (genVars, params, retType)
-  let fnDecl = FunctionDecl (name, ty) gen' params' retType'
-  return (fnDecl, (name, ty))
 
 fnTy :: Ctx -> ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
