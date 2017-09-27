@@ -10,6 +10,8 @@ module Typing.Ctx
   , getImplementations
   , addInterface
   , getInterface
+  , addInstanceVars
+  , getInstanceVars
   , tImportModule
   ) where
 
@@ -24,6 +26,7 @@ data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
                , implementations :: [(String, [(Type, [BoundVar])])]
                , interfaces :: [(String, Intf)]
+               , instanceVars :: [(Type, [(String, Type)])]
                } deriving (Eq)
 
 getType :: String -> Ctx -> Tc Type
@@ -81,6 +84,7 @@ defaultCtx =
                  ]
       , implementations = []
       , interfaces = []
+      , instanceVars = []
       }
 
 -- HELPERS
@@ -107,6 +111,17 @@ getInterface n ctx =
 
 addInterface :: Ctx -> (String, Intf) -> Ctx
 addInterface ctx (n, ty) = ctx { interfaces = (n, ty) : interfaces ctx }
+
+addInstanceVars :: Ctx -> (Type, [(String, Type)]) -> Ctx
+addInstanceVars ctx (cls, vars) = ctx { instanceVars = (cls, vars) : instanceVars ctx }
+
+getInstanceVars :: Type -> Ctx -> Tc [(String, Type)]
+getInstanceVars cls@(Cls name) ctx =
+  case lookup cls (instanceVars ctx) of
+    Nothing -> throwError $ UnknownType name
+    Just t -> return t
+
+getInstanceVars _ _ = undefined
 
 
 -- MODULE IMPORTATION

@@ -63,7 +63,7 @@ data Type
   | Var Var [Intf]
   | Fun [BoundVar] [Type] Type
   | Rec [(String, Type)]
-  | Cls String [(String, Type)]
+  | Cls String
   | TyAbs [Var] Type
   | TyApp Type [Type]
   | Top
@@ -85,7 +85,7 @@ instance PrettyPrint Intf where
 printType :: (Type  -> String) -> (Var -> String) -> (Intf -> String) -> Type -> String
 printType p _ _ t@(Con _) = p t
 printType p _ _ t@(Var _ _) = p t
-printType p _ _ t@(Cls _ _) = p t
+printType p _ _ t@(Cls _) = p t
 printType _ _ _ Type = "Type"
 printType _ _ _ Top = "⊤"
 printType _ _ _ Bot = "⊥"
@@ -119,13 +119,13 @@ printType f v i (TyApp ty args) =
 instance Show Type where
   show (Con t) = t
   show (Var v _) = show v
-  show (Cls t _) = t
+  show (Cls t) = t
   show t = printType show show show t
 
 instance PrettyPrint Type where
   ppr (Con t) = pprName t
   ppr (Var v _) = ppr v
-  ppr (Cls t _) = pprName t
+  ppr (Cls t) = pprName t
   ppr t = printType ppr ppr ppr t
 
 -- Free Type Variables
@@ -135,6 +135,7 @@ fv Top = []
 fv Bot = []
 fv Type = []
 fv (Con _) = []
+fv (Cls _) = []
 
 -- Var
 fv (Var x _) = [x]
@@ -143,8 +144,6 @@ fv (Var x _) = [x]
 fv (Fun x s r) =
   (foldl union [] (map fv s) `union` fv r) Data.List.\\ map fst x
 fv (Rec fields) =
-  foldl union [] $ map (fv . snd) fields
-fv (Cls _ fields) =
   foldl union [] $ map (fv . snd) fields
 fv (TyAbs gen ty) =
   fv ty Data.List.\\ gen

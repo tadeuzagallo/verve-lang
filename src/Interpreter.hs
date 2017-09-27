@@ -14,8 +14,8 @@ import PrettyPrint
 import Typing.Types (Type)
 
 import Control.Monad (foldM)
-import Control.Monad.Fix (mfix)
 import Data.Bifunctor (first)
+import Data.Function (fix)
 import Data.List (intercalate)
 import Data.Maybe (fromJust)
 import System.IO.Unsafe (unsafePerformIO)
@@ -43,6 +43,7 @@ data Value
   | VType Type
   | VNeutral Neutral
   | VRecord [(String, Value)]
+  | VLazy (() -> EvalResult)
 
 instance Show Value where
   show (VType t) = show t
@@ -115,7 +116,6 @@ builtins =
   , ("#unwrapClass"
     , VLam (\(VNeutral (NApp _ v)) ->
       return v))
-  , ("#fix", VLam (\(VLam fn) -> mfix fn))
   ]
 
 defaultEnv :: Env
@@ -144,6 +144,7 @@ e_expr _ (Lit s) = return $ VLit s
 e_expr env (Var (name, _)) =
   case getValue name env of
     Nothing -> return . VNeutral $ NFree name
+    Just (VLazy f) -> f ()
     Just val -> return val
 e_expr env (Lam (name, _) body) = do
   return . VLam $ \v -> e_expr (addValue env (name, v)) body
@@ -206,11 +207,14 @@ e_pattern env (VNeutral n) (PatCtor (name, _) pats) =
 
 e_let :: Env -> [Bind] -> Expr -> EvalResultT (Env, Value)
 e_let env binds exp = do
-  env' <- foldM e_bind env binds
+  let names = map (fst . fst) binds
+  let mkFn (_, expr) values = VLazy $ \() ->
+        let env' = foldl addValue env (zip names values)
+         in e_expr env' expr
+  let fns = map mkFn binds
+  let env' = foldl addValue env $ zip names (mfix_poly fns)
   val <- e_expr env' exp
   return (env', val)
-
-e_bind :: Env -> Bind -> EvalResultT Env
-e_bind env ((name, _), exp) = do
-  exp' <- e_expr env exp
-  return $ addValue env (name, exp')
+ where
+   mfix_poly :: [[a] -> a] -> [a]
+   mfix_poly fns = fix (\self -> map ($ self) fns)

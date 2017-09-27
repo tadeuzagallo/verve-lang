@@ -151,16 +151,8 @@ i_decl ctx (Let var expr) = do
   let let' = Let (var, exprTy) expr'
   return (ctx', let', exprTy)
 
-i_decl ctx (Class name vars methods) = do
-  vars' <- mapM (resolveId ctx) vars
-  let classTy = Cls name vars'
-  let ctorTy = [Rec vars'] ~> classTy
-  let ctx' = addType ctx (name, classTy)
-  let ctx'' = addValueType ctx' (name, ctorTy)
-
-  (ctx''', methods') <- foldM (i_method classTy) (ctx'', []) methods
-  let class' = Class (name, classTy) vars' methods'
-  return (ctx''', class', Type)
+i_decl ctx cls@(Class {}) = do
+  i_class ctx cls
 
 i_decl ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
@@ -243,18 +235,12 @@ fnTy ctx (generics, params, retType) = do
   tyArgs <- mapM (resolveId ctx) params
   mapM_ (assertKindStar . snd) tyArgs
   retType' <- resolveType ctx retType
+  assertKindStar retType'
   let tyArgs' = if null tyArgs
       then [void]
       else map snd tyArgs
   let ty = Fun generics tyArgs' retType'
   return (ty, tyArgs, retType')
-
-i_method :: Type -> (Ctx, [T.Function]) -> U.Function -> Tc (Ctx, [T.Function])
-i_method classTy (ctx, fns) fn = do
-  let ctx' = addType ctx ("Self", classTy)
-  let fn' = fn { params = ("self", U.TName "Self") : params fn }
-  (fn'', fnTy) <- i_fn ctx' fn'
-  return (addValueType ctx (name fn, fnTy), fn'' : fns)
 
 i_ctor :: Ctx -> (Maybe [Type] -> Type) -> U.DataCtor -> (Ctx, [T.DataCtor]) -> Tc (Ctx, [T.DataCtor])
 i_ctor sourceCtx mkEnumTy (name, types) (targetCtx, ctors) = do
@@ -359,7 +345,9 @@ i_expr ctx (FieldAccess expr _ field) = do
                 Just t -> return (FieldAccess expr' ty (field, t), t)
   case ty of
     Rec r -> aux ty r
-    Cls _ r -> aux ty r
+    Cls _ -> do
+      vars <- getInstanceVars ty ctx
+      aux ty vars
     _ -> throwError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
 i_expr ctx (If ifCond ifBody elseBody) = do
@@ -556,3 +544,34 @@ c_pattern ctx ty (PatCtor name vars) = do
       aux (vars, ctx) (ty, var) = do
         (var', ctx') <- c_pattern ctx ty var
         return (var':vars, ctx')
+
+i_class :: Ctx -> U.Decl -> Tc (Ctx, T.Decl, Type)
+i_class ctx (Class name vars methods) = do
+  let classTy = Cls name
+  let ctxWithClass = addType ctx (name, classTy)
+  vars' <- mapM (resolveId ctxWithClass) vars
+  let ctorTy = [Rec vars'] ~> classTy
+  let ctxWithCtor = addValueType ctxWithClass (name, ctorTy)
+  let ctxWithVars = addInstanceVars ctxWithCtor (classTy, vars')
+  ctxWithMethods <- foldM (i_addMethodType classTy) ctxWithVars methods
+  methods' <- mapM (i_method classTy ctxWithMethods) methods
+  let class' = Class (name, classTy) vars' methods'
+  return (ctxWithMethods, class', Type)
+
+i_class _ _ = undefined
+
+i_addMethodType :: Type -> Ctx -> U.Function -> Tc Ctx
+i_addMethodType classTy ctx fn = do
+  let ctxWithSelf = addType ctx ("Self", classTy)
+  let fn' = fn { params = ("self", U.TName "Self") : params fn }
+  gen' <- resolveGenerics ctxWithSelf $ generics fn'
+  (ctxWithGenerics, genericVars) <- addGenerics ctxWithSelf gen'
+  (ty, _, _) <- fnTy ctxWithGenerics (genericVars, params fn', retType fn')
+  return $ addValueType ctx (name fn', ty)
+
+i_method :: Type -> Ctx -> U.Function -> Tc T.Function
+i_method classTy ctx fn = do
+  let ctx' = addType ctx ("Self", classTy)
+  let fn' = fn { params = ("self", U.TName "Self") : params fn }
+  (fn'', _) <- i_fn ctx' fn'
+  return fn''

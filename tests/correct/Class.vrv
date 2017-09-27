@@ -29,6 +29,36 @@ implementation Shape<Square> {
 area(x) // CHECK-L: 100 : Int
 x.area() // CHECK-L: 100 : Int
 
+// Mutual recursion
+enum Nat {
+  Z
+  S(Nat)
+}
+
+class C {
+  fn even(x: Nat) -> Bool {
+    match x {
+      case Z: True
+      case S(y): self.odd(y)
+    }
+  }
+
+  fn odd(x: Nat) -> Bool {
+    match x {
+      case Z: False
+      case S(y): self.even(y)
+    }
+  }
+}
+
+C{}.even(Z) // CHECK-L: True : Bool
+C{}.odd(S(Z)) // CHECK-L: True : Bool
+C{}.even(S(S(Z))) // CHECK-L: True : Bool
+C{}.odd(S(S(Z))) // CHECK-L: False : Bool
+C{}.odd(S(S(S(Z)))) // CHECK-L: True : Bool
+C{}.even(S(S(S(Z)))) // CHECK-L: False : Bool
+C{}.even(S(S(S(S(Z))))) // CHECK-L: True : Bool
+
 // Polymorphic classes
 enum List<U> {
   Nil

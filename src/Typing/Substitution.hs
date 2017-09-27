@@ -26,10 +26,11 @@ zipSubst :: [Var] -> [Type] -> Substitution
 zipSubst vs = Substitution . zip vs
 
 applySubst :: Substitution -> Type -> Type
-applySubst _ (Con c) = Con c
 applySubst _ Top = Top
 applySubst _ Bot = Bot
 applySubst _ Type = Type
+applySubst _ (Con c) = Con c
+applySubst _ (Cls c) = Cls c
 applySubst (Substitution s) var@(Var v _) =
   case lookup v s of
     Nothing -> var
@@ -40,8 +41,6 @@ applySubst s (Fun gs t1 t2) =
    in Fun gs (map (applySubst s') t1) (applySubst s' t2)
 applySubst s (Rec fields) =
   Rec (map (\(k, v) -> (k, applySubst s v)) fields)
-applySubst s (Cls name vars) =
-  Cls name (map (\(k, v) -> (k, applySubst s v)) vars)
 applySubst s (TyAbs gen ty) =
   let s' = filterSubst (not . flip elem gen) s
    in TyAbs gen (applySubst s' ty)

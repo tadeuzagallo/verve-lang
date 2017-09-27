@@ -95,6 +95,9 @@ _ // Bot = Bot
 -- VU-Con
 _ // (Con x) = (Con x)
 
+-- VU-Cls
+_ // (Cls name) = (Cls name)
+
 -- VU-Type
 _ // Type = Type
 
@@ -114,10 +117,6 @@ v // (Rec fields) =
   let fields' = map (\(k, t) -> (k, v // t)) fields
    in Rec fields'
 
-v // (Cls name vars) =
-  let vars' = map (\(k, t) -> (k, v // t)) vars
-   in Cls name vars'
-
 v // (TyAbs gen ty) =
   let v' = v Data.List.\\ gen
    in TyAbs gen (v' // ty)
@@ -135,6 +134,9 @@ _ \\ Bot = Bot
 --
 -- VD-Con
 _ \\ (Con x) = (Con x)
+--
+-- VD-Cls
+_ \\ (Cls name) = (Cls name)
 
 -- VD-Type
 _ \\ Type = Type
@@ -154,10 +156,6 @@ v \\ (Fun x s t) =
 v \\ (Rec fields) =
   let fields' = map (\(k, t) -> (k, v \\ t)) fields
    in Rec fields'
-
-v \\ (Cls name vars) =
-  let vars' = map (\(k, t) -> (k, v \\ t)) vars
-   in Cls name vars'
 
 v \\ (TyAbs gen ty) =
   let v' = v Data.List.\\ gen

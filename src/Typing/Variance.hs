@@ -17,6 +17,7 @@ variance :: Var -> Type -> Variance
 variance _ Top = Bivariant
 variance _ Bot = Bivariant
 variance _ (Con _) = Bivariant
+variance _ (Cls _) = Bivariant
 variance _ Type = Bivariant
 variance v (Var x _)
   | v == x = Covariant
@@ -29,9 +30,6 @@ variance v (Fun x t r)
 variance v (Rec fields) =
   let vars = map (variance v . snd) fields
    in foldl joinVariance Bivariant vars
-variance v (Cls _ vars) =
-  let vars' = map (variance v . snd) vars
-   in foldl joinVariance Bivariant vars'
 variance v (TyAbs gen ty)
   | v `elem` gen = Bivariant
   | otherwise = variance v ty

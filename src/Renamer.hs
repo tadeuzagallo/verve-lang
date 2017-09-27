@@ -8,7 +8,7 @@ module Renamer
 import Absyn.Untyped
 import Error
 
-import Control.Monad (foldM)
+import Control.Monad (foldM, zipWithM)
 import Control.Monad.State (StateT, evalStateT, gets)
 import Control.Monad.Except (Except, runExcept)
 import Data.List (intercalate)
@@ -225,10 +225,10 @@ r_decl env (Let name expr) = do
 
 r_decl env (Class name vars methods) = do
   (envWithClass, name') <- addLocal env name
-  (_, vars') <- r_fnParams envWithClass vars
-  envWithSelf <- addInternal env "self"
-  ((_, envWithoutSelf), methods') <- foldAcc r_method (envWithSelf, envWithClass) methods
-  return (envWithoutSelf, Class name' vars' methods')
+  (envWithVars, vars') <- r_fnParams envWithClass vars
+  (envWithMethods, names') <- foldAcc r_methodSig envWithVars methods
+  methods' <- zipWithM (r_methodImp envWithMethods) names' methods
+  return (envWithMethods, Class name' vars' methods')
 
 r_decl env (Operator assoc prec gen lhs op rhs retType body) = do
   prec' <- r_prec env prec
@@ -382,24 +382,24 @@ r_type env (TRecord fields) = do
   return $ TRecord fields'
 
 r_fnNonRec :: RnEnv -> Function -> Rn (RnEnv, Function)
-r_fnNonRec = r_fnBase False
+r_fnNonRec env fn = do
+  (_, name') <- addLocal env (name fn)
+  fn' <- r_fnBase name' env fn
+  return (env, fn')
 
 r_fn :: RnEnv -> Function -> Rn (RnEnv, Function)
-r_fn = r_fnBase True
+r_fn env fn = do
+  (envWithFn, name') <- addLocal env (name fn)
+  fn' <- r_fnBase name' envWithFn fn
+  return (envWithFn, fn')
 
-r_fnBase :: Bool -> RnEnv -> Function -> Rn (RnEnv, Function)
-r_fnBase isRec env (Function name gen params retType body) = do
-  (envWithFn, name') <- addLocal env name
-  let env' = if isRec
-      then envWithFn
-      else env
-  (envWithGenerics, gen') <- r_generics env' gen
+r_fnBase :: String -> RnEnv -> Function -> Rn Function
+r_fnBase name' env (Function _ gen params retType body) = do
+  (envWithGenerics, gen') <- r_generics env gen
   (envWithParams, params') <- r_fnParams envWithGenerics params
   retType' <- r_type envWithGenerics retType
   body' <- r_stmts envWithParams body
-
-  let fn = Function name' gen' params' retType' body'
-   in return (env', fn)
+  return $ Function name' gen' params' retType' body'
 
 
 r_fnParams :: RnEnv -> [Param] -> Rn (RnEnv, [Param])
@@ -435,11 +435,11 @@ r_ctor env (name, args) = do
   return (env', (name', args'))
 
 
-foldAcc :: Monad m => (a -> b -> m (a, b)) -> a -> [b] -> m (a, [b])
+foldAcc :: Monad m => (a -> b -> m (a, c)) -> a -> [b] -> m (a, [c])
 foldAcc f a bs =
-  let aux (a, bs) b = do
-        (a', b') <- f a b
-        return (a', b' : bs)
+  let aux (a, cs) b = do
+        (a', c) <- f a b
+        return (a', c : cs)
    in fmap reverse <$> foldM aux (a, []) bs
 
 r_prec :: RnEnv -> Precedence -> Rn Precedence
@@ -459,11 +459,14 @@ r_prec env (PrecEqual name) = do
   return (PrecEqual name')
 
 
-r_method :: (RnEnv, RnEnv) -> Function -> Rn ((RnEnv, RnEnv), Function)
-r_method (envWithSelf, envWithoutSelf) fn = do
-  (envWithSelf', fn') <- r_fn envWithSelf fn
-  (envWithoutSelf', _) <- addLocal envWithoutSelf (name fn)
-  return ((envWithSelf', envWithoutSelf'), fn')
+r_methodSig :: RnEnv -> Function -> Rn (RnEnv, String)
+r_methodSig env fn = do
+  addLocal env (name fn)
+
+r_methodImp :: RnEnv -> String -> Function -> Rn Function
+r_methodImp env name' fn = do
+  envWithSelf <- addInternal env "self"
+  r_fnBase name' envWithSelf fn
 
 r_fnDecl :: (RnEnv, RnEnv) -> FunctionDecl -> Rn ((RnEnv, RnEnv), FunctionDecl)
 r_fnDecl (envWithParam, envWithoutParam) (FunctionDecl name gen params retType) = do

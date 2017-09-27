@@ -59,17 +59,16 @@ d_decl (Implementation (name, _) generics ty methods) =
   let dict = CA.Record (map d_implMethod methods)
       dictName = ("#" ++ name ++ print ty, void)
       dictLam = foldr CA.Lam dict (mkConstraints generics)
-      fixedDict = CA.App (mk_var "#fix") (CA.Lam dictName dictLam)
-   in [(dictName, fixedDict)]
+   in [(dictName, dictLam)]
   where
     print (TyApp ty _) = print ty
     print ty = show ty
 
-d_fnNoFix :: Function -> CA.Expr
-d_fnNoFix fn@(Function { params=[] }) =
+d_fn :: Function -> CA.Expr
+d_fn fn@(Function { params=[] }) =
   d_fn (fn { params = [ignore void] })
 
-d_fnNoFix fn =
+d_fn fn =
   let fn' = foldr CA.Lam (d_stmts $ body fn) (map (uncurry (,)) $ params fn)
    in foldr CA.Lam fn' (mkConstraints $ generics fn)
 
@@ -79,11 +78,6 @@ mkConstraints gen =
   where
     aux (varName, bounds) =
       map (\bound -> ("#" ++ show bound ++ varName, void)) bounds ++ [(varName, Type)]
-
-d_fn :: Function -> CA.Expr
-d_fn fn =
-  let fn' = d_fnNoFix fn
-   in CA.App (CA.Var ("#fix", void)) (CA.Lam (name fn) fn')
 
 mk_var :: String -> CA.Expr
 mk_var v = CA.Var (v, void)
@@ -96,7 +90,7 @@ d_intfMethod (FunctionDecl name@(s_name, _) _ _ _) =
 
 d_implMethod :: Function -> CA.Bind
 d_implMethod fn =
-   (name fn, d_fnNoFix fn)
+   (name fn, d_fn fn)
 
 data Constraint
   = CHole
@@ -138,7 +132,7 @@ d_expr (FieldAccess expr ty (field, _)) =
   let dexpr = (d_expr expr)
       expr' =
         case ty of
-          Cls _ _ -> CA.App (CA.Var ("#unwrapClass", void)) dexpr
+          Cls _ -> CA.App (CA.Var ("#unwrapClass", void)) dexpr
           Rec _ -> dexpr
           _ -> undefined
    in CA.App
