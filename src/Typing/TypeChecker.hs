@@ -10,6 +10,7 @@ import qualified Absyn.Typed as T
 
 import Absyn.Base
 import Absyn.Meta
+import Absyn.ValueOccursCheck
 import Error
 import Typing.Constraint
 import Typing.Ctx
@@ -155,6 +156,7 @@ i_decl ctx (Let (var, ty) expr) = do
       _ -> do
         ty' <- resolveType ctx ty
         let ctx' = addValueType ctx (var, ty')
+        _ <- valueOccursCheck var expr
         (expr', exprTy) <- i_expr ctx' expr
         exprTy <:! ty'
         return (ctx',expr', ty')

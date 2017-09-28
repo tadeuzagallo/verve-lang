@@ -25,6 +25,7 @@ data TypeError
   | ImplementationError String Type
   | ImplementingNonInterface String Type
   | KindError Type Kind Kind
+  | VariableUsedDuringInitialization Name
 
 instance ErrorT TypeError where
   kind _ = "TypeError"
@@ -77,3 +78,6 @@ instance Show TypeError where
 
   show (KindError ty expectedKind actualKind) =
     "Type `" ++ ppr ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
+
+  show (VariableUsedDuringInitialization var) =
+    "Variable `" ++ var ++ "` is used during its own initialisation, which will cause an infinite loop."

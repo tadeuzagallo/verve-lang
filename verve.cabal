@@ -33,6 +33,7 @@ library
 
   other-modules:       Absyn.Base
                        Absyn.Meta
+                       Absyn.ValueOccursCheck
                        Typing.Constraint
                        Typing.Kinds
                        Typing.State

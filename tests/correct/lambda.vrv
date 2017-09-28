@@ -6,3 +6,9 @@ let fact : (Int) -> Int = fn f(n : Int) -> Int {
   }
 }
 fact(5) // CHECK-L: 120 : Int
+
+let x : Int = match True {
+  case True:
+    let x = 42
+    x
+} // CHECK-L: 42 : Int

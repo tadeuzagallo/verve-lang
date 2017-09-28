@@ -5,3 +5,28 @@ let fact = fn f'(n: Int) -> Int {
     case _: n * fact(n - 1)
   }
 } // CHECK-L: Unknown variable: fact
+
+// CHECK-L: Variable `x` is used during its own initialisation, which will cause an infinite loop.
+let x : Int = x
+
+fn id<T>(x: T) -> T { x }
+
+// CHECK-L: Variable `x` is used during its own initialisation, which will cause an infinite loop.
+let x : Int = id(x)
+
+// CHECK-L: Variable `x` is used during its own initialisation, which will cause an infinite loop.
+let x : Int = match True {
+  case True: x
+}
+
+// CHECK-L: Variable `x` is used during its own initialisation, which will cause an infinite loop.
+let x : Int = { x : x }.x
+
+fn head<T>(l: List<T>) -> T {
+  match l {
+    case [x, ...]: x
+  }
+}
+
+// CHECK-L: Variable `x` is used during its own initialisation, which will cause an infinite loop.
+let x : Int = head([x])
