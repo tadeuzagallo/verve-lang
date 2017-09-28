@@ -1,0 +1,7 @@
+// RUN: %not %verve | %check
+let fact = fn f'(n: Int) -> Int {
+  match n {
+    case 1: 1
+    case _: n * fact(n - 1)
+  }
+} // CHECK-L: Unknown variable: fact

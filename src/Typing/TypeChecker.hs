@@ -145,9 +145,19 @@ i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
                      , opBody = opBody' }
   return (addValueType ctx (opName, ty), op', ty)
 
-i_decl ctx (Let var expr) = do
-  (expr', exprTy) <- i_expr ctx expr
-  let ctx' = addValueType ctx (var, exprTy)
+i_decl ctx (Let (var, ty) expr) = do
+  (ctx', expr', exprTy) <-
+    case ty of
+      U.TPlaceholder -> do
+        (expr', exprTy) <- i_expr ctx expr
+        let ctx' = addValueType ctx (var, exprTy)
+        return (ctx', expr', exprTy)
+      _ -> do
+        ty' <- resolveType ctx ty
+        let ctx' = addValueType ctx (var, ty')
+        (expr', exprTy) <- i_expr ctx' expr
+        exprTy <:! ty'
+        return (ctx',expr', ty')
   let let' = Let (var, exprTy) expr'
   return (ctx', let', exprTy)
 

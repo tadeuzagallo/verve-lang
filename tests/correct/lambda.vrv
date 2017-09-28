@@ -1,0 +1,8 @@
+// RUN: %verve | %check
+let fact : (Int) -> Int = fn f(n : Int) -> Int {
+  match n {
+    case 1: 1
+    case _: n * fact(n - 1)
+  }
+}
+fact(5) // CHECK-L: 120 : Int
