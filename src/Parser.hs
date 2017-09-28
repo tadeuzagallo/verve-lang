@@ -128,6 +128,7 @@ p_let :: Parser Decl
 p_let = do
   reserved "let"
   name <- lcid
+
   symbol "="
   expr <- p_expr True
   return $ Let name expr
@@ -191,8 +192,15 @@ p_generics = angles $ commaSep p_genericParam
 p_genericParam :: Parser (Name, [String])
 p_genericParam = do
   var <- ucid
-  bounds <- option [] (symbol ":" *>  (parens (commaSep1 ucid) <|> (ucid >>= return . (:[]) )))
+  bounds <- option [] p_genericBounds
   return (var, bounds)
+
+p_genericBounds :: Parser [String]
+p_genericBounds = do
+  symbol ":"
+  choice [ parens $ commaSep1 ucid
+         , ucid >>= return . (:[])
+         ]
 
 p_typedName :: Parser Param
 p_typedName = do
@@ -226,7 +234,7 @@ p_typeArrow = do
 
 p_typeRecord :: Parser Type
 p_typeRecord = do
-  fields <- braces $ commaSep ((,) <$> lcid <* symbol ":" <*> p_type)
+  fields <- braces $ commaSep p_typedName
   return $ TRecord fields
 
 p_expr :: Bool -> Parser Expr
