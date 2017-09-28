@@ -3,5 +3,36 @@
 let x = 1
 x // CHECK: 1 : Int
 
-/*let f = fn id<T>(x: T) -> T { x }*/
-/*f(x)*/
+let f = fn id<T>(x: T) -> T { x }
+f(x) // CHECK-L: 1 : Int
+
+// MUTUAL RECURSION
+
+enum Nat {
+  Z
+  S(Nat)
+}
+
+let self : {
+  even: (Nat) -> Bool,
+  odd: (Nat) -> Bool,
+} = {
+  even: fn even(x: Nat) -> Bool {
+    match x {
+      case Z: True
+      case S(y): (self.odd)(y)
+    }
+  },
+  odd: fn odd(x: Nat) -> Bool {
+    match x {
+      case Z: False
+      case S(y): (self.even)(y)
+    }
+  }
+}
+(self.odd)(Z) // CHECK-L: False : Bool
+(self.even)(Z) // CHECK-L: True : Bool
+(self.odd)(S(Z)) // CHECK-L: True : Bool
+(self.even)(S(Z)) // CHECK-L: False : Bool
+(self.odd)(S(S(Z))) // CHECK-L: False : Bool
+(self.even)(S(S(Z))) // CHECK-L: True : Bool

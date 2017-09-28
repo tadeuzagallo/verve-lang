@@ -219,9 +219,10 @@ r_decl env (FnStmt fn) = do
   return (env', FnStmt fn')
 
 r_decl env (Let (name, ty) expr) = do
+  ty' <- r_type env ty
   envWithVar <- addInternal env name
   expr' <- r_expr envWithVar expr
-  return (envWithVar, Let (name, ty) expr')
+  return (envWithVar, Let (name, ty') expr')
 
 r_decl env (Class name vars methods) = do
   (envWithClass, name') <- addLocal env name
