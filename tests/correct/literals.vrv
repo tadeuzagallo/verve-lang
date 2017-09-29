@@ -1,9 +1,16 @@
-// RUN: %verve
+// RUN: %verve | %check
 
 // Ints
-42
-0
-100000000
+42 // CHECK-L: 42 : Int
+0 // CHECK-L: 0 : Int
+100000000 // CHECK-L: 100000000 : Int
+
+// Floats
+4.2 // CHECK-L: 4.2
+42.0 // CHECK-L: 42.0
+
+// Chars
+'a' // CHECK-L: 'a' : Char
 
 // Strings
-"verve"
+"verve" // CHECK-L: "verve" : String
