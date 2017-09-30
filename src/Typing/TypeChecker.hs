@@ -377,7 +377,7 @@ i_expr ctx (FnExpr fn) =
 
 i_expr ctx (Negate _ expr) = do
   (expr', ty) <- i_expr ctx expr
-  intf <- getInterface "Std.Num" ctx
+  intf <- getInterface "Std.Number" ctx
   constrArgs <- boundsCheck ctx ty intf
   return (Negate constrArgs expr', ty)
 

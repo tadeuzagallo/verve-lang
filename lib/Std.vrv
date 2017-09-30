@@ -8,8 +8,7 @@ enum Either<T, U> {
   Right(U)
 }
 
-// TODO: s/Num/Number/g
-interface Num<T> {
+interface Number<T> {
   let num_add : (T, T) -> T
   let num_sub : (T, T) -> T
   let num_mul : (T, T) -> T
@@ -17,22 +16,22 @@ interface Num<T> {
   let negate : (T) -> T
 }
 
-operator<T: Num> (x: T) + (y: T) -> T {
+operator<T: Number> (x: T) + (y: T) -> T {
   num_add(x, y)
 }
-operator<T: Num> (x: T) - (y: T) -> T {
+operator<T: Number> (x: T) - (y: T) -> T {
   num_sub(x, y)
 }
 #prec(higher(+))
-operator<T: Num> (x: T) * (y: T) -> T {
+operator<T: Number> (x: T) * (y: T) -> T {
   num_mul(x, y)
 }
 #prec(equal(*))
-operator<T: Num> (x: T) / (y: T) -> T {
+operator<T: Number> (x: T) / (y: T) -> T {
   num_div(x, y)
 }
 
-implementation Num<Int> {
+implementation Number<Int> {
   fn num_add(x: Int, y: Int) -> Int { int_add(x, y) }
   fn num_sub(x: Int, y: Int) -> Int { int_sub(x, y) }
   fn num_mul(x: Int, y: Int) -> Int { int_mul(x, y) }

@@ -1,6 +1,7 @@
 // RUN: %verve | %check
 
-int_add(3, 5) // CHECK: 8 : Int
-int_sub(3, 5) // CHECK: -2 : Int
-int_mul(3, 5) // CHECK: 15 : Int
-int_div(35, 5) // CHECK: 7 : Int
+int_add(3, 5) // CHECK-L: 8 : Int
+int_sub(3, 5) // CHECK-L: -2 : Int
+int_mul(3, 5) // CHECK-L: 15 : Int
+int_div(35, 5) // CHECK-L: 7 : Int
+int_neg(42) // CHECK-L: -42 : Int
