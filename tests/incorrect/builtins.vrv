@@ -1,0 +1,3 @@
+// RUN: %not %verve | %check
+-"" // CHECK-L: No implementation of `Num` for type `String`
+-42.0 // CHECK-L: No implementation of `Num` for type `Float`

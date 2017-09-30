@@ -104,6 +104,10 @@ builtins =
         (\(VLit (Integer a)) ->
            return . VLam $ \(VLit (Integer b)) ->
              return . VLit . Integer $ a `div` b))
+  , ( "int_neg"
+    , VLam
+        (\(VLit (Integer a)) ->
+          return . VLit . Integer $ negate a))
   , ( "string_print"
     , VLam
         (\v ->

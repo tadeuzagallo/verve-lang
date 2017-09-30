@@ -5,12 +5,30 @@
 0 // CHECK-L: 0 : Int
 100000000 // CHECK-L: 100000000 : Int
 
+// Int negation
+-10 // CHECK-L: -10 : Int
+let x = 42
+-x // CHECK-L: -42 : Int
+
 // Floats
-4.2 // CHECK-L: 4.2
-42.0 // CHECK-L: 42.0
+4.2 // CHECK-L: 4.2 : Float
+42.0 // CHECK-L: 42.0 : Float
+
+// TODO: Float negation
+/*-12.0*/
+/*let x = 42.0*/
+/*-x*/
 
 // Chars
 'a' // CHECK-L: 'a' : Char
 
 // Strings
 "verve" // CHECK-L: "verve" : String
+
+// Lists
+
+[1, 2, 3] // CHECK-L: List<Int>
+
+[{x: 1}, {}] // CHECK-L: List<{}>
+
+[{x: 1}, {}, 1] // CHECK-L: List<⊤>

@@ -8,11 +8,13 @@ enum Either<T, U> {
   Right(U)
 }
 
+// TODO: s/Num/Number/g
 interface Num<T> {
   let num_add : (T, T) -> T
   let num_sub : (T, T) -> T
   let num_mul : (T, T) -> T
   let num_div : (T, T) -> T
+  let negate : (T) -> T
 }
 
 operator<T: Num> (x: T) + (y: T) -> T {
@@ -35,6 +37,7 @@ implementation Num<Int> {
   fn num_sub(x: Int, y: Int) -> Int { int_sub(x, y) }
   fn num_mul(x: Int, y: Int) -> Int { int_mul(x, y) }
   fn num_div(x: Int, y: Int) -> Int { int_div(x, y) }
+  fn negate(x: Int) -> Int { int_neg(x) }
 }
 
 interface Printable<T> {

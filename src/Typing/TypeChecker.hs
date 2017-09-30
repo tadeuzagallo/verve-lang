@@ -375,6 +375,12 @@ i_expr ctx (List _ items) = do
 i_expr ctx (FnExpr fn) =
   first FnExpr <$> i_fn ctx fn
 
+i_expr ctx (Negate _ expr) = do
+  (expr', ty) <- i_expr ctx expr
+  intf <- getInterface "Std.Num" ctx
+  constrArgs <- boundsCheck ctx ty intf
+  return (Negate constrArgs expr', ty)
+
 -- Expressions generated during type checking
 i_expr _ VoidExpr = return (VoidExpr, void)
 

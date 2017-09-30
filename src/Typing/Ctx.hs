@@ -77,6 +77,7 @@ defaultCtx =
                  , ("int_sub", [int, int] ~> int)
                  , ("int_mul", [int, int] ~> int)
                  , ("int_div", [int, int] ~> int)
+                 , ("int_neg", [int] ~> int)
                  , ("True", bool)
                  , ("False", bool)
                  , ("Nil", forall [T] $ list T)

@@ -111,6 +111,9 @@ n_expr env (BinOp _ _ ll lop (BinOp _ _ rl rop rr)) = do
       BinOp [] [] (BinOp [] [] ll' lop rl') rop rr'
     PRight ->
       BinOp [] [] ll' lop (BinOp [] [] rl' rop rr')
+
+-- TODO: this should propagate, otherwise nested operations won't be re-associated
+-- COUNTER-EXAMPLE: (fn f() -> Int { 2 * 3 + 4 })()
 n_expr _ expr = return expr
 
 data Prec

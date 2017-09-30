@@ -251,6 +251,7 @@ p_lhs allowCtor = choice [ p_record
                          , try p_lcid
                          , p_ucid allowCtor
                          , parens p_parenthesizedExpr
+                         , p_negate allowCtor
                          ]
 
 p_lcid :: Parser Expr
@@ -272,6 +273,11 @@ p_parenthesizedExpr = do
   choice [ ParenthesizedExpr <$> p_expr True
          , operator >>= return . flip Ident TPlaceholder . (:[])
          ]
+
+p_negate :: Bool -> Parser Expr
+p_negate allowCtor = try $ do { symbol "-"
+                              ; Negate [] <$> p_expr allowCtor
+                              }
 
 p_ctor :: Expr -> Parser Expr
 p_ctor ctor = do

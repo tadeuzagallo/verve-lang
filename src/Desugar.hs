@@ -155,6 +155,13 @@ d_expr (List ty items) =
 d_expr (FnExpr fn) =
   d_fn fn
 
+d_expr (Negate constrArgs expr) =
+  let (constraints', _) = computeConstraints constrArgs
+      negate = (CA.Var ("Std.negate", void))
+      app = foldl CA.App negate constraints'
+      expr' = d_expr expr
+   in CA.App app expr'
+
 computeConstraints :: [ConstraintArg] -> ([CA.Expr], [Id])
 computeConstraints cs = foldl aux ([], []) $ concatMap mkConstraint cs
   where

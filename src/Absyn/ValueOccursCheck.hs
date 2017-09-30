@@ -63,6 +63,9 @@ valueOccursCheckExpr var (FieldAccess obj _ _) =
 valueOccursCheckExpr var (TypeCall callee _) =
   valueOccursCheckExpr var callee
 
+valueOccursCheckExpr var (Negate _ expr) =
+  valueOccursCheckExpr var expr
+
 instance ValueOccursCheck BaseStmt where
   valueOccursCheck var (Decl x) =
     valueOccursCheck var x
