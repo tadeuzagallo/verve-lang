@@ -1,3 +1,4 @@
+import cgi
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives
 
@@ -22,7 +23,8 @@ def visit_code_node(self, node):
 
 def depart_code_node(self, node):
     klass = 'class="language-{}"'.format(node['language'])
-    link = """<pre {0}><code {0}>{1}</code></pre>""".format(klass, node['source'])
+    source = cgi.escape(node['source']).encode('ascii', 'xmlcharrefreplace')
+    link = """<pre {0}><code {0}>{1}</code></pre>""".format(klass, source)
     self.body.append(link)
 
 def setup(app):
