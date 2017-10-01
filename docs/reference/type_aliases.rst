@@ -1,9 +1,9 @@
 Type Aliases
 ============
 
-As types get more complicated, it not just becomes annoying to have to type really long type signatures, but it can also become hard to read the code and understand what those types actually refer to.
+As types get more complicated, it can be become cumbersome to have to repeat long types all over your code, and it often results in code that is hard to read and understand.
 
-Just like we avoid magic numbers, it can be useful to give names to types.
+Just like it's good practice to have constants instead of "magic numbers" all over your code, it can be useful to give names to types too.
 
 .. prismjs:: verve
 
