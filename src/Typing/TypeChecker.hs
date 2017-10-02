@@ -168,10 +168,10 @@ i_decl ctx cls@(Class {}) = do
 
 i_decl ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
-  methods' <- mapM (resolveId ctx') methods
-  let ty = Intf name param' methods'
+  (methods', methodsTy) <- unzip <$> mapM (i_interfaceItem ctx') methods
+  let ty = Intf name param' methodsTy
   let intf = Interface (name, void) param methods'
-  let ctx' = foldl (aux ty param') ctx methods'
+  let ctx' = foldl (aux ty param') ctx methodsTy
   return (addInterface ctx' (name, ty), intf, void)
     where
       aux intf param ctx (name, Fun gen params retType) =
@@ -585,3 +585,21 @@ i_method classTy ctx fn = do
   let fn' = fn { params = ("self", U.TName "Self") : params fn }
   (fn'', _) <- i_fn ctx' fn'
   return fn''
+
+
+i_interfaceItem :: Ctx -> U.InterfaceItem -> Tc (T.InterfaceItem, T.Id)
+i_interfaceItem ctx (IntfVar id) = do
+  id' <- resolveId ctx id
+  return (IntfVar id', id')
+
+i_interfaceItem ctx op@(IntfOperator _ _ lhs name rhs retType) = do
+  lhs' <- resolveType ctx lhs
+  rhs' <- resolveType ctx rhs
+  retType' <- resolveType ctx retType
+  let ty = Fun [] [lhs', rhs'] retType'
+  let op' = op { intfOpLhs = lhs'
+               , intfOpName = (name, ty)
+               , intfOpRhs = rhs'
+               , intfOpRetType = retType'
+               }
+  return (op', (name, ty))

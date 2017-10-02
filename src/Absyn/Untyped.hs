@@ -22,6 +22,7 @@ data Type
 type Module = BaseModule Name Type Name
 type Stmt = BaseStmt Name Type Name
 type Decl = BaseDecl Name Type Name
+type InterfaceItem = BaseInterfaceItem Name Type
 type DataCtor = BaseDataCtor Name Type
 type Param = BaseParam Type
 type Generics = BaseGenerics Name

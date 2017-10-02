@@ -7,20 +7,19 @@ operator (x: Int) + (y: Int) -> Int {
 3 + 5 // CHECK-L: 8 : Int
 
 // TODO: add support for operators in interfaces
-/*interface Num<T> {*/
-  /*#assoc(left)*/
-  /*operator (T) + (T) -> T*/
+interface Num<T> {
+  #assoc(left)
+  operator (T) + (T) -> T
 
-  /*#assoc(left) #prec(equal(+))*/
-  /*operator (T) - (T) -> T*/
+  #assoc(left) #prec(equal(+))
+  operator (T) - (T) -> T
 
-  /*#assoc(left) #prec(higher(+))*/
-  /*operator (T) * (T) -> T*/
+  #assoc(left) #prec(higher(+))
+  operator (T) * (T) -> T
 
-  /*#assoc(left) #prec(equal(*))*/
-  /*#unknown / / CHECK: warning: Unknown attribute: unknown*/
-  /*operator (T) / (T) -> T*/
-/*}*/
+  #assoc(left) #prec(equal(*))
+  operator (T) / (T) -> T
+}
 
 /*implementation Num<Int> {*/
   /*operator (x: Int) + (y: Int) -> Int {*/

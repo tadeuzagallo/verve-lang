@@ -91,7 +91,7 @@ p_operator = do
   opLhs <- parens p_typedName
   opName <- operator
   opRhs <- parens p_typedName
-  opRetType <- p_retType
+  opRetType <- option TVoid p_retType
   opBody <- p_codeBlock
   return $ Operator { opPrec
                     , opAssoc
@@ -155,8 +155,34 @@ p_interface = do
   reserved "interface"
   intfName <- ucid
   intfParam <- angles ucid
-  intfMethods <- p_body p_varDecl
+  intfMethods <- p_body (p_intfVar <|> p_intfOperator)
   return $ Interface { intfName, intfParam, intfMethods }
+
+p_intfVar :: Parser InterfaceItem
+p_intfVar = do
+  reserved "let"
+  IntfVar <$> p_typedName
+
+p_intfOperator :: Parser InterfaceItem
+p_intfOperator = do
+  maybeOpAssoc <- optionMaybe p_opAssoc
+  intfOpPrec <- option defaultPrec p_opPrec
+  intfOpAssoc <- case maybeOpAssoc of
+                   Just assoc -> return assoc
+                   Nothing -> option defaultAssoc p_opAssoc
+  anySpace
+  reserved "operator"
+  intfOpLhs <- parens p_type
+  intfOpName <- operator
+  intfOpRhs <- parens p_type
+  intfOpRetType <- option TVoid p_retType
+  return $ IntfOperator { intfOpPrec
+                        , intfOpAssoc
+                        , intfOpLhs
+                        , intfOpName
+                        , intfOpRhs
+                        , intfOpRetType
+                        }
 
 p_implementation :: Parser Decl
 p_implementation = do

@@ -32,7 +32,7 @@ data BaseDecl a b c
              }
   | Interface { intfName :: a
               , intfParam :: Name
-              , intfMethods :: [BaseParam b]}
+              , intfMethods :: [BaseInterfaceItem a b]}
   | Implementation { implName :: a
                    , implGenerics :: BaseGenerics c
                    , implType :: b
@@ -42,6 +42,18 @@ data BaseDecl a b c
               , aliasType :: b
               }
    deriving (Show)
+
+data BaseInterfaceItem a b
+  = IntfVar (Name, b)
+  | IntfOperator { intfOpAssoc :: Associativity
+                 , intfOpPrec :: Precedence
+                 , intfOpLhs :: b
+                 , intfOpName :: a
+                 , intfOpRhs :: b
+                 , intfOpRetType :: b
+                 }
+
+  deriving (Show)
 
 type BaseDataCtor a b = (a, Maybe [b])
 type BaseParam b = (Name, b)

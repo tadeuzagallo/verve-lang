@@ -472,9 +472,19 @@ r_methodImp env name' fn = do
   envWithSelf <- addInternal env "self"
   r_fnBase name' envWithSelf fn
 
-r_intfField :: String -> RnEnv -> Param -> Rn (RnEnv, Param)
-r_intfField param env (name, ty) = do
+r_intfField :: String -> RnEnv -> InterfaceItem -> Rn (RnEnv, InterfaceItem)
+r_intfField param env (IntfVar (name, ty)) = do
   envWithParam <- addInternal env param
   ty' <- r_type envWithParam ty
   (envWithField, name') <- addLocal env name
-  return (envWithField, (name', ty'))
+  return (envWithField, IntfVar (name', ty'))
+
+r_intfField param env (IntfOperator assoc prec lhs op rhs ret) = do
+  envWithParam <- addInternal env param
+  prec' <- r_prec env prec
+  (envWithOp, op') <- addLocal env op
+  lhs' <- r_type envWithParam lhs
+  rhs' <- r_type envWithParam rhs
+  ret' <- r_type envWithParam ret
+  let op = IntfOperator assoc prec' lhs' op' rhs' ret'
+   in return (envWithOp, op)
