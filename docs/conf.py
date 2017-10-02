@@ -163,6 +163,7 @@ html_theme_options = {
     'display_version': False,
     'navigation_depth': 2,
     'logo_only': True,
+    'logo_href': 'https://verve-lang.org',
 }
 
 html_logo = '_static/logo-white.svg'
