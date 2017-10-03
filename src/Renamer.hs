@@ -268,7 +268,7 @@ r_expr _ (Literal l) =
   return (Literal l)
 
 r_expr env (ParenthesizedExpr expr) =
-  r_expr env expr
+  ParenthesizedExpr <$> r_expr env expr
 
 r_expr env (FnExpr fn) = do
   FnExpr . snd <$> r_fn env fn
