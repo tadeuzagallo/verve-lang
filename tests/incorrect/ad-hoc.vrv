@@ -9,24 +9,24 @@ fn g'<T>(x: T) -> Int {
 }
 
 implementation Intish<Int> {
-  fn to_int(x: Int) -> Bool {
-    True // CHECK-L: Expected a value of type `(Int) -> Int`, but found `(Int) -> Bool`
+  fn to_int(x) {
+    True // CHECK-L: Expected a value of type `Int`, but found `Bool`
   }
 }
 
 implementation Intish<Bool> {
-  fn to_int(x: Bool) -> Int { 0 }
-  fn to_bool(x: Bool) -> Bool { x } // CHECK-L: Implementation contains method `to_bool` which is not part of the interface
+  fn to_int(x) { 0 }
+  fn to_bool(x) { x } // CHECK-L: Implementation contains method `to_bool` which is not part of the interface
 }
 
 implementation Intish<Bool> {} // CHECK-L: Implementation is missing method `to_int`
 
 implementation Intish<Int> {
-  fn to_int(x: Int) -> Int { x }
+  fn to_int(x) { x }
 }
 
 implementation Intish<Bool> {
-  fn to_int(x: Bool) -> Int {
+  fn to_int(x) {
     if x { 1 } else { 0 }
   }
 }
@@ -36,12 +36,7 @@ interface Math<T> {
 }
 
 implementation Math<Bool> {
-  fn add(x: Bool, y: Bool) -> Int { 0 }
-}
-
-implementation Math<Int> {
-  // CHECK-L: Expected a value of type `(Int, Int) -> Int`, but found `(Bool, Bool) -> Int`
-  fn add(x: Bool, y: Bool) -> Int { 0 }
+  fn add(x, y) { 0 }
 }
 
 enum Maybe<T> {
@@ -49,8 +44,7 @@ enum Maybe<T> {
   Some(T)
 }
 
-// TODO: reimplment the following check
-/* CHECK-L: Trying to implement Intish for Maybe<Int>, but Maybe<Int> should be a simple type, class or enum (monomorphic) */
+// CHECK-L: Implementation of `Intish` for type `Maybe<Int>` does not use all the type variables it introduces and/or uses concrete types.
 implementation Intish< Maybe<Int> > {
 }
 
@@ -61,7 +55,7 @@ enum Pair<A, B> {
 }
 
 implementation<T: Intish, U: Intish> Intish<Pair<T, U>> {
-  fn to_int(p: Pair<T, U>) -> Int {
+  fn to_int(p) {
     match p {
       case Pair(a, b): int_add(to_int(a), to_int(b))
     }
@@ -71,7 +65,8 @@ implementation<T: Intish, U: Intish> Intish<Pair<T, U>> {
 to_int(Pair(42, "")) // CHECK-L: No implementation of `Intish` for type `String`
 to_int(Pair(False)) // CHECK-L: No implementation of `Intish`
 
-implementation<T: Intish, U> Intish<Pair<T, U>> { fn to_int(p: Pair<T, U>) -> Int {
+implementation<T: Intish, U> Intish<Pair<T, U>> {
+  fn to_int(p) {
     match p {
       case Pair(a, b): int_add(to_int(a), to_int(b))
       // CHECK-L: No implementation of `Intish` for type `U`

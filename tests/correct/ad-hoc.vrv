@@ -5,13 +5,14 @@ interface Intish<T> {
 }
 
 implementation Intish<Int> {
-  fn to_int(x: Int) -> Int { x }
+  fn to_int(x) { x }
 }
 
+fn bool_to_int(x: Bool) -> Int {
+  if x { 1 } else { 0 }
+}
 implementation Intish<Bool> {
-  fn to_int(x: Bool) -> Int {
-    if x { 1 } else { 0 }
-  }
+  let to_int = bool_to_int
 }
 
 to_int // CHECK-L: ∀(T: Intish). (T) -> Int
@@ -34,12 +35,12 @@ interface Read<T> {
 }
 
 implementation Read<Int> {
-  fn read() -> Int {
+  fn read() {
     17
   }
 }
 implementation Read<Bool> {
-  fn read() -> Bool {
+  fn read() {
     True
   }
 }
@@ -120,7 +121,7 @@ fn f<A, B: Intish, C: Intish>(a: A, b: B, c: C) -> Int {
 f(1)(False)(2) // CHECK-L: 2 : Int
 
 implementation<T: Intish> Intish<List<T>> {
-  fn to_int(xs: List<T>) -> Int {
+  fn to_int(xs) {
     42
   }
 }
@@ -130,7 +131,7 @@ enum Pair<A, B> {
   Pair(A, B)
 }
 implementation<T: Intish, U: Intish> Intish<Pair<T, U>> {
-  fn to_int(p: Pair<T, U>) -> Int {
+  fn to_int(p) {
     match p {
       case Pair(a, b): int_add(to_int(a), to_int(b))
     }
@@ -140,7 +141,7 @@ to_int(Pair(42, True)) // CHECK-L: 43 : Int
 to_int(Pair(42, False)) // CHECK-L: 42 : Int
 
 implementation<T: Intish> Intish<List<T>> {
-  fn to_int(xs: List<T>) -> Int {
+  fn to_int(xs) {
     match xs {
       case Cons(x, xs): int_add(to_int(x), to_int(xs))
       case Nil: 0

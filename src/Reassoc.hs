@@ -87,7 +87,20 @@ n_decl env (Let x expr) = do
 n_decl env (Class name vars methods) = do
   methods' <- mapM (n_fn env) methods
   return (env, Class name vars methods')
+n_decl env intf@(Interface _ _ methods) = do
+  env' <- foldM n_intfItem env methods
+  return (env', intf)
 n_decl env stmt = return (env, stmt)
+
+n_intfItem :: Env -> InterfaceItem -> Result Env
+n_intfItem env (IntfOperator { intfOpName, intfOpPrec, intfOpAssoc }) = do
+  intfOpPrec' <- prec env intfOpPrec
+  let env' = addOpInfo env (intfOpName, (intfOpAssoc, intfOpPrec'))
+  return env'
+
+n_intfItem env _ =
+  return env
+
 
 prec :: Env -> Precedence -> Result PrecInt
 prec _ (PrecValue n) = return n

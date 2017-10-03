@@ -253,7 +253,7 @@ r_decl env (Implementation name gen ty implMethods) = do
   name' <- lookupIdent [name] env
   (envWithGen, gen') <- r_generics env gen
   ty' <- r_type envWithGen ty
-  (_, implMethods') <- foldAcc r_fnNonRec envWithGen implMethods
+  implMethods' <- mapM (r_implItem envWithGen) implMethods
   return (env, Implementation name' gen' ty' implMethods')
 
 r_decl env (TypeAlias aliasName aliasVars aliasType) = do
@@ -261,6 +261,25 @@ r_decl env (TypeAlias aliasName aliasVars aliasType) = do
   envWithVars <- foldM addInternal envWithAlias aliasVars
   aliasType' <- r_type envWithVars aliasType
   return (envWithAlias, TypeAlias aliasName' aliasVars aliasType')
+
+
+r_implItem :: RnEnv -> ImplementationItem -> Rn ImplementationItem
+r_implItem env (ImplVar (name, expr)) = do
+  (_, name') <- addLocal env name
+  expr' <- r_expr env expr
+  return $ ImplVar (name', expr')
+
+r_implItem env (ImplFunction implName implParams implBody) = do
+  (_, implName') <- addLocal env implName
+  envWithParams <- foldM addInternal env implParams
+  implBody' <- r_stmts envWithParams implBody
+  return (ImplFunction implName' implParams implBody')
+
+r_implItem env (ImplOperator lhs op rhs body) = do
+  (_, op') <- addLocal env op
+  envWithParams <- foldM addInternal env [lhs, rhs]
+  body' <- r_stmts envWithParams body
+  return (ImplOperator lhs op' rhs body')
 
 
 r_expr :: RnEnv -> Expr -> Rn Expr
@@ -384,12 +403,6 @@ r_type env (TArrow params ret) = do
 r_type env (TRecord fields) = do
   fields' <- mapM (sequence . fmap (r_type env)) fields
   return $ TRecord fields'
-
-r_fnNonRec :: RnEnv -> Function -> Rn (RnEnv, Function)
-r_fnNonRec env fn = do
-  (_, name') <- addLocal env (name fn)
-  fn' <- r_fnBase name' env fn
-  return (env, fn')
 
 r_fn :: RnEnv -> Function -> Rn (RnEnv, Function)
 r_fn env fn = do

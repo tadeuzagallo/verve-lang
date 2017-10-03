@@ -188,10 +188,41 @@ p_implementation :: Parser Decl
 p_implementation = do
   reserved "implementation"
   implGenerics <- option [] p_generics
-  implName <- ucid
+  implIntf <- ucid
   implType <- angles p_type
-  implMethods <- p_body p_function
-  return $ Implementation { implName, implGenerics, implType, implMethods }
+  implMethods <- p_body p_implementationItem
+  return $ Implementation { implIntf, implGenerics, implType, implMethods }
+
+p_implementationItem :: Parser ImplementationItem
+p_implementationItem = choice [ p_implFn
+                              , p_implOperator
+                              , p_implVar
+                              ]
+
+p_implFn :: Parser ImplementationItem
+p_implFn = do
+  reserved "fn"
+  implName <- lcid
+  implParams <- parens $ commaSep lcid
+  implBody <- p_codeBlock
+  return $ ImplFunction { implName, implParams, implBody }
+
+p_implOperator :: Parser ImplementationItem
+p_implOperator = do
+  reserved "operator"
+  implOpLhs <- lcid
+  implOpName <- operator
+  implOpRhs <- lcid
+  implOpBody <- p_codeBlock
+  return $ ImplOperator { implOpLhs, implOpName, implOpRhs, implOpBody }
+
+p_implVar :: Parser ImplementationItem
+p_implVar = do
+  reserved "let"
+  name <- lcid
+  symbol "="
+  expr <- p_expr True
+  return $ ImplVar (name, expr)
 
 p_typeAlias :: Parser Decl
 p_typeAlias = do

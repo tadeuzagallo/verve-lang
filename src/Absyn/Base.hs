@@ -33,10 +33,10 @@ data BaseDecl a b c
   | Interface { intfName :: a
               , intfParam :: Name
               , intfMethods :: [BaseInterfaceItem a b]}
-  | Implementation { implName :: a
+  | Implementation { implIntf :: a
                    , implGenerics :: BaseGenerics c
                    , implType :: b
-                   , implMethods :: [BaseFunction a b c]}
+                   , implMethods :: [BaseImplementationItem a b c]}
   | TypeAlias { aliasName :: Name
               , aliasVars :: [Name]
               , aliasType :: b
@@ -54,6 +54,19 @@ data BaseInterfaceItem a b
                  }
 
   deriving (Show)
+
+data BaseImplementationItem a b c
+  = ImplVar (a, BaseExpr a b c)
+  | ImplFunction { implName :: a
+                 , implParams :: [Name]
+                 , implBody :: [BaseStmt a b c]
+                 }
+  | ImplOperator { implOpLhs :: Name
+                 , implOpName :: a
+                 , implOpRhs :: Name
+                 , implOpBody :: [BaseStmt a b c]
+                 }
+ deriving (Show)
 
 type BaseDataCtor a b = (a, Maybe [b])
 type BaseParam b = (Name, b)

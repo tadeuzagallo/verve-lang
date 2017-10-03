@@ -21,34 +21,34 @@ interface Num<T> {
   operator (T) / (T) -> T
 }
 
-/*implementation Num<Int> {*/
-  /*operator (x: Int) + (y: Int) -> Int {*/
-    /*int_add(x, y)*/
-  /*}*/
-  /*operator (x: Int) - (y: Int) -> Int {*/
-    /*int_sub(x, y)*/
-  /*}*/
-  /*operator (x: Int) * (y: Int) -> Int {*/
-    /*int_mul(x, y)*/
-  /*}*/
-  /*operator (x: Int) / (y: Int) -> Int {*/
-    /*int_div(x, y)*/
-  /*}*/
-/*}*/
+implementation Num<Int> {
+  operator x + y {
+    int_add(x, y)
+  }
+  operator x - y {
+    int_sub(x, y)
+  }
+  operator x * y {
+    int_mul(x, y)
+  }
+  operator x / y {
+    int_div(x, y)
+  }
+}
 
-/*5 + 37 / / CHECK: 42 : Int*/
-/*5 + 3 * 15 / / CHECK: 50 : Int*/
-/*3 * 15 + 5 / / CHECK: 50 : Int*/
-/*3 * (15 + 5) / / CHECK: 60 : Int*/
-/*(15 + 5) * 3  / / CHECK: 60 : Int*/
-/*3 * 5 / 2 / / CHECK: 7 : Int*/
-/*5 / 2 * 3 / / CHECK: 6 : Int*/
-/*(+)(3, 5) / / CHECK: 8 : Int*/
+5 + 37 // CHECK: 42 : Int
+5 + 3 * 15 // CHECK: 50 : Int
+3 * 15 + 5 // CHECK: 50 : Int
+3 * (15 + 5) // CHECK: 60 : Int
+(15 + 5) * 3  // CHECK: 60 : Int
+3 * 5 / 2 // CHECK: 7 : Int
+5 / 2 * 3 // CHECK: 6 : Int
+(+)(3, 5) // CHECK: 8 : Int
 
-/*fn add<T: Num>(x: T, y: T) -> T {*/
-  /*x + y*/
-/*}*/
-/*add(3, 5)*/
+fn add<T: Num>(x: T, y: T) -> T {
+  x + y
+}
+add(3, 5)
 
 operator (x: Int) < (y: Int) -> Bool { False }
 
@@ -69,7 +69,7 @@ interface Num'<T> {
 }
 
 implementation Num'<Int> {
-  fn plus(x: Int, y: Int) -> Int {
+  fn plus(x, y) {
     int_add(x, y)
   }
 }

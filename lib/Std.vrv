@@ -32,11 +32,11 @@ operator<T: Number> (x: T) / (y: T) -> T {
 }
 
 implementation Number<Int> {
-  fn num_add(x: Int, y: Int) -> Int { int_add(x, y) }
-  fn num_sub(x: Int, y: Int) -> Int { int_sub(x, y) }
-  fn num_mul(x: Int, y: Int) -> Int { int_mul(x, y) }
-  fn num_div(x: Int, y: Int) -> Int { int_div(x, y) }
-  fn negate(x: Int) -> Int { int_neg(x) }
+  fn num_add(x, y) { int_add(x, y) }
+  fn num_sub(x, y) { int_sub(x, y) }
+  fn num_mul(x, y) { int_mul(x, y) }
+  fn num_div(x, y) { int_div(x, y) }
+  fn negate(x) { int_neg(x) }
 }
 
 interface Printable<T> {
@@ -48,9 +48,7 @@ fn print<T: Printable>(x: T) {
 }
 
 implementation Printable<String> {
-  fn to_string(s: String) -> String {
-    s
-  }
+  fn to_string(s) { s }
 }
 
 /*implementation Printable<Int> {*/

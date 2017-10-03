@@ -21,7 +21,7 @@ interface Shape<T> {
 }
 
 implementation Shape<Square> {
-  fn area(x : Square) -> Int {
+  fn area(x) {
     int_mul(x.side, x.side)
   }
 }

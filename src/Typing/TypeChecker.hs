@@ -185,10 +185,9 @@ i_decl ctx (Implementation implName generics ty methods) = do
   (ctx', genericVars) <- addGenerics ctx generics'
   ty' <- resolveType ctx' ty
   ctx'' <- extendCtx ctx' ty' genericVars
-  (methods', methodsTy) <- unzip <$> mapM (i_fnNonRec ctx'') methods
   let substs = mkSubst (param, ty')
-  checkCompleteInterface substs intfMethods (zip (map name methods) methodsTy)
-  checkExtraneousMethods intfMethods (zip (map name methods) methodsTy)
+  (methods', names) <- unzip <$> mapM (i_implItem ctx'' substs intfMethods) methods
+  checkCompleteInterface intfMethods names
   let impl = Implementation (implName, void) generics' ty' methods'
   ctx' <- extendCtx ctx ty' genericVars
   return (ctx', impl, void)
@@ -214,25 +213,50 @@ i_decl ctx (TypeAlias aliasName aliasVars aliasType) = do
   return (addType ctx (aliasName, aliasType''), alias, Type)
 
 
-checkCompleteInterface :: Substitution -> [(Name, Type)] -> [(Name, Type)] -> Tc ()
-checkCompleteInterface substs intf impl = do
+checkCompleteInterface :: [(Name, Type)] -> [Name] -> Tc ()
+checkCompleteInterface intf impl = do
   mapM_ aux intf
   where
     aux :: (Name, Type) -> Tc ()
-    aux (methodName, methodTy) =
-      case lookup methodName impl of
-        Nothing -> throwError $ ImplementationMissingMethod methodName
-        Just ty -> ty <:! (applySubst substs methodTy)
-
-checkExtraneousMethods :: [(Name, Type)] -> [(Name, Type)] -> Tc ()
-checkExtraneousMethods intf impl = do
-  mapM_ aux impl
-  where
-    aux :: (Name, Type) -> Tc ()
     aux (methodName, _) =
-      case lookup methodName intf of
-        Nothing -> throwError $ ExtraneousImplementation methodName
-        Just _ -> return ()
+      when (methodName `notElem` impl) $ throwError (ImplementationMissingMethod methodName)
+
+
+getIntfType :: Name -> [(Name, Type)] -> Tc Type
+getIntfType name intf = do
+  case lookup name intf of
+    Nothing -> throwError $ ExtraneousImplementation name
+    Just ty -> return ty
+
+
+-- TODO: this should switch to checking mode
+i_implItem :: Ctx -> Substitution -> [(Name, Type)] -> U.ImplementationItem -> Tc (T.ImplementationItem, Name)
+i_implItem ctx subst intfTypes (ImplVar (name, expr)) = do
+  (expr', exprTy) <- i_expr ctx expr
+  intfTy <- applySubst subst <$> getIntfType name intfTypes
+  intfTy <:! exprTy
+  return (ImplVar ((name, intfTy), expr'), name)
+
+i_implItem ctx subst intfTypes (ImplFunction name params body) = do
+  intfTy <- applySubst subst <$> getIntfType name intfTypes
+  Fun _ paramsTy retTy <- case intfTy of
+                            Fun _ ps _ | length ps == length params -> return intfTy
+                            _ -> throwError $ GenericError "Implementation type doesn't match interface"
+  let ctxWithParams = foldl addValueType ctx (zip params paramsTy)
+  (body', bodyTy) <- i_stmts ctxWithParams body
+  bodyTy <:! retTy
+  return (ImplFunction (name, intfTy) params body', name)
+
+i_implItem ctx subst intfTypes (ImplOperator lhs op rhs body) = do
+  intfTy <- applySubst subst <$> getIntfType op intfTypes
+  Fun _ paramsTy retTy <- case intfTy of
+                            Fun _ ps _ | length ps == 2 -> return intfTy
+                            _ -> throwError $ GenericError "Implementation type doesn't match interface"
+  let ctxWithParams = foldl addValueType ctx (zip [lhs, rhs] paramsTy)
+  (body', bodyTy) <- i_stmts ctxWithParams body
+  bodyTy <:! retTy
+  return (ImplOperator lhs (op, intfTy) rhs body', op)
+
 
 fnTy :: Ctx -> ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do
@@ -254,9 +278,6 @@ i_ctor sourceCtx mkEnumTy (name, types) (targetCtx, ctors) = do
 
 i_fn :: Ctx -> U.Function -> Tc (T.Function, Type)
 i_fn = i_fnBase True
-
-i_fnNonRec :: Ctx -> U.Function -> Tc (T.Function, Type)
-i_fnNonRec = i_fnBase False
 
 i_fnBase :: Bool -> Ctx -> U.Function -> Tc (T.Function, Type)
 i_fnBase addToCtx ctx fn = do

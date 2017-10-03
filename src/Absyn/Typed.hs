@@ -15,6 +15,7 @@ type Module = BaseModule Id Type Intf
 type Stmt = BaseStmt Id Type Intf
 type Decl = BaseDecl Id Type Intf
 type InterfaceItem = BaseInterfaceItem Id Type
+type ImplementationItem = BaseImplementationItem Id Type Intf
 type DataCtor = BaseDataCtor Id Type
 type Param = BaseParam Type
 type Generics = BaseGenerics Intf

@@ -56,7 +56,7 @@ d_decl (Interface _ _ methods) =
   map d_intfMethod methods
 
 d_decl (Implementation (name, _) generics ty methods) =
-  let dict = CA.Record (map d_implMethod methods)
+  let dict = CA.Record (map d_implItem methods)
       dictName = ("#" ++ name ++ print ty, void)
       dictLam = foldr CA.Lam dict (mkConstraints generics)
    in [(dictName, dictLam)]
@@ -93,9 +93,17 @@ d_intfMethod (IntfOperator { intfOpName = name@(s_name,  _) }) =
       select' = CA.App select (mk_var "#dict")
    in (name, CA.Lam ("#dict", void) (CA.Lam (ignore Type) select'))
 
-d_implMethod :: Function -> CA.Bind
-d_implMethod fn =
-   (name fn, d_fn fn)
+d_implItem :: ImplementationItem -> CA.Bind
+d_implItem (ImplVar (name, expr)) =
+  (name, d_expr expr)
+
+d_implItem fn@(ImplFunction {}) =
+  let fn' = foldr CA.Lam (d_stmts $ implBody fn) (map (flip (,) void) $ implParams fn)
+   in (implName fn, fn')
+
+d_implItem op@(ImplOperator {}) =
+  let op' = CA.Lam (implOpLhs op, void) (CA.Lam (implOpRhs op, void) (d_stmts $ implOpBody op))
+   in (implOpName op, op')
 
 data Constraint
   = CHole
