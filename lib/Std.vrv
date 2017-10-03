@@ -9,33 +9,25 @@ enum Either<T, U> {
 }
 
 interface Number<T> {
-  let num_add : (T, T) -> T
-  let num_sub : (T, T) -> T
-  let num_mul : (T, T) -> T
-  let num_div : (T, T) -> T
+  operator (T) + (T) -> T
+
+  operator (T) - (T) -> T
+
+  #prec(higher(+))
+  operator (T) * (T) -> T
+
+  #prec(equal(*))
+  operator (T) / (T) -> T
+
   let negate : (T) -> T
 }
 
-operator<T: Number> (x: T) + (y: T) -> T {
-  num_add(x, y)
-}
-operator<T: Number> (x: T) - (y: T) -> T {
-  num_sub(x, y)
-}
-#prec(higher(+))
-operator<T: Number> (x: T) * (y: T) -> T {
-  num_mul(x, y)
-}
-#prec(equal(*))
-operator<T: Number> (x: T) / (y: T) -> T {
-  num_div(x, y)
-}
 
 implementation Number<Int> {
-  fn num_add(x, y) { int_add(x, y) }
-  fn num_sub(x, y) { int_sub(x, y) }
-  fn num_mul(x, y) { int_mul(x, y) }
-  fn num_div(x, y) { int_div(x, y) }
+  operator x + y { int_add(x, y) }
+  operator x - y { int_sub(x, y) }
+  operator x * y { int_mul(x, y) }
+  operator x / y { int_div(x, y) }
   fn negate(x) { int_neg(x) }
 }
 
