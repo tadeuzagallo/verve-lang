@@ -17,23 +17,33 @@ data-files:          lib/*.vrv
 library
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
-  exposed-modules:     Parser
-                       Absyn.Typed
+  default-extensions:  NamedFieldPuns
+  exposed-modules:     Absyn.Typed
                        Absyn.Untyped
-                       Lexer
-                       Interpreter
-                       Error
-                       Desugar
-                       CoreAbsyn
-                       Reassoc
+                       Core.Absyn
+                       Core.Desugar
+                       Interpreter.Env
+                       Interpreter.Eval
+                       Reassoc.Env
+                       Reassoc.Reassoc
+                       Renamer.Env
+                       Renamer.Renamer
+                       Syntax.Lexer
+                       Syntax.Parser
                        Typing.Ctx
                        Typing.TypeChecker
-                       Renamer
-                       PrettyPrint
+                       Util.Error
+                       Util.PrettyPrint
 
   other-modules:       Absyn.Base
                        Absyn.Meta
                        Absyn.ValueOccursCheck
+                       Interpreter.Builtin
+                       Interpreter.RuntimeError
+                       Interpreter.Value
+                       Reassoc.Error
+                       Renamer.State
+                       Renamer.Error
                        Typing.Constraint
                        Typing.Kinds
                        Typing.State

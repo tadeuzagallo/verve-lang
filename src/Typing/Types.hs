@@ -27,8 +27,8 @@ module Typing.Types
   , isHole
   ) where
 
-import PrettyPrint
 import Typing.State
+import Util.PrettyPrint
 
 import Data.List (intercalate, union)
 import Text.Printf (printf)

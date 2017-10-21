@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs #-}
 
-module Error
+module Util.Error
   ( Error(..)
   , ErrorT(..)
   , Result

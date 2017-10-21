@@ -1,13 +1,17 @@
 import Absyn.Untyped
-import Error
-import Parser
-import qualified Reassoc
-import Desugar
-import Renamer
-import Interpreter
+import Core.Desugar
+import Interpreter.Eval
+import Interpreter.Env
+import Reassoc.Reassoc
+import Renamer.Renamer
+import Syntax.Parser
 import Typing.Ctx
 import Typing.TypeChecker
-import PrettyPrint
+import Util.Error
+import Util.PrettyPrint
+
+import qualified Reassoc.Env as Reassoc
+import qualified Renamer.Env as Renamer
 
 import Control.Monad (foldM)
 import Control.Monad.IO.Class (liftIO)
@@ -21,10 +25,10 @@ import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, joinPath, takeFileName, dropExtension)
 
-type EvalCtx = (Reassoc.Env, RnEnv, Ctx, Env)
+type EvalCtx = (Reassoc.Env, Renamer.Env, Ctx, Env)
 
 initEvalCtx :: EvalCtx
-initEvalCtx = (Reassoc.defaultEnv, initRnEnv, defaultCtx, defaultEnv)
+initEvalCtx = (Reassoc.defaultEnv, Renamer.defaultEnv, defaultCtx, defaultEnv)
 
 
 data Config = Config
@@ -70,7 +74,7 @@ main = do
 evalStmt :: Config ->  String -> EvalCtx -> Stmt -> Result (EvalCtx, String)
 evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
   (rnEnv', renamed) <- renameStmt modName rnEnv stmt
-  (nenv', balanced) <- Reassoc.reassocStmt nenv renamed
+  (nenv', balanced) <- reassocStmt nenv renamed
   (ctx', typed, ty) <- inferStmt ctx balanced
   let core = desugarStmt typed
   (env', val) <- evalWithEnv env core

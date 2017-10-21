@@ -6,7 +6,7 @@ module Typing.State
   , throwError
   ) where
 
-import Error
+import Util.Error
 
 import Control.Monad.State (StateT, evalStateT, get, put)
 import Control.Monad.Except (Except, runExcept)

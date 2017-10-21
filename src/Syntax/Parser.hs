@@ -1,13 +1,11 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
-module Parser
+module Syntax.Parser
   ( parseFile
   , parseStmt
   ) where
 
 import Absyn.Untyped
-import Error
-import Lexer
+import Syntax.Lexer
+import Util.Error
 
 import Text.Parsec ((<|>), (<?>), choice, eof, option, optional, parse, try, optionMaybe, sepBy1, sepBy, sepEndBy, endBy, skipMany1, lookAhead, many)
 import Text.Parsec.String (Parser, parseFromFile)

@@ -1,4 +1,4 @@
-module PrettyPrint
+module Util.PrettyPrint
   ( PrettyPrint(..)
   , pprName
   ) where

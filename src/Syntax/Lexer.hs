@@ -1,4 +1,4 @@
-module Lexer
+module Syntax.Lexer
   -- Literals
   ( natural
   , naturalOrFloat

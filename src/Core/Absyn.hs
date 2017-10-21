@@ -1,4 +1,4 @@
-module CoreAbsyn where
+module Core.Absyn where
 
 import Absyn.Typed (Id, Literal)
 import Typing.Types (Type)

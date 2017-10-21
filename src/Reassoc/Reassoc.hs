@@ -1,50 +1,14 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
-module Reassoc
+module Reassoc.Reassoc
   ( reassoc
   , reassocStmt
-  , Env
-  , defaultEnv
   ) where
 
 import Absyn.Untyped
-import Error
-import PrettyPrint
+import Reassoc.Env
+import Reassoc.Error
+import Util.Error
 
 import Control.Monad (foldM)
-
-type PrecInt = Integer
-type OpInfo = (Associativity, PrecInt)
-
-data ReassocError
-  = UnknownOperator Name
-  | PrecedenceError Name Name
-
-instance Show ReassocError where
-  show (PrecedenceError p1 p2) =
-    "Precedence parsing error: cannot mix `" ++ pprName p1 ++ "` and `" ++ pprName p2 ++ "` in the same infix expression"
-  show (UnknownOperator name) =
-    "Unknown operator: " ++ name
-
-instance ErrorT ReassocError where
-  kind _ = "ReassocError"
-
-newtype Env = Env [(Name, OpInfo)]
-
-defaultEnv :: Env
-defaultEnv = Env []
-
-addOpInfo :: Env -> (Name, OpInfo) -> Env
-addOpInfo (Env env) info = Env (info : env)
-
-getOpInfo :: Name -> Env -> Result OpInfo
-getOpInfo name (Env env) =
-  case lookup name env of
-    Just info -> return info
-    Nothing -> mkError $ UnknownOperator name
-
-getPrec :: Name -> Env -> Result PrecInt
-getPrec name env = snd <$> getOpInfo name env
 
 reassoc :: Module -> Result Module
 reassoc (Module imports stmts) = do

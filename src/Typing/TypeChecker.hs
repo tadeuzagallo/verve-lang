@@ -11,7 +11,6 @@ import qualified Absyn.Typed as T
 import Absyn.Base
 import Absyn.Meta
 import Absyn.ValueOccursCheck
-import Error
 import Typing.Constraint
 import Typing.Ctx
 import Typing.Kinds
@@ -20,6 +19,7 @@ import Typing.Substitution
 import Typing.Subtyping
 import Typing.TypeError
 import Typing.Types
+import Util.Error
 
 import Control.Monad (foldM, when, zipWithM)
 import Data.Bifunctor (first)

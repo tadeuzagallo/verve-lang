@@ -1,12 +1,11 @@
-{-# LANGUAGE NamedFieldPuns #-}
-module Desugar
+module Core.Desugar
   ( desugar
   , desugarStmt
   ) where
 
 import Absyn.Typed
 import Typing.Types
-import qualified CoreAbsyn as CA
+import qualified Core.Absyn as CA
 
 import Data.Bifunctor (second)
 

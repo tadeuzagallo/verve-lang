@@ -3,10 +3,10 @@ module Typing.TypeError
   ) where
 
 import Absyn.Meta
-import Error
-import PrettyPrint
-import Typing.Types
 import Typing.Kinds
+import Typing.Types
+import Util.Error
+import Util.PrettyPrint
 
 data TypeError
   = UnknownVariable String
