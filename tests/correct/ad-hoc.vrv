@@ -154,3 +154,10 @@ to_int([]) // CHECK-L: 0 : Int
 // Used to crash
 fn to_int'<T: Intish>(x: T) { }
 to_int'([30, 12]) // CHECK-L: () : Void
+
+// Implement interface from different file
+enum C { C }
+implementation Printable<C> {
+  fn to_string(c) { "C" }
+}
+to_string(C) // CHECK-L: "C" : String

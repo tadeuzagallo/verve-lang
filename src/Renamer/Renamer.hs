@@ -6,9 +6,12 @@ module Renamer.Renamer
 import Absyn.Untyped
 import Renamer.Env
 import Renamer.State
+import Typing.TypeError
 import Util.Error
 
 import Control.Monad (foldM, zipWithM)
+import Control.Monad.Except (withExcept)
+import Control.Monad.State (mapStateT)
 import Data.List (intercalate)
 
 
@@ -145,22 +148,25 @@ r_decl env (TypeAlias aliasName aliasVars aliasType) = do
 
 r_implItem :: Env -> ImplementationItem -> Rn ImplementationItem
 r_implItem env (ImplVar (name, expr)) = do
-  (_, name') <- addLocal env name
+  name' <- lookupIntfMethod name env
   expr' <- r_expr env expr
   return $ ImplVar (name', expr')
 
 r_implItem env (ImplFunction implName implParams implBody) = do
-  (_, implName') <- addLocal env implName
+  implName' <- lookupIntfMethod implName env
   envWithParams <- foldM addInternal env implParams
   implBody' <- r_stmts envWithParams implBody
   return (ImplFunction implName' implParams implBody')
 
 r_implItem env (ImplOperator lhs op rhs body) = do
-  (_, op') <- addLocal env op
+  op' <- lookupIntfMethod op env
   envWithParams <- foldM addInternal env [lhs, rhs]
   body' <- r_stmts envWithParams body
   return (ImplOperator lhs op' rhs body')
 
+lookupIntfMethod :: String -> Env -> Rn String
+lookupIntfMethod name env =
+  mapStateT (withExcept $ \_ -> Error (ExtraneousImplementation name)) $ lookupIdent [name] env
 
 r_expr :: Env -> Expr -> Rn Expr
 r_expr _ (Literal l) =
