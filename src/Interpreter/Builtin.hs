@@ -38,6 +38,11 @@ int_neg =
   VLam (\(VLit (Integer a)) ->
     return . VLit . Integer $ negate a)
 
+int_to_string :: Value
+int_to_string =
+  VLam (\(VLit (Integer a)) ->
+    return . VLit . String $ show a)
+
 string_print :: Value
 string_print =
   VLam (\v ->

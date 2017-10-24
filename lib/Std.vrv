@@ -43,11 +43,11 @@ implementation Printable<String> {
   fn to_string(s) { s }
 }
 
-/*implementation Printable<Int> {*/
-  /*fn to_string(i: Int) {*/
-    /*int_to_string(i)*/
-  /*}*/
-/*}*/
+implementation Printable<Int> {
+  fn to_string(i) {
+    int_to_string(i)
+  }
+}
 
 // LIST HELPERS
 fn map<T, U>(f: (T) -> U, list: List<T>) -> List<U> {

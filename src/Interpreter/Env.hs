@@ -18,6 +18,7 @@ defaultEnv = Env [ ("int_add", int_add)
                  , ("int_mul", int_mul)
                  , ("int_div", int_div)
                  , ("int_neg", int_neg)
+                 , ("int_to_string", int_to_string)
                  , ("string_print", string_print)
 
                  -- Private Values

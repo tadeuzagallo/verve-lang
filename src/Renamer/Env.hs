@@ -56,6 +56,7 @@ builtins =
   , "int_mul"
   , "int_div"
   , "int_neg"
+  , "int_to_string"
   , "string_print"
   ]
 
