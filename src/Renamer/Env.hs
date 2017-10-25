@@ -10,6 +10,7 @@ module Renamer.Env
   , joinName
   ) where
 
+import Lib.Registry
 import Renamer.State
 import Renamer.Error
 
@@ -24,42 +25,12 @@ data RnName
 data Env = Env { getBinds :: [(RdrName, RnName)] }
 
 defaultEnv :: Env
-defaultEnv = Env { getBinds = mkBuiltins builtins }
+defaultEnv = Env { getBinds = mkBuiltins (name <$> filter (not . isInternal) registry) }
 
 mkBuiltins :: [String] -> [(RdrName, RnName)]
 mkBuiltins =
   map $ \n ->
     ((Nothing, n), Internal n)
-
-builtins :: [String]
-builtins =
-  -- TYPES
-  [ "Int"
-  , "Float"
-  , "Char"
-  , "String"
-  , "Void"
-  , "Bool"
-
-  -- TYPE CONSTRUCTORS
-  , "List"
-
-  -- DATA CONSTRUCTORS
-  , "True"
-  , "False"
-  , "Nil"
-  , "Cons"
-
-  -- FUNCTIONS
-  , "int_add"
-  , "int_sub"
-  , "int_mul"
-  , "int_div"
-  , "int_neg"
-  , "int_to_string"
-  , "string_print"
-  ]
-
 
 addLocal :: Env -> String -> Rn (Env, String)
 addLocal env name = do

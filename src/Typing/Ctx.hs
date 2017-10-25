@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Typing.Ctx
-  ( Ctx()
+  ( Ctx
   , defaultCtx
   , addType
   , getType
@@ -15,12 +15,11 @@ module Typing.Ctx
   , tImportModule
   ) where
 
+import Lib.Registry
 import Typing.State
 import Typing.Substitution
 import Typing.TypeError
-import Typing.Types hiding (list)
-
-import qualified Typing.Types as Types (list)
+import Typing.Types
 
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
@@ -64,46 +63,12 @@ addImplementation ctx (n, inst) = do
 
 defaultCtx :: Ctx
 defaultCtx =
-  Ctx { types = [ ("Int", int)
-                , ("Float", float)
-                , ("Char", char)
-                , ("String", string)
-                , ("Void", void)
-                , ("List", forall [T] $ list T)
-                , ("Bool", bool)
-                ]
-      , values = [ ("string_print", [string] ~> void)
-                 , ("int_add", [int, int] ~> int)
-                 , ("int_sub", [int, int] ~> int)
-                 , ("int_mul", [int, int] ~> int)
-                 , ("int_div", [int, int] ~> int)
-                 , ("int_neg", [int] ~> int)
-                 , ("int_to_string", [int] ~> string)
-                 , ("True", bool)
-                 , ("False", bool)
-                 , ("Nil", forall [T] $ list T)
-                 , ("Cons", forall [T] $ [var T, list T] ~> list T)
-                 ]
+  Ctx { types = decl <$> filter isType registry
+      , values = decl <$> filter (\x -> isValue x || isCtor x) registry
       , implementations = []
       , interfaces = []
       , instanceVars = []
       }
-
--- HELPERS
-
-list :: FakeVar -> Type
-list ty = Types.list (var ty)
-
-forall :: [FakeVar] -> Type -> Type
-forall vs (Fun [] params args) =
-  let vs' = map (flip (,) [] . tyvar) vs
-   in Fun vs' params args
-
-forall vs ty =
-  TyAbs (map tyvar vs) ty
-
-var :: FakeVar -> Type
-var name = Var (tyvar name) []
 
 getInterface :: String -> Ctx -> Tc Intf
 getInterface n ctx =

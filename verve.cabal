@@ -41,6 +41,7 @@ library
                        Interpreter.Builtin
                        Interpreter.RuntimeError
                        Interpreter.Value
+                       Lib.Registry
                        Reassoc.Error
                        Renamer.State
                        Renamer.Error
