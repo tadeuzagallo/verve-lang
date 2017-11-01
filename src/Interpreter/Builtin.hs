@@ -59,3 +59,21 @@ unwrapClass :: Value
 unwrapClass =
   VLam (\(VNeutral (NApp _ v)) ->
     return v)
+
+strlen :: Value
+strlen =
+  VLam $ \(VLit (String field)) ->
+    return . VLit . Integer . toInteger $ length field
+
+substr :: Value
+substr =
+  VLam $ \(VLit (String str)) ->
+    return . VLam $ \(VLit (Integer off)) ->
+      return . VLam $ \(VLit (Integer len)) ->
+        return . VLit . String . take (fromInteger len) . drop (fromInteger off) $ str
+
+charAt :: Value
+charAt =
+  VLam $ \(VLit (String str)) ->
+    return . VLam $ \(VLit (Integer index)) ->
+      return . VLit . Char $ str !! fromInteger index

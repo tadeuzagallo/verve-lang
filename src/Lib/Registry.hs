@@ -60,6 +60,11 @@ registry = execWriter $ do
   val "int_neg" ([int] ~> int) int_neg
   val "int_to_string" ([int] ~> string) int_to_string
 
+  -- String
+  val "strlen" ([string] ~> int) strlen
+  val "substr" ([string, int, int] ~> string) substr
+  val "charAt" ([string, int] ~> char) charAt
+
   ctor "True" bool
   ctor "False" bool
   ctor "Nil" (forall [T] $ list T)

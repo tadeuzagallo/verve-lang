@@ -1,0 +1,183 @@
+// RUN: %verve | %check
+enum Token {
+  TInt(Int)
+  TAdd
+  TSub
+  TMul
+  TDiv
+}
+
+implementation Printable<Token> {
+  fn to_string(t) {
+    match t {
+      case TInt(i): i.to_string()
+      case TAdd: "TAdd"
+      case TSub: "TSub"
+      case TMul: "TMul"
+      case TDiv: "TDiv"
+    }
+  }
+}
+
+enum Expr {
+  Value(Int)
+  Add(Expr, Expr)
+  Sub(Expr, Expr)
+  Mul(Expr, Expr)
+  Div(Expr, Expr)
+}
+
+enum Result<T> {
+  Ok(T)
+  Err(String)
+}
+
+fn isDigit(c: Char) -> Bool {
+  match c {
+    case '0': True
+    case '1': True
+    case '2': True
+    case '3': True
+    case '4': True
+    case '5': True
+    case '6': True
+    case '7': True
+    case '8': True
+    case '9': True
+    case _: False
+  }
+}
+
+fn charToInt(c: Char) -> Int {
+  match c {
+    case '0': 0
+    case '1': 1
+    case '2': 2
+    case '3': 3
+    case '4': 4
+    case '5': 5
+    case '6': 6
+    case '7': 7
+    case '8': 8
+    case '9': 9
+  }
+}
+
+fn tokenize(input: String) -> Result<List<Token>> {
+  print(input)
+  print(input.length())
+  if (input.length() == 0) {
+    Ok([])
+  } else {
+    let head = input.charAt(0)
+    let tail = input.substr(1, input.length() - 1)
+    fn nest(t: Token, tail: String) -> Result<List<Token>> {
+        match tail.tokenize() {
+          case Err(msg): Err(msg)
+          case Ok([TInt(tail), ...rest]):
+            match t {
+              case TInt(head):
+                // TODO: Mistake made during impl: terrible error message
+                /*Ok(Cons(head * 10 + tail, rest))*/
+                Ok(Cons(TInt((head * 10) + tail), rest))
+              case _:
+                Ok(Cons(t, Cons(TInt(tail), rest)))
+            }
+          case Ok(tokens):
+            Ok(Cons(t, tokens))
+        }
+    }
+
+    fn int(acc: Int, off: Int) -> Result<List<Token>> {
+      if (off == input.length()) {
+        nest(TInt(acc), "")
+      } else {
+        let head = input.charAt(off)
+        if (isDigit(head)) {
+          int((acc * 10) + charToInt(head), off + 1)
+        } else {
+          nest(TInt(acc), input.substr(off, input.length() - off))
+        }
+      }
+    }
+
+    match head {
+      case ' ': tokenize(tail)
+      case '+': nest(TAdd, tail)
+      case '-': nest(TSub, tail)
+      case '*': nest(TMul, tail)
+      case '/': nest(TDiv, tail)
+      case x:
+        if (isDigit(x)) {
+          int(0, 0)
+        } else {
+          Err("Unexpected token")
+        }
+    }
+  }
+}
+
+fn parse(tokens: List<Token>) -> Result<Expr> {
+  match tokens {
+    case []: Err("Empty")
+    case [TInt(x)]: Ok(Value(x))
+    case [TInt(x), TAdd, ...rest]:
+      match parse(rest) {
+        case Err(x): Err(x)
+        case Ok(rhs): Ok(Add(Value(x), rhs))
+      }
+    case [TInt(x), TSub, ...rest]:
+      match parse(rest) {
+        case Err(x): Err(x)
+        case Ok(rhs): Ok(Sub(Value(x), rhs))
+      }
+    case [TInt(x), TMul, ...rest]:
+      match parse(rest) {
+        case Err(x): Err(x)
+        case Ok(rhs): Ok(Mul(Value(x), rhs))
+      }
+    case [TInt(x), TDiv, ...rest]:
+      match parse(rest) {
+        case Err(x): Err(x)
+        case Ok(rhs): Ok(Div(Value(x), rhs))
+      }
+  }
+}
+
+fn eval(expr: Expr) -> Int {
+  match expr {
+    case Value(i): i
+    case Add(lhs, rhs): eval(lhs) + eval(rhs)
+    case Sub(lhs, rhs): eval(lhs) - eval(rhs)
+    case Mul(lhs, rhs): eval(lhs) * eval(rhs)
+    case Div(lhs, rhs): eval(lhs) / eval(rhs)
+  }
+}
+
+fn exec(expr: String) {
+  match expr.tokenize() {
+    case Err(msg): print(msg)
+    case Ok(tokens):
+      match tokens.parse() {
+        case Err(msg): print(msg)
+        case Ok(ast): print(ast.eval())
+      }
+  }
+}
+
+// Easiest cases
+"2 + 3".exec() // CHECK-L: "5"
+"2 * 3".exec() // CHECK-L: "6"
+"4 - 1".exec() // CHECK-L: "3"
+"6 / 3".exec() // CHECK-L: "2"
+
+// Unknown character
+"a".exec() // CHECK-L: "Unexpected token"
+
+// Multi-digit numbers
+"42".exec() // CHECK-L: "42"
+"1234567890".exec() // CHECK-L: "1234567890"
+
+// TODO: precedence
+// "2 * 3 + 4".exec() CHECK-L: "10"
+// "4 + 2 * 3".exec() CHECK-L: "10

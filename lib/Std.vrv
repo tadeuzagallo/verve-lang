@@ -1,3 +1,5 @@
+fn id<T>(x: T) -> T { x }
+
 enum Optional<T> {
   None
   Some(T)
@@ -44,9 +46,7 @@ implementation Printable<String> {
 }
 
 implementation Printable<Int> {
-  fn to_string(i) {
-    int_to_string(i)
-  }
+  let to_string = int_to_string
 }
 
 // LIST HELPERS
@@ -73,5 +73,22 @@ fn forEach<T>(f: (T) -> Void, list: List<T>) {
     case [x, ...rest]:
       f(x)
       forEach(f, rest)
+  }
+}
+
+// STRING
+let length = strlen
+
+// Eq
+interface Equal<T> {
+  operator (T) == (T) -> Bool
+}
+
+implementation Equal<Int> {
+  operator x == y {
+    match x - y {
+      case 0: True
+      case _: False
+    }
   }
 }
