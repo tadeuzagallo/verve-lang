@@ -34,6 +34,12 @@ int_div =
     return . VLam $ \(VLit (Integer b)) ->
       return . VLit . Integer $ a `div` b)
 
+int_mod :: Value
+int_mod =
+  VLam (\(VLit (Integer a)) ->
+    return . VLam $ \(VLit (Integer b)) ->
+      return . VLit . Integer $ a `mod` b)
+
 int_neg :: Value
 int_neg =
   VLam (\(VLit (Integer a)) ->

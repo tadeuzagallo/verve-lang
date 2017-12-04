@@ -21,6 +21,9 @@ interface Number<T> {
   #prec(equal(*))
   operator (T) / (T) -> T
 
+  #prec(equal(*))
+  operator (T) % (T) -> T
+
   let negate : (T) -> T
 }
 
@@ -30,6 +33,7 @@ implementation Number<Int> {
   operator x - y { int_sub(x, y) }
   operator x * y { int_mul(x, y) }
   operator x / y { int_div(x, y) }
+  operator x % y { int_mod(x, y) }
   fn negate(x) { int_neg(x) }
 }
 

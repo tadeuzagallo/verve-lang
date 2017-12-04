@@ -57,6 +57,7 @@ registry = execWriter $ do
   val "int_sub" ([int, int] ~> int) int_sub
   val "int_mul" ([int, int] ~> int) int_mul
   val "int_div" ([int, int] ~> int) int_div
+  val "int_mod" ([int, int] ~> int) int_mod
   val "int_neg" ([int] ~> int) int_neg
   val "int_to_string" ([int] ~> string) int_to_string
   val "char_to_int" ([char] ~> int) char_to_int
