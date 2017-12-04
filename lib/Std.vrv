@@ -104,3 +104,9 @@ implementation Equal<Int> {
     }
   }
 }
+
+implementation Equal<Char> {
+  operator x == y {
+    toInt(x) == toInt(y)
+  }
+}
