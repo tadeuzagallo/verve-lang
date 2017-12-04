@@ -63,6 +63,8 @@ registry = execWriter $ do
   val "int_to_string" ([int] ~> string) int_to_string
   val "char_to_int" ([char] ~> int) char_to_int
 
+  val "readFile" ([string] ~> string) read_file
+
   -- String
   val "strlen" ([string] ~> int) strlen
   val "substr" ([string, int, int] ~> string) substr

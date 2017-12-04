@@ -96,3 +96,10 @@ char_to_int :: Value
 char_to_int =
   VLam $ \(VLit (Char c)) ->
     return . VLit . Integer . toInteger $ ord c
+
+read_file :: Value
+read_file =
+  VLam $ \(VLit (String fileName)) ->
+    case unsafePerformIO (readFile fileName) of
+      content ->
+        return . VLit . String $ content
