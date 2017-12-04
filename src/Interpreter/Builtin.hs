@@ -5,6 +5,7 @@ module Interpreter.Builtin where
 import Absyn.Meta
 import Interpreter.Value
 
+import Data.Char (ord)
 import Data.Maybe (fromJust)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -77,3 +78,8 @@ charAt =
   VLam $ \(VLit (String str)) ->
     return . VLam $ \(VLit (Integer index)) ->
       return . VLit . Char $ str !! fromInteger index
+
+char_to_int :: Value
+char_to_int =
+  VLam $ \(VLit (Char c)) ->
+    return . VLit . Integer . toInteger $ ord c
