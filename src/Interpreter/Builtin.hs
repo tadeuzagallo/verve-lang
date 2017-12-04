@@ -45,6 +45,13 @@ int_neg =
   VLam (\(VLit (Integer a)) ->
     return . VLit . Integer $ negate a)
 
+int_lt :: Value
+int_lt =
+  VLam
+    (\(VLit (Integer a)) ->
+       return . VLam $ \(VLit (Integer b)) ->
+         return . VNeutral . NFree $ if a < b then "True" else "False")
+
 int_to_string :: Value
 int_to_string =
   VLam (\(VLit (Integer a)) ->

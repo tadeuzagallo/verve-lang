@@ -110,3 +110,11 @@ implementation Equal<Char> {
     toInt(x) == toInt(y)
   }
 }
+
+interface Comparable<T> {
+  operator (T) < (T) -> Bool
+}
+
+implementation Comparable<Int> {
+  operator x < y { int_lt(x, y) }
+}
