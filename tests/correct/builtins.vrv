@@ -6,3 +6,8 @@ int_mul(3, 5) // CHECK-L: 15 : Int
 int_div(35, 5) // CHECK-L: 7 : Int
 int_neg(42) // CHECK-L: -42 : Int
 int_to_string(42) // CHECK-L: "42" : String
+char_to_int('0') // CHECK-L: 48 : Int
+int_mod(3, 2) // CHECK-L: 1 : Int
+
+int_lt(2, 3) // CHECK-L: True : Bool
+int_lt(2, 2) // CHECK-L: False : Bool
