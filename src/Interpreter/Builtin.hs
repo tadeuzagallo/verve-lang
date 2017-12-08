@@ -110,3 +110,13 @@ read_file =
     case unsafePerformIO (readFile fileName) of
       content ->
         return . VLit . String $ content
+
+sqrt' :: Value
+sqrt' =
+  VLam $ \(VLit (Float f)) ->
+    return . VLit . Float $ sqrt f
+
+ceil' :: Value
+ceil' =
+  VLam $ \(VLit (Float f)) ->
+    return . VLit . Integer $ ceiling f

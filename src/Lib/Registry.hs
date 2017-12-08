@@ -66,6 +66,10 @@ registry = execWriter $ do
 
   val "readFile" ([string] ~> string) read_file
 
+  -- Float
+  val "sqrt" ([float] ~> float) sqrt'
+  val "ceil" ([float] ~> int) ceil'
+
   -- String
   val "strlen" ([string] ~> int) strlen
   val "substr" ([string, int, int] ~> string) substr
