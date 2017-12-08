@@ -62,29 +62,29 @@ implementation Intish<Char> {
 }
 
 // LIST HELPERS
-fn map<T, U>(f: (T) -> U, list: List<T>) -> List<U> {
+fn map<T, U>(list: List<T>, f: (T) -> U) -> List<U> {
   match list {
     case []: []
     // TODO: replace with value-rest
-    case [x, ...rest]: Cons(f(x), map(f, rest))
+    case [x, ...rest]: Cons(f(x), rest.map(f))
   }
 }
 
-fn reduce<T, U>(f: (U, T) -> U, init: U, list: List<T>) -> U {
+fn reduce<T, U>(list: List<T>, f: (U, T) -> U, init: U) -> U {
   match list {
     case []: init
     case [x, ...rest]:
       let init' = f(init, x)
-      reduce(f, init', rest)
+      rest.reduce(f, init')
   }
 }
 
-fn forEach<T>(f: (T) -> Void, list: List<T>) {
+fn forEach<T>(list: List<T>, f: (T) -> Void) {
   match list {
     case []:
     case [x, ...rest]:
       f(x)
-      forEach(f, rest)
+      rest.forEach(f)
   }
 }
 
