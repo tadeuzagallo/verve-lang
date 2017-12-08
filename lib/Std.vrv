@@ -113,8 +113,10 @@ implementation Equal<Char> {
 
 interface Comparable<T> {
   operator (T) < (T) -> Bool
+  operator (T) > (T) -> Bool
 }
 
 implementation Comparable<Int> {
   operator x < y { int_lt(x, y) }
+  operator x > y { int_gt(x, y) }
 }

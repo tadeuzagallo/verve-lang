@@ -11,3 +11,8 @@ int_mod(3, 2) // CHECK-L: 1 : Int
 
 int_lt(2, 3) // CHECK-L: True : Bool
 int_lt(2, 2) // CHECK-L: False : Bool
+int_lt(3, 2) // CHECK-L: False : Bool
+
+int_gt(2, 3) // CHECK-L: False : Bool
+int_gt(2, 2) // CHECK-L: False : Bool
+int_gt(3, 2) // CHECK-L: True : Bool

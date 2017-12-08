@@ -52,6 +52,13 @@ int_lt =
        return . VLam $ \(VLit (Integer b)) ->
          return . VNeutral . NFree $ if a < b then "True" else "False")
 
+int_gt :: Value
+int_gt =
+  VLam
+    (\(VLit (Integer a)) ->
+       return . VLam $ \(VLit (Integer b)) ->
+         return . VNeutral . NFree $ if a > b then "True" else "False")
+
 int_to_string :: Value
 int_to_string =
   VLam (\(VLit (Integer a)) ->
