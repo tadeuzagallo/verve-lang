@@ -111,6 +111,17 @@ implementation Equal<Char> {
   }
 }
 
+fn not(b: Bool) -> Bool {
+  match b {
+    case True: False
+    case False: True
+  }
+}
+
+operator<T: Equal> (x: T) != (y: T) -> Bool {
+  not(x == y)
+}
+
 interface Comparable<T> {
   operator (T) < (T) -> Bool
   operator (T) > (T) -> Bool
