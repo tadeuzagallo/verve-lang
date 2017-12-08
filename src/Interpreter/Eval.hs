@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns -fno-warn-incomplete-uni-patterns #-}
 module Interpreter.Eval
   ( eval
   , evalWithEnv
@@ -99,9 +99,14 @@ e_let env binds exp = do
         let env' = foldl addValue env (zip names values)
          in e_expr env' expr
   let fns = map mkFn binds
-  let env' = foldl addValue env $ zip names (mfix_poly fns)
+  env' <- add env names (mfix_poly fns)
   val <- e_expr env' exp
   return (env', val)
  where
    mfix_poly :: [[a] -> a] -> [a]
    mfix_poly fns = fix (\self -> map ($ self) fns)
+
+   add :: Env -> [String] -> [Value] -> EvalResultT Env
+   add env names values = do
+     values' <- mapM (\(VLazy f) -> f()) values
+     return (foldl addValue env (zip names values'))

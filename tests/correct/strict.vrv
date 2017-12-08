@@ -1,0 +1,5 @@
+// RUN: %verve | %check
+(fn f() {
+  print("1") // CHECK-L: "1"
+  print("2") // CHECK-L: "2"
+})()
