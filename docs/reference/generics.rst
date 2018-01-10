@@ -3,29 +3,29 @@ Generics
 
 .. prismjs:: verve
 
-  fn mapInt(fun: (Int) -> Int, list: IntList) -> IntList {
+  fn mapInt(list: IntList, fun: (Int) -> Int) -> IntList {
     // ...
   }
 
 .. prismjs:: verve
 
-  fn mapFloat(fun: (Float) -> Float, list: FloatList) -> FloatList {
+  fn mapFloat(list: FloatList, fun: (Float) -> Float) -> FloatList {
     // ...
   }
 
 .. prismjs:: verve
 
-  fn map<T>(fun: (T) -> T, list: List<T>) -> List<T> {
+  fn map<T>(list: List<T>, fun: (T) -> T) -> List<T> {
     // ...
   }
 
-  map<Int, Int>(increment, [1, 2, 3])
+  map<Int, Int>([1, 2, 3], increment)
 
 .. prismjs:: verve
 
-  fn map<T, U>(fun: (T) -> U, list: List<T>) -> List<U> {
+  fn map<T, U>(list: List<T>, fun: (T) -> U) -> List<U> {
     // ...
   }
 
-  map<Int, Int>(increment, [1, 2, 3]) //=> [2, 3, 4] : List<Int>
-  map<Int, Bool>((>)(2), [1, 2, 3]) //=> [False, False, True] : List<Bool>
+  map<Int, Int>([1, 2, 3], increment) //=> [2, 3, 4] : List<Int>
+  map<Int, Bool>([1, 2, 3], (>)(2)) //=> [False, False, True] : List<Bool>
