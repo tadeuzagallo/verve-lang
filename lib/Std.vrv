@@ -53,6 +53,15 @@ implementation Printable<Int> {
   let to_string = int_to_string
 }
 
+implementation Printable<Bool> {
+  fn to_string(b) {
+    match b {
+      case True: "True"
+      case False: "False"
+    }
+  }
+}
+
 interface Intish<T> {
   let toInt : (T) -> Int
 }
