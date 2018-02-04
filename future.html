@@ -1,0 +1,310 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Under consideration &mdash; The Verve Programming Language  documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="The Verve Programming Language  documentation" href="index.html"/>
+    <link href="_static/prism.css" rel="stylesheet" type="text/css">
+    <link href="_static/style.css" rel="stylesheet" type="text/css">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-47264623-3"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments)};
+      gtag('js', new Date());
+
+      gtag('config', 'UA-47264623-3');
+    </script>
+
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="https://verve-lang.org">
+          
+
+          
+            
+            <img src="_static/logo-white.svg" class="logo" />
+          
+          </a>
+
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/primitives.html">Primitives</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/variables.html">Variables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/if.html">If</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/functions.html">Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/operators.html">Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/comments.html">Comments</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/enums.html">Enums</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/match.html">Match</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/records.html">Records</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/type_aliases.html">Type Aliases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/classes.html">Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/generics.html">Generics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference/imports.html">Imports</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">The Verve Programming Language</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Under consideration</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/future.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="under-consideration">
+<h1>Under consideration<a class="headerlink" href="#under-consideration" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="gadts">
+<h2>GADTs<a class="headerlink" href="#gadts" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-rust"><div class="highlight"><pre><span></span><span class="k">enum</span> <span class="nc">Term</span><span class="o">&lt;</span><span class="n">_</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">Int</span><span class="p">(</span><span class="n">Int</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Term</span><span class="o">&lt;</span><span class="n">Int</span><span class="o">&gt;</span><span class="w"></span>
+<span class="w">  </span><span class="n">Add</span><span class="w"> </span>-&gt; <span class="nc">Term</span><span class="o">&lt;</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span><span class="w"> </span><span class="n">Int</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Int</span><span class="o">&gt;</span><span class="w"></span>
+<span class="w">  </span><span class="n">App</span><span class="o">&lt;</span><span class="n">T</span><span class="p">,</span><span class="w"> </span><span class="n">U</span><span class="o">&gt;</span><span class="p">(</span><span class="n">Term</span><span class="o">&lt;</span><span class="n">T</span><span class="w"> </span>-&gt; <span class="nc">U</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">Term</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">Term</span><span class="o">&lt;</span><span class="n">U</span><span class="o">&gt;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+
+<span class="k">fn</span> <span class="nf">eval</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">(</span><span class="n">term</span>: <span class="nc">Term</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">T</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="k">match</span><span class="w"> </span><span class="n">term</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">Int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">i</span><span class="w"></span>
+<span class="w">    </span><span class="n">Add</span><span class="p">()</span><span class="w"> </span>-&gt; <span class="nc">fn</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="n">App</span><span class="p">(</span><span class="k">fn</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span>-&gt; <span class="nc">fn</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="w"></span>
+<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="visibility">
+<h2>Visibility<a class="headerlink" href="#visibility" title="Permalink to this headline">¶</a></h2>
+<p>Currently everything in the file is exported, which is not ideal. The current two approaches being considered are as follows.</p>
+<div class="section" id="export-declarations">
+<h3>Export declarations<a class="headerlink" href="#export-declarations" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-rust"><div class="highlight"><pre><span></span><span class="n">export</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="c1">// exports the whole module</span>
+<span class="n">export</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">foo</span><span class="p">,</span><span class="w"> </span><span class="n">bar</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// exports foo and bar</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="export-by-convention">
+<h3>Export by convention<a class="headerlink" href="#export-by-convention" title="Permalink to this headline">¶</a></h3>
+<p>Names beginning with <code class="code docutils literal"><span class="pre">_</span></code> are private.</p>
+<div class="highlight-rust"><div class="highlight"><pre><span></span><span class="k">fn</span> <span class="nf">_private</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// _private won&#39;t be exported</span>
+
+<span class="k">fn</span> <span class="nf">public</span><span class="p">()</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="c1">// public will be exported</span>
+</pre></div>
+</div>
+<p>This approach has the benefit that it could also be applied to class members visibility.</p>
+</div>
+</div>
+<div class="section" id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Permalink to this headline">¶</a></h2>
+<p>Declaring a new exception</p>
+<div class="highlight-rust"><div class="highlight"><pre><span></span><span class="n">exception</span><span class="w"> </span><span class="n">NotFound</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">key</span>: <span class="nb">String</span><span class="p">,</span><span class="w"></span>
+<span class="w">  </span><span class="n">foo</span>: <span class="nc">Bar</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>Exception handling</p>
+<div class="highlight-rust"><div class="highlight"><pre><span></span><span class="n">try</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+
+<span class="w">  </span><span class="n">throw</span><span class="w"> </span><span class="n">NotFound</span><span class="p">(</span><span class="n">key</span>: <span class="s">&quot;foo&quot;</span><span class="p">)</span><span class="w"></span>
+
+<span class="p">}</span><span class="w"> </span><span class="n">catch</span><span class="w"> </span><span class="n">NotFound</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="n">print</span><span class="p">(</span><span class="s">&quot;Couldn&#39;t find ${key}&quot;</span><span class="p">)</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Tadeu Zagallo.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+  
+    <script src="_static/prism.js"></script>
+    <script src="_static/prism-verve.js"></script>
+
+
+</body>
+</html>
