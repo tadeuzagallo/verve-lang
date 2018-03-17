@@ -77,10 +77,26 @@ evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
   (nenv', balanced) <- reassocStmt nenv renamed
   (ctx', typed, ty) <- inferStmt ctx balanced
   let core = desugarStmt typed
-  (env', val) <- evalWithEnv env core
+  {-(env', val) <- evalWithEnv env core-}
+  let (env', val) = evalWithEnv env core
   let out = if dumpCore config
-              then show core
-              else ppr (val, ty)
+              then ppr core
+              {-else ppr (val, ty)-}
+              else show (val, ty)
+  return ((nenv', rnEnv', ctx', env'), out)
+
+evalStmts :: Config ->  String -> EvalCtx -> [Stmt] -> Result (EvalCtx, String)
+evalStmts config modName (nenv, rnEnv, ctx, env) stmts = do
+  (rnEnv', renamed) <- renameStmts modName rnEnv stmts
+  (nenv', balanced) <- reassocStmts nenv renamed
+  (ctx', typed, ty) <- inferStmts ctx balanced
+  let core = desugarStmts typed
+  {-(env', val) <- evalWithEnv env core-}
+  let (env', val) = evalWithEnv env core
+  let out = if dumpCore config
+              then ppr core
+              {-else ppr (val, ty)-}
+              else show (val, ty)
   return ((nenv', rnEnv', ctx', env'), out)
 
 
@@ -137,17 +153,25 @@ runModule config file modName (Module imports stmts) = do
   ctx <- resolveImports (evalCtx config) file imports
   either (return . Left) execModule ctx
   where
-    aux :: (EvalCtx, [Either Error String]) -> Stmt -> IO (EvalCtx, [Either Error String])
-    aux (ctx, msgs) stmt =
-      case evalStmt config modName ctx stmt of
+    aux :: (EvalCtx, [Either Error String]) -> [Stmt] -> IO (EvalCtx, [Either Error String])
+    aux (ctx, _) stmts =
+      case evalStmts config modName ctx stmts of
         Left err -> do
-          return (ctx, Left err : msgs)
+          return (ctx, [Left err])
         Right (ctx', out) -> do
-          return (ctx', Right out : msgs)
+          return (ctx', [Right out])
+    {-aux :: (EvalCtx, [Either Error String]) -> Stmt -> IO (EvalCtx, [Either Error String])-}
+    {-aux (ctx, msgs) stmt =-}
+      {-case evalStmt config modName ctx stmt of-}
+        {-Left err -> do-}
+          {-return (ctx, Left err : msgs)-}
+        {-Right (ctx', out) -> do-}
+          {-return (ctx', Right out : msgs)-}
 
     execModule :: EvalCtx -> IO (Either [Error] (EvalCtx, [String]))
     execModule ctx = do
-      (ctx', output) <- foldM aux (ctx, []) stmts
+      {-(ctx', output) <- foldM aux (ctx, []) stmts-}
+      (ctx', output) <- aux (ctx, []) stmts
       (errMessages, outMessages) <- foldM part ([], []) (reverse output)
       return $ case errMessages of
         [] ->

@@ -1,6 +1,7 @@
 module Reassoc.Reassoc
   ( reassoc
   , reassocStmt
+  , reassocStmts
   ) where
 
 import Absyn.Untyped
@@ -14,6 +15,9 @@ reassoc :: Module -> Result Module
 reassoc (Module imports stmts) = do
   (_, stmts') <- n_stmts defaultEnv stmts
   return $ Module imports stmts'
+
+reassocStmts :: Env -> [Stmt] -> Result (Env, [Stmt])
+reassocStmts = n_stmts
 
 reassocStmt :: Env -> Stmt -> Result (Env, Stmt)
 reassocStmt = n_stmt

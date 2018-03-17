@@ -2,124 +2,122 @@ module Core.Absyn where
 
 import Absyn.Typed (Id, Literal)
 import Typing.Types (Type)
-
-import qualified Typing.Types as T (Type(Type))
+import Util.PrettyPrint
 
 import Data.List (intercalate)
 
-data Expr
-  = Void
+newtype Var = Var String
+  deriving (Eq, Show)
+
+newtype ContVar = ContVar String
+  deriving (Eq, Show)
+
+data Term
+  = LetVal Var Value Term
+  | LetCont [ContDef] Term
+  | LetFun [FunDef] Term
+  | AppCont ContVar [Var]
+  | App Var ContVar [Var]
+  | Match Var [(Pattern, ContVar)]
+  deriving (Show)
+
+data FunDef = FunDef Var ContVar [Var] Term
+  deriving (Show)
+
+data ContDef = ContDef ContVar [Var] Term
+  deriving (Show)
+
+data Lambda = Lambda ContVar [Var] Term
+  deriving (Show)
+
+data Value
+  = Unit
   | Lit Literal
-  | Var Id
-  | App Expr Expr
-  | Lam Id Expr
-  | Let [Bind] Expr
-  | Match Expr [Case]
+  | In String [Var]
+  | Lam Lambda
+  | Record [(Id, Var)]
   | Type Type
-  | Record [Bind]
-
-type Bind = (Id, Expr)
-
-type Case = (Pattern, Expr)
-
-instance Show Expr where
-  show = printOut . showExpr Top
-
-data Out
-  = Str String
-  | Indent
-  | Dedent
-  | LineBreak
-
-printOut :: [Out] -> String
-printOut out = printOutAux 0 out
-
-printOutAux :: Int -> [Out] -> String
-printOutAux _ [] = ""
-printOutAux d (Str s : out) = s ++ " " ++ printOutAux d out
-printOutAux d (Indent : out) = printOutAux (d + 1) out
-printOutAux d (Dedent : out) = printOutAux (d - 1) out
-printOutAux d (LineBreak : out) = "\n" ++ replicate (d * 2) ' ' ++ printOutAux d out
-
-data Ctx = Top | Bot
-
-showExpr :: Ctx -> Expr -> [Out]
-showExpr _ Void = [Str "()"]
-showExpr _ (Lit l) = [Str $ show l]
-showExpr _ (Var id) = [showIdName id]
-showExpr _ (Type ty) = [Str $ "@" ++ show ty]
-
-showExpr _ (Record fields) =
-  let showField (id, expr) = [showIdName id,  Str "="] ++ showExpr Top expr ++ [LineBreak]
-   in [Str "{", Indent, LineBreak] ++ concatMap showField fields ++ [Dedent, LineBreak, Str "}"]
-
-showExpr Top (App (Var ("#fix", _)) (Lam _ body)) =
-  showExpr Top body
-
-showExpr Top (App f arg) =
-  showExpr Top f ++ showExpr Bot arg
-
-showExpr Top lam@(Lam _ _) =
-  [Str "λ"] ++ aux lam
-  where
-    aux (Lam (name, T.Type) body) = [Str $ "@" ++ name] ++ aux body
-    aux (Lam id body) = [showIdName id] ++ aux body
-    aux expr = [Str "-> {", Indent, LineBreak] ++ showExpr Top expr ++ [Dedent, LineBreak, Str "}"]
-
-showExpr Top (Let bind expr) =
-  concatMap showBind bind ++ showExpr Top expr
-
-showExpr Top (Match expr cases) =
-  [Str "case", Str $ show expr, Str "of {", Indent, LineBreak] ++ concatMap showCase cases ++ [Dedent, LineBreak, Str "}"]
-
-showExpr Bot expr = [Str "("] ++  showExpr Top expr ++ [Str ")"]
-
-showId :: Id -> Out
-showId (v, ty) = Str $ v ++ " : " ++ show ty
-
-showIdName :: Id -> Out
-showIdName ("#ignore", _) = Str "_"
-showIdName (n, _) = Str n
-
-showBind :: Bind -> [Out]
-showBind (id, expr) =
-  [Str "let", showIdName id] ++ aux expr
-    where
-      aux (Lam id body) = [showIdName id] ++ aux body
-      aux expr = [Str "="] ++ showExpr Top expr ++ [LineBreak]
-
-showCase :: Case -> [Out]
-showCase (pat, expr) =
-  [Str $ show pat, Str "->", Str $ show expr, LineBreak]
+  deriving (Show)
 
 data Pattern
   = PatDefault
   | PatLiteral Literal
-  | PatVar Id
-  | PatRecord [(Id, Pattern)]
-  | PatCtor Id [Pattern]
+  | PatVar Var
+  | PatRecord [Var]
+  | PatCtor Var
+  deriving (Show)
 
-instance Show Pattern where
-  show = showPat Top
+-- Pretty Printing
 
-showPat :: Ctx -> Pattern -> String
-showPat _ PatDefault =
-  "_"
+instance PrettyPrint Var where
+  ppr (Var v) = v
 
-showPat _ (PatLiteral l) =
-  show l
+instance PrettyPrint ContVar where
+  ppr (ContVar v) = v
 
-showPat _ (PatVar (name, _ )) =
-  name
+instance PrettyPrint Term where
+  ppr (LetVal x v t) =
+    "letval " ++ ppr x ++ " = " ++ ppr v ++ " in\n" ++
+      ppr t
 
-showPat _ (PatRecord fields) =
-  "{" ++ intercalate ", " (map showField fields) ++ "}"
-    where
-      showField ((key, _), pat) =
-        key ++ ": " ++ showPat Top pat
+  ppr (LetCont contDefs t) =
+    "letcont\n" ++
+      concatMap ppr contDefs ++ "\n" ++
+        "in " ++ ppr t
 
-showPat Top (PatCtor (name, _) pats) =
-  name ++ " " ++ unwords (reverse $ map (showPat Bot) pats)
+  ppr (LetFun funDefs t) =
+    "letfun\n" ++
+      concatMap ppr funDefs ++ "\n" ++
+        "in " ++ ppr t
 
-showPat Bot pat@(PatCtor _ _) =
-  "(" ++ showPat Top  pat ++ ")"
+  ppr (AppCont k args) =
+    ppr k ++ " " ++ unwords (map ppr args)
+
+  ppr (App x k args) =
+    ppr x ++ " " ++ ppr k ++ " " ++ unwords (map ppr args)
+
+  ppr (Match x cases) =
+    "match " ++ ppr x ++ " with\n" ++
+      unlines (map pprCase cases)
+      where pprCase (pat, k) =
+              ppr pat ++ " -> " ++ ppr k
+
+instance PrettyPrint FunDef where
+  ppr (FunDef f k params body) =
+    unwords (ppr f : ppr k : map ppr (params)) ++ " = " ++ ppr body
+
+instance PrettyPrint ContDef where
+  ppr (ContDef k params body) =
+    unwords (ppr k : map ppr params) ++ " = " ++ ppr body
+
+instance PrettyPrint Lambda where
+  ppr (Lambda k params body) =
+    "λ " ++ ppr k ++ " " ++ unwords (map ppr params) ++ " . " ++ ppr body
+
+instance PrettyPrint Value where
+  ppr Unit = "()"
+
+  ppr (Lit lit) = show lit
+
+  ppr (In i vars) = "in " ++ i ++ " " ++ unwords (map ppr vars)
+
+  ppr (Lam l) = ppr l
+
+  ppr (Record fields) =
+    "{ " ++ intercalate ", " (map pprField fields) ++ " }"
+      where pprField ((n, _), var) =
+              n ++ ": " ++ ppr var
+
+  ppr (Type t) = ppr t
+
+instance PrettyPrint Pattern where
+  ppr PatDefault = "_"
+
+  ppr (PatLiteral l) = show l
+
+  ppr (PatVar v) = ppr v
+  
+  ppr (PatRecord r) =
+    "{ " ++ intercalate ", " (map ppr r) ++ " }"
+
+  ppr (PatCtor v) = ppr v

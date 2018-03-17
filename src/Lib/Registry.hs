@@ -81,7 +81,7 @@ registry = execWriter $ do
   ctor "Cons" (forall [T] $ [var T, list T] ~> list T)
 
   internal "#fieldAccess" fieldAccess
-  internal "#unwrapClass" unwrapClass
+  {-internal "#unwrapClass" unwrapClass-}
 
 -- FILTERS
 isValue :: Entry -> Bool

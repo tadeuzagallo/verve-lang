@@ -16,7 +16,7 @@ data-files:          lib/*.vrv
 
 library
   hs-source-dirs:      src
-  ghc-options:         -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
+  ghc-options:         -Wall -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
   default-extensions:  NamedFieldPuns
   exposed-modules:     Absyn.Typed
                        Absyn.Untyped
@@ -60,7 +60,7 @@ library
 executable verve
   hs-source-dirs: app
   main-is:        Main.hs
-  ghc-options:    -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
+  ghc-options:    -Wall -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
   build-depends:  base >= 4.7 && < 5, verve, haskeline, filepath, directory
   default-language:    Haskell2010
 

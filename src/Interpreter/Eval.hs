@@ -6,107 +6,94 @@ module Interpreter.Eval
 
 import Core.Absyn
 import Interpreter.Env
-import Interpreter.Value
-import Interpreter.RuntimeError
+import qualified Interpreter.Value as Rt
 
-import Control.Monad (foldM)
-import Data.Bifunctor (first)
-import Data.Function (fix)
+import Debug.Trace
 
+eval :: Term -> Rt.Value
+eval = snd . evalTerm defaultEnv
 
-eval :: Expr -> EvalResult
-eval expr = do
-  (_, val) <- evalWithEnv defaultEnv expr
-  return val
+evalWithEnv, evalTerm :: Env -> Term -> (Env, Rt.Value)
+evalWithEnv = evalTerm
 
-evalWithEnv :: Env -> Expr -> EvalResultT (Env, Value)
-evalWithEnv env (Let binds exp) =
-  e_let env binds exp
-evalWithEnv env exp =
-  (,) env <$> e_expr env exp
+evalTerm env (LetVal x v k) =
+  let v' = evalValue env v
+      env' = addVal env (x, v')
+   in evalTerm env' k
 
-e_expr :: Env -> Expr -> EvalResult
-e_expr _ Void = return VVoid
-e_expr _ (Lit s) = return $ VLit s
-e_expr env (Var (name, _)) =
-  case getValue name env of
-    Nothing -> return . VNeutral $ NFree name
-    Just (VLazy f) -> f ()
-    Just val -> return val
-e_expr env (Lam (name, _) body) = do
-  return . VLam $ \v -> e_expr (addValue env (name, v)) body
-e_expr _ (Type t) = return $ VType t
-e_expr env (App fn arg) = do
-  fnVal <- e_expr env fn
-  arg' <- e_expr env arg
-  case fnVal of
-    VNeutral n -> return . VNeutral $ NApp n arg'
-    VLam f -> f arg'
+evalTerm env (LetCont defs l) =
+  let conts = map (evalContDef env) defs
+      env' = foldl addCont env conts
+   in evalTerm env' l
 
-e_expr env (Let binds exp) =
-  e_let env binds exp >>= return . snd
+evalTerm env (LetFun defs t) =
+  let funs = map (evalFunDef env) defs
+      env' = foldl addVal env funs
+   in evalTerm env' t
 
-e_expr env (Match expr cases) = do
-  v <- e_expr env expr
-  e_cases env v cases
+evalTerm env (AppCont k xs) =
+  evalCont env k (map (flip lookupVal env) xs)
 
-e_expr env (Record fields) = do
-  fieldValues <- mapM (e_expr env . snd) fields
-  let labels = map (fst . fst) fields
-  return . VRecord $ zip labels fieldValues
+evalTerm env (App f k xs) =
+  let v = lookupVal f env in
+    case v of
+    Rt.VClosure (env', Lambda j ys t) ->
+      let env'' = addCont env' (j, lookupCont k env)
+          vs = map (`lookupVal` env) xs
+          env''' = foldl addVal env'' (zip ys vs)
+       in evalTerm env''' t
+    Rt.VBuiltin _ ->
+      let val = foldl g v xs
+       in evalCont env k [val]
+        where g (Rt.VBuiltin f) x =
+                (trace . show) (lookupVal x env) $
+                  f (lookupVal x env)
 
-e_cases :: Env -> Value -> [Case] -> EvalResult
-e_cases _ _ [] = mkError MatchFailure
-e_cases env val ((pattern, expr):cases) =
-  case e_pattern env val pattern of
-    Nothing -> e_cases env val cases
-    Just env' -> e_expr env' expr
+evalTerm env (Match x ks) =
+  error "match not supported yet"
+  {-let Rt.VIn i vs = lookupVal x env-}
+      {-ki = ks !! i-}
+      {-Rt.Cont (env', (ys, t)) = lookupCont ki env-}
+      {-env'' = foldl addVal env' (zip ys vs)-}
+   {-in evalTerm env'' t-}
 
-e_pattern :: Env -> Value -> Pattern -> Maybe Env
-e_pattern env _ PatDefault = Just env
+evalCont :: Env -> ContVar -> [Rt.Value] -> (Env, Rt.Value)
+evalCont env k vals =
+  case lookupCont k env of
+    Rt.Halt ->
+      (env, head vals)
+    Rt.Cont (env', (xs, t)) ->
+      let env'' = foldl addVal env' (zip xs vals)
+       in evalTerm env'' t
 
-e_pattern env val (PatVar (name, _)) =
-  Just (addValue env (name, val))
+evalValue :: Env -> Value -> Rt.Value
+evalValue _ Unit =
+  Rt.VUnit
 
-e_pattern env (VLit l) (PatLiteral l') =
-  if l == l'
-     then Just env
-     else Nothing
+evalValue env (Lam f) =
+  Rt.VClosure (env, f)
 
-e_pattern env (VRecord vFields) (PatRecord patFields) =
-  foldM aux env vFields
-  where
-    vFields' = map (first fst) patFields
+evalValue env (Lit l) =
+  Rt.VLit l
 
-    aux env (key, val) = do
-      pat <- lookup key vFields'
-      e_pattern env val pat
+evalValue env (In i args) =
+  Rt.VIn i (map (flip lookupVal env) args)
 
-e_pattern env (VNeutral n) (PatCtor (name, _) pats) =
-  aux env n pats
-    where
-      aux env (NFree n') [] | n' == name = Just env
-      aux env (NApp n (VType _)) p =
-        aux env n p
-      aux env (NApp n' v) (p:ps) =
-        e_pattern env v p >>= \env' -> aux env' n' ps
-      aux _ _ _ = Nothing
+evalValue env (Record fields) =
+  Rt.VRecord (map f fields)
+    where f ((name, _), var) =
+            (name, lookupVal var env)
 
-e_let :: Env -> [Bind] -> Expr -> EvalResultT (Env, Value)
-e_let env binds exp = do
-  let names = map (fst . fst) binds
-  let mkFn (_, expr) values = VLazy $ \() ->
-        let env' = foldl addValue env (zip names values)
-         in e_expr env' expr
-  let fns = map mkFn binds
-  env' <- add env names (mfix_poly fns)
-  val <- e_expr env' exp
-  return (env', val)
- where
-   mfix_poly :: [[a] -> a] -> [a]
-   mfix_poly fns = fix (\self -> map ($ self) fns)
+evalValue env (Type t) =
+  Rt.VType t
 
-   add :: Env -> [String] -> [Value] -> EvalResultT Env
-   add env names values = do
-     values' <- mapM (\(VLazy f) -> f()) values
-     return (foldl addValue env (zip names values'))
+evalContDef :: Env -> ContDef -> (ContVar, Rt.ContValue)
+evalContDef env (ContDef contVar vars body) =
+  let cont = Rt.Cont (env, (vars, body))
+   in (contVar, cont)
+
+-- TODO: this is wrong and won't support mutual recursive fns
+evalFunDef :: Env -> FunDef -> (Var, Rt.Value)
+evalFunDef env (FunDef name k xs body) =
+  let val = Rt.VClosure (env, (Lambda k xs body))
+   in (name, val)

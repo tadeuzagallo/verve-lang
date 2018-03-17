@@ -1,22 +1,48 @@
 module Interpreter.Env
   ( Env
   , defaultEnv
-  , addValue
-  , getValue
+  , addVal
+  , lookupVal
+  , addCont
+  , lookupCont
   ) where
 
-import Interpreter.Value (Value)
+import Core.Absyn (ContVar(..), Var(..))
+import Interpreter.Value (ContValue(..), Value(..))
 import Lib.Registry
 
-data Env =
-  Env [(String, Value)]
+data Env
+  = Empty
+  | ValueBind Var Value Env
+  | ContBind ContVar ContValue Env
   deriving (Show)
 
 defaultEnv :: Env
-defaultEnv = Env (impl <$> filter (\x -> isValue x || isInternal x) registry)
+defaultEnv =
+  let halt = ContVar "halt"
+      env = ContBind halt Halt Empty
+      filtered =  filter (\x -> isValue x || isInternal x) registry
+      merge env entry =
+        let (var, value) = impl entry
+         in ValueBind (Var var) value env
+   in foldl merge env filtered
 
-addValue :: Env -> (String, Value) -> Env
-addValue (Env env) (n, val) = Env ((n, val) : env)
+lookupVal :: Var -> Env -> Value
+lookupVal (Var x) Empty = VIn x []
+lookupVal x (ContBind _ _ tail) = lookupVal x tail
+lookupVal x (ValueBind y v tail)
+  | x == y = v
+  | otherwise = lookupVal x tail
 
-getValue :: String -> Env -> Maybe Value
-getValue key (Env env) = lookup key env
+lookupCont :: ContVar -> Env -> ContValue
+lookupCont _ Empty = undefined
+lookupCont k (ValueBind _ _ tail) = lookupCont k tail
+lookupCont l (ContBind k v tail)
+  | k == l = v
+  | otherwise = lookupCont k tail
+
+addVal :: Env -> (Var, Value) -> Env
+addVal env (x, v) = ValueBind x v env
+
+addCont :: Env -> (ContVar, ContValue) -> Env
+addCont env (k, v) = ContBind k v env

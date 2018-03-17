@@ -3,6 +3,7 @@
 module Typing.TypeChecker
   ( infer
   , inferStmt
+  , inferStmts
   ) where
 
 import qualified Absyn.Untyped as U
@@ -86,6 +87,20 @@ infer (Module imports stmts) =
   runTc
     (i_stmts defaultCtx stmts)
     (\(stmts, ty) -> (Module imports stmts, ty))
+
+inferStmts :: Ctx -> [U.Stmt] -> Result (Ctx, [T.Stmt], Type)
+inferStmts ctx stmts =
+  runTc (i_stmts ctx stmts) id
+ where 
+   i_stmts :: Ctx -> [U.Stmt] -> Tc (Ctx, [T.Stmt], Type)
+   i_stmts ctx stmts = do
+     (ctx, stmts', ty) <- foldM aux (ctx, [], void) stmts
+     return (ctx, reverse stmts', ty)
+       where
+         aux :: (Ctx, [T.Stmt], Type) -> U.Stmt -> Tc (Ctx, [T.Stmt], Type)
+         aux (ctx, stmts, _) stmt = do
+           (ctx', stmt', ty) <- i_stmt ctx stmt
+           return (ctx', stmt':stmts, ty)
 
 inferStmt :: Ctx -> U.Stmt -> Result (Ctx, T.Stmt, Type)
 inferStmt ctx stmt =

@@ -1,6 +1,7 @@
 module Renamer.Renamer
   ( renameImport
   , renameStmt
+  , renameStmts
   ) where
 
 import Absyn.Untyped
@@ -35,6 +36,10 @@ import Data.List (intercalate)
 
 
 -- ENTRY POINT
+
+renameStmts :: String -> Env -> [Stmt] -> Result (Env, [Stmt])
+renameStmts modName env stmts =
+  runRn modName $ foldAcc r_stmt env stmts
 
 renameStmt :: String -> Env -> Stmt -> Result (Env, Stmt)
 renameStmt modName env stmt =

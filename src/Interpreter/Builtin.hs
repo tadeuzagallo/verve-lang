@@ -11,112 +11,111 @@ import System.IO.Unsafe (unsafePerformIO)
 
 int_add :: Value
 int_add =
-  VLam
+  VBuiltin
     (\(VLit (Integer a)) ->
-       return . VLam $ \(VLit (Integer b)) ->
-         return . VLit . Integer $ a + b)
+       VBuiltin $ \(VLit (Integer b)) ->
+         VLit . Integer $ a + b)
 
 int_sub :: Value
 int_sub =
-  VLam (\(VLit (Integer a)) ->
-    return . VLam $ \(VLit (Integer b)) ->
-      return . VLit . Integer $ a - b)
+  VBuiltin (\(VLit (Integer a)) ->
+    VBuiltin $ \(VLit (Integer b)) ->
+      VLit . Integer $ a - b)
 
 int_mul :: Value
 int_mul =
-  VLam (\(VLit (Integer a)) ->
-    return . VLam $ \(VLit (Integer b)) ->
-      return . VLit . Integer $ a * b)
+  VBuiltin (\(VLit (Integer a)) ->
+    VBuiltin $ \(VLit (Integer b)) ->
+      VLit . Integer $ a * b)
 
 int_div :: Value
 int_div =
-  VLam (\(VLit (Integer a)) ->
-    return . VLam $ \(VLit (Integer b)) ->
-      return . VLit . Integer $ a `div` b)
+  VBuiltin (\(VLit (Integer a)) ->
+    VBuiltin $ \(VLit (Integer b)) ->
+      VLit . Integer $ a `div` b)
 
 int_mod :: Value
 int_mod =
-  VLam (\(VLit (Integer a)) ->
-    return . VLam $ \(VLit (Integer b)) ->
-      return . VLit . Integer $ a `mod` b)
+  VBuiltin (\(VLit (Integer a)) ->
+    VBuiltin $ \(VLit (Integer b)) ->
+      VLit . Integer $ a `mod` b)
 
 int_neg :: Value
 int_neg =
-  VLam (\(VLit (Integer a)) ->
-    return . VLit . Integer $ negate a)
+  VBuiltin (\(VLit (Integer a)) ->
+    VLit . Integer $ negate a)
 
 int_lt :: Value
 int_lt =
-  VLam
+  VBuiltin
     (\(VLit (Integer a)) ->
-       return . VLam $ \(VLit (Integer b)) ->
-         return . VNeutral . NFree $ if a < b then "True" else "False")
+       VBuiltin $ \(VLit (Integer b)) ->
+         if a < b then VIn "True" [] else VIn "False" [])
 
 int_gt :: Value
 int_gt =
-  VLam
+  VBuiltin
     (\(VLit (Integer a)) ->
-       return . VLam $ \(VLit (Integer b)) ->
-         return . VNeutral . NFree $ if a > b then "True" else "False")
+       VBuiltin $ \(VLit (Integer b)) ->
+         if a > b then VIn "True" [] else VIn "False" [])
 
 int_to_string :: Value
 int_to_string =
-  VLam (\(VLit (Integer a)) ->
-    return . VLit . String $ show a)
+  VBuiltin (\(VLit (Integer a)) ->
+    VLit . String $ show a)
 
 string_print :: Value
 string_print =
-  VLam (\v ->
+  VBuiltin (\v ->
     case unsafePerformIO (print v) of
-      () -> return VVoid)
+      () -> VUnit)
 
 fieldAccess :: Value
 fieldAccess =
-  VLam (\(VLit (String field)) ->
-    return . VLam $ \(VRecord fields) ->
-      return . fromJust $ lookup field fields)
+  VBuiltin (\(VLit (String field)) ->
+    VBuiltin $ \(VRecord fields) ->
+      fromJust $ lookup field fields)
 
-unwrapClass :: Value
-unwrapClass =
-  VLam (\(VNeutral (NApp _ v)) ->
-    return v)
+{-unwrapClass :: Value-}
+{-unwrapClass =-}
+  {-VBuiltin (\(VNeutral (NApp _ v)) -> v)-}
 
 strlen :: Value
 strlen =
-  VLam $ \(VLit (String field)) ->
-    return . VLit . Integer . toInteger $ length field
+  VBuiltin $ \(VLit (String field)) ->
+    VLit . Integer . toInteger $ length field
 
 substr :: Value
 substr =
-  VLam $ \(VLit (String str)) ->
-    return . VLam $ \(VLit (Integer off)) ->
-      return . VLam $ \(VLit (Integer len)) ->
-        return . VLit . String . take (fromInteger len) . drop (fromInteger off) $ str
+  VBuiltin $ \(VLit (String str)) ->
+    VBuiltin $ \(VLit (Integer off)) ->
+      VBuiltin $ \(VLit (Integer len)) ->
+        VLit . String . take (fromInteger len) . drop (fromInteger off) $ str
 
 charAt :: Value
 charAt =
-  VLam $ \(VLit (String str)) ->
-    return . VLam $ \(VLit (Integer index)) ->
-      return . VLit . Char $ str !! fromInteger index
+  VBuiltin $ \(VLit (String str)) ->
+    VBuiltin $ \(VLit (Integer index)) ->
+      VLit . Char $ str !! fromInteger index
 
 char_to_int :: Value
 char_to_int =
-  VLam $ \(VLit (Char c)) ->
-    return . VLit . Integer . toInteger $ ord c
+  VBuiltin $ \(VLit (Char c)) ->
+    VLit . Integer . toInteger $ ord c
 
 read_file :: Value
 read_file =
-  VLam $ \(VLit (String fileName)) ->
+  VBuiltin $ \(VLit (String fileName)) ->
     case unsafePerformIO (readFile fileName) of
       content ->
-        return . VLit . String $ content
+        VLit . String $ content
 
 sqrt' :: Value
 sqrt' =
-  VLam $ \(VLit (Float f)) ->
-    return . VLit . Float $ sqrt f
+  VBuiltin $ \(VLit (Float f)) ->
+    VLit . Float $ sqrt f
 
 ceil' :: Value
 ceil' =
-  VLam $ \(VLit (Float f)) ->
-    return . VLit . Integer $ ceiling f
+  VBuiltin $ \(VLit (Float f)) ->
+    VLit . Integer $ ceiling f
