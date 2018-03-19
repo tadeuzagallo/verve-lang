@@ -558,9 +558,22 @@ matchRecord =
     {-match (x1, ..., xn) with (p1, ..., pn)-}
 
 matchList :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchList =
-  -- TODO
-  undefined
+matchList vs eqs =
+  match vs eqs'
+    where
+      eqs' = map desugar eqs
+
+      desugar :: Equation -> Equation
+      desugar (p : ps, e) = (desugarCons p : ps, e)
+
+      desugarCons :: Pattern -> Pattern
+      desugarCons (PatList ps rest) =
+        foldl (\rest p -> PatCtor ("Cons", void) [p, rest]) (desugarRest rest) ps
+
+      desugarRest :: PatternRest -> Pattern
+      desugarRest NoRest = PatCtor ("Nil", void) []
+      desugarRest DiscardRest = PatDefault
+      desugarRest (NamedRest a) = PatVar a
 
 matchCtor :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 matchCtor (v:vs) eqs def k = do

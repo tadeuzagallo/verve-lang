@@ -23,3 +23,4 @@ type Function = BaseFunction Id Type Intf
 type Expr = BaseExpr Id Type Intf
 type Case = BaseCase Id Type Intf
 type Pattern = BasePattern Id
+type PatternRest = BasePatternRest Id
