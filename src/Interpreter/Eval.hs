@@ -8,7 +8,7 @@ import Core.Absyn
 import Interpreter.Env
 import qualified Interpreter.Value as Rt
 
-import Debug.Trace
+import Data.List (find)
 
 eval :: Term -> Rt.Value
 eval = snd . evalTerm defaultEnv
@@ -36,7 +36,7 @@ evalTerm env (AppCont k xs) =
 
 evalTerm env (App f k xs) =
   let v = lookupVal f env in
-    case v of
+  case v of
     Rt.VClosure (env', Lambda j ys t) ->
       let env'' = addCont env' (j, lookupCont k env)
           vs = map (`lookupVal` env) xs
@@ -45,17 +45,20 @@ evalTerm env (App f k xs) =
     Rt.VBuiltin _ ->
       let val = foldl g v xs
        in evalCont env k [val]
-        where g (Rt.VBuiltin f) x =
-                (trace . show) (lookupVal x env) $
-                  f (lookupVal x env)
+        where
+          g (Rt.VBuiltin f) x =
+            f (lookupVal x env)
+    Rt.VIn i vs ->
+      let vs' = filter noTypes $ map (`lookupVal` env) xs
+          -- discard types from sums
+          noTypes (Rt.VType _) = False
+          noTypes _ = True
+       in evalCont env k [Rt.VIn i (vs ++ vs')]
 
-evalTerm env (Match x ks) =
-  error "match not supported yet"
-  {-let Rt.VIn i vs = lookupVal x env-}
-      {-ki = ks !! i-}
-      {-Rt.Cont (env', (ys, t)) = lookupCont ki env-}
-      {-env'' = foldl addVal env' (zip ys vs)-}
-   {-in evalTerm env'' t-}
+evalTerm env (Case x ks) =
+  let Rt.VIn i vs = lookupVal x env
+      Just (Clause _ ki) = find (\(Clause c _) -> c == i) ks
+  in evalCont env ki vs
 
 evalCont :: Env -> ContVar -> [Rt.Value] -> (Env, Rt.Value)
 evalCont env k vals =
@@ -73,7 +76,7 @@ evalValue _ Unit =
 evalValue env (Lam f) =
   Rt.VClosure (env, f)
 
-evalValue env (Lit l) =
+evalValue _ (Lit l) =
   Rt.VLit l
 
 evalValue env (In i args) =
@@ -84,7 +87,7 @@ evalValue env (Record fields) =
     where f ((name, _), var) =
             (name, lookupVal var env)
 
-evalValue env (Type t) =
+evalValue _ (Type t) =
   Rt.VType t
 
 evalContDef :: Env -> ContDef -> (ContVar, Rt.ContValue)

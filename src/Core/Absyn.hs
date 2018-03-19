@@ -18,7 +18,7 @@ data Term
   | LetFun [FunDef] Term
   | AppCont ContVar [Var]
   | App Var ContVar [Var]
-  | Match Var [(Pattern, ContVar)]
+  | Case Var [Clause]
   deriving (Show)
 
 data FunDef = FunDef Var ContVar [Var] Term
@@ -39,16 +39,10 @@ data Value
   | Type Type
   deriving (Show)
 
-data Pattern
-  = PatDefault
-  | PatLiteral Literal
-  | PatVar Var
-  | PatRecord [Var]
-  | PatCtor Var
+data Clause = Clause String ContVar
   deriving (Show)
 
 -- Pretty Printing
-
 instance PrettyPrint Var where
   ppr (Var v) = v
 
@@ -76,11 +70,12 @@ instance PrettyPrint Term where
   ppr (App x k args) =
     ppr x ++ " " ++ ppr k ++ " " ++ unwords (map ppr args)
 
-  ppr (Match x cases) =
-    "match " ++ ppr x ++ " with\n" ++
+  ppr (Case x cases) =
+    "case " ++ ppr x ++ " of\n" ++
       unlines (map pprCase cases)
-      where pprCase (pat, k) =
-              ppr pat ++ " -> " ++ ppr k
+        where
+          pprCase (Clause c k) =
+            c ++ " -> " ++ ppr k
 
 instance PrettyPrint FunDef where
   ppr (FunDef f k params body) =
@@ -110,14 +105,45 @@ instance PrettyPrint Value where
 
   ppr (Type t) = ppr t
 
-instance PrettyPrint Pattern where
-  ppr PatDefault = "_"
+-- Substitution
+class Subst t where
+  -- t[v / x]
+  subst :: t -> Var -> Var -> t
 
-  ppr (PatLiteral l) = show l
+instance Subst Term where
+  subst (LetVal x' v' t) v x =
+    LetVal x' v' (if x' == x then t else subst t v x)
 
-  ppr (PatVar v) = ppr v
-  
-  ppr (PatRecord r) =
-    "{ " ++ intercalate ", " (map ppr r) ++ " }"
+  subst (LetCont d t) v x =
+    LetCont (subst d v x) (subst t v x)
 
-  ppr (PatCtor v) = ppr v
+  subst (LetFun d t) v x =
+    if x `elem` map fnName d
+       then LetFun d t
+       else LetFun (subst d v x) (subst t v x)
+     where fnName (FunDef n _ _ _) = n
+
+  subst (AppCont k xs) v x =
+    AppCont k (subst xs v x)
+
+  subst (App f k xs) v x =
+    App (subst f v x) k (subst xs v x)
+
+  subst (Case y cs) v x =
+    Case (subst y v x) cs
+
+instance Subst ContDef where
+  subst (ContDef k xs t) v x =
+    ContDef k xs (if x `elem` xs then t else subst t v x)
+
+instance Subst FunDef where
+  subst (FunDef f k xs t) v x =
+    FunDef f k xs (if x `elem` xs then t else subst t v x)
+
+instance Subst Var where
+  subst y v x
+    | x == y = v
+    | otherwise = y
+
+instance (Subst t) => Subst [t] where
+  subst ts v x = map (\t -> subst t v x) ts

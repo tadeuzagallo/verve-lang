@@ -91,7 +91,7 @@ infer (Module imports stmts) =
 inferStmts :: Ctx -> [U.Stmt] -> Result (Ctx, [T.Stmt], Type)
 inferStmts ctx stmts =
   runTc (i_stmts ctx stmts) id
- where 
+ where
    i_stmts :: Ctx -> [U.Stmt] -> Tc (Ctx, [T.Stmt], Type)
    i_stmts ctx stmts = do
      (ctx, stmts', ty) <- foldM aux (ctx, [], void) stmts
@@ -585,7 +585,7 @@ c_pattern ctx ty (PatCtor name vars) = do
                  _ -> emptySubst
   let params' = map (applySubst substs) params
   (vars', ctx') <- foldM aux ([], ctx) (zip params' vars)
-  return (PatCtor (name, fnTy) vars', ctx')
+  return (PatCtor (name, fnTy) (reverse vars'), ctx')
     where
       aux (vars, ctx) (ty, var) = do
         (var', ctx') <- c_pattern ctx ty var
