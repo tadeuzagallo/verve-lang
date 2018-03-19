@@ -41,7 +41,24 @@ evalTerm env (App f k xs) =
       let env'' = addCont env' (j, lookupCont k env)
           vs = map (`lookupVal` env) xs
           env''' = foldl addVal env'' (zip ys vs)
-       in evalTerm env''' t
+       in
+      case compare (length xs) (length ys) of
+        -- partial application
+        LT ->
+          let ys' = drop (length vs) ys
+           in evalCont env k [Rt.VClosure (env''', Lambda j ys' t)]
+
+        -- curry - is this a good idea?
+        GT ->
+          let j = case k of ContVar k' -> ContVar (k' ++ "'")
+              xs' = drop (length ys) xs
+              def = ContDef j [f] (App f k $ xs')
+           in evalTerm env (LetCont [def] $
+             App f j (take (length ys) xs))
+
+        -- nice
+        EQ ->
+           evalTerm env''' t
     Rt.VBuiltin _ ->
       let val = foldl g v xs
        in evalCont env k [val]
