@@ -11,6 +11,7 @@ import qualified Core.Absyn as CA
 
 import Control.Monad (foldM)
 import Control.Monad.State (State, evalState, gets, modify)
+import Data.Foldable (foldrM)
 import Data.List (groupBy)
 import Data.Maybe (maybe)
 
@@ -85,44 +86,70 @@ findEnumForCtor c = do
 
 
 d_stmts :: [Stmt] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-d_stmts [] k =
-  d_expr VoidExpr k
+{-d_stmts [] k =-}
+  {-d_expr VoidExpr k-}
 
-d_stmts [stmt] k =
-  case stmt of
-    Decl decl -> d_decl decl k
-    Expr expr -> d_expr expr k
+{-d_stmts [stmt] k =-}
+{-d_stmts (stmt : stmts) k = do-}
+  {-j <- contVar-}
+  {-stmt' <- case stmt of-}
+             {-Decl decl -> d_decl decl $ \x -> return (CA.AppCont j x)-}
+             {-Expr expr -> d_expr expr $ \x -> return (CA.AppCont j x)-}
+  {-stmts' <- d_stmts stmts k-}
+  {-return $ CA.LetCont [CA.ContDef j [] stmts'] stmt'-}
 
-d_stmts (stmt : stmts) k = do
-  j <- contVar
-  stmt' <- case stmt of
-             Decl decl -> d_decl decl $ \x -> return (CA.AppCont j x)
-             Expr expr -> d_expr expr $ \x -> return (CA.AppCont j x)
-  stmts' <- d_stmts stmts k
-  return $ CA.LetCont [CA.ContDef j [] stmts'] stmt'
+d_stmts stmts k =
+  let stmts' = groupBy f stmts
+   in g stmts' k
+    where
+      f (Decl _) (Decl _) = True
+      f (Expr _) (Expr _) = True
+      f _ _ = False
 
+      g (ds@(Decl _: _) : rest) k = do
+        let r =
+              case rest of
+                [] -> k
+                r -> \_ -> g r k
+        d_decls (map (\(Decl d) -> d) ds) r
+
+      g (es@(Expr _ : _) : rest) k = do
+        let init = case rest of
+                     [] -> \x -> k x
+                     r -> \_ -> g r k
+        foldr (\e k _ -> d_expr e k) init [e | Expr e <- es] []
+
+      g [] k =
+        d_expr VoidExpr k
+
+
+d_decls :: [Decl] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
+d_decls [d] k =
+  d_decl d k
+
+d_decls (d:ds) k = do
+  d_decl d (\_ -> d_decls ds k)
 
 d_decl :: Decl -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_decl (Let (x, _) expr) k = do
   j <- contVar
   expr' <- d_expr expr $ \z -> return (CA.AppCont j z)
-  x' <- k [CA.Var x]
-  return $ CA.LetCont [CA.ContDef j [CA.Var x] x'] expr'
+  next <- k []
+  return $ CA.LetCont [CA.ContDef j [CA.Var x] next] expr'
 
 d_decl (FnStmt fn) k = do
   d_fn fn k
 
 d_decl (Enum (name, _) _ ctors) k = do
-  x <- var
   modify (addEnum $ DsEnum { enumName = name, enumCtors = ctors' })
-  CA.LetVal x CA.Unit <$> k [x]
+  k []
     where
       ctors' = map mkCtor ctors
       mkCtor ((name, _), args) = DsCtor { ctorName = name, arity = maybe 0 length args }
 
 d_decl (TypeAlias { aliasName, aliasType }) k =
   let x = CA.Var aliasName
-   in CA.LetVal x (CA.Type aliasType) <$> k [x]
+   in CA.LetVal x (CA.Type aliasType) <$> k []
 
 d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
   d_fn (Function { name = opName
@@ -134,25 +161,31 @@ d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
 
 d_decl (Class _ _ methods) k =
   let f k method =
-        (\_ -> d_fn method k)
-      j = foldl f k methods
-   in var >>= \y -> CA.LetVal y CA.Unit <$> j [y]
+        \_ -> d_fn method k
+   in foldl f k methods []
 
-d_decl (Interface _ _ methods) k =
-  let f k method =
-        (\_ -> d_intfMethod method k)
-      j = foldl f k methods
-   in var >>= \y -> CA.LetVal y CA.Unit <$> j [y]
+d_decl (Interface _ _ methods) k = do
+  next <- k []
+  foldM (flip d_intfMethod) next methods
 
 d_decl (Implementation (name, _) generics ty methods) k = do
-  j <- contVar
-  dict <- d_implItems methods $ \x -> return $ CA.AppCont j x
   let dictName = "#" ++ name ++ print ty
-  let dictLam = CA.Lam $ CA.Lambda j (mkConstraints generics) dict
-  CA.LetVal (CA.Var dictName) dictLam <$> k [CA.Var dictName]
+  d_implItems methods $ \dict -> do
+    dict' <- f dict
+    CA.LetVal (CA.Var dictName) dict' <$> k []
   where
     print (TyApp ty _) = print ty
     print ty = show ty
+
+    f :: CA.Value -> DsM CA.Value
+    f =
+      case mkConstraints generics of
+        [] -> return
+        constr ->
+          \dict -> do
+            j <- contVar
+            x <- var
+            return $ CA.Lam $ CA.Lambda j constr (CA.LetVal x dict (CA.AppCont j [x]))
 
 d_fn :: Function -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_fn fn@(Function { params=[] }) k =
@@ -176,27 +209,27 @@ mkConstraints gen =
 mk_var :: String -> CA.Var
 mk_var v = CA.Var v
 
-d_intfMethod :: InterfaceItem -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-d_intfMethod (IntfVar (name,  _)) k = do
+d_intfMethod :: InterfaceItem -> CA.Term -> DsM CA.Term
+d_intfMethod (IntfVar (name,  _)) next = do
   s_name <- var
   j <- contVar
   let def = CA.FunDef (CA.Var name) j [CA.Var "#dict", CA.Var "#_"] (CA.LetVal s_name (CA.Lit $ String name) (CA.App (mk_var "#fieldAccess") j [s_name, mk_var "#dict"]))
-  CA.LetFun [def] <$> k [CA.Var name]
+  return $ CA.LetFun [def] next
 
-d_intfMethod (IntfOperator { intfOpName = (name,  _) }) k = do
+d_intfMethod (IntfOperator { intfOpName = (name,  _) }) next = do
   s_name <- var
   j <- contVar
   let def = CA.FunDef (CA.Var name) j [CA.Var "#dict", CA.Var "#_"] (CA.LetVal s_name (CA.Lit $ String name) (CA.App (mk_var "#fieldAccess") j [s_name, mk_var "#dict"]))
-  CA.LetFun [def] <$> k [CA.Var name]
+  return $ CA.LetFun [def] next
 
-d_implItems :: [ImplementationItem] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-d_implItems items k = do
-  x <- var
-  let f k item =
+d_implItems :: [ImplementationItem] -> (CA.Value -> DsM CA.Term) -> DsM CA.Term
+d_implItems items f = do
+  let g k item =
         (\x -> d_implItem item (\y -> k $ y : x))
   let init fields =
-        CA.LetVal x (CA.Record fields) <$> k [x]
-  foldl f init items $ []
+        f (CA.Record fields)
+        {-return $ CA.LetVal x (CA.Record fields) (CA.AppCont k [x])-}
+  foldl g init items $ []
 
 d_implItem :: ImplementationItem -> ((Id, CA.Var) -> DsM CA.Term) -> DsM CA.Term
 d_implItem (ImplVar (name, expr)) k =
@@ -205,14 +238,14 @@ d_implItem (ImplVar (name, expr)) k =
 d_implItem fn@(ImplFunction { implName=(name, _) }) k = do
   j <- contVar
   body <- d_stmts (implBody fn) $ \x -> return $ CA.AppCont j x
-  let f = CA.Var name
+  let f = CA.Var ("#" ++ name)
   let def = CA.FunDef f j (map CA.Var (implParams fn)) body
   CA.LetFun [def] <$> k (implName fn, f)
 
 d_implItem op@(ImplOperator {}) k = do
   j <- contVar
   body <- d_stmts (implOpBody op) $ \x -> return $ CA.AppCont j x
-  let name = CA.Var (fst $ implOpName op)
+  let name = CA.Var ("#" ++ (fst $ implOpName op))
   let def = CA.FunDef name j [CA.Var (implOpLhs op), CA.Var (implOpRhs op)] body
   CA.LetFun [def] <$> k (implOpName op, name)
 
@@ -261,24 +294,24 @@ d_expr (Call callee constraints _ args) k =
 
     let
         f :: ([CA.Var] -> DsM CA.Term) -> Expr -> ([CA.Var] -> DsM CA.Term)
-        f k arg = \args' -> d_expr arg (\arg' ->
-          k $ args' ++ arg')
+        f k arg = \args' -> d_expr arg (\arg' -> k $ args' ++ arg')
 
         init :: [CA.Var] -> DsM CA.Term
         init (callee':args')
           | constraintHoles == [] = do
             cont <- CA.ContDef j [x] <$> (k [x])
-            return $ CA.LetCont [cont] $ CA.App callee' j (constraints' ++ args')
+            return $ CA.LetCont [cont] app
           | otherwise =
-              let app = CA.App callee' j (constraints' ++ args')
-                  lambda = CA.Lam (CA.Lambda j constraintHoles app)
-               in CA.LetVal x lambda <$> k [x]
+            let lambda = CA.Lam (CA.Lambda j constraintHoles app)
+             in CA.LetVal x lambda <$> k [x]
+          where app = CA.App callee' j (reverse constraints' ++ args')
+
     d_expr callee $ \x -> foldl f init (reverse args) x
 
 d_expr (Match expr cases) k = do
   cases' <- mapM d_case cases
   d_expr expr $ \x ->
-    match x cases' (error "pattern match failed") k
+    match x cases' CA.Error k
   where
     d_case (Case pat body) = do
       body' <- d_stmts body k
@@ -456,7 +489,7 @@ match [] eqs def _k =
       f _ ([], e) = return e
 
 match vs eqs def k =
-  foldM (\def eqs -> match' vs eqs def k) def g
+  foldrM (\eqs def -> match' vs eqs def k) def g
     where
       g = groupBy h eqs
       h (PatDefault : _, _) (PatDefault : _, _) = True
@@ -492,10 +525,26 @@ matchDefault (_ : vs) eqs def k =
     where eqs' = [ (ps, e) | (_ : ps, e) <- eqs ]
 
 matchLit :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchLit =
-  -- TODO
-  undefined
-  {-[ \x -> if v == c then e else k x | (c : ps, e) <- eqs]-}
+matchLit (v:vs) eqs def k = do
+  foldrM f def eqs
+    where
+      f (PatLiteral p:ps, e) def' = do
+        j <- contVar
+        t <- contVar
+        f <- contVar
+        x <- var
+        tBody <- match vs [(ps, e)] def k
+
+        let defJ = CA.ContDef j [x] kase
+            defT = CA.ContDef t [] tBody
+            defF = CA.ContDef f [] def'
+            kase = CA.Case x [ CA.Clause "True" t
+                             , CA.Clause "False" f
+                             ]
+        return $
+          CA.LetCont [defT, defF, defJ] $
+          CA.LetVal x (CA.Lit p) $
+          CA.App (CA.Var "#literalEquality") j [v, x]
 
 matchVar :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 matchVar (v:vs) eqs def k =

@@ -16,14 +16,16 @@ eval = snd . evalTerm defaultEnv
 evalWithEnv, evalTerm :: Env -> Term -> (Env, Rt.Value)
 evalWithEnv = evalTerm
 
+evalTerm _ Error =
+  error "pattern match failed"
+
 evalTerm env (LetVal x v k) =
   let v' = evalValue env v
       env' = addVal env (x, v')
    in evalTerm env' k
 
 evalTerm env (LetCont defs l) =
-  let conts = map (evalContDef env) defs
-      env' = foldl addCont env conts
+  let env' = foldl (\env def -> addCont env (evalContDef env' def)) env defs
    in evalTerm env' l
 
 evalTerm env (LetFun defs t) =

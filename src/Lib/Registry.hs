@@ -81,6 +81,7 @@ registry = execWriter $ do
   ctor "Cons" (forall [T] $ [var T, list T] ~> list T)
 
   internal "#fieldAccess" fieldAccess
+  internal "#literalEquality" literalEquality
   {-internal "#unwrapClass" unwrapClass-}
 
 -- FILTERS

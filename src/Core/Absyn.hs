@@ -19,6 +19,7 @@ data Term
   | AppCont ContVar [Var]
   | App Var ContVar [Var]
   | Case Var [Clause]
+  | Error
   deriving (Show)
 
 data FunDef = FunDef Var ContVar [Var] Term
@@ -50,13 +51,15 @@ instance PrettyPrint ContVar where
   ppr (ContVar v) = v
 
 instance PrettyPrint Term where
+  ppr Error = "error"
+
   ppr (LetVal x v t) =
     "letval " ++ ppr x ++ " = " ++ ppr v ++ " in\n" ++
       ppr t
 
   ppr (LetCont contDefs t) =
     "letcont\n" ++
-      concatMap ppr contDefs ++ "\n" ++
+      unlines (map ppr contDefs) ++ "\n" ++
         "in " ++ ppr t
 
   ppr (LetFun funDefs t) =
@@ -111,6 +114,8 @@ class Subst t where
   subst :: t -> Var -> Var -> t
 
 instance Subst Term where
+  subst Error _ _ = Error
+
   subst (LetVal x' v' t) v x =
     LetVal x' v' (if x' == x then t else subst t v x)
 

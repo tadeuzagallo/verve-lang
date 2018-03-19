@@ -9,6 +9,10 @@ import Data.Char (ord)
 import Data.Maybe (fromJust)
 import System.IO.Unsafe (unsafePerformIO)
 
+true, false :: Value
+true = VIn "True" []
+false = VIn "False" []
+
 int_add :: Value
 int_add =
   VBuiltin
@@ -75,6 +79,17 @@ fieldAccess =
   VBuiltin (\(VLit (String field)) ->
     VBuiltin $ \(VRecord fields) ->
       fromJust $ lookup field fields)
+
+literalEquality :: Value
+literalEquality =
+  VBuiltin $ \(VLit l) ->
+    VBuiltin $ \(VLit k) ->
+      case (l, k) of
+        (Integer m, Integer n) | m == n -> true
+        (Float m, Float n) | m == n -> true
+        (Char m, Char n) | m == n -> true
+        (String m, String n) | m == n -> true
+        _ -> false
 
 {-unwrapClass :: Value-}
 {-unwrapClass =-}

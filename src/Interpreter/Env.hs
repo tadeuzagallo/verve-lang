@@ -39,7 +39,7 @@ lookupCont _ Empty = undefined
 lookupCont k (ValueBind _ _ tail) = lookupCont k tail
 lookupCont k (ContBind l v tail)
   | k == l = v
-  | otherwise = lookupCont k tail
+  | otherwise =  lookupCont k tail
 
 addVal :: Env -> (Var, Value) -> Env
 addVal env (x, v) = ValueBind x v env
