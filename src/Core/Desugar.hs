@@ -12,7 +12,7 @@ import qualified Core.Absyn as CA
 import Control.Monad (foldM)
 import Control.Monad.State (State, evalState, gets, modify)
 import Data.Foldable (foldrM)
-import Data.List (groupBy)
+import Data.List (groupBy, nub)
 import Data.Maybe (maybe)
 
 desugar :: Module -> CA.Term
@@ -228,7 +228,6 @@ d_implItems items f = do
         (\x -> d_implItem item (\y -> k $ y : x))
   let init fields =
         f (CA.Record fields)
-        {-return $ CA.LetVal x (CA.Record fields) (CA.AppCont k [x])-}
   foldl g init items $ []
 
 d_implItem :: ImplementationItem -> ((Id, CA.Var) -> DsM CA.Term) -> DsM CA.Term
@@ -450,30 +449,6 @@ computeConstraints cs k =
     mkTypeBound (typeArg, _) | isHole typeArg = CHole
     mkTypeBound (typeArg, typeBound) = CDict typeArg typeBound
 
-
-{-d_case :: Case -> (CA.ContVar -> DsM CA.Term) -> DsM CA.Term-}
-{-d_case kase k =-}
-
-{-d_pattern :: Pattern -> CA.Pattern-}
-{-d_pattern PatDefault = CA.PatDefault-}
-{-d_pattern (PatLiteral l) = CA.PatLiteral l-}
-{-d_pattern (PatVar v) = CA.PatVar . CA.Var . fst $ v-}
-
-{-d_pattern (PatRecord fields) =-}
-  {-CA.PatRecord $ map (second d_pattern) fields-}
-
-{-d_pattern (PatList pats rest) =-}
-  {-let init = case rest of-}
-               {-NoRest -> CA.PatCtor ("Nil", void) []-}
-               {-DiscardRest -> CA.PatDefault-}
-               {-NamedRest n -> CA.PatVar n-}
-      {-aux pat tail =-}
-        {-let pat' = d_pattern pat-}
-         {-in CA.PatCtor ("Cons", void) [tail, pat']-}
-   {-in foldr aux init (reverse pats)-}
-
-{-d_pattern (PatCtor name pats) = CA.PatCtor name (map d_pattern pats)-}
-
 ignore :: Type -> Id
 ignore ty = ("#ignore", ty)
 
@@ -550,12 +525,16 @@ matchVar :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> Ds
 matchVar (v:vs) eqs def k =
   match vs [(ps, CA.subst e v (CA.Var x)) | (PatVar (x, _) : ps, e) <- eqs ] def k
 
+-- poor implementation, need a tuple or something better - maybe support records in core
 matchRecord :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchRecord =
-  -- TODO
-  undefined
-{-let xi = r.i, ..., in-}
-    {-match (x1, ..., xn) with (p1, ..., pn)-}
+matchRecord ((CA.Var v') : vs) eqs def k =
+  foldl d_field match' fields []
+    where
+      match' vs' = match (vs' ++ vs) eqs' def k
+      eqs' = [ ([maybe PatDefault id (lookup field f) | field <- fields] ++ ps, e)  | (PatRecord f : ps, e) <- eqs ]
+      fields = nub . concat $ [ map fst f | (PatRecord f : _, _) <- eqs ]
+      d_field k field =
+        \x -> d_expr (FieldAccess (Ident [v'] void) (Rec []) field) $ \y -> k (y ++ x)
 
 matchList :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 matchList vs eqs =
