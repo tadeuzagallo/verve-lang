@@ -168,24 +168,23 @@ d_decl (Interface _ _ methods) k = do
   next <- k []
   foldM (flip d_intfMethod) next methods
 
-d_decl (Implementation (name, _) generics ty methods) k = do
-  let dictName = "#" ++ name ++ print ty
-  d_implItems methods $ \dict -> do
-    dict' <- f dict
-    CA.LetVal (CA.Var dictName) dict' <$> k []
+d_decl (Implementation (name, _) generics ty methods) k =
+  case mkConstraints generics of
+    [] ->
+      d_implItems methods $ \dict ->
+        CA.LetVal (CA.Var dictName) dict <$> k []
+    constr -> do
+      j <- contVar
+      x <- var
+      items <- d_implItems methods $ \dict ->
+        return $ CA.LetVal x dict (CA.AppCont j [x])
+      CA.LetVal (CA.Var dictName) (CA.Lam $ CA.Lambda j constr items) <$> k []
+
   where
+    dictName = "#" ++ name ++ print ty
+
     print (TyApp ty _) = print ty
     print ty = show ty
-
-    f :: CA.Value -> DsM CA.Value
-    f =
-      case mkConstraints generics of
-        [] -> return
-        constr ->
-          \dict -> do
-            j <- contVar
-            x <- var
-            return $ CA.Lam $ CA.Lambda j constr (CA.LetVal x dict (CA.AppCont j [x]))
 
 d_fn :: Function -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_fn fn@(Function { params=[] }) k =
@@ -266,7 +265,7 @@ d_expr (TypeCall callee constraints) k = do
   x <- var
   callee' <- d_expr callee (\x -> return $ CA.AppCont j x)
   computeConstraints constraints $ \(constraints', constraintHoles) -> do
-    let lambda = CA.Lam $ CA.Lambda l constraintHoles (CA.App x l constraints')
+    let lambda = CA.Lam $ CA.Lambda l constraintHoles (CA.App x l (reverse constraints'))
     contDef <- CA.ContDef j [x] <$> CA.LetVal x lambda <$> k [x]
     return $ CA.LetCont [contDef] callee'
 
@@ -402,6 +401,7 @@ d_expr (Negate constrArgs expr) k =
         CA.LetCont [CA.ContDef j [y] k'] $
           CA.App (CA.Var "Std.negate") j (constraints' ++ x)
 
+-- TODO: figure out ordering and remove reverse usages all over
 computeConstraints :: [ConstraintArg] -> (([CA.Var], [CA.Var]) -> DsM CA.Term) -> DsM CA.Term
 computeConstraints cs k =
   foldl aux k (concatMap mkConstraint cs) ([], [])
@@ -431,7 +431,7 @@ computeConstraints cs k =
                               k' <- k (args ++ [x], holes'')
                               return $
                                 CA.LetCont [CA.ContDef j [x] k'] $
-                                  CA.App typeArg' j nestedArgs'
+                                  CA.App typeArg' j (reverse nestedArgs')
                             _ -> undefined
 
     mkConstraint :: ConstraintArg -> [Constraint]
