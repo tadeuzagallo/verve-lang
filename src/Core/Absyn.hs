@@ -1,10 +1,10 @@
 module Core.Absyn where
 
+import Prelude hiding (concat)
+
 import Absyn.Typed (Id, Literal)
 import Typing.Types (Type)
 import Util.PrettyPrint
-
-import Data.List (intercalate)
 
 newtype Var = Var String
   deriving (Eq, Show)
@@ -45,68 +45,83 @@ data Clause = Clause String ContVar
 
 -- Pretty Printing
 instance PrettyPrint Var where
-  ppr (Var v) = v
+  pprint (Var v) = str v
 
 instance PrettyPrint ContVar where
-  ppr (ContVar v) = v
+  pprint (ContVar v) = str v
 
 instance PrettyPrint Term where
-  ppr Error = "error"
+  pprint Error = str "error"
 
-  ppr (LetVal x v t) =
-    "letval " ++ ppr x ++ " = " ++ ppr v ++ " in\n" ++
-      ppr t
+  pprint (LetVal x v t) =
+    concat [ str "letval ",  pprint x, str " = ", pprint v, str " in", newline, pprint t ]
 
-  ppr (LetCont contDefs t) =
-    "letcont\n" ++
-      unlines (map ppr contDefs) ++ "\n" ++
-        "in " ++ ppr t
+  pprint (LetCont contDefs t) =
+    concat [ str "letcont"
+           , indent (newline `append` interleave newline (map pprint contDefs))
+           , newline, str "in", newline, pprint t
+           ]
 
-  ppr (LetFun funDefs t) =
-    "letfun\n" ++
-      concatMap ppr funDefs ++ "\n" ++
-        "in " ++ ppr t
+  pprint (LetFun funDefs t) =
+    concat [ str "letfun"
+           , indent (newline `append` interleave newline (map pprint funDefs))
+           , newline, str "in", newline, pprint t
+           ]
 
-  ppr (AppCont k args) =
-    ppr k ++ " " ++ unwords (map ppr args)
+  pprint (AppCont k args) =
+    concat [pprint k, str " ", interleave (str " ") (map pprint args)]
 
-  ppr (App x k args) =
-    ppr x ++ " " ++ ppr k ++ " " ++ unwords (map ppr args)
+  pprint (App x k args) =
+    concat [pprint x, str " ", pprint k, str " ", interleave (str " ") (map pprint args)]
 
-  ppr (Case x cases) =
-    "case " ++ ppr x ++ " of\n" ++
-      unlines (map pprCase cases)
-        where
-          pprCase (Clause c k) =
-            c ++ " -> " ++ ppr k
+  pprint (Case x cases) =
+    concat [str "case ", pprint x, str " of"
+           , indent (newline `append` interleave newline (map pprint cases))
+           ]
+
+instance PrettyPrint Clause where
+  pprint (Clause c k) =
+    concat [str c, str " -> ", indent (newline `append` pprint k)]
 
 instance PrettyPrint FunDef where
-  ppr (FunDef f k params body) =
-    unwords (ppr f : ppr k : map ppr (params)) ++ " = " ++ ppr body
+  pprint (FunDef f k params body) =
+    concat [ interleave (str " ") (pprint f : pprint k : map pprint params)
+           , str " = " , indent (newline `append` pprint body)
+           ]
 
 instance PrettyPrint ContDef where
-  ppr (ContDef k params body) =
-    unwords (ppr k : map ppr params) ++ " = " ++ ppr body
+  pprint (ContDef k params body) =
+    concat [interleave (str " ") (pprint k : map pprint params)
+           , str " = ",  indent (newline `append` pprint body)
+           ]
 
 instance PrettyPrint Lambda where
-  ppr (Lambda k params body) =
-    "λ " ++ ppr k ++ " " ++ unwords (map ppr params) ++ " . " ++ ppr body
+  pprint (Lambda k params body) =
+    concat [str "λ "
+           , interleave (str " ") (pprint k : map pprint params)
+           , str " . ", indent (newline `append` pprint body)
+           ]
 
 instance PrettyPrint Value where
-  ppr Unit = "()"
+  pprint Unit = str "()"
 
-  ppr (Lit lit) = show lit
+  pprint (Lit lit) = str (show lit)
 
-  ppr (In i vars) = "in " ++ i ++ " " ++ unwords (map ppr vars)
+  pprint (In i vars) = concat [ str i, str "(",  interleave (str ", ") (map pprint vars), str ")" ]
 
-  ppr (Lam l) = ppr l
+  pprint (Lam l) = pprint l
 
-  ppr (Record fields) =
-    "{ " ++ intercalate ", " (map pprField fields) ++ " }"
-      where pprField ((n, _), var) =
-              n ++ ": " ++ ppr var
+  pprint (Record fields) =
+    concat [ str "{"
+           , indent (newline `append` interleave (str "," `append` newline) (map pprintField fields))
+           , newline
+           , str "}"
+           ]
+      where
+        pprintField ((n, _), var) =
+          concat [str n, str ": ", pprint var]
 
-  ppr (Type t) = ppr t
+  pprint (Type t) = pprint t
 
 -- Substitution
 class Subst t where

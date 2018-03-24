@@ -80,7 +80,7 @@ evalStmt config modName (nenv, rnEnv, ctx, env) stmt = do
   {-(env', val) <- evalWithEnv env core-}
   let (env', val) = evalWithEnv env core
   let out = if dumpCore config
-              then ppr core
+              then Util.PrettyPrint.print core
               {-else ppr (val, ty)-}
               else show (val, ty)
   return ((nenv', rnEnv', ctx', env'), out)
@@ -94,7 +94,7 @@ evalStmts config modName (nenv, rnEnv, ctx, env) stmts = do
   {-(env', val) <- evalWithEnv env core-}
   let (env', val) = evalWithEnv env core
   let out = if dumpCore config
-              then ppr core
+              then Util.PrettyPrint.print core
               {-else ppr (val, ty)-}
               else show (val, ty)
   return ((nenv', rnEnv', ctx', env'), out)

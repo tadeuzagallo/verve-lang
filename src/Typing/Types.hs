@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+
 module Typing.Types
   ( Type(..)
   , Intf(..)
@@ -27,6 +29,8 @@ module Typing.Types
   , isHole
   ) where
 
+import Prelude hiding (concat)
+
 import Typing.State
 import Util.PrettyPrint
 
@@ -48,7 +52,7 @@ instance Show Var where
   show (TV v _) = v
 
 instance PrettyPrint Var where
-  ppr (TV v _) = pprName v
+  pprint (TV v _) = str v
 
 newVar :: String -> Tc Var
 newVar name = do
@@ -80,7 +84,7 @@ instance Show Intf where
   show (Intf name _ _) = name
 
 instance PrettyPrint Intf where
-  ppr (Intf name _ _) = pprName name
+  pprint (Intf name _ _) = str name
 
 printType :: (Type  -> String) -> (Var -> String) -> (Intf -> String) -> Type -> String
 printType p _ _ t@(Con _) = p t
@@ -111,7 +115,7 @@ printType f v i (Rec fields) =
       showField (key, ty) = key ++ ": " ++ printType f v i ty
 
 printType f v i (TyAbs params ty) =
-  "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
+  "∀" ++ (intercalate " " $ map v params)  ++ ". " ++ printType f v i ty
 
 printType f v i (TyApp ty args) =
   printType f v i ty ++ "<" ++ intercalate ", " (map (printType f v i) args) ++ ">"
@@ -123,10 +127,69 @@ instance Show Type where
   show t = printType show show show t
 
 instance PrettyPrint Type where
-  ppr (Con t) = pprName t
-  ppr (Var v _) = ppr v
-  ppr (Cls t) = pprName t
-  ppr t = printType ppr ppr ppr t
+  pprint (Con t) = str t
+  pprint (Var v _) = pprint v
+  pprint (Cls t) = str t
+  pprint Type = str "Type"
+  pprint Top = str "⊤"
+  pprint Bot = str "⊥"
+
+  pprint (Fun gs [v] t2) | v == void =
+    pprint (Fun gs [] t2)
+
+  pprint (Fun gs t1 t2) =
+    concat [ ppgs
+           , str "(",  ppt1, str ")"
+           , str " -> ", pprint t2
+           ]
+      where
+        ppgs =
+          if null gs
+             then nil
+             else concat [ str "∀"
+                         , interleave (str " ") (map pprint gs)
+                         , str ". "
+                         ]
+
+        ppt1 = interleave (str ", ") $ map pprint t1
+
+  pprint (Rec fields) =
+    concat [ str "{"
+           , fields'
+           , str "}"
+           ]
+      where
+        fields' = interleave (str ", ") $ map pprintField fields
+        pprintField (key, ty) = concat [ str key,  str ": ", pprint ty]
+
+  pprint (TyAbs params ty) =
+    concat [ str "∀"
+           , interleave (str " ") (map pprint params)
+           , str ". "
+           , pprint ty
+           ]
+
+  pprint (TyApp ty args) =
+    concat [ pprint ty
+           , str "<"
+           , interleave (str ", ") (map pprint args)
+           , str ">"
+           ]
+
+instance PrettyPrint BoundVar where
+  pprint (v, []) = pprint v
+  pprint (v, [t]) =
+    concat [ str "("
+           , pprint v
+           , str ": "
+           , pprint t
+           , str ")"]
+  pprint (v, ts) =
+    concat [ str "("
+           , pprint v
+           , str ": ("
+           , interleave (str ", ") $ map pprint ts
+           , str "))"]
 
 -- Free Type Variables
 fv :: Type -> [Var]

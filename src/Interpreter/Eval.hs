@@ -83,7 +83,9 @@ evalCont :: Env -> ContVar -> [Rt.Value] -> (Env, Rt.Value)
 evalCont env k vals =
   case lookupCont k env of
     Rt.Halt ->
-      (env, head vals)
+      let f [] = Rt.VUnit
+          f (x : _) = x
+       in (env, f vals)
     Rt.Cont (env', (xs, t)) ->
       let env'' = foldl addVal env' (zip xs vals)
        in evalTerm env'' t

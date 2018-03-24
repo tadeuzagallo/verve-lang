@@ -2,6 +2,8 @@ module Typing.TypeError
   ( TypeError(..)
   ) where
 
+import Prelude hiding (print)
+
 import Absyn.Meta
 import Typing.Kinds
 import Typing.Types
@@ -53,10 +55,10 @@ instance Show TypeError where
     "Failed to infer type arguments for function call"
 
   show (TypeError expected actual) =
-    "Expected a value of type `" ++ ppr expected ++ "`, but found `" ++ ppr actual ++ "`"
+    "Expected a value of type `" ++ print expected ++ "`, but found `" ++ print actual ++ "`"
 
   show (UnknownField ty field) =
-    "Trying to access unknown property `" ++ field ++ "` of object of type `" ++ ppr ty ++ "`"
+    "Trying to access unknown property `" ++ field ++ "` of object of type `" ++ print ty ++ "`"
 
   show (ImplementationMissingMethod name) =
     "Implementation is missing method `" ++ pprName name ++ "`"
@@ -65,19 +67,19 @@ instance Show TypeError where
     "Implementation contains method `" ++ pprName name ++ "` which is not part of the interface"
 
   show (InterfaceExpected ty) =
-    "Expected an interface, but found type `" ++ ppr ty ++ "`"
+    "Expected an interface, but found type `" ++ print ty ++ "`"
 
   show (ImplementingNonInterface name actualTy) =
-    "Cannot have an implementation of `" ++ pprName name ++ "` because it's not an interface. " ++ pprName name  ++ " has type `" ++ ppr actualTy ++ "`."
+    "Cannot have an implementation of `" ++ pprName name ++ "` because it's not an interface. " ++ pprName name  ++ " has type `" ++ print actualTy ++ "`."
 
   show (MissingImplementation intf ty) =
-    "No implementation of `" ++ pprName intf ++ "` for type `" ++ ppr ty ++  "`"
+    "No implementation of `" ++ pprName intf ++ "` for type `" ++ print ty ++  "`"
 
   show (ImplementationError intfName ty) =
-    "Implementation of `" ++ pprName intfName ++ "` for type `" ++ ppr ty ++ "` does not use all the type variables it introduces and/or uses concrete types."
+    "Implementation of `" ++ pprName intfName ++ "` for type `" ++ print ty ++ "` does not use all the type variables it introduces and/or uses concrete types."
 
   show (KindError ty expectedKind actualKind) =
-    "Type `" ++ ppr ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
+    "Type `" ++ print ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
 
   show (VariableUsedDuringInitialization var) =
     "Variable `" ++ var ++ "` is used during its own initialisation, which will cause an infinite loop."
