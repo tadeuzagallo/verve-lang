@@ -308,12 +308,18 @@ d_expr (Call callee constraints _ args) k =
     d_expr callee $ \x -> foldl f init (reverse args) x
 
 d_expr (Match expr cases) k = do
-  cases' <- mapM d_case cases
-  d_expr expr $ \x ->
-    match x cases' CA.Error k
+  j <- contVar
+  x <- var
+  cases' <- mapM (d_case j) cases
+  expr' <- d_expr expr $ \x ->
+    match x cases' CA.Error $ \y ->
+      return $ CA.AppCont j y
+  def <- CA.ContDef j [x] <$> k [x]
+  return $ CA.LetCont [def] expr'
   where
-    d_case (Case pat body) = do
-      body' <- d_stmts body k
+    d_case j (Case pat body) = do
+      body' <- d_stmts body $ \y ->
+        return $ CA.AppCont j y
       return ([pat], body')
 
 d_expr (Record fields) k = do
