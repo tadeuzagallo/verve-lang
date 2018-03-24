@@ -312,8 +312,7 @@ d_expr (Match expr cases) k = do
   x <- var
   cases' <- mapM (d_case j) cases
   expr' <- d_expr expr $ \x ->
-    match x cases' CA.Error $ \y ->
-      return $ CA.AppCont j y
+    match x cases' CA.Error
   def <- CA.ContDef j [x] <$> k [x]
   return $ CA.LetCont [def] expr'
   where
@@ -462,15 +461,12 @@ ignore ty = ("#ignore", ty)
 
 type Equation = ([Pattern], CA.Term)
 
-match :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-match [] eqs def _k =
-  -- TODO: use double-barreled expressions to emulate fatbar
-  foldM f def eqs
-    where
-      f _ ([], e) = return e
+match :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+match [] [] def = return def
+match [] (([], e) : _) _ = return e
 
-match vs eqs def k =
-  foldrM (\eqs def -> match' vs eqs def k) def g
+match vs eqs def =
+  foldrM (\eqs def -> match' vs eqs def) def g
     where
       g = groupBy h eqs
       h (PatDefault : _, _) (PatDefault : _, _) = True
@@ -481,40 +477,44 @@ match vs eqs def k =
       h (PatCtor _ _ : _, _) (PatCtor _ _ : _, _) = True
       h _ _ = False
 
-match' :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-match' vs eqs@((PatDefault : _ , _): _) def k =
-  matchDefault vs eqs def k
+match' :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+match' vs eqs@((PatDefault : _ , _): _) def =
+  matchDefault vs eqs def
 
-match' vs eqs@((PatLiteral _ : _ , _): _) def k =
-  matchLit vs eqs def k
+match' vs eqs@((PatLiteral _ : _ , _): _) def =
+  matchLit vs eqs def
 
-match' vs eqs@((PatVar _ : _ , _): _) def k =
-  matchVar vs eqs def k
+match' vs eqs@((PatVar _ : _ , _): _) def =
+  matchVar vs eqs def
 
-match' vs eqs@((PatRecord _ : _ , _): _) def k =
-  matchRecord vs eqs def k
+match' vs eqs@((PatRecord _ : _ , _): _) def =
+  matchRecord vs eqs def
 
-match' vs eqs@((PatList _ _ : _ , _): _) def k =
-  matchList vs eqs def k
+match' vs eqs@((PatList _ _ : _ , _): _) def =
+  matchList vs eqs def
 
-match' vs eqs@((PatCtor _ _ : _ , _): _) def k =
-  matchCtor vs eqs def k
+match' vs eqs@((PatCtor _ _ : _ , _): _) def =
+  matchCtor vs eqs def
 
-matchDefault :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchDefault (_ : vs) eqs def k =
-  match vs eqs' def k
+matchDefault :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+matchDefault (_ : vs) eqs def =
+  match vs eqs' def
     where eqs' = [ (ps, e) | (_ : ps, e) <- eqs ]
 
-matchLit :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchLit (v:vs) eqs def k = do
-  foldrM f def eqs
+matchLit :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+matchLit (v:vs) eqs def = do
+  foldrM f def eqs'
     where
-      f (PatLiteral p:ps, e) def' = do
+      eqs' = groupBy eqPatLit eqs
+
+      eqPatLit (PatLiteral l : _, _) (PatLiteral l' : _, _) = l == l'
+
+      f eqs@((PatLiteral p:_, _) : _) def' = do
         j <- contVar
         t <- contVar
         f <- contVar
         x <- var
-        tBody <- match vs [(ps, e)] def k
+        tBody <- match vs [(ps, e) | (_ : ps, e) <- eqs] def
 
         let defJ = CA.ContDef j [x] kase
             defT = CA.ContDef t [] tBody
@@ -527,22 +527,22 @@ matchLit (v:vs) eqs def k = do
           CA.LetVal x (CA.Lit p) $
           CA.App (CA.Var "#literalEquality") j [v, x]
 
-matchVar :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchVar (v:vs) eqs def k =
-  match vs [(ps, CA.subst e v (CA.Var x)) | (PatVar (x, _) : ps, e) <- eqs ] def k
+matchVar :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+matchVar (v:vs) eqs def =
+  match vs [(ps, CA.subst e v (CA.Var x)) | (PatVar (x, _) : ps, e) <- eqs ] def
 
 -- poor implementation, need a tuple or something better - maybe support records in core
-matchRecord :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchRecord ((CA.Var v') : vs) eqs def k =
+matchRecord :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+matchRecord ((CA.Var v') : vs) eqs def =
   foldl d_field match' fields []
     where
-      match' vs' = match (vs' ++ vs) eqs' def k
+      match' vs' = match (vs' ++ vs) eqs' def
       eqs' = [ ([maybe PatDefault id (lookup field f) | field <- fields] ++ ps, e)  | (PatRecord f : ps, e) <- eqs ]
       fields = nub . concat $ [ map fst f | (PatRecord f : _, _) <- eqs ]
       d_field k field =
         \x -> d_expr (FieldAccess (Ident [v'] void) (Rec []) field) $ \y -> k (y ++ x)
 
-matchList :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
+matchList :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
 matchList vs eqs =
   match vs eqs'
     where
@@ -560,10 +560,10 @@ matchList vs eqs =
       desugarRest DiscardRest = PatDefault
       desugarRest (NamedRest a) = PatVar a
 
-matchCtor :: [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-matchCtor (v:vs) eqs def k = do
+matchCtor :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
+matchCtor (v:vs) eqs def = do
   enum <- findEnumForCtor (getCtor (head eqs))
-  (defs, clauses) <- unzip <$> mapM (\c -> matchClause c vs (choose c eqs) def k) (enumCtors enum)
+  (defs, clauses) <- unzip <$> mapM (\c -> matchClause c vs (choose c eqs) def) (enumCtors enum)
   return $ CA.LetCont defs (CA.Case v clauses)
 
 getCtor :: Equation -> String
@@ -572,11 +572,11 @@ getCtor (PatCtor c _: _, _) = fst c
 choose :: DsCtor -> [Equation] -> [Equation]
 choose c = filter (\eq -> getCtor eq == ctorName c)
 
-matchClause :: DsCtor -> [CA.Var] -> [Equation] -> CA.Term -> ([CA.Var] -> DsM CA.Term) -> DsM (CA.ContDef, CA.Clause)
-matchClause c vs eqs def k = do
+matchClause :: DsCtor -> [CA.Var] -> [Equation] -> CA.Term -> DsM (CA.ContDef, CA.Clause)
+matchClause c vs eqs def = do
   j <- contVar
   vs' <- mapM (const var) [1..n]
-  e <- match (vs' ++ vs) eqs' def k
+  e <- match (vs' ++ vs) eqs' def
   let def = CA.ContDef j vs' e
   let clause = CA.Clause (ctorName c) j
   return (def, clause)
