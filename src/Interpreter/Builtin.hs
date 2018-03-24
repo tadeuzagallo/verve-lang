@@ -91,9 +91,9 @@ literalEquality =
         (String m, String n) | m == n -> true
         _ -> false
 
-{-unwrapClass :: Value-}
-{-unwrapClass =-}
-  {-VBuiltin (\(VNeutral (NApp _ v)) -> v)-}
+unwrapClass :: Value
+unwrapClass =
+  VBuiltin $ \(VIn _ [v]) -> v
 
 strlen :: Value
 strlen =

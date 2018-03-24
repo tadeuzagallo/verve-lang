@@ -82,7 +82,7 @@ registry = execWriter $ do
 
   internal "#fieldAccess" fieldAccess
   internal "#literalEquality" literalEquality
-  {-internal "#unwrapClass" unwrapClass-}
+  internal "#unwrapClass" unwrapClass
 
 -- FILTERS
 isValue :: Entry -> Bool
