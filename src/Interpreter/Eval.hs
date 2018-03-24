@@ -29,8 +29,7 @@ evalTerm env (LetCont defs l) =
    in evalTerm env' l
 
 evalTerm env (LetFun defs t) =
-  let funs = map (evalFunDef env) defs
-      env' = foldl addVal env funs
+  let env' = foldl (\env def -> addVal env (evalFunDef env' def)) env defs
    in evalTerm env' t
 
 evalTerm env (AppCont k xs) =
