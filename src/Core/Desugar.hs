@@ -133,9 +133,14 @@ d_decls (d:ds) k = do
 d_decl :: Decl -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_decl (Let (x, _) expr) k = do
   j <- contVar
-  expr' <- d_expr expr $ \z -> return (CA.AppCont j z)
+  l <- contVar
+  y <- var
+  expr' <- d_expr expr $ \z -> return (CA.AppCont l z)
   next <- k []
-  return $ CA.LetCont [CA.ContDef j [CA.Var x] next] expr'
+  return $
+    CA.LetCont [CA.ContDef j [CA.Var x] next] $
+      CA.LetVal y (CA.Lam $ CA.Lambda l [CA.Var x] expr') $
+        CA.App (CA.Var "#fix") j [y]
 
 d_decl (FnStmt fn) k = do
   d_fn fn k

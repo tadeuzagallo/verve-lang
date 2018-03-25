@@ -66,6 +66,12 @@ evalTerm env (App f k xs) =
         where
           g (Rt.VBuiltin f) x =
             f (lookupVal x env)
+    -- TODO: this hack with Halt is a bit sad
+    Rt.VIn "#fix" [] ->
+      let [Rt.VClosure (_, Lambda j [x] t)] = (`lookupVal` env) <$> xs
+          env' = addVal (addCont env (j, Rt.Halt)) (x, v')
+          (_, v') = evalTerm env' t
+       in evalCont env k [v']
     Rt.VIn i vs ->
       let vs' = filter noTypes $ map (`lookupVal` env) xs
           -- discard types from sums
