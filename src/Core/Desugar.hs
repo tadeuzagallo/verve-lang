@@ -404,7 +404,7 @@ d_expr (Negate constrArgs expr) k =
       k' <- k [y]
       return $
         CA.LetCont [CA.ContDef j [y] k'] $
-          CA.App (CA.Var "Std.negate") j (constraints' ++ x)
+          CA.App (CA.Var "Std.negate") j (reverse constraints' ++ x)
 
 -- TODO: figure out ordering and remove reverse usages all over
 computeConstraints :: [ConstraintArg] -> (([CA.Var], [CA.Var]) -> DsM CA.Term) -> DsM CA.Term
