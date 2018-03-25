@@ -31,7 +31,11 @@ instance Show Value where
   show (VBuiltin _) = "<builtin>"
   show VUnit = "()"
   show (VType v) = show v
-  show (VRecord v) = show v
+  show (VRecord v) =
+    "{" ++ intercalate ", " (map f v) ++ "}"
+      where
+        f (id, value) = id ++ ": " ++ show value
+
   show (VIn c vs) =
     c ++ f vs
       where
