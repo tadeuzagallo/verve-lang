@@ -23,7 +23,7 @@ data Out
 
 -- helpers
 nil :: Out
-nil = nil
+nil = Nil
 
 str :: String -> Out
 str = Str
