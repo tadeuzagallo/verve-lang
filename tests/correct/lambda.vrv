@@ -11,4 +11,5 @@ let x : Int = match True {
   case True:
     let x = 42
     x
-} // CHECK-L: 42 : Int
+}
+x // CHECK-L: 42 : Int

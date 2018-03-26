@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns -fno-warn-incomplete-uni-patterns #-}
 module Interpreter.Eval
   ( eval
@@ -61,7 +62,8 @@ evalTerm env (App f k xs) =
         EQ ->
            evalTerm env''' t
     Rt.VBuiltin _ ->
-      let val = foldl g v xs
+      -- force strictness since this is the only place where side effects can happen
+      let !val = foldl g v xs
        in evalCont env k [val]
         where
           g (Rt.VBuiltin f) x =

@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns -fno-warn-incomplete-uni-patterns #-}
 module Core.Desugar
-  ( desugar
+  ( DsState
+  , initialState
   , desugarStmt
   , desugarStmts
   ) where
@@ -10,23 +11,19 @@ import Typing.Types
 import qualified Core.Absyn as CA
 
 import Control.Monad (foldM)
-import Control.Monad.State (State, evalState, gets, modify)
+import Control.Monad.State (State, runState, gets, modify)
 import Data.Foldable (foldrM)
 import Data.List (groupBy, nub)
 import Data.Maybe (maybe)
+import Data.Tuple (swap)
 
-desugar :: Module -> CA.Term
-desugar m =
+desugarStmts :: DsState -> [Stmt] -> (DsState, CA.Term)
+desugarStmts state stmts =
   let k z = return (CA.AppCont (CA.ContVar "halt") z)
-   in evalState (d_stmts (stmts m) k) initialState
+   in swap $ runState (d_stmts stmts k) state
 
-desugarStmts :: [Stmt] -> CA.Term
-desugarStmts stmts =
-  let k z = return (CA.AppCont (CA.ContVar "halt") z)
-   in evalState (d_stmts stmts k) initialState
-
-desugarStmt :: Stmt -> CA.Term
-desugarStmt = desugarStmts . (:[])
+desugarStmt :: DsState -> Stmt -> (DsState, CA.Term)
+desugarStmt s = desugarStmts s . (:[])
 
 
 data DsEnum = DsEnum { enumName :: String, enumCtors :: [DsCtor] }
