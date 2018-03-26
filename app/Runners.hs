@@ -44,7 +44,7 @@ runAll modName stmts = do
       inferStmts ctx rebalanced \> \(ctx', typed, ty) ->
         let (dsState', core) = desugarStmts dsState typed
             (env', val) = evalWithEnv env core
-         in puts (if dumpIR && modName /= "Std"
+         in puts (if dumpIR
                      then PP.print core
                      else typedValue val ty) >>
                        updateEnv (nenv', rnEnv', ctx', dsState', env')

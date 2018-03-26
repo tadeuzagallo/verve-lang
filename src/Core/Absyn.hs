@@ -132,7 +132,7 @@ instance Subst Term where
   subst Error _ _ = Error
 
   subst (LetVal x' v' t) v x =
-    LetVal x' v' (if x' == x then t else subst t v x)
+    LetVal x' (subst v' v x) (if x' == x then t else subst t v x)
 
   subst (LetCont d t) v x =
     LetCont (subst d v x) (subst t v x)
@@ -152,6 +152,18 @@ instance Subst Term where
   subst (Case y cs) v x =
     Case (subst y v x) cs
 
+instance Subst Value where
+  subst Unit _ _ = Unit
+  subst (Lit l) _ _ = Lit l
+  subst (In c vs) v x = In c (subst vs v x)
+  subst (Lam t) v x = Lam (subst t v x)
+  subst (Record t) v x = Record (subst t v x)
+  subst (Type t) _ _ = Type t
+
+instance Subst Lambda where
+  subst (Lambda k xs t) v x =
+    Lambda k xs (if x `elem` xs then t else subst t v x)
+
 instance Subst ContDef where
   subst (ContDef k xs t) v x =
     ContDef k xs (if x `elem` xs then t else subst t v x)
@@ -164,6 +176,9 @@ instance Subst Var where
   subst y v x
     | x == y = v
     | otherwise = y
+
+instance Subst t => Subst (x, t) where
+  subst (r, t) v x = (r, subst t v x)
 
 instance (Subst t) => Subst [t] where
   subst ts v x = map (\t -> subst t v x) ts
