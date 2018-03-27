@@ -115,7 +115,7 @@ printType f v i (Rec fields) =
       showField (key, ty) = key ++ ": " ++ printType f v i ty
 
 printType f v i (TyAbs params ty) =
-  "∀" ++ (intercalate " " $ map v params)  ++ ". " ++ printType f v i ty
+  "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
 
 printType f v i (TyApp ty args) =
   printType f v i ty ++ "<" ++ intercalate ", " (map (printType f v i) args) ++ ">"
@@ -165,7 +165,7 @@ instance PrettyPrint Type where
   pprint (TyAbs params ty) =
     concat [ str "∀"
            , interleave (str " ") (map pprint params)
-           , str ". "
+           , str "."
            , pprint ty
            ]
 

@@ -89,7 +89,7 @@ runPipeline p options = do
   (s, _) <- runPipeline_ p (initState options)
   case sErrors s of
     [] -> mapM_ putStrLn (sOut s)
-    errs -> mapM_ print errs >> exitFailure
+    errs -> mapM_ report errs >> exitFailure
 
 getEnv :: Pipeline Env
 getEnv =
