@@ -5,9 +5,7 @@ import Env
 import Runners
 
 import Syntax.Parser
-import Util.Error
 
-import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans (lift)
 import System.Console.Haskeline (InputT, defaultSettings, getInputLine, outputStrLn, runInputT)
 import System.Console.Haskeline.MonadException (MonadException, RunIO(..), controlIO)
@@ -34,7 +32,5 @@ repl = do
             lift $ case parseStmt "(stdin)" input of
               Left err -> reportErrors [err]
               Right stmt -> runStmt "REPL" stmt
-            (errs, out) <- lift flush
-            liftIO $ mapM_ report errs
-            liftIO $ mapM_ putStrLn out
+            lift (flush >>= printResults False)
             loop

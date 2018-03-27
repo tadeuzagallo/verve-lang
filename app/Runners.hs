@@ -21,8 +21,13 @@ import qualified Util.PrettyPrint as PP
 type StmtsFn = String -> [Stmt] -> Pipeline ()
 
 runEach :: StmtsFn
-runEach modName stmts = do
-  mapM_ (runStmt modName) stmts
+runEach modName stmts = f stmts
+  where
+    f [] = return ()
+    f (stmt:rest) = do
+      runStmt modName stmt
+      flush >>= printResults (null rest)
+      f rest
 
 runStmt :: String -> Stmt -> Pipeline ()
 runStmt modName stmt = do

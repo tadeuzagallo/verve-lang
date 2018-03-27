@@ -1,7 +1,9 @@
 module Env
   ( Pipeline(..)
   , Env
+  , defaultEnv
   , runPipeline
+  , printResults
   , option
   , options
   , reportErrors
@@ -23,7 +25,7 @@ import qualified Interpreter.Env as Interpreter
 import qualified Reassoc.Env as Reassoc
 import qualified Renamer.Env as Renamer
 
-import Control.Monad (ap, liftM)
+import Control.Monad (ap, liftM, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Either (either)
 import System.Exit (exitFailure)
@@ -86,10 +88,16 @@ modify f =
 
 runPipeline :: Pipeline a -> Options -> IO ()
 runPipeline p options = do
-  (s, _) <- runPipeline_ p (initState options)
-  case sErrors s of
-    [] -> mapM_ putStrLn (sOut s)
-    errs -> mapM_ report errs >> exitFailure
+  runPipeline_ (p >> flush >>= printResults True) (initState options)
+  return ()
+
+printResults :: Bool -> ([Error], [String]) -> Pipeline ()
+printResults _ ([], out) =
+  liftIO $ mapM_ putStrLn out
+
+printResults exitOnFailure (errors, _) = do
+  liftIO $ mapM_ report errors
+  liftIO $ when exitOnFailure exitFailure
 
 getEnv :: Pipeline Env
 getEnv =
