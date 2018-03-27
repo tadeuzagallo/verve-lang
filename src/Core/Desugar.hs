@@ -180,7 +180,7 @@ d_decl (Implementation (name, _) generics ty methods) k =
       x <- var
       items <- d_implItems methods $ \dict ->
         return $ CA.LetVal x dict (CA.AppCont j [x])
-      CA.LetVal (CA.Var dictName) (CA.Lam $ CA.Lambda j constr items) <$> k []
+      CA.LetFun [CA.FunDef (CA.Var dictName)  j constr items] <$> k []
 
   where
     dictName = "#" ++ name ++ print ty

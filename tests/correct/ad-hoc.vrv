@@ -150,6 +150,7 @@ implementation<T: Intish> Intish<List<T>> {
 }
 to_int([13, 31]) // CHECK-L: 44 : Int
 to_int([]) // CHECK-L: 0 : Int
+to_int([[[42]]]) // CHECK-L: 42 : Int
 
 // Used to crash
 fn to_int'<T: Intish>(x: T) { }
