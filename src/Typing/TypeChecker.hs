@@ -559,8 +559,8 @@ c_pattern ctx ty (PatList pats rest) = do
                             in (NamedRest (n, ty), ctx'')
   return (PatList (reverse pats') rest', ctx'')
   where
-    getItemTy (TyAbs vars ty) =
-      return $ vars // ty
+    getItemTy (TyAbs _ (TyApp (Con "List") _)) =
+      return Top
 
     getItemTy (TyApp (Con "List") [ty]) =
       return ty

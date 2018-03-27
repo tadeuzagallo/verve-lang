@@ -140,3 +140,9 @@ fn stdLength<T>(l: StdList<T>) -> Int {
 stdLength([]) // CHECK-L: 0 : Int
 stdLength([1]) // CHECK-L: 1 : Int
 stdLength([1, 2, 3]) // CHECK-L: 3 : Int
+
+// match empty list
+match [] {
+  case []: 0
+  case [1]: 1
+} // CHECK-L: 0 : Int
