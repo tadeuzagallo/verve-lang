@@ -140,7 +140,8 @@ d_decl (Let (x, _) expr) k = do
         CA.App (CA.Var "#fix") j [y]
 
 d_decl (FnStmt fn) k = do
-  d_fn fn k
+  decl <- d_fn fn
+  CA.LetFun [decl] <$> k [CA.Var $ fst $ name fn]
 
 d_decl (Enum (name, _) _ ctors) k = do
   modify (addEnum $ DsEnum { enumName = name, enumCtors = ctors' })
@@ -154,17 +155,15 @@ d_decl (TypeAlias { aliasName, aliasType }) k =
    in CA.LetVal x (CA.Type aliasType) <$> k []
 
 d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
-  d_fn (Function { name = opName
-                 , generics = opGenerics
-                 , params = [opLhs, opRhs]
-                 , retType = opRetType
-                 , body = opBody
-                 }) k
+  d_decl (FnStmt $ Function { name = opName
+                            , generics = opGenerics
+                            , params = [opLhs, opRhs]
+                            , retType = opRetType
+                            , body = opBody
+                            }) k
 
 d_decl (Class _ _ methods) k =
-  let f k method =
-        \_ -> d_fn method k
-   in foldl f k methods []
+  CA.LetFun <$> mapM d_fn methods <*> k []
 
 d_decl (Interface _ _ methods) k = do
   next <- k []
@@ -188,17 +187,17 @@ d_decl (Implementation (name, _) generics ty methods) k =
     print (TyApp ty _) = print ty
     print ty = show ty
 
-d_fn :: Function -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-d_fn fn@(Function { params=[] }) k =
-  d_fn (fn { params = [ignore void] }) k
+d_fn :: Function -> DsM CA.FunDef
+d_fn fn@(Function { params=[] }) =
+  d_fn (fn { params = [ignore void] })
 
-d_fn fn k = do
+d_fn fn = do
   let params' = map (CA.Var . fst) (params fn)
   let f = CA.Var $ fst $ name fn
   j <- contVar
   body' <- d_stmts (body fn) $ \x -> return (CA.AppCont j x)
   let constrs = mkConstraints (generics fn)
-  CA.LetFun [CA.FunDef f j (constrs ++ params') body'] <$> k [f]
+  return $ CA.FunDef f j (constrs ++ params') body'
 
 mkConstraints :: Generics -> [CA.Var]
 mkConstraints gen =
@@ -390,8 +389,9 @@ d_expr (List ty items) k =
             CA.LetVal t (CA.Type ty) $
               CA.App (CA.Var "Cons") j [t, head, tail]
 
-d_expr (FnExpr fn) k =
-  d_fn fn k
+d_expr (FnExpr fn) k = do
+  decl <- d_fn fn
+  CA.LetFun [decl] <$> k [CA.Var $ fst $ name fn]
 
 d_expr (Negate constrArgs expr) k =
   computeConstraints constrArgs $ \(constraints', _) ->
