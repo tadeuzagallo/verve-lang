@@ -7,6 +7,7 @@ import Absyn.Meta (Literal)
 import Core.Absyn (Lambda, Var, Term)
 import {-# SOURCE #-} Interpreter.Env (Env)
 import Typing.Types (Type)
+import Util.PrettyPrint (pprName)
 
 import Data.List (intercalate)
 
@@ -37,7 +38,7 @@ instance Show Value where
         f (id, value) = id ++ ": " ++ show value
 
   show (VIn c vs) =
-    c ++ f vs
+    pprName c ++ f vs
       where
         f [] = ""
         f args = "(" ++ intercalate ", " (map show args) ++ ")"

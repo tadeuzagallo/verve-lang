@@ -84,7 +84,7 @@ instance Show Intf where
   show (Intf name _ _) = name
 
 instance PrettyPrint Intf where
-  pprint (Intf name _ _) = str name
+  pprint (Intf name _ _) = str $ pprName name
 
 printType :: (Type  -> String) -> (Var -> String) -> (Intf -> String) -> Type -> String
 printType p _ _ t@(Con _) = p t
@@ -127,9 +127,9 @@ instance Show Type where
   show t = printType show show show t
 
 instance PrettyPrint Type where
-  pprint (Con t) = str t
+  pprint (Con t) = str $ pprName t
   pprint (Var v _) = pprint v
-  pprint (Cls t) = str t
+  pprint (Cls t) = str $ pprName t
   pprint Type = str "Type"
   pprint Top = str "⊤"
   pprint Bot = str "⊥"
