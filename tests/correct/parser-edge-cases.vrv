@@ -38,3 +38,11 @@
 enum Box<T> { Box(T) }
 
 fn f(x: Box<Box<Box<Box<Int>>>>) { }
+
+// propagate allowCtor to rhs
+operator<T, U> (x: T) >> (y: U) -> U { y }
+enum C { C }
+
+match [] >> C {
+  case C: 0
+}

@@ -16,6 +16,8 @@ module Syntax.Lexer
   , braces
   , brackets
   , angles
+  , separator
+  , block
   -- Utils
   , commaSep
   , commaSep1
@@ -25,7 +27,7 @@ module Syntax.Lexer
   ) where
 
 import Data.Char (digitToInt)
-import Text.Parsec ((<|>), (<?>), sepEndBy1, sepEndBy, many, many1, between, try, skipMany, choice, unexpected, parserFail, option, parserZero)
+import Text.Parsec ((<|>), (<?>), sepEndBy1, sepEndBy, many, many1, between, try, skipMany, skipMany1, choice, unexpected, parserFail, option, parserZero)
 import Text.Parsec.Char (lower, upper, alphaNum, oneOf, noneOf, char, anyChar, string, digit, satisfy, endOfLine, hexDigit, octDigit)
 import Text.Parsec.String (Parser)
 
@@ -226,3 +228,9 @@ number base baseDigit
         ; let n = foldl (\x d -> base*x + toInteger (digitToInt d)) 0 digits
         ; seq n (return n)
         }
+
+separator :: Parser ()
+separator = skipMany1 newline
+
+block :: Parser a -> Parser [a]
+block p = braces $ p `sepEndBy` separator

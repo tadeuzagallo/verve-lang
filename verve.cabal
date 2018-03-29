@@ -45,6 +45,14 @@ library
                        Reassoc.Error
                        Renamer.State
                        Renamer.Error
+                       Syntax.Decl
+                       Syntax.Expr
+                       Syntax.Import
+                       Syntax.Literal
+                       Syntax.Pattern
+                       Syntax.Shared
+                       Syntax.Stmt
+                       Syntax.Type
                        Typing.Constraint
                        Typing.Kinds
                        Typing.State

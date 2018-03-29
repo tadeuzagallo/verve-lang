@@ -1,0 +1,273 @@
+; GRAMMAR FOR MODULES
+
+module ::= imports? stmts?
+
+; GRAMMAR FOR IMPORTS
+
+imports ::= import
+          | import '\n' imports?
+
+import ::= 'global'? 'import' qualified_ucid alias? import_list?
+
+alias ::= 'as' UCID
+
+import_list ::= '{' import_items '}'
+
+import_items ::= import_item
+               | import_item ',' import_items?
+
+import_item ::= import_value
+              | import_type
+
+import_value ::= LCID
+
+import_type ::= UCID constructors?
+
+constructors ::= '(' ucids? ')'
+constructors ::= constructor
+               | constructor ',' constructors
+
+constructor ::= UCID
+
+; GRAMMAR FOR STMTS
+
+stmts ::= stmt
+        | stmt '\n' stmts?
+
+stmt ::= decl
+       | expr
+
+; GRAMMAR FOR DECL
+
+decl ::= enum
+       | operator
+       | let
+       | class
+       | interface
+       | implementation
+       | type_alias
+       | function
+
+; ENUM
+enum ::= 'enum' UCID generics? '{' constructors? '}'
+
+constructors ::= constructor
+               | constructor ',' constructors?
+
+constructor ::= UCID parameters?
+
+parameters ::= '(' types? ')'
+
+types ::= type
+        | type ',' types?
+
+; OPERATOR
+operator ::= assoc? prec? 'operator' generics? op_param OPERATOR op_param ret_type? code_block
+
+assoc ::= '#assoc' '(' assoc_choice ')'
+
+assoc_choice ::= 'left' | 'right' | 'none'
+
+prec ::= '#prec' '(' prec_choice ')'
+
+prec_choice ::= 'higher' '(' OPERATOR ')'
+              | 'lower' '(' OPERATOR ')'
+              | 'equal' '(' OPERATOR ')'
+              | NATURAL
+
+op_param ::= '(' typed_name ')'
+
+; LET
+let ::= 'let' LCID type_annotation? '=' expr
+
+; CLASS
+class ::= 'class' UCID '{' var_decls? fn_decls? '}'
+
+var_decls ::= var_decl
+            | var_decl '\n' var_decls?
+
+var_decl ::= 'let' typed_name
+
+fn_decls ::= function
+           | function '\n' fn_decls?
+
+; INTERFACE
+
+interface ::= 'interface' UCID '<' UCID '>' '{' intf_members? '}'
+
+intf_members ::= intf_member
+               | intf_member '\n' intf_members?
+
+intf_member ::= intf_var
+              | intf_operator
+
+intf_var ::= 'let' typed_name
+
+intf_operator ::= assoc? prec? 'operator' '(' type ')' OPERATOR '(' type ')' ret_type?
+
+; IMPLEMENTATION
+
+implementation ::= 'implementation' generics? UCID '<' type '>' '{' impl_members '}'
+
+impl_members ::= impl_member
+               | impl_member '\n' impl_members?
+
+impl_member ::= impl_fn
+              | impl_operator
+              | impl_var
+
+impl_fn ::= 'fn' LCID '(' lcids ')' code_block
+
+lcids ::= LCID
+        | LCID ',' lcids?
+
+impl_operator ::= 'operator' LCID OPERATOR LCID code_block
+
+impl_var ::= 'let' LCID '=' expr
+
+; TYPE ALIAS
+
+type_alias ::= 'type' UCID '<' ucids? '>' '=' type
+
+ucids ::= UCID
+        | UCID ',' ucids?
+
+
+; GRAMMAR FOR EXPR
+
+expr ::= match
+       | if
+       | function
+       | lhs_expr rhs_expr*
+
+lhs_expr ::= record
+           | list
+           | literal
+           | qualified_lcid
+           | qualified_ucid
+           | constructor ; not allowed in some contexts
+           | '(' expr ')'
+           | '(' OPERATOR ')'
+           | negate
+
+rhs_expr ::= call
+           | method_call
+           | field_access
+           | binop
+
+simpl-expr ::= expr - constructor
+
+match ::= 'match' simpl-expr '{' cases? '}'
+
+cases ::= case | case '\n' cases?
+
+; TODO: fix this mess - drop the `case` prefix and use `expr | code_block` for the case_body
+case ::= 'case' pattern ':' case_body
+
+case_body ::= stmts
+
+if ::= 'if' expr code_block else
+
+else ::= 'else' (if | code_block)
+
+record ::= '{' fields? '}'
+
+fields ::= field | field ',' fields?
+
+field ::= LCID ':' expr
+
+list ::= '[' exprs ']'
+
+exprs ::= expr | expr ',' exprs?
+
+qualified_lcid ::= (UCID '.')* LCID
+
+qualified_ucid ::= (UCID '.')* UCID
+
+constructor ::= qualified_ucid record
+
+negate ::= '-' expr
+
+call ::= generic_args? '(' exprs? ')'
+
+generic_args ::= '<' types? '>'
+
+method_call ::= field_access call
+
+field_access ::= '.' LCID
+
+binop ::= OPERATOR expr
+
+; GRAMMAR FOR PATTERNS
+
+pattern ::= '_'
+          | literal
+          | record_pattern
+          | list_pattern
+          | constructor_pattern
+          | LCID
+
+record_pattern ::= '{' field_pats? '}'
+
+field_pats ::= field_pat | field_pats?
+
+field_pat ::= LCID ':' pattern
+
+list_pattern ::= '[' patterns? ']'
+
+patterns ::= pattern | pattern ',' patterns?
+
+constructor_pattern ::= UCID arg_patterns?
+
+arg_patterns ::= '(' patterns ')'
+
+; GRAMMAR FOR LITERALS
+
+literal ::= NATURAL_OR_FLOAT
+          | CHAR
+          | STRING
+
+;  GRAMMAR FOR TYPES
+type ::= simple_type
+       | arrow
+       | record
+
+simple_type ::= UCID application?
+
+application ::= '<' types? '>'
+
+arrow ::= '(' types ')' ret_type
+
+ret_type ::= '->' type
+
+record ::= '{' typed_names '}'
+
+typed_names ::= typed_name | typed_name ',' typed_names?
+
+typed_name ::= LCID type_annotation
+
+type_annotation ::= ':' type
+
+; SHARED
+
+code_block ::= '{' stmts '}'
+
+function ::= 'fn' LCID generics? '(' typed_names ')' ret_type? code_block
+
+generics ::= '<' generic_params? '>'
+
+generic_params ::= generic_param | generic_param ',' generi_params?
+
+generic_param ::= UCID bounds?
+
+bounds ::= ':' (UCID | '(' ucids ')')
+
+; TOKENS
+
+LCID
+UCID
+OPERATOR
+NATURAL
+CHAR
+STRING
+NATURAL_OR_FLOAT

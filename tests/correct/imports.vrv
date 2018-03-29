@@ -4,7 +4,7 @@ global import Enum
 global import Match { Nat(Z) }
 
 import Enum
-import Enum as E
+import Enum as E { Nat, Bool(True) }
 
 import Match { Nat(Z) }
 import Match as M { Nat(Z), length, List(Cons, Nil) }

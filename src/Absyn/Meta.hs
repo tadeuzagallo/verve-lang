@@ -53,3 +53,14 @@ instance Show Literal where
   show (Float i) = show i
   show (Char i) = show i
   show (String i) = show i
+
+data Located a = L SourceLoc a
+
+data SourceLoc = SourceLoc { file :: FilePath
+                           , start :: SourcePos
+                           , end :: SourcePos
+                           }
+
+data SourcePos = SourcePos { line :: Int
+                           , column :: Int
+                           }
