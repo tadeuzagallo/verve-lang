@@ -38,6 +38,8 @@ library
   other-modules:       Absyn.Base
                        Absyn.Meta
                        Absyn.ValueOccursCheck
+                       Core.Match
+                       Core.State
                        Interpreter.Builtin
                        Interpreter.RuntimeError
                        Interpreter.Value
