@@ -28,6 +28,7 @@ import qualified Renamer.Env as Renamer
 import Control.Monad (ap, liftM, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Either (either)
+import System.Console.Haskeline.MonadException (MonadException, RunIO(..), controlIO)
 import System.Exit (exitFailure)
 
 type Env = (Reassoc.Env, Renamer.Env, Ctx, DsState, Interpreter.Env)
@@ -75,6 +76,12 @@ instance MonadIO Pipeline where
     Pipeline { runPipeline_ = \s ->
       f >>= \v -> return (s, v) }
 
+instance MonadException Pipeline where
+  controlIO f = Pipeline $ \s ->
+    controlIO $ \(RunIO run) ->
+      let run' = RunIO (fmap (Pipeline . const) . run . flip runPipeline_ s)
+       in fmap (flip runPipeline_ s) $ f run'
+
 -- Internal Helpers
 ask :: (State -> t) -> Pipeline t
 ask f =
@@ -88,7 +95,7 @@ modify f =
 
 runPipeline :: Pipeline a -> Options -> IO ()
 runPipeline p options = do
-  runPipeline_ (p >> flush >>= printResults True) (initState options)
+  _ <- runPipeline_ (p >> flush >>= printResults True) (initState options)
   return ()
 
 printResults :: Bool -> ([Error], [String]) -> Pipeline ()
