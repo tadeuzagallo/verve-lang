@@ -9,4 +9,3 @@ data Options = Options
   , dump_statements :: Bool
   , files :: [FilePath]
   } deriving (Show, Data, Typeable)
-

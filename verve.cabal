@@ -56,12 +56,16 @@ library
                        Syntax.Stmt
                        Syntax.Type
                        Typing.Constraint
+                       Typing.Decl
+                       Typing.Expr
                        Typing.Kinds
                        Typing.State
+                       Typing.Stmt
                        Typing.Substitution
                        Typing.Subtyping
                        Typing.TypeError
                        Typing.Types
+                       Typing.Util
                        Typing.Variance
 
   build-depends:       base >= 4.7 && < 5, parsec, mtl
