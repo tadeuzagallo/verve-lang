@@ -73,3 +73,8 @@ implementation<T: Intish, U> Intish<Pair<T, U>> {
     }
   }
 }
+
+// CHECK-L: let bindings within interfaces must be functions
+interface I<T> {
+  let x : T
+}

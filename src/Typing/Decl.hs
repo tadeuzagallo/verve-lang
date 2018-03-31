@@ -21,13 +21,14 @@ import Data.List (intersect)
 {-
    Δ : types context
    Γ : values context
+   Ψ : implementations context (for brevity only mentioned on the necessary rules)
 -}
 
 i_decl :: Ctx -> U.Decl -> Tc (Ctx, T.Decl, Type)
 
 {-
   Δ; Γ ⊢ f : T
-  -----------
+  ----------------------- FnDecl
   Δ; Γ ⊢ fn ⊣ Γ, f : T; Δ
 -}
 i_decl ctx (FnStmt fn) = do
@@ -36,9 +37,9 @@ i_decl ctx (FnStmt fn) = do
 
 {-
    ∀ Ci ∈ C1..Cn, ∀ Tij ∈ Ti1..Tik, Δ, S1 : *, ..., Sn : *, E : arity(m, *); Γ ⊢ Tik : *
-   ------------------------------------------------------------------------------------------------------------------
+   ------------------------------------------------------------------------------------------------------------------ EnumDecl
    Δ; Γ ⊢ enum E<S1, ..., Sm> { C1(T11..T1j), ..., Cn(Tn1..Tnk) }
-        ⊣ Δ, E: arity(m, *); Γ, C1 : T1 -> ... Tj -> E, ..., Cn : T1 -> ... -> Tk -> E
+        ⊣ Δ, E: arity(m, *); Γ, C1 : ∀ S1, ..., Sm. T1 -> ... Tj -> E, ..., Cn : ∀ S1, ..., Sm. T1 -> ... -> Tk -> E
   -}
 i_decl ctx (Enum name generics ctors) = do
   (ctx', generics') <- addGenerics ctx (defaultBounds generics)
@@ -56,10 +57,11 @@ i_decl ctx (Enum name generics ctors) = do
   return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'), Type)
 
 {-
-   Δ(S) = S'                  Δ(T) = T'                   Δ(U) = U'
-   Δ, S1 : *, ..., Sn : *; Γ, x : S', y: U' ⊢ e : V         V <: U
-   ---------------------------------------------------------------------------------------
-   Δ; Γ ⊢ operator<V1, ..., Vn> (x : S) OP (y : T) -> U { e } ⊣ Δ; Γ, OP : S' -> T' -> U'
+                   S :: *              T :: *              U :: *
+                   Δ, S1 : *, ..., Sn : *; Γ, x : S, y: U ⊢ e : V
+                                   V <: U
+   -----------------------------------------------------------------------------------
+   Δ; Γ ⊢ operator<V1, ..., Vn> (x : S) OP (y : T) -> U { e } ⊣ Δ; Γ, OP : S -> T -> U
 -}
 i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
   opGenerics' <- resolveGenerics ctx opGenerics
@@ -83,12 +85,12 @@ i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
 
 {-
 
-   Δ(T) = T'    Δ; Γ, x: T ⊢ e : S    S <: T
-   ----------------------------------------- LetRec
-   Δ; Γ ⊢ let x : T = e ⊣ Δ; Γ, x : T
+   T :: *      Δ; Γ, x: T ⊢ e : S     S <: T
+   ----------------------------------------- LetRecDecl
+      Δ; Γ ⊢ let x : T = e ⊣ Δ; Γ, x : T
 
-   Δ; Γ ⊢ e : S
-   ------------------------------ Let
+           Δ; Γ ⊢ e : S
+   ------------------------------ LetDecl
    Δ; Γ ⊢ let x = e ⊣ Δ; Γ, x : S
 -}
 i_decl ctx (Let (var, ty) expr) = do
@@ -111,19 +113,42 @@ i_decl ctx (Let (var, ty) expr) = do
 i_decl ctx cls@(Class {}) = do
   i_class ctx cls
 
+{-
+   NOTE: interface lets must bind to functions for now - it's get a bit more complicated with arbitrary types
+
+   ∀ i ∈ 1..n, Δ, T :: * ⊢ Ti <: ⊥ -> ⊤
+   ----------------------------------------------------- InterfaceDecl
+   Δ; Γ ⊢ interface  I<T> {
+     decl1 : T1
+     ...
+     decln : Tn
+  } ⊣ Δ, I : Interface { decl1 : T1, ... decln : Tn } ;
+      Γ, decl1 : ∀(T: I). T1, ..., decln :  ∀(T : I). Tn
+-}
 i_decl ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
   (methods', methodsTy) <- unzip <$> mapM (i_interfaceItem ctx') methods
   let ty = Intf name param' methodsTy
   let intf = Interface (name, void) param methods'
-  let ctx' = foldl (aux ty param') ctx methodsTy
+  ctx' <- foldM (aux ty param') ctx methodsTy
   return (addInterface ctx' (name, ty), intf, void)
     where
       aux intf param ctx (name, Fun gen params retType) =
         let ty = Fun ((param, [intf]) : gen) params retType
-         in addValueType ctx (name, ty)
-      aux _ _ _ _ = undefined
+         in return $ addValueType ctx (name, ty)
+      aux _ _ _ _ = throwError $ GenericError "let bindings within interfaces must be functions"
 
+{-
+   TODO: Check for existing implementation for type
+
+  ∀ i ∈ 1..n, Δ, U1 :: *, ..., Un :: *; Γ ⊢ impli : T /\ T <: Δ(I)[impli]
+  ---------------------------------------------- ImplementationDecl
+   Δ; Γ; Ψ ⊢ implement<U1, ..., Un> I<T> {
+     impl1
+     ...
+     impln
+   } ⊣ Δ; Γ; Ψ, I<T> : { impl1, ..., impln }
+-}
 i_decl ctx (Implementation implName generics ty methods) = do
   Intf _ param intfMethods <- getInterface implName ctx
   generics' <- resolveGenerics ctx generics
@@ -148,6 +173,11 @@ i_decl ctx (Implementation implName generics ty methods) = do
     extendCtx _ ty _ =
       throwError (ImplementationError implName ty)
 
+{-
+  Δ, T1 :: *, ..., Tn :: *; Γ ⊢ well_formed U
+  ------------------------------------------------- AliasTypeDecl
+  Δ; Γ ⊢ type S<T1, ..., Tn> = U ⊣ Δ, ΛT1..Tn. U; Γ
+-}
 i_decl ctx (TypeAlias aliasName aliasVars aliasType) = do
   (ctx', aliasVars') <- addGenerics ctx (defaultBounds aliasVars)
   aliasType' <- resolveType ctx' aliasType
