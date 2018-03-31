@@ -19,16 +19,32 @@ import Control.Monad (foldM, when)
 import Data.Foldable (foldrM)
 import Data.List (intersect)
 
+{-
+   Δ : types context
+   Γ : values context
+-}
+
 i_decl :: Ctx -> U.Decl -> Tc (Ctx, T.Decl, Type)
+
+{-
+  Δ; Γ ⊢ f : T
+  -----------
+  Δ; Γ ⊢ fn ⊣ Γ, f : T; Δ
+-}
 i_decl ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
   return (addValueType ctx (name fn, ty), FnStmt fn', ty)
 
+{-
+   ∀ Ci ∈ C1..Cn, ∀ Tij ∈ Ti1..Tik, Δ, S1 : *, ..., Sn : *, E : arity(m, *); Γ ⊢ Tik : *
+   ------------------------------------------------------------------------------------------------------------------
+   Δ; Γ ⊢ enum E<S1, ..., Sm> { C1(T11..T1j), ..., Cn(Tn1..Tnk) }
+        ⊣ Δ, E: arity(m, *); Γ, C1 : T1 -> ... Tj -> E, ..., Cn : T1 -> ... -> Tk -> E
+  -}
 i_decl ctx (Enum name generics ctors) = do
   (ctx', generics') <- addGenerics ctx (defaultBounds generics)
   let mkEnumTy ty = case (ty, generics') of
                 (Nothing, []) -> Con name
-                (Just t, [])  -> Fun [] t (Con name)
                 (Nothing, _)  -> TyAbs (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
                 (Just t, _)   -> Fun generics' t (TyApp (Con name) (map (uncurry Var) generics'))
   let enumTy = mkEnumTy Nothing
@@ -36,6 +52,12 @@ i_decl ctx (Enum name generics ctors) = do
   (ctx''', ctors') <- foldrM (i_ctor ctx'' mkEnumTy) (ctx, []) ctors
   return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'), Type)
 
+{-
+   Δ(S) = S'                  Δ(T) = T'                   Δ(U) = U'
+   Δ, S1 : *, ..., Sn : *; Γ, x : S', y: U' ⊢ e : V         V <: U
+   ---------------------------------------------------------------------------------------
+   Δ; Γ ⊢ operator<V1, ..., Vn> (x : S) OP (y : T) -> U { e } ⊣ Δ; Γ, OP : S' -> T' -> U'
+-}
 i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
   opGenerics' <- resolveGenerics ctx opGenerics
   (ctx', opGenericVars) <- addGenerics ctx opGenerics'
@@ -56,6 +78,16 @@ i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
                      , opBody = opBody' }
   return (addValueType ctx (opName, ty), op', ty)
 
+{-
+
+   Δ(T) = T'    Δ; Γ, x: T ⊢ e : S    S <: T
+   ----------------------------------------- LetRec
+   Δ; Γ ⊢ let x : T = e ⊣ Δ; Γ, x : T
+
+   Δ; Γ ⊢ e : S
+   ------------------------------ Let
+   Δ; Γ ⊢ let x = e ⊣ Δ; Γ, x : S
+-}
 i_decl ctx (Let (var, ty) expr) = do
   (ctx', expr', exprTy) <-
     case ty of
