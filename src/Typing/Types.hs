@@ -34,8 +34,7 @@ import Prelude hiding (concat)
 import Typing.State
 import Util.PrettyPrint
 
-import Data.List (intercalate, union)
-import Text.Printf (printf)
+import Data.List (union)
 
 import qualified Data.List ((\\))
 
@@ -87,49 +86,8 @@ instance Show Intf where
 instance PrettyPrint Intf where
   pprint (Intf name _ _) = str $ pprName name
 
-printType :: (Type  -> String) -> (Var -> String) -> (Intf -> String) -> Type -> String
-printType p _ _ t@(Con _) = p t
-printType p _ _ t@(Var _ _) = p t
-printType p _ _ t@(Cls _) = p t
-printType _ _ _ Type = "Type"
-printType _ _ _ Top = "⊤"
-printType _ _ _ Bot = "⊥"
-
-printType f pv pi (Fun gs [v] t2) | v == void =
-  printType f pv pi(Fun gs [] t2)
-
-printType f printVar printIntf (Fun gs t1 t2) =
-  printf "%s(%s) -> %s"
-    (if null gs then "" else printf "∀%s. " (intercalate " " $ map var gs))
-    (intercalate ", " $ map (printType f printVar printIntf) t1)
-    (printType f printVar printIntf t2)
-      where
-        var :: BoundVar -> String
-        var (v, []) = printVar v
-        var (v, [t]) = printf "(%s: %s)" (printVar v) (printIntf t)
-        var (v, ts) = printf "(%s: (%s))" (printVar v) (intercalate ", " $ map printIntf ts)
-
-printType f v i (Rec fields) =
-  "{" ++ fields' ++ "}"
-    where
-      fields' = intercalate ", " $ map showField fields
-      showField (key, ty) = key ++ ": " ++ printType f v i ty
-
-printType f v i (TyAbs params ty) =
-  "Λ" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
-
-printType f v i (Forall params ty) =
-  "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
-
-
-printType f v i (TyApp ty args) =
-  printType f v i ty ++ "<" ++ intercalate ", " (map (printType f v i) args) ++ ">"
-
 instance Show Type where
-  show (Con t) = t
-  show (Var v _) = show v
-  show (Cls t) = t
-  show t = printType show show show t
+  show = Util.PrettyPrint.print
 
 instance PrettyPrint Type where
   pprint (Con t) = str $ pprName t
