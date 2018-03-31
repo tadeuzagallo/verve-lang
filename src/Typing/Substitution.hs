@@ -28,7 +28,6 @@ zipSubst vs = Substitution . zip vs
 applySubst :: Substitution -> Type -> Type
 applySubst _ Top = Top
 applySubst _ Bot = Bot
-applySubst _ Type = Type
 applySubst _ (Con c) = Con c
 applySubst _ (Cls c) = Cls c
 applySubst (Substitution s) var@(Var v _) =

@@ -18,7 +18,6 @@ variance _ Top = Bivariant
 variance _ Bot = Bivariant
 variance _ (Con _) = Bivariant
 variance _ (Cls _) = Bivariant
-variance _ Type = Bivariant
 variance v (Var x _)
   | v == x = Covariant
   | otherwise = Bivariant

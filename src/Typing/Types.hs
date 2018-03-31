@@ -72,7 +72,6 @@ data Type
   | TyApp Type [Type]
   | Top
   | Bot
-  | Type
   deriving (Eq)
 
 type BoundVar = (Var, [Intf])
@@ -93,7 +92,6 @@ instance PrettyPrint Type where
   pprint (Con t) = str $ pprName t
   pprint (Var v _) = pprint v
   pprint (Cls t) = str $ pprName t
-  pprint Type = str "Type"
   pprint Top = str "⊤"
   pprint Bot = str "⊥"
 
@@ -166,7 +164,6 @@ fv :: Type -> [Var]
 -- No free variables
 fv Top = []
 fv Bot = []
-fv Type = []
 fv (Con _) = []
 fv (Cls _) = []
 

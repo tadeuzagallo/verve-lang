@@ -112,9 +112,6 @@ _ // (Con x) = (Con x)
 -- VU-Cls
 _ // (Cls name) = (Cls name)
 
--- VU-Type
-_ // Type = Type
-
 v // var@(Var x _)
   -- VU-Var-1
   | x `elem` v = Top
@@ -155,9 +152,6 @@ _ \\ (Con x) = (Con x)
 --
 -- VD-Cls
 _ \\ (Cls name) = (Cls name)
-
--- VD-Type
-_ \\ Type = Type
 
 v \\ var@(Var x _)
   -- VD-Var-1
