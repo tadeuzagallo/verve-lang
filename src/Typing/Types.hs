@@ -255,7 +255,17 @@ isHole (Var tv _) | tv == holeVar = True
 isHole _ = False
 
 data ConstraintArg
+  -- A simple type, when the generic has no bounds
+  -- e.g. `(<T>(T) -> U) Int`  will produce [CAType Int]
   = CAType Type
+
+  -- A type that satisfies a given interface
+  -- e.g. `(<T: Printable>(T) -> U) Int` will produce [CABound Int Printable]
   | CABound Type Intf
+
+  -- A type constructor that recursively satisfies the interface plus evidence that
+  -- its arguments also satisfy the required constraints
+  -- e.g. `(<T: Printable>(T) -> U) List<Int>` will produce [CAPoly List Printable [CABound Int Printable]]
+  --   assuming `implementation<T:Printable> Printable<List<T>>`
   | CAPoly Type Intf [ConstraintArg]
   deriving (Show)

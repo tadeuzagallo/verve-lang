@@ -158,6 +158,10 @@ inferConstraintArgs ctx gen skippedVars typeArgs = do
       findConstrArgs (_, bounds) tyArg = do
         concat <$> mapM (boundsCheck ctx tyArg) bounds
 
+-- Checks if `t1` implements the interface in `t2`
+-- returns a list with a single ConstraintArg indicating
+--  how to satisfy the bounds. See `ConstraintArg` for
+--  an explanation on the kinds of ConstraintArgs
 boundsCheck :: Ctx -> Type -> Intf -> Tc [ConstraintArg]
 boundsCheck ctx t1 t2@(Intf name _ _) = do
   args <- boundsCheck' ctx t1 t2
