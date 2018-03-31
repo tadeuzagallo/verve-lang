@@ -17,7 +17,7 @@ i_stmts ctx [] =
   return (ctx, [], Nothing)
 
 i_stmts ctx (Decl decl : stmts) = do
-  (ctx', decl', _) <- i_decl ctx decl
+  (ctx', decl') <- c_decl ctx decl
   continue ctx' (Decl decl') stmts
 
 i_stmts ctx (Expr expr : stmts) = do

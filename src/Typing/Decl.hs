@@ -1,4 +1,4 @@
-module Typing.Decl (i_decl) where
+module Typing.Decl (c_decl) where
 
 import Typing.Ctx
 import Typing.Expr
@@ -24,16 +24,16 @@ import Data.List (intersect)
    Ψ : implementations context (for brevity only mentioned on the necessary rules)
 -}
 
-i_decl :: Ctx -> U.Decl -> Tc (Ctx, T.Decl, Type)
+c_decl :: Ctx -> U.Decl -> Tc (Ctx, T.Decl)
 
 {-
   Δ; Γ ⊢ f : T
   ----------------------- FnDecl
   Δ; Γ ⊢ fn ⊣ Γ, f : T; Δ
 -}
-i_decl ctx (FnStmt fn) = do
+c_decl ctx (FnStmt fn) = do
   (fn', ty) <- i_fn ctx fn
-  return (addValueType ctx (name fn, ty), FnStmt fn', ty)
+  return (addValueType ctx (name fn, ty), FnStmt fn')
 
 {-
    ∀ Ci ∈ C1..Cn, ∀ Tij ∈ Ti1..Tik, Δ, S1 : *, ..., Sn : *, E : arity(m, *); Γ ⊢ Tik : *
@@ -41,7 +41,7 @@ i_decl ctx (FnStmt fn) = do
    Δ; Γ ⊢ enum E<S1, ..., Sm> { C1(T11..T1j), ..., Cn(Tn1..Tnk) }
         ⊣ Δ, E: arity(m, *); Γ, C1 : ∀ S1, ..., Sm. T1 -> ... Tj -> E, ..., Cn : ∀ S1, ..., Sm. T1 -> ... -> Tk -> E
   -}
-i_decl ctx (Enum name generics ctors) = do
+c_decl ctx (Enum name generics ctors) = do
   (ctx', generics') <- addGenerics ctx (defaultBounds generics)
   let mkEnumTy ty = case (ty, generics') of
                 (Nothing, []) -> Con name
@@ -54,7 +54,7 @@ i_decl ctx (Enum name generics ctors) = do
            else TyAbs (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
   let ctx'' = addType ctx' (name, enumTy)
   (ctx''', ctors') <- foldrM (i_ctor ctx'' mkEnumTy) (ctx, []) ctors
-  return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'), Type)
+  return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'))
 
 {-
                    S :: *              T :: *              U :: *
@@ -63,7 +63,7 @@ i_decl ctx (Enum name generics ctors) = do
    -----------------------------------------------------------------------------------
    Δ; Γ ⊢ operator<V1, ..., Vn> (x : S) OP (y : T) -> U { e } ⊣ Δ; Γ, OP : S -> T -> U
 -}
-i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
+c_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) = do
   opGenerics' <- resolveGenerics ctx opGenerics
   (ctx', opGenericVars) <- addGenerics ctx opGenerics'
   opLhs' <- resolveId ctx' opLhs
@@ -81,7 +81,7 @@ i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
                      , opRhs = opRhs'
                      , opRetType = opRetType'
                      , opBody = opBody' }
-  return (addValueType ctx (opName, ty), op', ty)
+  return (addValueType ctx (opName, ty), op')
 
 {-
 
@@ -93,7 +93,7 @@ i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
    ------------------------------ LetDecl
    Δ; Γ ⊢ let x = e ⊣ Δ; Γ, x : S
 -}
-i_decl ctx (Let (var, ty) expr) = do
+c_decl ctx (Let (var, ty) expr) = do
   (ctx', expr', exprTy) <-
     case ty of
       U.TPlaceholder -> do
@@ -108,9 +108,9 @@ i_decl ctx (Let (var, ty) expr) = do
         exprTy <:! ty'
         return (ctx',expr', ty')
   let let' = Let (var, exprTy) expr'
-  return (ctx', let', exprTy)
+  return (ctx', let')
 
-i_decl ctx cls@(Class {}) = do
+c_decl ctx cls@(Class {}) = do
   i_class ctx cls
 
 {-
@@ -125,13 +125,13 @@ i_decl ctx cls@(Class {}) = do
   } ⊣ Δ, I : Interface { decl1 : T1, ... decln : Tn } ;
       Γ, decl1 : ∀(T: I). T1, ..., decln :  ∀(T : I). Tn
 -}
-i_decl ctx (Interface name param methods) = do
+c_decl ctx (Interface name param methods) = do
   (ctx', [(param', [])]) <- addGenerics ctx [(param, [])]
   (methods', methodsTy) <- unzip <$> mapM (i_interfaceItem ctx') methods
   let ty = Intf name param' methodsTy
   let intf = Interface (name, void) param methods'
   ctx' <- foldM (aux ty param') ctx methodsTy
-  return (addInterface ctx' (name, ty), intf, void)
+  return (addInterface ctx' (name, ty), intf)
     where
       aux intf param ctx (name, Fun gen params retType) =
         let ty = Fun ((param, [intf]) : gen) params retType
@@ -149,7 +149,7 @@ i_decl ctx (Interface name param methods) = do
      impln
    } ⊣ Δ; Γ; Ψ, I<T> : { impl1, ..., impln }
 -}
-i_decl ctx (Implementation implName generics ty methods) = do
+c_decl ctx (Implementation implName generics ty methods) = do
   Intf _ param intfMethods <- getInterface implName ctx
   generics' <- resolveGenerics ctx generics
   (ctx', genericVars) <- addGenerics ctx generics'
@@ -160,7 +160,7 @@ i_decl ctx (Implementation implName generics ty methods) = do
   checkCompleteInterface intfMethods names
   let impl = Implementation (implName, void) generics' ty' methods'
   ctx' <- extendCtx ctx ty' genericVars
-  return (ctx', impl, void)
+  return (ctx', impl)
   where
     extendCtx ctx (TyApp ty args) genericVars@(_:_) | vars  `intersect` args == vars =
       addImplementation ctx (implName, (ty, genericVars))
@@ -178,14 +178,14 @@ i_decl ctx (Implementation implName generics ty methods) = do
   ------------------------------------------------- AliasTypeDecl
   Δ; Γ ⊢ type S<T1, ..., Tn> = U ⊣ Δ, ΛT1..Tn. U; Γ
 -}
-i_decl ctx (TypeAlias aliasName aliasVars aliasType) = do
+c_decl ctx (TypeAlias aliasName aliasVars aliasType) = do
   (ctx', aliasVars') <- addGenerics ctx (defaultBounds aliasVars)
   aliasType' <- resolveType ctx' aliasType
   let aliasType'' = case aliasVars' of
                 [] -> aliasType'
                 _  -> TyAbs (map fst aliasVars') aliasType'
   let alias = TypeAlias aliasName aliasVars aliasType''
-  return (addType ctx (aliasName, aliasType''), alias, Type)
+  return (addType ctx (aliasName, aliasType''), alias)
 
 
 checkCompleteInterface :: [(Name, Type)] -> [Name] -> Tc ()
@@ -239,7 +239,7 @@ i_ctor sourceCtx mkEnumTy (name, types) (targetCtx, ctors) = do
   let ty = mkEnumTy types'
   return (addValueType targetCtx (name, ty), ((name, ty), types'):ctors)
 
-i_class :: Ctx -> U.Decl -> Tc (Ctx, T.Decl, Type)
+i_class :: Ctx -> U.Decl -> Tc (Ctx, T.Decl)
 i_class ctx (Class name vars methods) = do
   let classTy = Cls name
   let ctxWithClass = addType ctx (name, classTy)
@@ -250,7 +250,7 @@ i_class ctx (Class name vars methods) = do
   ctxWithMethods <- foldM (i_addMethodType classTy) ctxWithVars methods
   methods' <- mapM (i_method classTy ctxWithMethods) methods
   let class' = Class (name, classTy) vars' methods'
-  return (ctxWithMethods, class', Type)
+  return (ctxWithMethods, class')
 
 i_class _ _ = undefined
 
