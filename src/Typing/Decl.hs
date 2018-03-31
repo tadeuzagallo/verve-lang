@@ -45,9 +45,13 @@ i_decl ctx (Enum name generics ctors) = do
   (ctx', generics') <- addGenerics ctx (defaultBounds generics)
   let mkEnumTy ty = case (ty, generics') of
                 (Nothing, []) -> Con name
-                (Nothing, _)  -> TyAbs (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
+                (Nothing, _)  -> Forall (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
+                (Just t, [])   -> Fun generics' t (Con name)
                 (Just t, _)   -> Fun generics' t (TyApp (Con name) (map (uncurry Var) generics'))
-  let enumTy = mkEnumTy Nothing
+  let enumTy =
+        if null generics
+           then Con name
+           else TyAbs (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
   let ctx'' = addType ctx' (name, enumTy)
   (ctx''', ctors') <- foldrM (i_ctor ctx'' mkEnumTy) (ctx, []) ctors
   return (addType ctx''' (name, enumTy), (Enum (name, enumTy) generics ctors'), Type)
@@ -202,7 +206,7 @@ i_implItem ctx subst intfTypes (ImplOperator lhs op rhs body) = do
 
 i_ctor :: Ctx -> (Maybe [Type] -> Type) -> U.DataCtor -> (Ctx, [T.DataCtor]) -> Tc (Ctx, [T.DataCtor])
 i_ctor sourceCtx mkEnumTy (name, types) (targetCtx, ctors) = do
-  types' <- sequence (types >>= return . mapM (resolveType sourceCtx))
+  types' <- sequence (mapM (resolveType sourceCtx) <$> types)
   let ty = mkEnumTy types'
   return (addValueType targetCtx (name, ty), ((name, ty), types'):ctors)
 

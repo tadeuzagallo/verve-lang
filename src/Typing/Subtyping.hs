@@ -35,13 +35,19 @@ Bot <: _ = True
     let s = zipSubst (map fst v1) (map (uncurry Var) v2)
      in applySubst s (Fun v2 p1 t1) <: f2
 
+-- α-equivalence of polymorphic types
+(Forall v1 t1) <: t2@(Forall v2 _)
+  | length v1 == length v2 =
+    let s = zipSubst v1 (map (flip Var []) v2)
+     in applySubst s (Forall v2 t1) <: t2
+
 -- α-equivalence of type constructors
 (TyAbs v1 t1) <: t2@(TyAbs v2 _)
   | length v1 == length v2 =
     let s = zipSubst v1 (map (flip Var []) v2)
      in applySubst s (TyAbs v2 t1) <: t2
 
-_t1@(TyAbs gen t12) <: t2@(TyApp _t21 args) =
+(Forall gen t12) <: t2@(TyApp _t21 args) | length gen == length args =
   let t1' = applySubst (zipSubst gen args) t12
    in t1' <: t2
 
@@ -117,6 +123,10 @@ v // (Rec fields) =
   let fields' = map (\(k, t) -> (k, v // t)) fields
    in Rec fields'
 
+v // (Forall gen ty) =
+  let v' = v Data.List.\\ gen
+   in Forall gen (v' // ty)
+
 v // (TyAbs gen ty) =
   let v' = v Data.List.\\ gen
    in TyAbs gen (v' // ty)
@@ -156,6 +166,10 @@ v \\ (Fun x s t) =
 v \\ (Rec fields) =
   let fields' = map (\(k, t) -> (k, v \\ t)) fields
    in Rec fields'
+
+v \\ (Forall gen ty) =
+  let v' = v Data.List.\\ gen
+   in Forall gen (v' \\ ty)
 
 v \\ (TyAbs gen ty) =
   let v' = v Data.List.\\ gen

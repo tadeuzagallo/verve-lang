@@ -5,7 +5,7 @@ enum List<T> {
   Cons(T, List<T>)
 }
 
-// CHECK-L: TypeError: Type `∀T.List<T>` has kind * => *, but a type of kind * was expected.
+// CHECK-L: TypeError: Type `ΛT.List<T>` has kind * => *, but a type of kind * was expected.
 fn f(x: List) -> List { x }
 
 // CHECK-L: Unknown type: T

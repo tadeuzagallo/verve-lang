@@ -41,6 +41,9 @@ applySubst s (Fun gs t1 t2) =
    in Fun gs (map (applySubst s') t1) (applySubst s' t2)
 applySubst s (Rec fields) =
   Rec (map (\(k, v) -> (k, applySubst s v)) fields)
+applySubst s (Forall gen ty) =
+  let s' = filterSubst (not . flip elem gen) s
+   in Forall gen (applySubst s' ty)
 applySubst s (TyAbs gen ty) =
   let s' = filterSubst (not . flip elem gen) s
    in TyAbs gen (applySubst s' ty)

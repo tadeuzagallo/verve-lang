@@ -185,6 +185,9 @@ boundsCheck' ctx (TyApp ty args) intf@(Intf name _ _) = do
       args <- concat <$> zipWithM aux args vars
       return [CAPoly ty intf args]
 
+boundsCheck' ctx (Forall params ty) intf =
+  boundsCheck' ctx (params \\ ty) intf
+
 boundsCheck' ctx (TyAbs params ty) intf =
   boundsCheck' ctx (params \\ ty) intf
 
@@ -269,7 +272,7 @@ c_pattern ctx ty (PatList pats rest) = do
                             in (NamedRest (n, ty), ctx'')
   return (PatList (reverse pats') rest', ctx'')
   where
-    getItemTy (TyAbs _ (TyApp (Con "List") _)) =
+    getItemTy (Forall _ (TyApp (Con "List") _)) =
       return Top
 
     getItemTy (TyApp (Con "List") [ty]) =
@@ -286,12 +289,12 @@ c_pattern ctx ty (PatCtor name vars) = do
   ctorTy <- getValueType name ctx
   let (fnTy, params, retTy) = case ctorTy of
                             fn@(Fun [] params retTy) -> (fn, params, retTy)
-                            fn@(Fun gen params retTy) -> (fn, params, TyAbs (map fst gen) retTy)
+                            fn@(Fun gen params retTy) -> (fn, params, Forall (map fst gen) retTy)
                             t -> (Fun [] [] t, [], t)
   when (length vars /= length params) (throwError ArityMismatch)
   retTy <:! ty
   let substs = case (retTy, ty) of
-                 (TyAbs gen _, TyApp _ args) -> zipSubst gen args
+                 (Forall gen _, TyApp _ args) -> zipSubst gen args
                  _ -> emptySubst
   let params' = map (applySubst substs) params
   (vars', ctx') <- foldM aux ([], ctx) (zip params' vars)

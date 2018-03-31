@@ -30,6 +30,9 @@ variance v (Fun x t r)
 variance v (Rec fields) =
   let vars = map (variance v . snd) fields
    in foldl joinVariance Bivariant vars
+variance v (Forall gen ty)
+  | v `elem` gen = Bivariant
+  | otherwise = variance v ty
 variance v (TyAbs gen ty)
   | v `elem` gen = Bivariant
   | otherwise = variance v ty

@@ -68,6 +68,7 @@ data Type
   | Fun [BoundVar] [Type] Type
   | Rec [(String, Type)]
   | Cls String
+  | Forall [Var] Type
   | TyAbs [Var] Type
   | TyApp Type [Type]
   | Top
@@ -115,7 +116,11 @@ printType f v i (Rec fields) =
       showField (key, ty) = key ++ ": " ++ printType f v i ty
 
 printType f v i (TyAbs params ty) =
+  "Λ" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
+
+printType f v i (Forall params ty) =
   "∀" ++ (intercalate " " $ map v params)  ++ "." ++ printType f v i ty
+
 
 printType f v i (TyApp ty args) =
   printType f v i ty ++ "<" ++ intercalate ", " (map (printType f v i) args) ++ ">"
@@ -162,8 +167,15 @@ instance PrettyPrint Type where
         fields' = interleave (str ", ") $ map pprintField fields
         pprintField (key, ty) = concat [ str key,  str ": ", pprint ty]
 
-  pprint (TyAbs params ty) =
+  pprint (Forall params ty) =
     concat [ str "∀"
+           , interleave (str " ") (map pprint params)
+           , str "."
+           , pprint ty
+           ]
+
+  pprint (TyAbs params ty) =
+    concat [ str "Λ"
            , interleave (str " ") (map pprint params)
            , str "."
            , pprint ty
@@ -208,6 +220,8 @@ fv (Fun x s r) =
   (foldl union [] (map fv s) `union` fv r) Data.List.\\ map fst x
 fv (Rec fields) =
   foldl union [] $ map (fv . snd) fields
+fv (Forall gen ty) =
+  fv ty Data.List.\\ gen
 fv (TyAbs gen ty) =
   fv ty Data.List.\\ gen
 fv (TyApp ty args) =

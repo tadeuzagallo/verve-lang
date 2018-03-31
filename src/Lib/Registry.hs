@@ -49,7 +49,7 @@ registry = execWriter $ do
   ty "Char" char
   ty "String" string
   ty "Void" void
-  ty "List" (forall [T] $ list T)
+  ty "List" ([T] ==> list T)
   ty "Bool" bool
 
   val "string_print" ([string] ~> void) string_print
@@ -139,7 +139,10 @@ forall vs (Fun [] params args) =
    in Fun vs' params args
 
 forall vs ty =
-  TyAbs (map tyvar vs) ty
+  Forall (map tyvar vs) ty
+
+(==>) :: [FakeVar] -> Type -> Type
+vars ==> ty = TyAbs (map tyvar vars) ty
 
 var :: FakeVar -> Type
 var name = Var (tyvar name) []
