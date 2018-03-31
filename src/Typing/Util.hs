@@ -15,6 +15,7 @@ import qualified Absyn.Untyped as U
 import qualified Absyn.Typed as T
 
 import Control.Monad (foldM, when)
+import Data.Maybe (fromMaybe)
 
 (<:!) :: Type -> Type -> Tc ()
 actualTy <:! expectedTy =
@@ -83,7 +84,7 @@ i_fnBase addToCtx ctx fn = do
                 then addValueType ctx' (name fn, ty)
                 else ctx'
   let ctx''' = foldl addValueType ctx'' tyArgs
-  (_, body', bodyTy) <- i_stmts ctx''' (body fn)
+  (body', bodyTy) <- i_body ctx''' (body fn)
   bodyTy <:! retType'
   let fn' = fn { name = (name fn, ty)
                , generics = gen'
@@ -92,6 +93,11 @@ i_fnBase addToCtx ctx fn = do
                , body = body'
                }
   return (fn', ty)
+
+i_body :: Ctx -> [U.Stmt] -> Tc ([T.Stmt], Type)
+i_body ctx stmts = do
+  (_, stmts', ty) <- i_stmts ctx stmts
+  return (stmts', fromMaybe void ty)
 
 fnTy :: Ctx -> ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
 fnTy ctx (generics, params, retType) = do

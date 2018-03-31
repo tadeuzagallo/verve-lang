@@ -2,7 +2,6 @@
 module Core.Desugar
   ( DsState
   , initialState
-  , desugarStmt
   , desugarStmts
   , d_expr
   ) where
@@ -20,10 +19,6 @@ import Data.List (groupBy)
 desugarStmts :: DsState -> [Stmt] -> (DsState, CA.Term)
 desugarStmts state stmts =
   runDesugar (d_stmts stmts) state
-
-desugarStmt :: DsState -> Stmt -> (DsState, CA.Term)
-desugarStmt s =
-  desugarStmts s . (:[])
 
 d_stmts :: [Stmt] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_stmts stmts k =

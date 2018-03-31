@@ -2,7 +2,7 @@
 
 // TODO: this is not visible anymore - how to test it?
 // instantiation
-fn id<T>(x: T) -> T { x } //CHECK-L: ∀T. (T) -> T
+fn id<T>(x: T) -> T { x }
 id //CHECK-L: ∀T. (T) -> T
 
 // TODO: Consider application with only type args

@@ -21,6 +21,9 @@ import Typing.Substitution
 import Typing.TypeError
 import Typing.Types
 
+{-data TypeBinding-}
+  {-= BType Type-}
+  {-| BIntf Intf-}
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
                , implementations :: [(String, [(Type, [BoundVar])])]

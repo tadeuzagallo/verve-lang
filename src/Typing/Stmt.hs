@@ -1,6 +1,5 @@
 module Typing.Stmt
   ( i_stmts
-  , i_stmt
   ) where
 
 import Typing.Ctx
@@ -13,22 +12,22 @@ import Absyn.Base
 import qualified Absyn.Untyped as U
 import qualified Absyn.Typed as T
 
-import Control.Monad (foldM)
+i_stmts :: Ctx -> [U.Stmt] -> Tc (Ctx, [T.Stmt], Maybe Type)
+i_stmts ctx [] =
+  return (ctx, [], Nothing)
 
-i_stmts :: Ctx -> [U.Stmt] -> Tc (Ctx, [T.Stmt], Type)
-i_stmts ctx stmts = do
-  (ctx, stmts', ty) <- foldM aux (ctx, [], void) stmts
-  return (ctx, reverse stmts', ty)
-    where
-      aux :: (Ctx, [T.Stmt], Type) -> U.Stmt -> Tc (Ctx, [T.Stmt], Type)
-      aux (ctx, stmts, _) stmt = do
-        (ctx', stmt', ty) <- i_stmt ctx stmt
-        return (ctx', stmt':stmts, ty)
+i_stmts ctx (Decl decl : stmts) = do
+  (ctx', decl', _) <- i_decl ctx decl
+  continue ctx' (Decl decl') stmts
 
-i_stmt :: Ctx -> U.Stmt -> Tc (Ctx, T.Stmt, Type)
-i_stmt ctx (Expr expr) = do
+i_stmts ctx (Expr expr : stmts) = do
   (expr', ty) <- i_expr ctx expr
-  return (ctx, Expr expr', ty)
-i_stmt ctx (Decl decl) = do
-  (ctx', decl', ty) <- i_decl ctx decl
-  return (ctx', Decl decl', ty)
+  if null stmts
+     then return (ctx, [Expr expr'], Just ty)
+     else do continue ctx (Expr expr') stmts
+
+continue :: Ctx -> T.Stmt -> [U.Stmt] -> Tc (Ctx, [T.Stmt], Maybe Type)
+continue ctx stmt stmts = do
+  (ctx', stmts', ty) <- i_stmts ctx stmts
+  return (ctx', stmt : stmts', ty)
+

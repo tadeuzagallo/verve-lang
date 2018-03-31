@@ -12,7 +12,11 @@ import Match as M { Nat(Z), length, List(Cons, Nil) }
 A // CHECK-L: A : X
 B // CHECK-L: B : X
 
-fn f(x: Nat) { } // CHECK-L: (Nat) -> Void
+fn f(x: Nat) { }
+
+// CHECK-L: (Nat) -> Void
+f
+
 Z // CHECK-L: Z : Nat
 S // CHECK-L: Unknown variable: S
 

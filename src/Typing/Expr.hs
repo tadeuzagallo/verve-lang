@@ -3,7 +3,6 @@ module Typing.Expr (i_expr) where
 import Typing.Constraint
 import Typing.Ctx
 import Typing.State
-import {-# SOURCE #-} Typing.Stmt
 import Typing.Substitution
 import Typing.Subtyping
 import Typing.TypeError
@@ -99,8 +98,8 @@ i_expr ctx (FieldAccess expr _ field) = do
 i_expr ctx (If ifCond ifBody elseBody) = do
   (ifCond', ty) <- i_expr ctx ifCond
   ty <:! bool
-  (_, ifBody', ifTy) <- i_stmts ctx ifBody
-  (_, elseBody', elseTy) <- i_stmts ctx elseBody
+  (ifBody', ifTy) <- i_body ctx ifBody
+  (elseBody', elseTy) <- i_body ctx elseBody
   return (If ifCond' ifBody' elseBody', ifTy \/ elseTy)
 
 i_expr ctx (List _ items) = do
@@ -228,7 +227,7 @@ i_lit (String _) = string
 i_case :: Ctx -> Type -> U.Case -> Tc (T.Case, Type)
 i_case ctx ty (Case pattern caseBody) = do
   (pattern', ctx') <- c_pattern ctx ty pattern
-  (_, caseBody', ty) <- i_stmts ctx' caseBody
+  (caseBody', ty) <- i_body ctx' caseBody
   return (Case pattern' caseBody', ty)
 
 -- TODO: Ctx should come first in the tuple

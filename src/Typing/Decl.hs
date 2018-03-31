@@ -4,7 +4,6 @@ import Typing.Ctx
 import Typing.Expr
 import Typing.Util
 import Typing.State
-import {-# SOURCE #-} Typing.Stmt
 import Typing.Substitution
 import Typing.TypeError
 import Typing.Types
@@ -69,7 +68,7 @@ i_decl ctx (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBo
   opRhs' <- resolveId ctx' opRhs
   opRetType' <- resolveType ctx' opRetType
   let ctx'' = addValueType (addValueType ctx' opLhs') opRhs'
-  (_, opBody', bodyTy) <- i_stmts ctx'' opBody
+  (opBody', bodyTy) <- i_body ctx'' opBody
   bodyTy <:! opRetType'
   let ty = Fun opGenericVars [snd opLhs', snd opRhs'] opRetType'
   let op' = Operator { opAssoc
@@ -189,7 +188,7 @@ i_implItem ctx subst intfTypes (ImplFunction name params body) = do
                             Fun _ ps _ | length ps == length params -> return intfTy
                             _ -> throwError $ GenericError "Implementation type doesn't match interface"
   let ctxWithParams = foldl addValueType ctx (zip params paramsTy)
-  (_, body', bodyTy) <- i_stmts ctxWithParams body
+  (body', bodyTy) <- i_body ctxWithParams body
   bodyTy <:! retTy
   return (ImplFunction (name, intfTy) params body', name)
 
@@ -199,7 +198,7 @@ i_implItem ctx subst intfTypes (ImplOperator lhs op rhs body) = do
                             Fun _ ps _ | length ps == 2 -> return intfTy
                             _ -> throwError $ GenericError "Implementation type doesn't match interface"
   let ctxWithParams = foldl addValueType ctx (zip [lhs, rhs] paramsTy)
-  (_, body', bodyTy) <- i_stmts ctxWithParams body
+  (body', bodyTy) <- i_body ctxWithParams body
   bodyTy <:! retTy
   return (ImplOperator lhs (op, intfTy) rhs body', op)
 

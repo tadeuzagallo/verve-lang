@@ -2,7 +2,11 @@
 
 { x: 1 } // CHECK-L: {x: 1} : {x: Int}
 
-fn f(x: { x: Int }) -> Int { 42 } // CHECK-L: : ({x: Int}) -> Int
+fn f(x: { x: Int }) -> Int { 42 }
+
+// CHECK-L: : ({x: Int}) -> Int
+f
+
 f({ x: 1 }) // CHECK: 42 : Int
 
 fn f(x: { x: Int }) -> Int { x.x }
