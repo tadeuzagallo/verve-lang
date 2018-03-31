@@ -70,6 +70,10 @@ s \/ t | s <: t = t
 s \/ t | t <: s = s
 (Fun x v p) \/ (Fun x' w q) | x == x' =
   Fun x (zipWith (/\) v w) (p \/ q)
+(Forall xs p) \/ (Forall ys q) | xs == ys =
+  Forall xs (p \/ q)
+(TyApp p xs) \/ (TyApp q ys) | length xs == length ys =
+  TyApp (p \/ q) (zipWith (\/) xs ys)
 (Rec f1) \/ (Rec f2) =
   let fields = (fst <$> f1) `intersect` (fst <$> f2)
    in Rec $ map (\f -> (f, fromJust (lookup f f1) \/ fromJust (lookup f f2))) fields
@@ -81,6 +85,10 @@ s /\ t | s <: t = s
 s /\ t | t <: s = t
 (Fun x v p) /\ (Fun x' w q) | x == x' =
   Fun x (zipWith (\/) v w) (p /\ q)
+(Forall xs p) /\ (Forall ys q) | xs == ys =
+  Forall xs (p /\ q)
+(TyApp p xs) /\ (TyApp q ys) | length xs == length ys =
+  TyApp (p /\ q) (zipWith (/\) xs ys)
 (Rec f1) /\ (Rec f2) =
   let fields = (fst <$> f1) `union` (fst <$> f2)
    in Rec $ map (\f -> (f, maybe Top id (lookup f f1) /\ maybe Top id (lookup f f2))) fields

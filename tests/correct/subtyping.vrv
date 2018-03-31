@@ -1,0 +1,13 @@
+// RUN: %verve | %check
+
+let x = [[1], [""]]
+// CHECK-L: List<List<⊤>>
+x
+
+let y = [fn x(y: List<Int>) {}, fn y(z: List<String>) {}]
+// CHECK-L: List<(List<⊥>) -> Void>
+y
+
+match y {
+  case [f, ...]: f([]) // CHECK-L: () : Void
+}
