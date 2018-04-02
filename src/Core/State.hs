@@ -17,10 +17,13 @@ module Core.State
 import qualified Core.Absyn as CA
 
 import Absyn.Typed
+import Lib.Registry
+import Typing.Types
+
 import Control.Monad.State (State, runState, gets, modify)
 import Data.Tuple (swap)
 
-data DsEnum = DsEnum { enumName :: String, enumCtors :: [DsCtor] }
+data DsEnum = DsEnum { _enumName :: String, enumCtors :: [DsCtor] }
 data DsCtor = DsCtor { ctorName :: String, arity :: Int }
 data DsState = DsState { contCount :: Int, varCount :: Int, enums :: [DsEnum] }
 
@@ -33,19 +36,33 @@ initialState :: DsState
 initialState = DsState
   { contCount = 0
   , varCount = 0
-  -- TODO: this should live in the registry somehow
-  , enums = [ DsEnum { enumName = "Bool"
-                     , enumCtors = [ DsCtor "True" 0
-                                   , DsCtor "False" 0
-                                   ]
-                     }
-            , DsEnum { enumName = "List"
-                     , enumCtors = [ DsCtor "Nil" 0
-                                   , DsCtor "Cons" 2
-                                   ]
-                     }
-            ]
+  , enums
   }
+    where
+      enums = map (uncurry DsEnum) $ foldl aux [] ctors
+
+      ctors = filter isCtor registry
+
+      aux enums ctor =
+        let (name, ty) = decl ctor
+            (enum, ctor') = mkDsCtor name ty
+         in addTo enum ctor' enums
+
+      mkDsCtor name (Fun _ args ty) =
+        (getEnumForTy ty, DsCtor name (length args))
+      mkDsCtor name ty = (getEnumForTy ty, DsCtor name 0)
+
+      getEnumForTy (Con enum) = enum
+      getEnumForTy (Forall _ ty) = getEnumForTy ty
+      getEnumForTy (TyApp ty _) = getEnumForTy ty
+      getEnumForTy _ = undefined
+
+      addTo enum ctor [] = [(enum, [ctor])]
+      addTo enum ctor ((enum', ctors):rest) | enum == enum' =
+        (enum, ctor : ctors) : rest
+      addTo enum ctor (x:xs) = x : addTo enum ctor xs
+
+
 
 type DsM = State DsState
 
