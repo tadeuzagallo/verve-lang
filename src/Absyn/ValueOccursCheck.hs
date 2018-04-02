@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Absyn.ValueOccursCheck where
 
 import Absyn.Base

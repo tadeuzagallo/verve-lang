@@ -1,5 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
-
 module Typing.TypeChecker
   ( inferStmts
   ) where

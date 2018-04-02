@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs #-}
-
 module Util.Error
   ( Error(..)
   , ErrorT(..)
