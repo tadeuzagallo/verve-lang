@@ -39,7 +39,6 @@ n_stmt env (Decl decl) = do
   (env', decl') <- n_decl env decl
   return (env', Decl decl')
 
--- TODO: Remove catch all case
 n_decl :: Env -> Decl -> Result (Env, Decl)
 n_decl env op@(Operator { opAssoc, opPrec, opName, opBody }) = do
   opPrec' <- prec env opPrec
@@ -58,7 +57,11 @@ n_decl env (Class name vars methods) = do
 n_decl env intf@(Interface _ _ methods) = do
   env' <- foldM n_intfItem env methods
   return (env', intf)
-n_decl env stmt = return (env, stmt)
+n_decl env enum@(Enum {}) = return (env, enum)
+n_decl env ta@(TypeAlias {}) = return (env, ta)
+n_decl env impl@(Implementation { implMethods }) = do
+  implMethods' <- mapM (n_implItem env) implMethods
+  return (env, impl { implMethods = implMethods' })
 
 n_intfItem :: Env -> InterfaceItem -> Result Env
 n_intfItem env (IntfOperator { intfOpName, intfOpPrec, intfOpAssoc }) = do
@@ -69,6 +72,18 @@ n_intfItem env (IntfOperator { intfOpName, intfOpPrec, intfOpAssoc }) = do
 n_intfItem env _ =
   return env
 
+n_implItem :: Env -> ImplementationItem -> Result ImplementationItem
+n_implItem env (ImplVar (a, e)) = do
+  e' <- n_expr env e
+  return $ ImplVar (a, e')
+
+n_implItem env fn@(ImplFunction { implBody }) = do
+  implBody' <- snd <$> n_stmts env implBody
+  return $ fn { implBody = implBody' }
+
+n_implItem env op@(ImplOperator { implOpBody }) = do
+  implOpBody' <- snd <$> n_stmts env implOpBody
+  return $ op { implOpBody = implOpBody' }
 
 prec :: Env -> Precedence -> Result PrecInt
 prec _ (PrecValue n) = return n
@@ -93,9 +108,62 @@ n_expr env (BinOp _ _ ll lop (BinOp _ _ rl rop rr)) = do
     PRight ->
       BinOp [] [] ll' lop (BinOp [] [] rl' rop rr')
 
--- TODO: this should propagate, otherwise nested operations won't be re-associated
--- COUNTER-EXAMPLE: (fn f() -> Int { 2 * 3 + 4 })()
-n_expr _ expr = return expr
+n_expr _ (Literal l) = return $ Literal l
+n_expr _ (Ident a b) = return $ Ident a b
+
+n_expr env (ParenthesizedExpr e) =
+  ParenthesizedExpr <$> n_expr env e
+
+n_expr env (Match e cs) = do
+  e' <- n_expr env e
+  cs' <- mapM (n_case env) cs
+  return $ Match e' cs'
+
+n_expr env (If cond conseq alt) = do
+  cond' <- n_expr env cond
+  conseq' <- snd <$> n_stmts env conseq
+  alt' <- snd <$> n_stmts env alt
+  return $ If cond' conseq' alt'
+
+n_expr env call@(Call { callee, args }) = do
+  callee' <- n_expr env callee
+  args' <- mapM (n_expr env) args
+  return $ call { callee = callee', args = args' }
+
+n_expr env op@(BinOp { lhs, rhs }) = do
+  lhs' <- n_expr env lhs
+  rhs' <- n_expr env rhs
+  return $ op { lhs = lhs', rhs = rhs' }
+
+n_expr env (Record fields) = do
+  fields' <- mapM (mapM $ n_expr env) fields
+  return $ Record fields'
+
+n_expr env (List t items) = do
+  items' <- mapM (n_expr env) items
+  return $ List t items'
+
+n_expr env (FieldAccess obj t field) = do
+  obj' <- n_expr env obj
+  return $ FieldAccess obj' t field
+
+n_expr env (FnExpr fn) =
+  FnExpr <$> n_fn env fn
+
+n_expr env (Negate cArgs e) = do
+  e' <- n_expr env e
+  return $ Negate cArgs e'
+
+n_expr _ VoidExpr = return VoidExpr
+
+n_expr env (TypeCall e cArgs) = do
+  e' <- n_expr env e
+  return $ TypeCall e' cArgs
+
+n_case :: Env -> Case -> Result Case
+n_case env (Case pattern body) = do
+  body' <- snd <$> n_stmts env body
+  return $ Case pattern body'
 
 data Prec
   = PLeft

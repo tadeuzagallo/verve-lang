@@ -79,3 +79,15 @@ operator<T: Num'> (x: T) + (y: T) -> T {
 }
 
 1 + 3
+
+(fn f() -> Int { 2 * 3 + 4 })() // CHECK-L: 10 : Int
+
+implementation Num'<Float> {
+  fn plus(x, y) {
+    // bogus implementation just to check reassoc is working
+    // on implementations
+    print(2 * 3 + 4) // CHECK-L: "10"
+    42.0
+  }
+}
+plus(2.0, 3.0)
