@@ -14,7 +14,7 @@ import Absyn.Meta
 import qualified Absyn.Untyped as U
 import qualified Absyn.Typed as T
 
-import Control.Monad (foldM, when)
+import Control.Monad (when)
 import Data.Maybe (fromMaybe)
 
 (<:!) :: Type -> Type -> Tc ()
@@ -26,32 +26,33 @@ assertKindStar ty =
   let kind = kindOf ty
    in when (kind /= Star) (throwError $ KindError ty Star kind)
 
-resolveId :: Ctx -> U.Id -> Tc T.Id
-resolveId ctx (n, ty) = (,) n  <$> resolveType ctx ty
+resolveId :: U.Id -> Tc T.Id
+resolveId (n, ty) = (,) n  <$> resolveType ty
 
-resolveType :: Ctx -> U.Type -> Tc Type
-resolveType ctx (U.TName v) =
-  getType v ctx
-resolveType ctx (U.TArrow params ret) = do
-  params' <- mapM (resolveType ctx) params
-  ret' <- resolveType ctx ret
+resolveType :: U.Type -> Tc Type
+resolveType (U.TName v) =
+  getType v
+
+resolveType (U.TArrow params ret) = do
+  params' <- mapM resolveType params
+  ret' <- resolveType ret
   return $ Fun [] params' ret'
-resolveType ctx (U.TRecord fieldsTy) = do
-  fieldsTy' <- mapM (resolveId ctx) fieldsTy
+resolveType (U.TRecord fieldsTy) = do
+  fieldsTy' <- mapM resolveId fieldsTy
   return $ Rec fieldsTy'
-resolveType ctx (U.TApp t1 t2) = do
-  t1' <- resolveType ctx t1
-  t2' <- mapM (resolveType ctx) t2
+resolveType (U.TApp t1 t2) = do
+  t1' <- resolveType t1
+  t2' <- mapM resolveType t2
   case t1' of
     TyAbs params ty -> do
       when (length params /= length t2) $ throwError TypeArityMismatch
       return $ applySubst (zipSubst params t2') ty
     _ -> return $ TyApp t1' t2'
-resolveType _ U.TVoid = return void
-resolveType _ U.TPlaceholder = undefined
+resolveType U.TVoid = return void
+resolveType U.TPlaceholder = undefined
 
-resolveGenerics :: Ctx -> [(Name, [String])] -> Tc [(Name, [Intf])]
-resolveGenerics ctx gen =
+resolveGenericBounds :: [(Name, [String])] -> Tc [(Name, [Intf])]
+resolveGenericBounds gen =
   mapM resolve gen
     where
       resolve (name, bounds) = do
@@ -59,33 +60,44 @@ resolveGenerics ctx gen =
         return (name, bounds')
 
       resolveConstraint intf = do
-        getInterface intf ctx
+        getInterface intf
 
-addGenerics :: Ctx -> [(Name, [Intf])] -> Tc (Ctx, [BoundVar])
-addGenerics ctx generics =
-  foldM aux (ctx, []) generics
+resolveGenericVars :: [(Name, [Intf])] -> Tc [BoundVar]
+resolveGenericVars generics =
+  mapM aux generics
     where
-      aux (ctx, vars) (g, bounds) = do
+      aux (g, bounds) = do
         g' <- newVar g
-        return (addType ctx (g, Var g' bounds), vars ++ [(g', bounds)])
+        return (g', bounds)
+
+addGenerics :: [BoundVar] -> Tc ()
+addGenerics generics =
+  mapM_ aux generics
+    where
+      aux (var, bounds) = do
+        addType (varName var, Var var bounds)
 
 defaultBounds :: [a] -> [(a, [b])]
 defaultBounds = map (flip (,) [])
 
-i_fn :: Ctx -> U.Function -> Tc (T.Function, Type)
-i_fn = i_fnBase True
+i_fn :: U.Function -> Tc (T.Function, Type)
+i_fn fn = do
+  gen' <- resolveGenericBounds (generics fn)
+  genericVars <- resolveGenericVars gen'
 
-i_fnBase :: Bool -> Ctx -> U.Function -> Tc (T.Function, Type)
-i_fnBase addToCtx ctx fn = do
-  gen' <- resolveGenerics ctx $ generics fn
-  (ctx', genericVars) <- addGenerics ctx gen'
-  (ty, tyArgs, retType') <- fnTy ctx' (genericVars, params fn, retType fn)
-  let ctx'' = if addToCtx
-                then addValueType ctx' (name fn, ty)
-                else ctx'
-  let ctx''' = foldl addValueType ctx'' tyArgs
-  (body', bodyTy) <- i_body ctx''' (body fn)
+  m <- startMarker
+  addGenerics genericVars
+  (ty, tyArgs, retType') <- fnTy (genericVars, params fn, retType fn)
+  mapM_ addValueType tyArgs
+  endMarker m
+
+  addValueType (name fn, ty)
+  (body', bodyTy) <- i_body (body fn)
+
+  clearMarker m
+
   bodyTy <:! retType'
+
   let fn' = fn { name = (name fn, ty)
                , generics = gen'
                , params = tyArgs
@@ -94,16 +106,16 @@ i_fnBase addToCtx ctx fn = do
                }
   return (fn', ty)
 
-i_body :: Ctx -> [U.Stmt] -> Tc ([T.Stmt], Type)
-i_body ctx stmts = do
-  (_, stmts', ty) <- i_stmts ctx stmts
+i_body :: [U.Stmt] -> Tc ([T.Stmt], Type)
+i_body stmts = do
+  (stmts', ty) <- i_stmts stmts
   return (stmts', fromMaybe void ty)
 
-fnTy :: Ctx -> ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
-fnTy ctx (generics, params, retType) = do
-  tyArgs <- mapM (resolveId ctx) params
+fnTy :: ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
+fnTy (generics, params, retType) = do
+  tyArgs <- mapM resolveId params
   mapM_ (assertKindStar . snd) tyArgs
-  retType' <- resolveType ctx retType
+  retType' <- resolveType retType
   assertKindStar retType'
   let tyArgs' = if null tyArgs
       then [void]

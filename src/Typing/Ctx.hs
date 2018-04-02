@@ -13,6 +13,7 @@ module Typing.Ctx
   , addInstanceVars
   , getInstanceVars
   , tImportModule
+  , deleteBetween
   ) where
 
 import Lib.Registry
@@ -31,39 +32,6 @@ data Ctx = Ctx { types :: [(String, Type)]
                , instanceVars :: [(Type, [(String, Type)])]
                } deriving (Eq)
 
-getType :: String -> Ctx -> Tc Type
-getType n ctx =
-  case lookup n (types ctx) of
-    Nothing -> throwError (UnknownType n)
-    Just t -> instantiate t
-
-getValueType :: String -> Ctx -> Tc Type
-getValueType n ctx =
-  case lookup n (values ctx) of
-    Nothing -> throwError (UnknownVariable n)
-    Just t -> instantiate t
-
-addType :: Ctx -> (String, Type) -> Ctx
-addType ctx (n, ty) = ctx { types = (n, ty) : types ctx }
-
-addValueType :: Ctx -> (String, Type) -> Ctx
-addValueType ctx (n, ty) = ctx { values = (n, ty) : values ctx }
-
-getImplementations :: String -> Ctx -> Tc [(Type, [BoundVar])]
-getImplementations n ctx =
-  case lookup n (implementations ctx) of
-    Nothing -> return []
-    Just insts -> return insts
-
-addImplementation :: Ctx -> (String, (Type, [BoundVar])) -> Tc Ctx
-addImplementation ctx (n, inst) = do
-  insts <- getImplementations n ctx
-  return $ ctx { implementations = update n (inst : insts) (implementations ctx) }
-    where
-      update key value [] = [(key, value)]
-      update key value ((k,_):rest) | k == key = (key, value) : rest
-      update key value (x:xs) = x : update key value xs
-
 defaultCtx :: Ctx
 defaultCtx =
   Ctx { types = decl <$> filter isType registry
@@ -73,25 +41,67 @@ defaultCtx =
       , instanceVars = []
       }
 
-getInterface :: String -> Ctx -> Tc Intf
-getInterface n ctx =
+getType :: String -> Tc Type
+getType n = do
+  ctx <- getCtx
+  case lookup n (types ctx) of
+    Nothing -> throwError (UnknownType n)
+    Just t -> instantiate t
+
+getValueType :: String -> Tc Type
+getValueType n = do
+  ctx <- getCtx
+  case lookup n (values ctx) of
+    Nothing -> throwError (UnknownVariable n)
+    Just t -> instantiate t
+
+addType :: (String, Type) -> Tc ()
+addType (n, ty) =
+  modifyCtx $ \ctx -> ctx { types = (n, ty) : types ctx }
+
+addValueType :: (String, Type) -> Tc ()
+addValueType (n, ty) =
+  modifyCtx $ \ctx -> ctx { values = (n, ty) : values ctx }
+
+getImplementations :: String -> Tc [(Type, [BoundVar])]
+getImplementations n = do
+  ctx <- getCtx
+  case lookup n (implementations ctx) of
+    Nothing -> return []
+    Just insts -> return insts
+
+addImplementation :: (String, (Type, [BoundVar])) -> Tc ()
+addImplementation (n, inst) = do
+  insts <- getImplementations n
+  modifyCtx $ \ctx -> ctx { implementations = update n (inst : insts) (implementations ctx) }
+    where
+      update key value [] = [(key, value)]
+      update key value ((k,_):rest) | k == key = (key, value) : rest
+      update key value (x:xs) = x : update key value xs
+
+getInterface :: String -> Tc Intf
+getInterface n = do
+  ctx <- getCtx
   case lookup n (interfaces ctx) of
     Nothing -> throwError (UnknownInterface n)
     Just t -> return t
 
-addInterface :: Ctx -> (String, Intf) -> Ctx
-addInterface ctx (n, ty) = ctx { interfaces = (n, ty) : interfaces ctx }
+addInterface :: (String, Intf) -> Tc ()
+addInterface (n, ty) =
+  modifyCtx $ \ctx -> ctx { interfaces = (n, ty) : interfaces ctx }
 
-addInstanceVars :: Ctx -> (Type, [(String, Type)]) -> Ctx
-addInstanceVars ctx (cls, vars) = ctx { instanceVars = (cls, vars) : instanceVars ctx }
+addInstanceVars :: (Type, [(String, Type)]) -> Tc ()
+addInstanceVars (cls, vars) =
+  modifyCtx $ \ctx -> ctx { instanceVars = (cls, vars) : instanceVars ctx }
 
-getInstanceVars :: Type -> Ctx -> Tc [(String, Type)]
-getInstanceVars cls@(Cls name) ctx =
+getInstanceVars :: Type -> Tc [(String, Type)]
+getInstanceVars cls@(Cls name) = do
+  ctx <- getCtx
   case lookup cls (instanceVars ctx) of
     Nothing -> throwError $ UnknownType name
     Just t -> return t
 
-getInstanceVars _ _ = undefined
+getInstanceVars _ = undefined
 
 
 -- MODULE IMPORTATION
@@ -104,3 +114,33 @@ tImportModule items prevCtx impCtx =
 
  where
    filterImports = filter $ flip elem items . fst
+
+-- This is a confusing signature, the idea is that
+--  that everything that got added to the `current`
+--  context in between `from` and `to` should be
+--  removed. Everything added after `to` should be
+--  preserved though. e.g.:
+--
+--                  current
+--  +------------------------------------+
+--  [ x: S, y: T, z: U, a: A, b: B, x: T ]
+--  +-----------------------+
+--  +-----------+     to
+--     from
+--
+--  `delete from to current` would result in
+--
+--                 current - to
+--                +------------+
+--    [ x: S, y: T, b: B, x: T ]
+--    +-----------+
+--        from
+--
+--  NOTE: the implementation is mirrored, since items get
+--   added to the front of the list instead of the end
+--
+deleteBetween :: Ctx -> Ctx -> Ctx -> Ctx
+deleteBetween from to current =
+  current { types  = take (length (types  current) - length (types  to)) (types  current) ++ types  from
+          , values = take (length (values current) - length (values to)) (values current) ++ values from
+          }

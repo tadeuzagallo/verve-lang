@@ -8,6 +8,7 @@ module Typing.Types
   , BoundVar
   , newVar
   , freshVar
+  , varName
   , fv
 
   -- BASE TYPES
@@ -31,7 +32,7 @@ module Typing.Types
 
 import Prelude hiding (concat)
 
-import Typing.State
+import {-# SOURCE #-} Typing.State
 import Util.PrettyPrint
 
 import Data.List (union)
@@ -60,6 +61,9 @@ newVar name = do
 
 freshVar :: Var -> Tc Var
 freshVar (TV name _) = newVar name
+
+varName :: Var -> String
+varName (TV name _) = name
 
 data Type
   = Con String

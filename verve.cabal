@@ -30,7 +30,7 @@ library
                        Renamer.Renamer
                        Syntax.Lexer
                        Syntax.Parser
-                       Typing.Ctx
+                       Typing.State
                        Typing.TypeChecker
                        Util.Error
                        Util.PrettyPrint
@@ -56,10 +56,10 @@ library
                        Syntax.Stmt
                        Syntax.Type
                        Typing.Constraint
+                       Typing.Ctx
                        Typing.Decl
                        Typing.Expr
                        Typing.Kinds
-                       Typing.State
                        Typing.Stmt
                        Typing.Substitution
                        Typing.Subtyping
@@ -68,7 +68,7 @@ library
                        Typing.Util
                        Typing.Variance
 
-  build-depends:       base >= 4.7 && < 5, parsec, mtl
+  build-depends:       base >= 4.7 && < 5, parsec, mtl, containers
   default-language:    Haskell2010
 
 executable verve
