@@ -123,7 +123,6 @@ evalContDef env (ContDef contVar vars body) =
   let cont = Rt.Cont (env, (vars, body))
    in (contVar, cont)
 
--- TODO: this is wrong and won't support mutual recursive fns
 evalFunDef :: Env -> FunDef -> (Var, Rt.Value)
 evalFunDef env (FunDef name k xs body) =
   let val = Rt.VClosure (env, (Lambda k xs body))
