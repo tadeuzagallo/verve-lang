@@ -110,7 +110,10 @@ i_fn fn = do
 
 i_body :: [U.Stmt] -> Tc ([T.Stmt], Type)
 i_body stmts = do
+  m <- startMarker
   (stmts', ty) <- i_stmts stmts
+  endMarker m
+  clearMarker m
   return (stmts', fromMaybe void ty)
 
 fnTy :: ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)

@@ -1,0 +1,13 @@
+// RUN: %verve | %check
+
+type T = String
+
+// `x` and `y` should be visible outside of f
+let x = 1
+let y = 2
+fn f<T>(y : String){ let x = "" }
+x // CHECK-L: 1 : Int
+y // CHECK-L: 2 : Int
+
+let z : T = ""
+z // CHECK-L: "" : String
