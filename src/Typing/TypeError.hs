@@ -82,4 +82,4 @@ instance Show TypeError where
     "Type `" ++ print ty ++ "` has kind " ++ show actualKind ++ ", but a type of kind " ++ show expectedKind ++ " was expected."
 
   show (VariableUsedDuringInitialization var) =
-    "Variable `" ++ var ++ "` is used during its own initialisation, which will cause an infinite loop."
+    "Variable `" ++ pprName var ++ "` is used during its own initialisation, which will cause an infinite loop."

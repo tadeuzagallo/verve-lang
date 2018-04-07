@@ -17,7 +17,10 @@ data-files:          lib/*.vrv
 library
   hs-source-dirs:      src
   ghc-options:         -Wall -Werror -fwarn-tabs -fwarn-incomplete-uni-patterns -fwarn-identities -Wmissing-exported-signatures -fno-warn-name-shadowing
-  default-extensions:  NamedFieldPuns, GADTs
+  default-extensions:  NamedFieldPuns
+                       GADTs
+                       TypeFamilies
+                       FlexibleContexts
   exposed-modules:     Absyn.Typed
                        Absyn.Untyped
                        Core.Absyn
@@ -45,7 +48,6 @@ library
                        Interpreter.Value
                        Lib.Registry
                        Reassoc.Error
-                       Renamer.State
                        Renamer.Error
                        Syntax.Decl
                        Syntax.Expr
@@ -67,6 +69,8 @@ library
                        Typing.Types
                        Typing.Util
                        Typing.Variance
+                       Util.Env
+                       Util.Scope
 
   build-depends:       base >= 4.7 && < 5, parsec, mtl, containers
   default-language:    Haskell2010

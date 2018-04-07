@@ -13,6 +13,7 @@ import Absyn.Meta
 import Absyn.ValueOccursCheck
 import qualified Absyn.Untyped as U
 import qualified Absyn.Typed as T
+import Util.Error
 
 import Control.Monad (when)
 import Data.List (intersect)

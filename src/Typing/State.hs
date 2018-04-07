@@ -4,7 +4,6 @@ module Typing.State
   , initialState
   , runTc
   , mkUniqueId
-  , throwError
   , startMarker
   , endMarker
   , clearMarker
@@ -23,8 +22,6 @@ import Control.Monad.State (StateT, runStateT, get, gets, modify, put)
 import Control.Monad.Except (Except, runExcept)
 import qualified Data.Map as Map
 import Data.Maybe (isJust, maybe)
-
-import qualified Control.Monad.Except as Except (throwError)
 
 type Tc a = (StateT TcState (Except Error) a)
 
@@ -53,9 +50,6 @@ mkUniqueId = do
   s <- get
   put s{uid = uid s + 1}
   return $ uid s
-
-throwError :: ErrorT a => a -> Tc b
-throwError = Except.throwError . Error
 
 -- Markers
 

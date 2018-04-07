@@ -5,6 +5,8 @@ import Absyn.Meta
 import Typing.State
 import Typing.TypeError
 
+import Util.Error
+
 import Control.Monad (mapM_, when)
 
 class ValueOccursCheck b where

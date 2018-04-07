@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 module Typing.Ctx
   ( Ctx
   , defaultCtx
@@ -22,13 +21,15 @@ import Typing.Substitution
 import Typing.TypeError
 import Typing.Types
 
-{-data TypeBinding-}
-  {-= BType Type-}
-  {-| BIntf Intf-}
+import Util.Error
+
 data Ctx = Ctx { types :: [(String, Type)]
                , values :: [(String, Type)]
-               , implementations :: [(String, [(Type, [BoundVar])])]
+
                , interfaces :: [(String, Intf)]
+
+
+               , implementations :: [(String, [(Type, [BoundVar])])]
                , instanceVars :: [(Type, [(String, Type)])]
                } deriving (Eq)
 

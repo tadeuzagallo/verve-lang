@@ -9,6 +9,8 @@ import Typing.Subtyping
 import Typing.TypeError
 import Typing.Types
 
+import Util.Error
+
 import Absyn.Base
 import Absyn.Meta
 import qualified Absyn.Untyped as U

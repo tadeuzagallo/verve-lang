@@ -13,6 +13,7 @@ import Absyn.Base
 import Absyn.Meta
 import qualified Absyn.Untyped as U
 import qualified Absyn.Typed as T
+import Util.Error
 
 import Control.Monad (when, zipWithM)
 import Data.Bifunctor (first)

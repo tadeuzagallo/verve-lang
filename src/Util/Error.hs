@@ -1,13 +1,17 @@
+{-# LANGUAGE FlexibleContexts #-}
 module Util.Error
   ( Error(..)
   , ErrorT(..)
   , Result
   , mkError
   , liftError
+  , throwError
   ) where
 
 import Text.Parsec (ParseError)
 import Text.Printf (printf)
+
+import qualified Control.Monad.Except as Except (MonadError, throwError)
 
 class (Show a) =>
       ErrorT a where
@@ -39,3 +43,6 @@ mkError a = Left (Error a)
 liftError :: (ErrorT a) => Either a b -> Either Error b
 liftError (Left a) = Left (Error a)
 liftError (Right b) = Right b
+
+throwError :: (Except.MonadError Error m, ErrorT a) => a -> m b
+throwError = Except.throwError . Error

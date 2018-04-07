@@ -1,19 +1,19 @@
 module Renamer.Renamer
   ( renameImport
-  , renameStmt
   , renameStmts
   ) where
 
 import Absyn.Untyped
 import Renamer.Env
-import Renamer.State
 import Typing.TypeError
 import Util.Error
+import Util.Scope
 
-import Control.Monad (foldM, zipWithM)
+import Control.Monad (zipWithM)
 import Control.Monad.Except (withExcept)
 import Control.Monad.State (mapStateT)
 import Data.List (intercalate)
+import Data.Maybe (fromMaybe)
 
 
 -- TODO: This will need scoping, otherwise the following will fail
@@ -37,358 +37,428 @@ import Data.List (intercalate)
 
 -- ENTRY POINT
 
-renameStmts :: String -> Env -> [Stmt] -> Result (Env, [Stmt])
-renameStmts modName env stmts =
-  runRn modName $ foldAcc r_stmt env stmts
+renameStmts :: String -> [Stmt] -> RnEnv -> Result (RnEnv, [Stmt])
+renameStmts modName stmts state = do
+  runRn modName (r_stmts stmts) state
 
-renameStmt :: String -> Env -> Stmt -> Result (Env, Stmt)
-renameStmt modName env stmt =
-  runRn modName $ r_stmt env stmt
-
-renameImport :: Env -> Env -> Import -> (Env, [String])
-renameImport env impEnv (Import isGlobal mod alias items) =
-  let (envBinds, renamedImports) = binds
-   in (extendEnv env envBinds, renamedImports)
+renameImport :: RnEnv -> RnEnv -> Import -> (RnEnv, [String])
+renameImport targetEnv importEnv (Import isGlobal mod alias items) =
+  let env' = foldl (importValue importEnv) targetEnv valuesToImport
+      env'' = foldl (importType importEnv) env' typesToImport
+   in (env'', map fullName (valuesToImport ++ typesToImport))
   where
-    binds =
-      let f b@(External (m, n)) = (((modAlias, n), b), joinName (m, n))
-          f _ = undefined
-       in unzip $ map f filteredNames
+    (valuesToImport, typesToImport) =
+      case items of
+        Just items -> foldl processItem ([], []) items
+        Nothing -> findValuesAndTypes modName modAlias importEnv
 
-    filteredNames =
-      let f = maybe (const True) mkFilter items
-       in filter f unfilteredNames
+    processItem (values, types) (ImportValue v) = (rdrName v : values, types)
+    processItem (values, types) (ImportType t vs) = (map rdrName vs ++ values, rdrName t : types)
 
-    mkFilter items =
-      let items' = concatMap getItemNames items
-          f (External (_, n)) = elem n items'
-          f _ = undefined
-       in f
-
-    getItemNames (ImportValue v) = [v]
-    getItemNames (ImportType n vs) = n : vs
-
-    unfilteredNames =
-      let f (Internal _) = False
-          f (External (m, _)) = m == modName
-       in filter f $ map snd $ getBinds impEnv
+    rdrName name = (modAlias, name)
 
     modName = intercalate "." mod
 
-    modAlias =
-      if isGlobal
-         then Nothing
-         else Just $ maybe modName id alias
+    -- returns the `name` with the full module name, not the local alias
+    fullName (_moduleAlias, name) = joinName (modName, name)
+
+    -- the alias under which the imports should be bound to in the new env
+    modAlias | isGlobal = Nothing
+             | otherwise = Just $ fromMaybe modName alias
 
 
 -- ABSYN RENAMERS
 
-r_stmts :: Env -> [Stmt] -> Rn [Stmt]
-r_stmts env stmts = snd <$> foldAcc r_stmt env stmts
+r_stmts :: [Stmt] -> Rn [Stmt]
+r_stmts stmts = mapM r_stmt stmts
+
+r_body :: [Stmt] -> Rn [Stmt]
+r_body stmts = do
+  m <- startMarker
+  stmts' <- r_stmts stmts
+  endMarker m
+  clearMarker m
+  return stmts'
+
+r_stmt :: Stmt -> Rn Stmt
+r_stmt (Expr expr) =
+  Expr <$> r_expr expr
+
+r_stmt (Decl decl) =
+  Decl <$> r_decl decl
+
+r_decl :: Decl -> Rn Decl
+r_decl (Enum name gen ctors) = do
+  insertLocalType name
+
+  name' <- local name
+
+  m <- startMarker
+  mapM_ insertInternalType gen
+  endMarker m
+
+  ctors' <- r_ctors ctors
+
+  clearMarker m
+
+  return $ Enum name' gen ctors'
+
+r_decl (FnStmt fn) = do
+  insertLocalValue (name fn)
+
+  FnStmt <$> r_fn fn
+
+r_decl (Let (name, ty) expr) = do
+  insertLocalValue name
+
+  name' <- local name
+  ty' <- r_type ty
+  expr' <- r_expr expr
+  return $ Let (name', ty') expr'
+
+r_decl (Class name vars methods) = do
+  insertLocalType name
+  insertLocalValue name
+
+  name' <- local name
+
+  m <- startMarker
+  vars' <- r_fnParams vars
+  endMarker m
+
+  names' <- mapM r_methodSig methods
+  methods' <- zipWithM r_methodImp names' methods
+
+  clearMarker m
+
+  return $ Class name' vars' methods'
+
+r_decl (Operator assoc prec gen lhs op rhs retType body) = do
+  insertLocalValue op
+
+  prec' <- r_prec prec
+  op' <- local op
+
+  m <- startMarker
+  gen' <- r_generics gen
+  [lhs', rhs'] <- r_fnParams [lhs, rhs]
+  endMarker m
+
+  retType' <- r_type retType
+
+  body' <- r_body body
+
+  clearMarker m
+
+  return $ Operator assoc prec' gen' lhs' op' rhs' retType' body'
+
+r_decl (Interface name param methods) = do
+  insertLocalType name
+
+  name' <- local name
+
+  m <- startMarker
+  insertInternalType param
+  endMarker m
+
+  methods' <- mapM r_intfField methods
+
+  clearMarker m
+
+  return $ Interface name' param methods'
+
+r_decl (Implementation name gen ty implMethods) = do
+  name' <- renameType name
+
+  m <- startMarker
+  gen' <- r_generics gen
+  endMarker m
+
+  ty' <- r_type ty
+  implMethods' <- mapM r_implItem implMethods
+
+  clearMarker m
+
+  return $ Implementation name' gen' ty' implMethods'
+
+r_decl (TypeAlias aliasName aliasVars aliasType) = do
+  insertLocalType aliasName
+
+  aliasName' <- local aliasName
+
+  m <- startMarker
+  mapM_ insertInternalType aliasVars
+  endMarker m
+
+  aliasType' <- r_type aliasType
+
+  clearMarker m
+
+  return $ TypeAlias aliasName' aliasVars aliasType'
 
 
-r_stmt :: Env -> Stmt -> Rn (Env, Stmt)
-r_stmt env (Expr expr) = do
-  expr' <- r_expr env expr
-  return (env, Expr expr')
-
-r_stmt env (Decl decl) = do
-  (env', decl') <- r_decl env decl
-  return (env', Decl decl')
-
-r_decl ::Env -> Decl -> Rn (Env, Decl)
-r_decl env (Enum name gen ctors) = do
-  (envWithType, name') <- addLocal env name
-  envWithGenerics <- foldM addInternal envWithType gen
-  (envWithCtors, ctors') <- r_ctors envWithGenerics ctors
-  return (envWithCtors, Enum name' gen ctors')
-
-r_decl env (FnStmt fn) = do
-  (env', fn') <- r_fn env fn
-  return (env', FnStmt fn')
-
-r_decl env (Let (name, ty) expr) = do
-  ty' <- r_type env ty
-  envWithVar <- addInternal env name
-  expr' <- r_expr envWithVar expr
-  return (envWithVar, Let (name, ty') expr')
-
-r_decl env (Class name vars methods) = do
-  (envWithClass, name') <- addLocal env name
-  (envWithVars, vars') <- r_fnParams envWithClass vars
-  (envWithMethods, names') <- foldAcc r_methodSig envWithVars methods
-  methods' <- zipWithM (r_methodImp envWithMethods) names' methods
-  return (envWithMethods, Class name' vars' methods')
-
-r_decl env (Operator assoc prec gen lhs op rhs retType body) = do
-  prec' <- r_prec env prec
-  (envWithOp, op') <- addLocal env op
-  (envWithGen, gen') <- r_generics envWithOp gen
-  retType' <- r_type envWithGen retType
-
-  (envWithParams, [lhs', rhs']) <- r_fnParams envWithGen [lhs, rhs]
-  body' <- r_stmts envWithParams body
-
-  let op = Operator assoc prec' gen' lhs' op' rhs' retType' body'
-   in return (envWithOp, op)
-
-r_decl env (Interface name param methods) = do
-  (envWithIntf, name') <- addLocal env name
-  (envWithoutParam, methods') <- foldAcc (r_intfField param) envWithIntf methods
-  return (envWithoutParam, Interface name' param methods')
-
-r_decl env (Implementation name gen ty implMethods) = do
-  name' <- lookupIdent [name] env
-  (envWithGen, gen') <- r_generics env gen
-  ty' <- r_type envWithGen ty
-  implMethods' <- mapM (r_implItem envWithGen) implMethods
-  return (env, Implementation name' gen' ty' implMethods')
-
-r_decl env (TypeAlias aliasName aliasVars aliasType) = do
-  (envWithAlias, aliasName') <- addLocal env aliasName
-  envWithVars <- foldM addInternal envWithAlias aliasVars
-  aliasType' <- r_type envWithVars aliasType
-  return (envWithAlias, TypeAlias aliasName' aliasVars aliasType')
-
-
-r_implItem :: Env -> ImplementationItem -> Rn ImplementationItem
-r_implItem env (ImplVar (name, expr)) = do
-  name' <- lookupIntfMethod name env
-  expr' <- r_expr env expr
+r_implItem :: ImplementationItem -> Rn ImplementationItem
+r_implItem (ImplVar (name, expr)) = do
+  name' <- lookupIntfMethod name
+  expr' <- r_expr expr
   return $ ImplVar (name', expr')
 
-r_implItem env (ImplFunction implName implParams implBody) = do
-  implName' <- lookupIntfMethod implName env
-  envWithParams <- foldM addInternal env implParams
-  implBody' <- r_stmts envWithParams implBody
-  return (ImplFunction implName' implParams implBody')
+r_implItem (ImplFunction implName implParams implBody) = do
+  implName' <- lookupIntfMethod implName
 
-r_implItem env (ImplOperator lhs op rhs body) = do
-  op' <- lookupIntfMethod op env
-  envWithParams <- foldM addInternal env [lhs, rhs]
-  body' <- r_stmts envWithParams body
-  return (ImplOperator lhs op' rhs body')
+  m <- startMarker
+  mapM_ insertInternalValue implParams
+  endMarker m
 
-lookupIntfMethod :: String -> Env -> Rn String
-lookupIntfMethod name env =
-  mapStateT (withExcept $ \_ -> Error (ExtraneousImplementation name)) $ lookupIdent [name] env
+  implBody' <- r_body implBody
 
-r_expr :: Env -> Expr -> Rn Expr
-r_expr _ (Literal l) =
-  return (Literal l)
+  clearMarker m
 
-r_expr env (ParenthesizedExpr expr) =
-  ParenthesizedExpr <$> r_expr env expr
+  return $ ImplFunction implName' implParams implBody'
 
-r_expr env (FnExpr fn) = do
-  FnExpr . snd <$> r_fn env fn
+r_implItem (ImplOperator lhs op rhs body) = do
+  op' <- lookupIntfMethod op
 
-r_expr env (Ident name ty) = do
-  name' <- lookupIdent name env
-  ty' <- r_type env ty
-  return (Ident [name'] ty')
+  m <- startMarker
+  insertInternalValue lhs
+  insertInternalValue rhs
+  endMarker m
 
-r_expr env (Match expr cases) = do
-  expr' <- r_expr env expr
-  cases' <- mapM (r_case env) cases
-  return (Match expr' cases')
+  body' <- r_body body
 
-r_expr env (If cond conseq alt) = do
-  cond' <- r_expr env cond
-  conseq' <- r_stmts env conseq
-  alt' <- r_stmts env alt
-  return (If cond' conseq' alt')
+  clearMarker m
 
-r_expr env (Call callee _ tyArgs vArgs) = do
-  callee' <- r_expr env callee
-  tyArgs' <- mapM (r_type env) tyArgs
-  vArgs' <- mapM (r_expr env) vArgs
-  return (Call callee' [] tyArgs' vArgs')
+  return $ ImplOperator lhs op' rhs body'
 
-r_expr env (BinOp _ _ lhs op rhs) = do
-  lhs' <- r_expr env lhs
-  op' <- lookupIdent [op] env
-  rhs' <- r_expr env rhs
-  return (BinOp [] [] lhs' op' rhs')
+lookupIntfMethod :: String -> Rn String
+lookupIntfMethod name = do
+  mapStateT (withExcept $ \_ -> Error (ExtraneousImplementation name)) $ renameValue name
 
-r_expr env (Record fields) = do
-  fields' <- mapM (sequence . fmap (r_expr env)) fields
-  return (Record fields')
+r_expr :: Expr -> Rn Expr
+r_expr (Literal l) =
+  return $ Literal l
 
-r_expr env (List ty items) = do
-  items' <- mapM (r_expr env) items
-  return (List ty items')
+r_expr (ParenthesizedExpr expr) =
+  ParenthesizedExpr <$> r_expr expr
 
-r_expr env (FieldAccess expr ty field) = do
-  expr' <- r_expr env expr
-  ty' <- r_type env ty
-  return (FieldAccess expr' ty' field)
+r_expr (FnExpr fn) = do
+  FnExpr <$> r_fn fn
 
-r_expr env (Negate constrArgs expr) =
-  Negate constrArgs <$> r_expr env expr
+r_expr (Ident name ty) = do
+  name' <- renameIdentValue name
+  ty' <- r_type ty
+  return $ Ident [name'] ty'
+
+r_expr (Match expr cases) = do
+  expr' <- r_expr expr
+  cases' <- mapM r_case cases
+  return $ Match expr' cases'
+
+r_expr (If cond conseq alt) = do
+  cond' <- r_expr cond
+  conseq' <- r_body conseq
+  alt' <- r_body alt
+  return $ If cond' conseq' alt'
+
+r_expr (Call callee _ tyArgs vArgs) = do
+  callee' <- r_expr callee
+  tyArgs' <- mapM r_type tyArgs
+  vArgs' <- mapM r_expr vArgs
+  return $ Call callee' [] tyArgs' vArgs'
+
+r_expr (BinOp _ _ lhs op rhs) = do
+  lhs' <- r_expr lhs
+  op' <- renameValue op
+  rhs' <- r_expr rhs
+  return $ BinOp [] [] lhs' op' rhs'
+
+r_expr (Record fields) = do
+  fields' <- mapM (sequence . fmap r_expr) fields
+  return $ Record fields'
+
+r_expr (List ty items) = do
+  items' <- mapM r_expr items
+  return $ List ty items'
+
+r_expr (FieldAccess expr ty field) = do
+  expr' <- r_expr expr
+  ty' <- r_type ty
+  return $ FieldAccess expr' ty' field
+
+r_expr (Negate constrArgs expr) =
+  Negate constrArgs <$> r_expr expr
 
 -- Expressions that can only be generated by the compiler after Type Checking
-r_expr _ VoidExpr = undefined
-r_expr _ (TypeCall {}) = undefined
+r_expr VoidExpr = undefined
+r_expr (TypeCall {}) = undefined
 
 
-r_case :: Env -> Case -> Rn Case
-r_case env (Case pat body) = do
-  (env', pat') <- r_pat env pat
-  body' <- r_stmts env' body
-  return (Case pat' body')
+r_case :: Case -> Rn Case
+r_case (Case pat body) = do
+  m <- startMarker
+  pat' <- r_pat pat
+  endMarker m
+
+  body' <- r_body body
+
+  clearMarker m
+
+  return $ Case pat' body'
 
 
-r_pat :: Env -> Pattern -> Rn (Env, Pattern)
-r_pat env PatDefault =
-  return (env, PatDefault)
+r_pat :: Pattern -> Rn Pattern
+r_pat PatDefault =
+  return PatDefault
 
-r_pat env (PatLiteral l) =
-  return (env, PatLiteral l)
+r_pat (PatLiteral l) =
+  return $ PatLiteral l
 
-r_pat env (PatVar v) = do
-  env' <- addInternal env v
-  return (env', PatVar v)
+r_pat (PatVar v) = do
+  insertInternalValue v
+  return $ PatVar v
 
-r_pat env (PatRecord fields) = do
-  (env', fields') <- foldAcc aux env fields
-  return (env', PatRecord $ reverse fields')
-  where
-    aux env (key, pat) = do
-      (env', pat') <- r_pat env pat
-      return (env', (key, pat'))
+r_pat (PatRecord fields) = do
+  fields' <- mapM (sequence . fmap r_pat) fields
+  return $ PatRecord fields'
 
-r_pat env (PatList pats rest) = do
-  (env', pats') <- foldAcc r_pat env pats
-  env'' <- case rest of
-              NamedRest n -> addInternal env' n
-              _ -> return env'
-  return (env'', PatList (reverse pats') rest)
+r_pat (PatList pats rest) = do
+  pats' <- mapM r_pat pats
+  case rest of
+    NamedRest n -> insertInternalValue n
+    _ -> return ()
+  -- TODO: This is a bug, it had reverse order at some point as is being re-reversed somewhere else
+  return $ PatList (reverse pats') rest
 
-r_pat env (PatCtor name args) = do
-  name' <- lookupIdent [name] env
-  (env', args') <- foldAcc r_pat env args
-  return (env', PatCtor name' args')
+r_pat (PatCtor name args) = do
+  name' <- renameValue name
+  args' <- mapM r_pat args
+  return $ PatCtor name' args'
 
-r_type :: Env -> Type -> Rn Type
-r_type _ TVoid =
+r_type :: Type -> Rn Type
+r_type TVoid =
   return TVoid
 
-r_type _ TPlaceholder =
+r_type TPlaceholder =
   return TPlaceholder
 
-r_type env (TName name) = do
-  name' <- lookupIdent [name] env
-  return $ TName name'
+r_type (TName name) =
+  TName <$> renameType name
 
-r_type env (TApp ty args) = do
-  ty' <- r_type env ty
-  args' <- mapM (r_type env) args
+r_type (TApp ty args) = do
+  ty' <- r_type ty
+  args' <- mapM r_type args
   return $ TApp ty' args'
 
-r_type env (TArrow params ret) = do
-  params' <- mapM (r_type env) params
-  ret' <- r_type env ret
+r_type (TArrow params ret) = do
+  params' <- mapM r_type params
+  ret' <- r_type ret
   return $ TArrow params' ret'
 
-r_type env (TRecord fields) = do
-  fields' <- mapM (sequence . fmap (r_type env)) fields
+r_type (TRecord fields) = do
+  fields' <- mapM (sequence . fmap r_type) fields
   return $ TRecord fields'
 
-r_fn :: Env -> Function -> Rn (Env, Function)
-r_fn env fn = do
-  (envWithFn, name') <- addLocal env (name fn)
-  fn' <- r_fnBase name' envWithFn fn
-  return (envWithFn, fn')
+r_fn :: Function -> Rn Function
+r_fn fn = do
+  m <- startMarker
+  insertLocalValue (name fn)
+  endMarker m
 
-r_fnBase :: String -> Env -> Function -> Rn Function
-r_fnBase name' env (Function _ gen params retType body) = do
-  (envWithGenerics, gen') <- r_generics env gen
-  (envWithParams, params') <- r_fnParams envWithGenerics params
-  retType' <- r_type envWithGenerics retType
-  body' <- r_stmts envWithParams body
+  name' <- local (name fn)
+  fn' <- r_fnBase name' fn
+
+  clearMarker m
+
+  return fn'
+
+r_fnBase :: String -> Function -> Rn Function
+r_fnBase name' (Function _ gen params retType body) = do
+  m <- startMarker
+  gen' <- r_generics gen
+  params' <- r_fnParams params
+  endMarker m
+
+  retType' <- r_type retType
+  body' <- r_body body
+
+  clearMarker m
+
   return $ Function name' gen' params' retType' body'
 
 
-r_fnParams :: Env -> [Param] -> Rn (Env, [Param])
-r_fnParams = foldAcc r_fnParam
+r_fnParams :: [Param] -> Rn [Param]
+r_fnParams = mapM r_fnParam
 
 
-r_fnParam :: Env -> Param -> Rn (Env, Param)
-r_fnParam env (name, ty) = do
-  envWithParam <- addInternal env name
-  ty' <- r_type env ty
-  return (envWithParam, (name, ty'))
+r_fnParam :: Param -> Rn Param
+r_fnParam (name, ty) = do
+  insertInternalValue name
+  ty' <- r_type ty
+  return (name, ty')
 
 
-r_generics :: Env -> Generics -> Rn (Env, Generics)
-r_generics = foldAcc r_generic
+r_generics :: Generics -> Rn Generics
+r_generics = mapM r_generic
 
 
-r_generic :: Env -> (Name, [Name]) -> Rn (Env, (Name, [Name]))
-r_generic env (name, bounds) = do
-  envWithTypeVar <- addInternal env name
-  bounds' <- mapM (flip lookupIdent env . (:[])) bounds
-  return (envWithTypeVar, (name, bounds'))
+r_generic :: (Name, [Name]) -> Rn (Name, [Name])
+r_generic (name, bounds) = do
+  insertInternalType name
+  bounds' <- mapM renameType bounds
+  return (name, bounds')
 
 
-r_ctors :: Env -> [DataCtor] -> Rn (Env, [DataCtor])
-r_ctors = foldAcc r_ctor
+r_ctors :: [DataCtor] -> Rn [DataCtor]
+r_ctors = mapM r_ctor
 
 
-r_ctor :: Env -> DataCtor -> Rn (Env, DataCtor)
-r_ctor env (name, args) = do
-  (env', name') <- addLocal env name
-  args' <- sequence $ args >>= return . mapM (r_type env)
-  return (env', (name', args'))
+r_ctor :: DataCtor -> Rn DataCtor
+r_ctor (name, args) = do
+  insertLocalValue name
+  name' <- local name
+  args' <- mapM (mapM r_type) args
+  return (name', args')
 
 
-foldAcc :: Monad m => (a -> b -> m (a, c)) -> a -> [b] -> m (a, [c])
-foldAcc f a bs =
-  let aux (a, cs) b = do
-        (a', c) <- f a b
-        return (a', c : cs)
-   in fmap reverse <$> foldM aux (a, []) bs
-
-r_prec :: Env -> Precedence -> Rn Precedence
-r_prec _ (PrecValue v) =
+r_prec :: Precedence -> Rn Precedence
+r_prec (PrecValue v) =
   return $ PrecValue v
 
-r_prec env (PrecHigher name) = do
-  name' <- lookupIdent [name] env
-  return (PrecHigher name')
+r_prec (PrecHigher name) = do
+  PrecHigher <$> renameValue name
 
-r_prec env (PrecLower name) = do
-  name' <- lookupIdent [name] env
-  return (PrecLower name')
+r_prec (PrecLower name) = do
+  PrecLower <$> renameValue name
 
-r_prec env (PrecEqual name) = do
-  name' <- lookupIdent [name] env
-  return (PrecEqual name')
+r_prec (PrecEqual name) = do
+  PrecEqual <$> renameValue name
 
 
-r_methodSig :: Env -> Function -> Rn (Env, String)
-r_methodSig env fn = do
-  addLocal env (name fn)
+r_methodSig :: Function -> Rn String
+r_methodSig fn = do
+  insertLocalValue (name fn)
+  local (name fn)
 
-r_methodImp :: Env -> String -> Function -> Rn Function
-r_methodImp env name' fn = do
-  envWithSelf <- addInternal env "self"
-  r_fnBase name' envWithSelf fn
+r_methodImp :: String -> Function -> Rn Function
+r_methodImp name' fn = do
+  insertInternalValue "self"
+  r_fnBase name' fn
 
-r_intfField :: String -> Env -> InterfaceItem -> Rn (Env, InterfaceItem)
-r_intfField param env (IntfVar (name, ty)) = do
-  envWithParam <- addInternal env param
-  ty' <- r_type envWithParam ty
-  (envWithField, name') <- addLocal env name
-  return (envWithField, IntfVar (name', ty'))
+r_intfField :: InterfaceItem -> Rn InterfaceItem
+r_intfField (IntfVar (name, ty)) = do
+  insertLocalValue name
 
-r_intfField param env (IntfOperator assoc prec lhs op rhs ret) = do
-  envWithParam <- addInternal env param
-  prec' <- r_prec env prec
-  (envWithOp, op') <- addLocal env op
-  lhs' <- r_type envWithParam lhs
-  rhs' <- r_type envWithParam rhs
-  ret' <- r_type envWithParam ret
-  let op = IntfOperator assoc prec' lhs' op' rhs' ret'
-   in return (envWithOp, op)
+  name' <- local name
+  ty' <- r_type ty
+  return $ IntfVar (name', ty')
+
+r_intfField (IntfOperator assoc prec lhs op rhs ret) = do
+  insertLocalValue op
+
+  prec' <- r_prec prec
+  lhs' <- r_type lhs
+  op' <- local op
+  rhs' <- r_type rhs
+  ret' <- r_type ret
+
+  return $ IntfOperator assoc prec' lhs' op' rhs' ret'

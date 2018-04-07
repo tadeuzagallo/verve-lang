@@ -13,7 +13,7 @@ import Absyn.Untyped (Stmt)
 import Core.Desugar (desugarStmts)
 import Interpreter.Eval (evalWithEnv)
 import Reassoc.Reassoc (reassocStmt, reassocStmts)
-import Renamer.Renamer (renameStmt, renameStmts)
+import Renamer.Renamer (renameStmts)
 import Typing.TypeChecker (inferStmts)
 import qualified Util.PrettyPrint as PP
 
@@ -31,8 +31,8 @@ runEach modName stmts = f stmts
 runStmt :: String -> Stmt -> Pipeline ()
 runStmt modName stmt = do
   (nenv, rnEnv, tcState, dsState, env) <- getEnv
-  renameStmt modName rnEnv stmt \> \(rnEnv', renamed) ->
-    reassocStmt nenv renamed \> \(nenv', rebalanced) ->
+  renameStmts modName [stmt] rnEnv \> \(rnEnv', renamed) ->
+    reassocStmt nenv (head renamed) \> \(nenv', rebalanced) ->
       inferStmts tcState [rebalanced] \> \(tcState', (typed, ty)) ->
         let (dsState', core) = desugarStmts dsState typed
             (env', val) = evalWithEnv env core
@@ -43,7 +43,7 @@ runAll :: StmtsFn
 runAll modName stmts = do
   (nenv, rnEnv, tcState, dsState, env) <- getEnv
   dumpIR <- option dump_ir
-  renameStmts modName rnEnv stmts \> \(rnEnv', renamed) ->
+  renameStmts modName stmts rnEnv \> \(rnEnv', renamed) ->
     reassocStmts nenv renamed \> \(nenv', rebalanced) ->
       inferStmts tcState rebalanced \> \(tcState', (typed, ty)) ->
         let (dsState', core) = desugarStmts dsState typed
