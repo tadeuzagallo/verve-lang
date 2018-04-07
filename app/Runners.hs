@@ -12,7 +12,7 @@ import TypedValue
 import Absyn.Untyped (Stmt)
 import Core.Desugar (desugarStmts)
 import Interpreter.Eval (evalWithEnv)
-import Reassoc.Reassoc (reassocStmt, reassocStmts)
+import Reassoc.Reassoc (reassocStmts)
 import Renamer.Renamer (renameStmts)
 import Typing.TypeChecker (inferStmts)
 import qualified Util.PrettyPrint as PP
@@ -29,15 +29,7 @@ runEach modName stmts = f stmts
       f rest
 
 runStmt :: String -> Stmt -> Pipeline ()
-runStmt modName stmt = do
-  (nenv, rnEnv, tcState, dsState, env) <- getEnv
-  renameStmts modName [stmt] rnEnv \> \(rnEnv', renamed) ->
-    reassocStmt nenv (head renamed) \> \(nenv', rebalanced) ->
-      inferStmts tcState [rebalanced] \> \(tcState', (typed, ty)) ->
-        let (dsState', core) = desugarStmts dsState typed
-            (env', val) = evalWithEnv env core
-         in maybePrintTypedValue val ty >>
-           updateEnv (nenv', rnEnv', tcState', dsState', env')
+runStmt modName stmt = runAll modName [stmt]
 
 runAll :: StmtsFn
 runAll modName stmts = do
