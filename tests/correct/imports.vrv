@@ -71,3 +71,7 @@ k.x // CHECK-L: 42 : Int
 
 // Check implementations are properly imported
 print(k) // CHECK-L: "K"
+
+// Check reassoc imports
+3 >> 1 + 2 // CHECK-L: 3 : Int
+2 + 3 >> 1 // CHECK-L: 3 : Int

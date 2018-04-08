@@ -5,6 +5,7 @@ module Reassoc.Env
   , addOpInfo
   , getOpInfo
   , getPrec
+  , importReassocEnv
   ) where
 
 import Absyn.Untyped
@@ -30,3 +31,7 @@ getOpInfo name (Env env) =
 
 getPrec :: Name -> Env -> Result PrecInt
 getPrec name env = snd <$> getOpInfo name env
+
+importReassocEnv :: [String] -> Env -> Env -> Env
+importReassocEnv imports (Env targetEnv) (Env importEnv) =
+  Env (filter ((`elem` imports) . fst) importEnv ++ targetEnv)
