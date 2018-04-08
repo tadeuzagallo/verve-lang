@@ -42,6 +42,7 @@ data State = State
   , sEnv :: Env
   , sErrors :: [Error]
   , sOut :: [String]
+  , sHasError :: Bool
   }
 
 initState :: Options -> State
@@ -50,6 +51,7 @@ initState options =
         , sEnv = defaultEnv
         , sErrors = []
         , sOut = []
+        , sHasError = False
         }
 
 newtype Pipeline a = Pipeline
@@ -99,8 +101,10 @@ runPipeline p options = do
   return ()
 
 printResults :: Bool -> ([Error], [String]) -> Pipeline ()
-printResults _ ([], out) =
+printResults exitOnFailure ([], out) = do
   liftIO $ mapM_ putStrLn out
+  hasError <- ask sHasError
+  liftIO $ when (exitOnFailure && hasError) exitFailure
 
 printResults exitOnFailure (errors, _) = do
   liftIO $ mapM_ report errors
@@ -120,7 +124,7 @@ option f =
 
 reportErrors :: [Error] -> Pipeline ()
 reportErrors errors =
-  modify $ \s -> s { sErrors = sErrors s ++ errors}
+  modify $ \s -> s { sErrors = sErrors s ++ errors, sHasError = True }
 
 puts :: String -> Pipeline ()
 puts str =
