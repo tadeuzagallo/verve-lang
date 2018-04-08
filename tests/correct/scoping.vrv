@@ -13,6 +13,8 @@ let z : T = ""
 z // CHECK-L: "" : String
 
 let f = 3
-(fn f() {})
-// TODO: fix the interpreter so that the value below is also correct
-f // CHECK-L: : Int
+(fn f(x: Bool) {
+  // Check that internally f still points to the function
+  if x { f(False) }
+})(True)
+f // CHECK-L: 3 : Int

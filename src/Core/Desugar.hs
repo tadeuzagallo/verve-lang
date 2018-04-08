@@ -313,8 +313,12 @@ d_expr (List ty items) k =
               CA.App (CA.Var "Cons") j [t, head, tail]
 
 d_expr (FnExpr fn) k = do
-  decl <- d_fn fn
-  CA.LetFun [decl] <$> k [CA.Var $ fst $ name fn]
+  -- replace the name of the function with a fresh variable
+  --  to avoid shadowing as the expressions should not add
+  --  values to the scope
+  x <- var
+  (CA.FunDef y j ps e) <- d_fn fn
+  CA.LetFun [CA.FunDef x j ps (CA.subst e x y)] <$> k [x]
 
 d_expr (Negate constrArgs expr) k =
   computeConstraints constrArgs $ \(constraints', _) ->
