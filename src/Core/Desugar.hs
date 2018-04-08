@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns -fno-warn-incomplete-uni-patterns #-}
 module Core.Desugar
   ( DsState
+  , importDsState
   , initialState
   , desugarStmts
   , d_expr

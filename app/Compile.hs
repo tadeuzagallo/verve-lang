@@ -9,6 +9,7 @@ import Options
 import Runners
 
 import Absyn.Untyped
+import Core.Desugar (importDsState)
 import Reassoc.Env (importReassocEnv)
 import Renamer.Renamer (renameImport)
 import Syntax.Parser (parseFile)
@@ -54,7 +55,7 @@ resolveImports file imports =
 resolveImport :: FilePath -> Import -> Pipeline ()
 resolveImport file imp@(Import _ mod _ _) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
-  (prevNEnv, prevRnEnv, prevTcState, _, prevEnv) <- getEnv
+  (prevNEnv, prevRnEnv, prevTcState, prevDsEnv, prevEnv) <- getEnv
   updateEnv defaultEnv
   loadPrelude
   execFile runAll (intercalate "." mod) path
@@ -63,7 +64,7 @@ resolveImport file imp@(Import _ mod _ _) = do
    in updateEnv ( importReassocEnv renamedImports prevNEnv impNEnv
                 , rnEnv'
                 , importModule renamedImports prevTcState impTcState
-                , impDsState
+                , importDsState renamedImports prevDsEnv impDsState
                 , importEvalEnv renamedImports prevEnv impEnv
                 )
 

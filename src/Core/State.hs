@@ -12,6 +12,7 @@ module Core.State
   , arity
   , enumCtors
   , ctorName
+  , importDsState
   ) where
 
 import qualified Core.Absyn as CA
@@ -102,3 +103,11 @@ findEnumForCtor c = do
       g (c' : cs)
         | ctorName c' == c = True
         | otherwise = g cs
+
+importDsState :: [String] -> DsState -> DsState -> DsState
+importDsState imports targetState importState =
+  importState { enums = mergedEnums }
+    where
+      mergedEnums = importedEnums ++ enums targetState
+      importedEnums = filter pred (enums importState)
+      pred (DsEnum name _) = name `elem` imports
