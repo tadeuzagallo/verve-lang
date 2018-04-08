@@ -16,25 +16,6 @@ import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 
 
--- TODO: This will need scoping, otherwise the following will fail
---
--- module A { enum C { D } }
--- module B { enum D { C } }
---
--- then in a module C, when you import both A and B, the following will
--- be renamed from
---
--- f() -> (C, D) { (D, C) }
---
--- to:
---
--- f() -> (B.C, B.D) { (B.D, B.C) }
---
--- instead of:
---
--- f() -> (A.C, B.D) { (A.D, B.C) }
-
-
 -- ENTRY POINT
 
 renameStmts :: String -> [Stmt] -> RnEnv -> Result (RnEnv, [Stmt])
