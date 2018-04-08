@@ -87,13 +87,13 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
   addValueType opRhs'
   endMarker m
 
+  let ty = Fun opGenericVars [snd opLhs', snd opRhs'] opRetType'
+  addValueType (opName, ty)
   (opBody', bodyTy) <- i_body opBody
 
   clearMarker m
 
   bodyTy <:! opRetType'
-  let ty = Fun opGenericVars [snd opLhs', snd opRhs'] opRetType'
-  addValueType (opName, ty)
   return $ Operator { opAssoc
                     , opPrec
                     , opGenerics = opGenerics'

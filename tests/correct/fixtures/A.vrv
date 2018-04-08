@@ -1,3 +1,13 @@
 enum C { D }
 
 let f = 42
+
+#prec(higher(+))
+operator (x: Int) >> (y: Int) -> Int {
+  if (y > 0) {
+    (x / 2) >> (y - 1)
+  } else {
+    x
+  }
+}
+
