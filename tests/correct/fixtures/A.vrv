@@ -2,6 +2,8 @@ enum C { D }
 
 let f = 42
 
+class K { let x : Int }
+
 #prec(higher(+))
 operator (x: Int) >> (y: Int) -> Int {
   if (y > 0) {
@@ -10,4 +12,3 @@ operator (x: Int) >> (y: Int) -> Int {
     x
   }
 }
-

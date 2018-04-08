@@ -111,6 +111,7 @@ tImportModule items prevCtx impCtx =
   prevCtx { values = filterImports (values impCtx) ++ values prevCtx
           , types = filterImports (types impCtx) ++ types prevCtx
           , implementations = implementations impCtx
+          , instanceVars = instanceVars impCtx ++ instanceVars prevCtx
           }
 
  where

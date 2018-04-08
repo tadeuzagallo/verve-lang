@@ -60,6 +60,11 @@ M.length(M.Cons(1, Nil))
 // CHECK-L: Unknown variable: M.add
 M.add
 
+// Test scoped renaming - Types and Values with the same name should not be mixed
 enum Pair<S, T> { Pair(S, T) }
 fn f() -> Pair<C, D> { Pair(D, C) }
 f // CHECK-L: () -> Pair<C, D>
+
+// Test that instancesVars are properly tracked
+let k = K { x: 42 }
+k.x // CHECK-L: 42 : Int
