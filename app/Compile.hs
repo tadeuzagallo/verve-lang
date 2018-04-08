@@ -55,6 +55,7 @@ resolveImport file imp@(Import _ mod _ _) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
   (_, prevRnEnv, prevTcState, _, prevEnv) <- getEnv
   updateEnv defaultEnv
+  loadPrelude
   execFile runAll (intercalate "." mod) path
   (impNEnv, impRnEnv, impTcState, impDsState, impEnv) <- getEnv
   let (rnEnv', renamedImports) = renameImport prevRnEnv impRnEnv imp
