@@ -9,6 +9,9 @@ import Enum as E { Nat, Bool(True) }
 import Match { Nat(Z) }
 import Match as M { Nat(Z), length, List(Cons, Nil) }
 
+global import Fixtures.A
+global import Fixtures.B
+
 A // CHECK-L: A : X
 B // CHECK-L: B : X
 
@@ -56,3 +59,7 @@ M.length(M.Cons(1, Nil))
 
 // CHECK-L: Unknown variable: M.add
 M.add
+
+enum Pair<S, T> { Pair(S, T) }
+fn f() -> Pair<C, D> { Pair(D, C) }
+f // CHECK-L: () -> Pair<C, D>

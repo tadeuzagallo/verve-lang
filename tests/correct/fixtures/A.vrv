@@ -1,0 +1,3 @@
+enum C { D }
+
+let f = 42

@@ -12,6 +12,7 @@ import Absyn.Untyped
 import Renamer.Renamer (renameImport)
 import Syntax.Parser (parseFile)
 import Typing.State (importModule)
+import Interpreter.Env (importEvalEnv)
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Char (toUpper)
@@ -52,12 +53,12 @@ resolveImports file imports =
 resolveImport :: FilePath -> Import -> Pipeline ()
 resolveImport file imp@(Import _ mod _ _) = do
   let path = takeDirectory file </> joinPath mod <.> "vrv"
-  (_, prevRnEnv, prevTcState, _, _) <- getEnv
+  (_, prevRnEnv, prevTcState, _, prevEnv) <- getEnv
   updateEnv defaultEnv
   execFile runAll (intercalate "." mod) path
   (impNEnv, impRnEnv, impTcState, impDsState, impEnv) <- getEnv
   let (rnEnv', renamedImports) = renameImport prevRnEnv impRnEnv imp
-   in updateEnv (impNEnv, rnEnv', importModule renamedImports prevTcState impTcState, impDsState, impEnv)
+   in updateEnv (impNEnv, rnEnv', importModule renamedImports prevTcState impTcState, impDsState, importEvalEnv renamedImports prevEnv impEnv)
 
 modNameFromFile :: FilePath -> FilePath
 modNameFromFile file =

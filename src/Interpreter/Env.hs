@@ -5,17 +5,32 @@ module Interpreter.Env
   , lookupVal
   , addCont
   , lookupCont
+  , importEvalEnv
   ) where
 
 import Core.Absyn (ContVar(..), Var(..))
 import Interpreter.Value (ContValue(..), Value(..))
 import Lib.Registry
+import qualified Util.PrettyPrint as PP
 
 data Env
   = Empty
   | ValueBind Var Value Env
   | ContBind ContVar ContValue Env
-  deriving (Show)
+
+instance Show Env where
+  show Empty = "{}"
+  show (ValueBind x _ rest) =
+    "{ " ++ PP.print x ++ showTail rest
+  show (ContBind k _ rest) =
+    "{ " ++ PP.print k ++ showTail rest
+
+showTail :: Env -> String
+showTail Empty = " }"
+showTail (ValueBind x _ rest) =
+  ", " ++ PP.print x ++ showTail rest
+showTail (ContBind k _ rest) =
+  ", " ++ PP.print k ++ showTail rest
 
 defaultEnv :: Env
 defaultEnv =
@@ -46,3 +61,16 @@ addVal env (x, v) = ValueBind x v env
 
 addCont :: Env -> (ContVar, ContValue) -> Env
 addCont env (k, v) = ContBind k v env
+
+importEvalEnv :: [String] -> Env -> Env -> Env
+importEvalEnv _ targetEnv Empty =
+  targetEnv
+
+importEvalEnv imports targetEnv (ContBind _ _ tail) =
+  importEvalEnv imports targetEnv tail
+
+importEvalEnv imports targetEnv (ValueBind x@(Var name) v tail)
+  | name `elem` imports =
+    ValueBind x v (importEvalEnv imports targetEnv tail)
+  | otherwise =
+    importEvalEnv imports targetEnv tail
