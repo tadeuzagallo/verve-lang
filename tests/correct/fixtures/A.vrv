@@ -12,3 +12,7 @@ operator (x: Int) >> (y: Int) -> Int {
     x
   }
 }
+
+implementation Printable<K> {
+  fn to_string(k) { "K" }
+}

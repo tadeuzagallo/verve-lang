@@ -96,17 +96,21 @@ d_decl (Implementation (name, _) generics ty methods) k =
   case mkConstraints generics of
     [] ->
       d_implItems methods $ \dict ->
-        CA.LetVal (CA.Var dictName) dict <$> k []
+        CA.LetVal dictVar dict <$> k []
     constr -> do
       j <- contVar
       x <- var
       items <- d_implItems methods $ \dict ->
         return $ CA.LetVal x dict (CA.AppCont j [x])
-      CA.LetFun [CA.FunDef (CA.Var dictName)  j constr items] <$> k []
+      CA.LetFun [CA.FunDef dictVar  j constr items] <$> k []
 
   where
-    dictName = "#" ++ name ++ print ty
+    dictVar = mkDictVar name ty
 
+mkDictVar :: String -> Type -> CA.Var
+mkDictVar name ty =
+  CA.Var $ "%" ++ name ++ print ty
+  where
     print (TyApp ty _) = print ty
     print ty = show ty
 
@@ -127,7 +131,7 @@ mkConstraints gen =
   concatMap aux gen
   where
     aux (varName, bounds) =
-      map (\bound -> CA.Var $ "#" ++ show bound ++ varName) bounds ++ [CA.Var varName]
+      map (\bound -> mkDictVar (show bound) (Con varName)) bounds ++ [CA.Var varName]
 
 mk_var :: String -> CA.Var
 mk_var v = CA.Var v
@@ -345,7 +349,7 @@ computeConstraints cs k =
       CA.LetVal x (CA.Type typeArg) <$> k (args ++ [x], holes)
 
     aux k (CDict typeArg typeBound) (args, holes) =
-      let constr = mk_var ("#" ++ show typeBound ++ show typeArg)
+      let constr = mkDictVar (show typeBound) typeArg
        in k (args ++ [constr], holes)
 
     aux k (CApp typeArg nestedArgs) (args, holes) =

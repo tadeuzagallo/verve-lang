@@ -70,7 +70,8 @@ importEvalEnv imports targetEnv (ContBind _ _ tail) =
   importEvalEnv imports targetEnv tail
 
 importEvalEnv imports targetEnv (ValueBind x@(Var name) v tail)
-  | name `elem` imports =
+  | name `elem` imports
+  || head name == '%' =
     ValueBind x v (importEvalEnv imports targetEnv tail)
   | otherwise =
     importEvalEnv imports targetEnv tail

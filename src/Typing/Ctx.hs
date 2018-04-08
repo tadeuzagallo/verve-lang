@@ -110,12 +110,20 @@ tImportModule :: [String] -> Ctx -> Ctx -> Ctx
 tImportModule items prevCtx impCtx =
   prevCtx { values = filterImports (values impCtx) ++ values prevCtx
           , types = filterImports (types impCtx) ++ types prevCtx
-          , implementations = implementations impCtx
+          , implementations = mergeImplementations (implementations prevCtx) (implementations impCtx)
           , instanceVars = instanceVars impCtx ++ instanceVars prevCtx
           }
 
  where
    filterImports = filter $ flip elem items . fst
+   mergeImplementations prev [] = prev
+   mergeImplementations prev ((intf, impls): rest) =
+     mergeImplementations (update prev intf impls) rest
+
+   update [] intf impls = [(intf, impls)]
+   update ((intf', impls') : rest) intf impls
+     | intf == intf' = (intf, impls ++ impls') : rest
+     | otherwise = (intf', impls') : update rest intf impls
 
 -- This is a confusing signature, the idea is that
 --  that everything that got added to the `current`

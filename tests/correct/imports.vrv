@@ -68,3 +68,6 @@ f // CHECK-L: () -> Pair<C, D>
 // Test that instancesVars are properly tracked
 let k = K { x: 42 }
 k.x // CHECK-L: 42 : Int
+
+// Check implementations are properly imported
+print(k) // CHECK-L: "K"
