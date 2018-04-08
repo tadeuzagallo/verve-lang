@@ -384,8 +384,8 @@ r_generics = mapM r_generic
 
 r_generic :: (Name, [Name]) -> Rn (Name, [Name])
 r_generic (name, bounds) = do
-  insertInternalType name
   bounds' <- mapM renameType bounds
+  insertInternalType name
   return (name, bounds')
 
 
