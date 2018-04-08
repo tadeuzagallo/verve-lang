@@ -91,9 +91,9 @@ i_fn fn = do
   addGenerics genericVars
   (ty, tyArgs, retType') <- fnTy (genericVars, params fn, retType fn)
   mapM_ addValueType tyArgs
+  addValueType (name fn, ty)
   endMarker m
 
-  addValueType (name fn, ty)
   (body', bodyTy) <- i_body (body fn)
 
   clearMarker m

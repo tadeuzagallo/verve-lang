@@ -32,7 +32,9 @@ c_decl :: U.Decl -> Tc T.Decl
   Δ; Γ ⊢ fn ⊣ Γ, f : T; Δ
 -}
 c_decl (FnStmt fn) = do
-  FnStmt . fst <$> i_fn fn
+  (fn', ty) <-  i_fn fn
+  addValueType (name fn, ty)
+  return $ FnStmt fn'
 
 {-
    ∀ Ci ∈ C1..Cn, ∀ Tij ∈ Ti1..Tik, Δ, S1 : *, ..., Sn : *, E : arity(m, *); Γ ⊢ Tik : *
@@ -321,7 +323,8 @@ i_method classTy fn = do
   addType ("Self", classTy)
   endMarker m
 
-  (fn', _) <- i_fn $ fn { params = ("self", U.TName "Self") : params fn }
+  (fn', ty) <- i_fn $ fn { params = ("self", U.TName "Self") : params fn }
+  addValueType (name fn, ty)
 
   clearMarker m
 
