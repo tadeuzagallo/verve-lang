@@ -7,24 +7,23 @@ module Renamer.Env
   , local
   , insertLocalType
   , insertLocalValue
+  , insertLocalInterface
   , insertInternalType
   , insertInternalValue
   , ident
   , renameType
   , renameValue
   , renameIdentValue
+  , renameInterface
   , joinName
   -- for imports
   , findValuesAndTypes
-  , importValue
-  , importType
   ) where
-
-import Prelude hiding (lookup)
 
 import Renamer.Error
 
 import Lib.Registry
+import Typing.TypeError (TypeError(ExtraneousImplementation, UnknownInterface))
 import Util.Env
 import Util.Error
 import Util.Scope
@@ -37,10 +36,13 @@ data RenamerEnv = RenamerEnv
   { modName :: String
   } deriving (Show)
 
+data RnIntf = RnIntf RnName (Field RdrName RnName)
+  deriving (Show)
+
 instance Env RenamerEnv where
   type KeyType RenamerEnv = RdrName
   type ValueType RenamerEnv = RnName
-  type InterfaceType RenamerEnv = RnName
+  type InterfaceType RenamerEnv = RnIntf
 
   deleteBetween _ _ = id
 
@@ -97,7 +99,7 @@ external name = do
 internal :: String -> Rn RnName
 internal = return . Internal
 
-insertion :: (String -> Rn RdrName) -> (String -> Rn RnName) -> (RdrName -> RnName -> Rn ()) -> String -> Rn ()
+insertion :: (String -> Rn a) -> (String -> Rn b) -> (a -> b -> Rn ()) -> String -> Rn ()
 insertion rdrName rnName insert name = do
   key <- rdrName name
   value <- rnName name
@@ -108,6 +110,15 @@ insertLocalType = insertion localRdr external insertType
 
 insertLocalValue :: String -> Rn ()
 insertLocalValue = insertion localRdr external insertValue
+
+insertLocalInterface :: String -> [String] -> Rn ()
+insertLocalInterface intf methods = do
+  intfRdr <- localRdr intf
+  intfRn <- external intf
+  methods' <- mapM mkMethod methods
+  insertInterface intfRdr (RnIntf intfRn methods')
+    where
+      mkMethod str = (,) <$> localRdr str <*> external str
 
 insertInternalType :: String -> Rn ()
 insertInternalType = insertion localRdr internal insertType
@@ -147,6 +158,23 @@ renameValue name = lookupRdrName lookupValue (Nothing, name)
 renameIdentValue :: [String] -> Rn String
 renameIdentValue = lookupRdrName lookupValue . ident
 
+renameInterface :: String -> Rn (String, String -> Rn String)
+renameInterface name = do
+  maybeIntf <- lookupInterface =<< localRdr name
+  RnIntf name methods <- maybe unknownInterface return maybeIntf
+  return (rnName name, renameIntfMethod methods)
+    where
+      unknownInterface = throwError $ UnknownInterface $ name
+
+renameIntfMethod :: Field RdrName RnName -> String -> Rn String
+renameIntfMethod methods method = do
+  method' <- localRdr method
+  case Prelude.lookup method' methods of
+    Nothing -> unknownIntfMethod
+    Just name -> return $ rnName name
+  where
+    unknownIntfMethod = throwError $ ExtraneousImplementation $ method
+
 showRdrName :: RdrName -> String
 showRdrName (Nothing, name) = name
 showRdrName (Just mod, name) = joinName (mod, name)
@@ -159,9 +187,9 @@ thisMod :: Rn String
 thisMod = getEnv modName
 
 -- For imports
-findValuesAndTypes :: String -> Maybe String -> RnEnv -> ([RdrName], [RdrName])
+findValuesAndTypes :: String -> Maybe String -> RnEnv -> ([(RdrName, RdrName)], [(RdrName, RdrName)])
 findValuesAndTypes modName modAlias env =
-  (rdrNames values, rdrNames types)
+  (rdrNames values, rdrNames types ++ rdrNames interfaces)
   where
     valuesResult = runScoped (filterValues filter) env
     values = getValue valuesResult
@@ -169,35 +197,17 @@ findValuesAndTypes modName modAlias env =
     typesResult = runScoped (filterTypes filter) env
     types = getValue typesResult
 
+    interfacesResult = runScoped (filterInterfaces filterIntf) env
+    interfaces = getValue interfacesResult
+
     filter _ (External (m, _)) = m == modName
     filter _ _ = False
 
-    rdrNames = map $ \((_, name), _) -> (modAlias, name)
+    filterIntf _ (RnIntf (External (m, _)) _) = m == modName
+    filterIntf _ _ = False
+
+    rdrNames :: [(RdrName, a)] -> [(RdrName, RdrName)]
+    rdrNames = map $ \((_, name), _) -> ((Nothing, name), (modAlias, name))
 
     getValue (Right (_, a)) = a
     getValue _ = undefined
-
-type Importer = RnEnv -> RnEnv -> RdrName -> RnEnv
-
--- TODO: this should return Result
-importRdrName :: (RdrName -> Rn (Maybe RnName))
-              -> (RdrName -> RnName -> Rn ())
-              -> Importer
-importRdrName lookup insert importedModuleEnv targetEnv rdrName@(_, name) =
-  finalEnv
-  where
-    resultLookup = runScoped (lookupRnName lookup $ ident [name]) importedModuleEnv
-    rnName = case resultLookup of
-      Right (_, rnName) -> rnName
-      Left _ -> undefined
-
-    resultInsert = runScoped (insert rdrName rnName) targetEnv
-    finalEnv = case resultInsert of
-      Right (finalEnv, _) -> finalEnv
-      Left _ -> undefined
-
-importValue :: Importer
-importValue = importRdrName lookupValue insertValue
-
-importType :: Importer
-importType = importRdrName lookupType insertType

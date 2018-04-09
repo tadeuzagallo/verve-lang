@@ -111,7 +111,9 @@ tImportModule items prevCtx impCtx =
   prevCtx { values = filterImports (values impCtx) ++ values prevCtx
           , types = filterImports (types impCtx) ++ types prevCtx
           , implementations = mergeImplementations (implementations prevCtx) (implementations impCtx)
+          -- TODO: filter in order to avoid overwriting
           , instanceVars = instanceVars impCtx ++ instanceVars prevCtx
+          , interfaces = interfaces impCtx ++ interfaces prevCtx
           }
 
  where

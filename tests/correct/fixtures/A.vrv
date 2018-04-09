@@ -16,3 +16,7 @@ operator (x: Int) >> (y: Int) -> Int {
 implementation Printable<K> {
   fn to_string(k) { "K" }
 }
+
+interface I<T> {
+  let f : (T) -> Void
+}

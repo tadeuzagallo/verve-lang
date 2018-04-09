@@ -11,6 +11,7 @@ import Match as M { Nat(Z), length, List(Cons, Nil) }
 
 global import Fixtures.A
 global import Fixtures.B
+import Fixtures.A as A
 
 A // CHECK-L: A : X
 B // CHECK-L: B : X
@@ -75,3 +76,9 @@ print(k) // CHECK-L: "K"
 // Check reassoc imports
 3 >> 1 + 2 // CHECK-L: 3 : Int
 2 + 3 >> 1 // CHECK-L: 3 : Int
+
+// Check interface imports
+implementation I<K> {
+  fn f(k) { print(k) }
+}
+A.f(k) // CHECK-L: "K"

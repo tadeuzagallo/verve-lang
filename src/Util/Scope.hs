@@ -27,6 +27,9 @@ module Util.Scope
   -- to support imports
   , filterValues
   , filterTypes
+  , filterInterfaces
+  , importType
+  , importValue
   ) where
 
 import Util.Env
@@ -38,7 +41,7 @@ import Control.Monad (when)
 import Control.Monad.Except (Except, runExcept)
 import Control.Monad.State (StateT, get, gets, modify, put, runStateT)
 import qualified Data.Map as Map
-import Data.Maybe (isJust)
+import Data.Maybe (fromJust, isJust)
 import Data.Tuple (swap)
 
 -- Scoped monad
@@ -49,14 +52,27 @@ runScoped scoped scope =
   swap <$> runExcept (runStateT scoped scope)
 
 -- Actual Scope
+data TypeEntry env
+  = Type (ValueType env)
+  | Intf (InterfaceType env)
+
+deriving instance Env env => Show (TypeEntry env)
+
+unType :: Env t => TypeEntry t -> Maybe (ValueType t)
+unType (Type t) = Just t
+unType (Intf _) = Nothing
+
+unIntf :: Env t => TypeEntry t -> Maybe (InterfaceType t)
+unIntf (Intf t) = Just t
+unIntf (Type _) = Nothing
+
 type Types env = Field (KeyType env) (ValueType env)
 type Values env = Field (KeyType env) (ValueType env)
 type Interfaces env = Field (KeyType env) (InterfaceType env)
 
 data Scope env = Scope
   { values :: Values env
-  , types :: Types env
-  , interfaces :: Interfaces env
+  , types :: Field (KeyType env) (TypeEntry env)
   , env :: env
 
   -- Meta data
@@ -85,12 +101,14 @@ createScope :: Env t
             -> Scope t
 createScope values types interfaces env =
   Scope { values
-        , types
-        , interfaces
+        , types = typesAndInterfaces
         , env
         , markers = Map.empty
         , uid = 0
         }
+
+ where
+   typesAndInterfaces = map (fmap Type) types ++ map (fmap Intf) interfaces
 
 lookupScope :: (Eq a, Env t) => (Scope t -> Field a b) -> a -> Scoped t (Maybe b)
 lookupScope proj key = do
@@ -109,19 +127,23 @@ lookupValue :: Lookup ValueType
 lookupValue = lookupScope values
 
 lookupType :: Lookup ValueType
-lookupType = lookupScope types
+lookupType key = do
+  ty <- lookupScope types key
+  return $ ty >>= unType
 
 lookupInterface :: Lookup InterfaceType
-lookupInterface = lookupScope interfaces
+lookupInterface key = do
+  ty <- lookupScope types key
+  return $ ty >>= unIntf
 
 insertValue :: Insertion ValueType
 insertValue = insertScope values (\st values -> st { values })
 
 insertType :: Insertion ValueType
-insertType = insertScope types (\st types -> st { types })
+insertType key = insertScope types (\st types -> st { types }) key . Type
 
 insertInterface :: Insertion InterfaceType
-insertInterface = insertScope interfaces (\st interfaces -> st { interfaces })
+insertInterface key = insertScope types (\st types -> st { types }) key . Intf
 
 
 getEnv :: Env t => (t -> a) -> Scoped t a
@@ -204,4 +226,32 @@ filterValues :: Filter ValueType
 filterValues = filterScope values
 
 filterTypes :: Filter ValueType
-filterTypes = filterScope types
+filterTypes pred = do
+  map (fmap (fromJust . unType)) <$> filterScope types (\k v ->
+    case v of
+      Type t -> pred k t
+      _ -> False)
+
+filterInterfaces :: Filter InterfaceType
+filterInterfaces pred =
+  map (fmap (fromJust . unIntf)) <$> filterScope types (\k v ->
+    case v of
+      Intf i -> pred k i
+      _ -> False)
+
+type Importer t = Scope t -> Scope t -> (KeyType t, KeyType t) -> Scope t
+
+importScope :: (Env t, Eq (KeyType t))
+            => (Scope t -> Field (KeyType t) b)
+            -> (Scope t -> Field (KeyType t) b -> Scope t)
+            -> Importer t
+importScope proj inj importScope targetScope (lookupKey, insertionKey) =
+  -- TODO: Handle errors
+  let value = Util.Env.lookup proj lookupKey importScope
+   in insert proj inj insertionKey (fromJust value) targetScope
+
+importValue :: (Env t, Eq (KeyType t)) => Importer t
+importValue = importScope values (\s values -> s { values })
+
+importType :: (Env t, Eq (KeyType t)) => Importer t
+importType = importScope types (\s types -> s { types })

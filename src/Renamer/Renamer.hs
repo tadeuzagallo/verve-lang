@@ -5,13 +5,10 @@ module Renamer.Renamer
 
 import Absyn.Untyped
 import Renamer.Env
-import Typing.TypeError
 import Util.Error
 import Util.Scope
 
 import Control.Monad (zipWithM)
-import Control.Monad.Except (withExcept)
-import Control.Monad.State (mapStateT)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 
@@ -36,12 +33,12 @@ renameImport targetEnv importEnv (Import isGlobal mod alias items) =
     processItem (values, types) (ImportValue v) = (rdrName v : values, types)
     processItem (values, types) (ImportType t vs) = (map rdrName vs ++ values, rdrName t : types)
 
-    rdrName name = (modAlias, name)
+    rdrName name = ((Nothing, name), (modAlias, name))
 
     modName = intercalate "." mod
 
     -- returns the `name` with the full module name, not the local alias
-    fullName (_moduleAlias, name) = joinName (modName, name)
+    fullName ((_moduleAlias, name), _) = joinName (modName, name)
 
     -- the alias under which the imports should be bound to in the new env
     modAlias | isGlobal = Nothing
@@ -134,7 +131,9 @@ r_decl (Operator assoc prec gen lhs op rhs retType body) = do
   return $ Operator assoc prec' gen' lhs' op' rhs' retType' body'
 
 r_decl (Interface name param methods) = do
-  insertLocalType name
+  methodNames <- mapM r_intfFieldName methods
+
+  insertLocalInterface name methodNames
 
   name' <- local name
 
@@ -149,14 +148,14 @@ r_decl (Interface name param methods) = do
   return $ Interface name' param methods'
 
 r_decl (Implementation name gen ty implMethods) = do
-  name' <- renameType name
+  (name', renameIntfMethod) <- renameInterface name
 
   m <- startMarker
   gen' <- r_generics gen
   endMarker m
 
   ty' <- r_type ty
-  implMethods' <- mapM r_implItem implMethods
+  implMethods' <- mapM (r_implItem renameIntfMethod) implMethods
 
   clearMarker m
 
@@ -178,14 +177,14 @@ r_decl (TypeAlias aliasName aliasVars aliasType) = do
   return $ TypeAlias aliasName' aliasVars aliasType'
 
 
-r_implItem :: ImplementationItem -> Rn ImplementationItem
-r_implItem (ImplVar (name, expr)) = do
-  name' <- lookupIntfMethod name
+r_implItem :: (String -> Rn String) -> ImplementationItem -> Rn ImplementationItem
+r_implItem renameIntfMethod (ImplVar (name, expr)) = do
+  name' <- renameIntfMethod name
   expr' <- r_expr expr
   return $ ImplVar (name', expr')
 
-r_implItem (ImplFunction implName implParams implBody) = do
-  implName' <- lookupIntfMethod implName
+r_implItem renameIntfMethod (ImplFunction implName implParams implBody) = do
+  implName' <- renameIntfMethod implName
 
   m <- startMarker
   mapM_ insertInternalValue implParams
@@ -197,8 +196,8 @@ r_implItem (ImplFunction implName implParams implBody) = do
 
   return $ ImplFunction implName' implParams implBody'
 
-r_implItem (ImplOperator lhs op rhs body) = do
-  op' <- lookupIntfMethod op
+r_implItem renameIntfMethod (ImplOperator lhs op rhs body) = do
+  op' <- renameIntfMethod op
 
   m <- startMarker
   insertInternalValue lhs
@@ -210,10 +209,6 @@ r_implItem (ImplOperator lhs op rhs body) = do
   clearMarker m
 
   return $ ImplOperator lhs op' rhs body'
-
-lookupIntfMethod :: String -> Rn String
-lookupIntfMethod name = do
-  mapStateT (withExcept $ \_ -> Error (ExtraneousImplementation name)) $ renameValue name
 
 r_expr :: Expr -> Rn Expr
 r_expr (Literal l) =
@@ -384,7 +379,7 @@ r_generics = mapM r_generic
 
 r_generic :: (Name, [Name]) -> Rn (Name, [Name])
 r_generic (name, bounds) = do
-  bounds' <- mapM renameType bounds
+  bounds' <- mapM (fmap fst . renameInterface) bounds
   insertInternalType name
   return (name, bounds')
 
@@ -424,6 +419,10 @@ r_methodImp :: String -> Function -> Rn Function
 r_methodImp name' fn = do
   insertInternalValue "self"
   r_fnBase name' fn
+
+r_intfFieldName :: InterfaceItem -> Rn Name
+r_intfFieldName (IntfVar (name, _)) = return name
+r_intfFieldName (IntfOperator { intfOpName }) = return intfOpName
 
 r_intfField :: InterfaceItem -> Rn InterfaceItem
 r_intfField (IntfVar (name, ty)) = do
