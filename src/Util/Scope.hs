@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types, StandaloneDeriving #-}
 module Util.Scope
   ( Scoped
   , Scope
@@ -63,6 +63,8 @@ data Scope env = Scope
   , markers :: Map.Map MarkerId (Marker env)
   , uid :: Int
   }
+
+deriving instance Env t => Show (Scope t)
 
 instance Env t => Env (Scope t) where
   type KeyType (Scope t) = KeyType t
@@ -152,7 +154,10 @@ mkUniqueId = do
 -- Markers
 
 newtype MarkerId = MarkerId Int deriving (Eq, Ord, Show)
-data Marker t = Marker { start :: Scope t, end :: Maybe (Scope t) }
+data Marker t =
+  Marker { start :: Scope t
+         , end :: Maybe (Scope t)
+         } deriving (Show)
 
 startMarker :: Env t => Scoped t MarkerId
 startMarker = do

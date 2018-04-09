@@ -12,10 +12,10 @@ deleteBetweenField :: Field a b -> Field a b -> Field a b -> Field a b
 deleteBetweenField from to current =
   take (length current - length to) current ++ from
 
-class Env t where
-  type KeyType t
-  type ValueType t
-  type InterfaceType t
+class (Show t, Show (KeyType t), Show (ValueType t), Show (InterfaceType t)) => Env t where
+  type KeyType t :: *
+  type ValueType t :: *
+  type InterfaceType t :: *
 
   deleteBetween :: t -> t -> t -> t
 

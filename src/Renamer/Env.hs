@@ -34,7 +34,8 @@ import Data.Maybe (maybe)
 
 -- Extra environment used for renaming
 data RenamerEnv = RenamerEnv
-  { modName :: String }
+  { modName :: String
+  } deriving (Show)
 
 instance Env RenamerEnv where
   type KeyType RenamerEnv = RdrName
