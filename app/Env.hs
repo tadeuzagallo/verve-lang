@@ -1,5 +1,5 @@
 module Env
-  ( Pipeline(..)
+  ( Pipeline
   , Env
   , defaultEnv
   , runPipeline

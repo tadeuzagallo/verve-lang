@@ -23,17 +23,16 @@ import Paths_verve (getDataFileName)
 import System.Directory (getCurrentDirectory)
 import System.FilePath.Posix ((</>), (<.>), takeDirectory, takeFileName, dropExtension, joinPath)
 
-evalProgram :: StmtsFn -> Pipeline ()
+evalProgram :: (Verbosity -> StmtsFn) -> Pipeline ()
 evalProgram processStmts = do
   loadPrelude
   inputFiles <- option files
-  mapM_ (\f -> execFile processStmts (modNameFromFile f) f) inputFiles
+  mapM_ (\f -> execFile (processStmts Verbose) (modNameFromFile f) f) inputFiles
 
 loadPrelude :: Pipeline ()
 loadPrelude = do
   prelude <- liftIO $ getDataFileName "lib/Std.vrv"
-  execFile runAll "Std" prelude
-  flush >> return ()
+  execFile (runAll Quiet) "Std" prelude
 
 execFile :: StmtsFn -> String -> FilePath -> Pipeline ()
 execFile processStmts moduleName file = do
@@ -58,7 +57,7 @@ resolveImport file imp@(Import _ mod _ _) = do
   (prevNEnv, prevRnEnv, prevTcState, prevDsEnv, prevEnv) <- getEnv
   updateEnv defaultEnv
   loadPrelude
-  execFile runAll (intercalate "." mod) path
+  execFile (runAll Quiet) (intercalate "." mod) path
   (impNEnv, impRnEnv, impTcState, impDsState, impEnv) <- getEnv
   let (rnEnv', renamedImports) = renameImport prevRnEnv impRnEnv imp
    in updateEnv ( importReassocEnv renamedImports prevNEnv impNEnv

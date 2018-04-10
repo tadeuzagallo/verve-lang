@@ -24,6 +24,6 @@ repl = do
           Just input -> do
             lift $ case parseStmt "(stdin)" input of
               Left err -> reportErrors [err]
-              Right stmt -> runStmt "REPL" stmt
+              Right stmt -> runStmt Verbose "REPL" stmt
             lift (flush >>= printResults False)
             loop
