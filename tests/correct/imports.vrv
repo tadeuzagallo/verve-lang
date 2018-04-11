@@ -11,7 +11,7 @@ import Match as M { Nat(Z), length, List(Cons, Nil) }
 
 global import Fixtures.A
 global import Fixtures.B
-import Fixtures.A as A
+import Fixtures.A as A { f, (>>) }
 
 A // CHECK-L: A : X
 B // CHECK-L: B : X

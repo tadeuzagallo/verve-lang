@@ -25,6 +25,7 @@ p_importItems =
 
 p_importItem :: Parser ImportItem
 p_importItem = do
-  choice [ lcid >>= return . ImportValue
+  choice [ ImportValue <$> lcid
+         , ImportValue <$> parens operator
          , ImportType <$> ucid <*> option [] (parens (commaSep ucid))
          ]
