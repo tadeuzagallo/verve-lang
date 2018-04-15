@@ -32,8 +32,9 @@ module Typing.Types
 
 import Prelude hiding (concat)
 
-import {-# SOURCE #-} Typing.State
+import Util.Env
 import Util.PrettyPrint
+import Util.Scope
 
 import Data.List (union)
 
@@ -54,12 +55,12 @@ instance Show Var where
 instance PrettyPrint Var where
   pprint (TV v _) = str v
 
-newVar :: String -> Tc Var
+newVar :: Env t => String -> Scoped t Var
 newVar name = do
   uid <- mkUniqueId
   return $ TV name uid
 
-freshVar :: Var -> Tc Var
+freshVar :: Env t => Var -> Scoped t Var
 freshVar (TV name _) = newVar name
 
 varName :: Var -> String

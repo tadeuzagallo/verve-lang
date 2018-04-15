@@ -23,7 +23,7 @@ import Util.Error
 import qualified Interpreter.Env as Interpreter
 import qualified Reassoc.Env as Reassoc
 import qualified Renamer.Env as Renamer
-import qualified Typing.State as Typing
+import qualified Typing.TypeChecker as Typing
 
 import Control.Monad (ap, liftM, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -31,11 +31,11 @@ import Data.Either (either)
 import System.Console.Haskeline.MonadException (MonadException, RunIO(..), controlIO)
 import System.Exit (exitFailure)
 
-type Env = (Reassoc.Env, Renamer.RnEnv, Typing.TcState, DsState, Interpreter.Env)
+type Env = (Reassoc.Env, Renamer.RnEnv, Typing.TcEnv, DsState, Interpreter.Env)
 
 defaultEnv :: Env
 defaultEnv =
-  (Reassoc.defaultEnv, Renamer.defaultEnv, Typing.initialState, initialState, Interpreter.defaultEnv)
+  (Reassoc.defaultEnv, Renamer.defaultEnv, Typing.defaultEnv, initialState, Interpreter.defaultEnv)
 
 data State = State
   { sOptions :: Options

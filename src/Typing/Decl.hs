@@ -1,9 +1,8 @@
 module Typing.Decl (c_decl) where
 
-import Typing.Ctx
+import Typing.Env
 import Typing.Expr
 import Typing.Util
-import Typing.State
 import Typing.Substitution
 import Typing.TypeError
 import Typing.Types
@@ -15,7 +14,7 @@ import qualified Absyn.Untyped as U
 import qualified Absyn.Typed as T
 import Util.Error
 
-import Control.Monad (when)
+import Control.Monad (when, zipWithM_)
 import Data.List (intersect)
 
 {-
@@ -33,7 +32,7 @@ c_decl :: U.Decl -> Tc T.Decl
 -}
 c_decl (FnStmt fn) = do
   (fn', ty) <-  i_fn fn
-  addValueType (name fn, ty)
+  insertValue (name fn) ty
   return $ FnStmt fn'
 
 {-
@@ -53,7 +52,7 @@ c_decl (Enum name generics ctors) = do
         if null generics
            then Con name
            else TyAbs (map fst generics') (TyApp (Con name) (map (uncurry Var) generics'))
-  addType (name, enumTy)
+  insertType name enumTy
 
   -- Only visible inside the enum
   m <- startMarker
@@ -83,12 +82,12 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
   opLhs' <- resolveId opLhs
   opRhs' <- resolveId opRhs
   opRetType' <- resolveType opRetType
-  addValueType opLhs'
-  addValueType opRhs'
+  uncurry insertValue opLhs'
+  uncurry insertValue opRhs'
   endMarker m
 
   let ty = Fun opGenericVars [snd opLhs', snd opRhs'] opRetType'
-  addValueType (opName, ty)
+  insertValue opName ty
   (opBody', bodyTy) <- i_body opBody
 
   clearMarker m
@@ -118,11 +117,11 @@ c_decl (Let (var, ty) expr) = do
     case ty of
       U.TPlaceholder -> do
         (expr', exprTy) <- i_expr expr
-        addValueType (var, exprTy)
+        insertValue var exprTy
         return (expr', exprTy)
       _ -> do
         ty' <- resolveType ty
-        addValueType (var, ty')
+        insertValue var ty'
         _ <- valueOccursCheck var expr
         (expr', exprTy) <- i_expr expr
         exprTy <:! ty'
@@ -157,12 +156,12 @@ c_decl (Interface name param methods) = do
 
   let ty = Intf name param' methodsTy
   mapM_ (aux ty param') methodsTy
-  addInterface (name, ty)
+  insertInterface name ty
   return $ Interface (name, void) param methods'
     where
       aux intf param (name, Fun gen params retType) =
         let ty = Fun ((param, [intf]) : gen) params retType
-         in addValueType (name, ty)
+         in insertValue name ty
       aux _ _ _ = throwError $ GenericError "let bindings within interfaces must be functions"
 
 {-
@@ -177,7 +176,7 @@ c_decl (Interface name param methods) = do
    } ⊣ Δ; Γ; Ψ, I<T> : { impl1, ..., impln }
 -}
 c_decl (Implementation implName generics ty methods) = do
-  Intf _ param intfMethods <- getInterface implName
+  Intf _ param intfMethods <- lookupInterface implName
   generics' <- resolveGenericBounds generics
   genericVars <- resolveGenericVars generics'
 
@@ -201,13 +200,13 @@ c_decl (Implementation implName generics ty methods) = do
 
   where
     extendCtx (TyApp ty args) genericVars@(_:_) | vars  `intersect` args == vars =
-      addImplementation (implName, (ty, genericVars))
+      insertImplementation implName (ty, genericVars)
         where
           vars = map (uncurry Var) genericVars
     extendCtx ty@(TyApp _ _) [] =
       throwError (ImplementationError implName ty)
     extendCtx ty [] =
-      addImplementation (implName, (ty, []))
+      insertImplementation implName (ty, [])
     extendCtx ty _ =
       throwError (ImplementationError implName ty)
 
@@ -230,7 +229,7 @@ c_decl (TypeAlias aliasName aliasVars aliasType) = do
   let aliasType'' = case aliasVars' of
                 [] -> aliasType'
                 _  -> TyAbs (map fst aliasVars') aliasType'
-  addType (aliasName, aliasType'')
+  insertType aliasName aliasType''
   return $ TypeAlias aliasName aliasVars aliasType''
 
 
@@ -263,7 +262,7 @@ i_implItem subst intfTypes (ImplFunction name params body) = do
   Fun _ paramsTy retTy <- case intfTy of
                             Fun _ ps _ | length ps == length params -> return intfTy
                             _ -> throwError $ GenericError "Implementation type doesn't match interface"
-  mapM_ addValueType (zip params paramsTy)
+  zipWithM_ insertValue params paramsTy
   (body', bodyTy) <- i_body body
   bodyTy <:! retTy
   return (ImplFunction (name, intfTy) params body', name)
@@ -273,7 +272,7 @@ i_implItem subst intfTypes (ImplOperator lhs op rhs body) = do
   Fun _ paramsTy retTy <- case intfTy of
                             Fun _ ps _ | length ps == 2 -> return intfTy
                             _ -> throwError $ GenericError "Implementation type doesn't match interface"
-  mapM_ addValueType (zip [lhs, rhs] paramsTy)
+  zipWithM_ insertValue [lhs, rhs] paramsTy
   (body', bodyTy) <- i_body body
   bodyTy <:! retTy
   return (ImplOperator lhs (op, intfTy) rhs body', op)
@@ -283,17 +282,17 @@ i_ctor :: (Maybe [Type] -> Type) -> U.DataCtor -> Tc T.DataCtor
 i_ctor mkEnumTy (name, types) = do
   types' <- sequence (mapM resolveType <$> types)
   let ty = mkEnumTy types'
-  addValueType (name, ty)
+  insertValue name ty
   return ((name, ty), types')
 
 i_class :: U.Decl -> Tc T.Decl
 i_class (Class name vars methods) = do
   let classTy = Cls name
-  addType (name, classTy)
+  insertType name classTy
   vars' <- mapM resolveId vars
   let ctorTy = [Rec vars'] ~> classTy
-  addValueType (name, ctorTy)
-  addInstanceVars (classTy, vars')
+  insertValue name ctorTy
+  insertInstanceVars classTy vars'
   mapM_ (i_addMethodType classTy) methods
   methods' <- mapM (i_method classTy) methods
   return $ Class (name, classTy) vars' methods'
@@ -307,7 +306,7 @@ i_addMethodType classTy fn = do
   let fn' = fn { params = ("self", U.TName "Self") : params fn }
 
   m <- startMarker
-  addType ("Self", classTy)
+  insertType "Self" classTy
   addGenerics genericVars
   endMarker m
 
@@ -315,16 +314,16 @@ i_addMethodType classTy fn = do
 
   clearMarker m
 
-  addValueType (name fn', ty)
+  insertValue (name fn') ty
 
 i_method :: Type -> U.Function -> Tc T.Function
 i_method classTy fn = do
   m <- startMarker
-  addType ("Self", classTy)
+  insertType "Self" classTy
   endMarker m
 
   (fn', ty) <- i_fn $ fn { params = ("self", U.TName "Self") : params fn }
-  addValueType (name fn, ty)
+  insertValue (name fn) ty
 
   clearMarker m
 

@@ -9,7 +9,8 @@ module Typing.Substitution
   ) where
 
 import Typing.Types
-import Typing.State
+
+import Util.Scope
 
 newtype Substitution = Substitution [(Var, Type)]
 
@@ -53,12 +54,12 @@ filterSubst :: (Var -> Bool) -> Substitution -> Substitution
 filterSubst f (Substitution s) =
   Substitution $ filter (f . fst) s
 
-freshBound :: BoundVar -> Tc BoundVar
+freshBound :: Env t => BoundVar -> Scoped t BoundVar
 freshBound (var, bounds) = do
   var' <- freshVar var
   return (var', bounds)
 
-instantiate :: Type -> Tc Type
+instantiate :: Env t => Type -> Scoped t Type
 instantiate (TyAbs gen ty) = do
   gen' <- mapM freshVar gen
   let s = zipSubst gen (map (flip Var []) gen')

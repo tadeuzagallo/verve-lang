@@ -5,6 +5,9 @@ module Util.Scope
   , createScope
   , runScoped
 
+  , Env(..)
+  , deleteBetweenField
+
   , lookupValue
   , lookupType
   , lookupInterface
@@ -30,26 +33,29 @@ module Util.Scope
   , filterInterfaces
   , importType
   , importValue
+  , importEnv
   ) where
 
 import Util.Env
 import Util.Error
-
-import Typing.TypeError
 
 import Control.Monad (when)
 import Control.Monad.Except (Except, runExcept)
 import Control.Monad.State (StateT, get, gets, modify, put, runStateT)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust, isJust)
-import Data.Tuple (swap)
 
 -- Scoped monad
 type Scoped env a = StateT (Scope env) (Except Error) a
 
 runScoped :: Env env => Scoped env a -> Scope env -> Result (Scope env, a)
 runScoped scoped scope =
-  swap <$> runExcept (runStateT scoped scope)
+  case runExcept $ runStateT scoped scope of
+    Left err -> Left err
+    Right (v, s) ->
+      if not (Map.null $ markers s)
+         then Left (Error $ GenericError "Type checking finished with uncleared markers")
+         else Right (s, v)
 
 -- Actual Scope
 data TypeEntry env
@@ -255,3 +261,12 @@ importValue = importScope values (\s values -> s { values })
 
 importType :: (Env t, Eq (KeyType t)) => Importer t
 importType = importScope types (\s types -> s { types })
+
+importEnv :: (Env t, Eq (KeyType t))
+          => (t -> t -> t)
+          -> Scope t
+          -> Scope t
+          -> Scope t
+importEnv importer targetScope importScope =
+  let env' = importer (env targetScope) (env importScope)
+   in targetScope { env = env' }

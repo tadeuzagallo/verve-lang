@@ -1,6 +1,6 @@
 module Typing.Stmt where
 
-import Typing.State
+import Typing.Env
 import Typing.Types
 
 import qualified Absyn.Untyped as U

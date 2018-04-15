@@ -1,8 +1,7 @@
 module Typing.Expr (i_expr) where
 
 import Typing.Constraint
-import Typing.Ctx
-import Typing.State
+import Typing.Env
 import Typing.Substitution
 import Typing.Subtyping
 import Typing.TypeError
@@ -24,7 +23,7 @@ i_expr (Literal lit) =
   return (Literal lit, i_lit lit)
 
 i_expr (Ident [i] _) = do
-  ty <- getValueType i
+  ty <- lookupValue i
   return (Ident [i] ty, ty)
 
 -- TODO: Clear this up - should be handled by the renamer now
@@ -35,7 +34,7 @@ i_expr (ParenthesizedExpr expr) =
   fmap (first ParenthesizedExpr) $ i_expr expr
 
 i_expr (BinOp _ _ lhs op rhs) = do
-  tyOp@(Fun gen _ _) <- getValueType op
+  tyOp@(Fun gen _ _) <- lookupValue op
   (lhs', lhsTy) <- i_expr lhs
   (rhs', rhsTy) <- i_expr rhs
   (retType', typeArgs)  <- inferTyArgs [lhsTy, rhsTy] tyOp
@@ -94,7 +93,7 @@ i_expr (FieldAccess expr _ field) = do
   case ty of
     Rec r -> aux ty r
     Cls _ -> do
-      vars <- getInstanceVars ty
+      vars <- lookupInstanceVars ty
       aux ty vars
     _ -> throwError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
@@ -109,7 +108,7 @@ i_expr (List _ items) = do
   (items', itemsTy) <- unzip <$> mapM i_expr items
   (ty, itemTy) <- case itemsTy of
                     [] -> do
-                      nilTy <- getValueType "Nil"
+                      nilTy <- lookupValue "Nil"
                       return (nilTy, Bot)
                     x:xs ->
                       let ty = foldl (\/) x xs
@@ -121,7 +120,7 @@ i_expr (FnExpr fn) =
 
 i_expr (Negate _ expr) = do
   (expr', ty) <- i_expr expr
-  intf <- getInterface "Std.Number"
+  intf <- lookupInterface "Std.Number"
   constrArgs <- boundsCheck ty intf
   return (Negate constrArgs expr', ty)
 
@@ -178,7 +177,7 @@ boundsCheck' v@(Var _ bounds) intf = do
               else []
 
 boundsCheck' (TyApp ty args) intf@(Intf name _ _) = do
-  implementations <- getImplementations name
+  implementations <- lookupImplementations name
   case lookup ty implementations of
     Nothing -> return []
     Just vars -> do
@@ -197,7 +196,7 @@ boundsCheck' Bot intf =
   return [CABound Bot intf]
 
 boundsCheck' ty intf@(Intf name _ _) = do
-  implementations <- getImplementations name
+  implementations <- lookupImplementations name
   case lookup ty implementations of
     Just [] -> return [CABound ty intf]
     _ -> return []
@@ -249,7 +248,7 @@ c_pattern ty (PatLiteral l) = do
   return $ PatLiteral l
 
 c_pattern ty (PatVar v) = do
-  addValueType (v, ty)
+  insertValue v ty
   return $ PatVar (v, ty)
 
 c_pattern ty@(Rec tyFields) (PatRecord fields) = do
@@ -274,7 +273,7 @@ c_pattern ty (PatList pats rest) = do
              NoRest -> return NoRest
              DiscardRest -> return DiscardRest
              NamedRest n -> do
-               addValueType (n, ty)
+               insertValue n ty
                return (NamedRest (n, ty))
   return $ PatList pats' rest'
   where
@@ -288,7 +287,7 @@ c_pattern ty (PatList pats rest) = do
       throwError . GenericError $ "Using a list pattern, but value being matched has type `" ++ show ty ++ "`"
 
 c_pattern ty (PatCtor name vars) = do
-  ctorTy <- getValueType name
+  ctorTy <- lookupValue name
   let (fnTy, params, retTy) = case ctorTy of
                             fn@(Fun [] params retTy) -> (fn, params, retTy)
                             fn@(Fun gen params retTy) -> (fn, params, Forall (map fst gen) retTy)

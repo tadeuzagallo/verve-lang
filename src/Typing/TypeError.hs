@@ -19,7 +19,6 @@ data TypeError
   | InferenceFailure
   | TypeError Type Type
   | UnknownField Type String
-  | GenericError String
   | ImplementationMissingMethod Name
   | ExtraneousImplementation Name
   | InterfaceExpected Type
@@ -33,9 +32,6 @@ instance ErrorT TypeError where
   kind _ = "TypeError"
 
 instance Show TypeError where
-  show (GenericError err) =
-    err
-
   show (UnknownVariable x) =
     "Unknown variable: " ++ pprName x
 

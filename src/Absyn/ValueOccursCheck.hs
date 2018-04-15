@@ -1,10 +1,10 @@
 module Absyn.ValueOccursCheck where
 
-import Absyn.Base
-import Absyn.Meta
-import Typing.State
+import Typing.Env
 import Typing.TypeError
 
+import Absyn.Base
+import Absyn.Meta
 import Util.Error
 
 import Control.Monad (mapM_, when)

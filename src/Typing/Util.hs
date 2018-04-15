@@ -1,8 +1,7 @@
 module Typing.Util where
 
-import Typing.Ctx
+import Typing.Env
 import Typing.Kinds
-import Typing.State
 import {-# SOURCE #-} Typing.Stmt
 import Typing.Substitution
 import Typing.Subtyping
@@ -33,7 +32,7 @@ resolveId (n, ty) = (,) n  <$> resolveType ty
 
 resolveType :: U.Type -> Tc Type
 resolveType (U.TName v) =
-  getType v
+  lookupType v
 
 resolveType (U.TArrow params ret) = do
   params' <- mapM resolveType params
@@ -62,7 +61,7 @@ resolveGenericBounds gen =
         return (name, bounds')
 
       resolveConstraint intf = do
-        getInterface intf
+        lookupInterface intf
 
 resolveGenericVars :: [(Name, [Intf])] -> Tc [BoundVar]
 resolveGenericVars generics =
@@ -77,7 +76,7 @@ addGenerics generics =
   mapM_ aux generics
     where
       aux (var, bounds) = do
-        addType (varName var, Var var bounds)
+        insertType (varName var) (Var var bounds)
 
 defaultBounds :: [a] -> [(a, [b])]
 defaultBounds = map (flip (,) [])
@@ -90,8 +89,8 @@ i_fn fn = do
   m <- startMarker
   addGenerics genericVars
   (ty, tyArgs, retType') <- fnTy (genericVars, params fn, retType fn)
-  mapM_ addValueType tyArgs
-  addValueType (name fn, ty)
+  mapM_ (uncurry insertValue) tyArgs
+  insertValue (name fn) ty
   endMarker m
 
   (body', bodyTy) <- i_body (body fn)

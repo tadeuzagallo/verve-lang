@@ -75,7 +75,8 @@ fn map<T, U>(list: List<T>, f: (T) -> U) -> List<U> {
   match list {
     case []: []
     // TODO: replace with value-rest
-    case [x, ...rest]: Cons(f(x), rest.map(f))
+    case [x, ...rest]:
+    Cons(f(x), rest.map(f))
   }
 }
 

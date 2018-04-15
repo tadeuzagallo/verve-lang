@@ -13,7 +13,7 @@ import Core.Desugar (importDsState)
 import Reassoc.Env (importReassocEnv)
 import Renamer.Renamer (renameImport)
 import Syntax.Parser (parseFile)
-import Typing.State (importModule)
+import Typing.TypeChecker (importModule)
 import Interpreter.Env (importEvalEnv)
 
 import Control.Monad.IO.Class (liftIO)

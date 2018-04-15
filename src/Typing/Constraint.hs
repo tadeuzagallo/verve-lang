@@ -3,7 +3,7 @@ module Typing.Constraint
   , inferTyAbs
   ) where
 
-import Typing.State
+import Typing.Env
 import Typing.Substitution
 import Typing.Subtyping
 import Typing.TypeError

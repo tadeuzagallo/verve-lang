@@ -2,6 +2,7 @@
 module Util.Error
   ( Error(..)
   , ErrorT(..)
+  , GenericError(..)
   , Result
   , mkError
   , liftError
@@ -36,6 +37,14 @@ instance ErrorT Error where
 -- Orphan instance for Parsec.ParseError
 instance ErrorT ParseError where
   kind _ = "ParseError"
+
+data GenericError = GenericError String
+
+instance Show GenericError where
+  show (GenericError s) = s
+
+instance ErrorT GenericError where
+  kind _ = "Error"
 
 mkError :: (ErrorT a) => a -> Either Error b
 mkError a = Left (Error a)

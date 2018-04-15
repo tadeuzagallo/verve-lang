@@ -2,9 +2,9 @@ module Typing.Stmt
   ( i_stmts
   ) where
 
+import Typing.Env
 import Typing.Decl
 import Typing.Expr
-import Typing.State
 import Typing.Types
 
 import Absyn.Base
