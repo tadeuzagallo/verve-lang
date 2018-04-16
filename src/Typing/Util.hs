@@ -100,7 +100,6 @@ i_fn fn = do
   bodyTy <:! retType'
 
   let fn' = fn { name = (name fn, ty)
-               , generics = gen'
                , params = tyArgs
                , retType = retType'
                , body = body'

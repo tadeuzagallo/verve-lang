@@ -132,7 +132,7 @@ mkConstraints gen =
   concatMap aux gen
   where
     aux (varName, bounds) =
-      map (\bound -> mkDictVar (show bound) (Con varName)) bounds ++ [CA.Var varName]
+      map (\bound -> mkDictVar bound (Con varName)) bounds ++ [CA.Var varName]
 
 mk_var :: String -> CA.Var
 mk_var v = CA.Var v

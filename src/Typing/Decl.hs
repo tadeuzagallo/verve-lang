@@ -95,7 +95,7 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
   bodyTy <:! opRetType'
   return $ Operator { opAssoc
                     , opPrec
-                    , opGenerics = opGenerics'
+                    , opGenerics
                     , opLhs = opLhs'
                     , opName = (opName, ty)
                     , opRhs = opRhs'
@@ -196,7 +196,7 @@ c_decl (Implementation implName generics ty methods) = do
   clearMarker m
 
   checkCompleteInterface intfMethods names
-  return $ Implementation (implName, void) generics' ty' methods'
+  return $ Implementation (implName, void) generics ty' methods'
 
   where
     extendCtx (TyApp ty args) genericVars@(_:_) | vars  `intersect` args == vars =
