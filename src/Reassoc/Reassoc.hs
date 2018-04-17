@@ -133,9 +133,9 @@ n_expr env (List t items) = do
   items' <- mapM (n_expr env) items
   return $ List t items'
 
-n_expr env (FieldAccess obj t field) = do
+n_expr env (FieldAccess obj field) = do
   obj' <- n_expr env obj
-  return $ FieldAccess obj' t field
+  return $ FieldAccess obj' field
 
 n_expr env (FnExpr fn) =
   FnExpr <$> n_fn env fn

@@ -83,13 +83,13 @@ i_expr (Record fields) = do
   let record = Record (zip fieldsTy exprs)
   return (record, recordTy)
 
-i_expr (FieldAccess expr _ field) = do
+i_expr (FieldAccess expr field) = do
   (expr', ty) <- i_expr expr
   let
       aux :: Type -> [(String, Type)] -> Tc (T.Expr, Type)
       aux ty r = case lookup field r of
                 Nothing -> throwError $ UnknownField ty field
-                Just t -> return (FieldAccess expr' ty (field, t), t)
+                Just t -> return (FieldAccess expr' (field, t), t)
   case ty of
     Rec r -> aux ty r
     Cls _ -> do

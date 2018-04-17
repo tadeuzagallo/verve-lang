@@ -86,8 +86,12 @@ d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
                             , body = opBody
                             }) k
 
-d_decl (Class _ _ methods) k =
-  CA.LetFun <$> mapM d_fn methods <*> k []
+d_decl (Class (name, _) _ methods) k = do
+  j <- contVar
+  x <- var
+  methods' <- mapM d_fn methods
+  let ctor = CA.FunDef (CA.Var name) j [x] (CA.AppCont j [x])
+  CA.LetFun (ctor : methods') <$> k []
 
 d_decl (Interface _ _ methods) k = do
   next <- k []
@@ -103,7 +107,7 @@ d_decl (Implementation (name, _) generics ty methods) k =
       x <- var
       items <- d_implItems methods $ \dict ->
         return $ CA.LetVal x dict (CA.AppCont j [x])
-      CA.LetFun [CA.FunDef dictVar  j constr items] <$> k []
+      CA.LetFun [CA.FunDef dictVar j constr items] <$> k []
 
   where
     dictVar = mkDictVar name ty
@@ -259,26 +263,15 @@ d_expr (Record fields) k = do
         CA.LetVal x (CA.Record fields') <$> k [x]
   foldl f init fields []
 
-d_expr (FieldAccess expr ty (field, _)) k = do
+d_expr (FieldAccess expr (field, _)) k = do
   x <- var
   z <- var
   j <- contVar
-  l <- contVar
   k' <- k [z]
-  let
-    unwrapIfNecessary y k =
-      case ty of
-        Cls _ ->
-          CA.LetCont [CA.ContDef l [z] (k z)] $
-            CA.App (CA.Var "#unwrapClass") l [y]
-        Rec _ ->
-          k y
-        _ -> undefined
   d_expr expr $ \[y] ->
     return $ CA.LetCont [CA.ContDef j [z] k'] $
       CA.LetVal x (CA.Lit $ String field) $
-        unwrapIfNecessary y $ \y' ->
-          CA.App (CA.Var "#fieldAccess") j [x, y']
+          CA.App (CA.Var "#fieldAccess") j [x, y]
 
 d_expr (If ifCond ifBody elseBody) k =
   d_expr match k

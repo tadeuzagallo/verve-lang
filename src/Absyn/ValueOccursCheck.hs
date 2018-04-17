@@ -57,7 +57,7 @@ valueOccursCheckExpr var (List _ items) = do
   _ <- mapValueOccursCheck var items
   return ()
 
-valueOccursCheckExpr var (FieldAccess obj _ _) =
+valueOccursCheckExpr var (FieldAccess obj _) =
   valueOccursCheckExpr var obj
 
 valueOccursCheckExpr var (TypeCall callee _) =

@@ -104,7 +104,7 @@ data BaseExpr a b
           }
   | Record [(a, BaseExpr a b)]
   | List b [BaseExpr a b]
-  | FieldAccess (BaseExpr a b) b a
+  | FieldAccess (BaseExpr a b) a
   | FnExpr (BaseFunction a b)
   | Negate [ConstraintArg] (BaseExpr a b)
 

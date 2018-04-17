@@ -256,10 +256,9 @@ r_expr (List ty items) = do
   items' <- mapM r_expr items
   return $ List ty items'
 
-r_expr (FieldAccess expr ty field) = do
+r_expr (FieldAccess expr field) = do
   expr' <- r_expr expr
-  ty' <- r_type ty
-  return $ FieldAccess expr' ty' field
+  return $ FieldAccess expr' field
 
 r_expr (Negate constrArgs expr) =
   Negate constrArgs <$> r_expr expr

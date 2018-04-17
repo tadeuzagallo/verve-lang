@@ -86,7 +86,7 @@ p_fieldAccess :: Expr -> Parser Expr
 p_fieldAccess lhs = do
   symbol "."
   fieldName <- lcid
-  p_methodCall lhs fieldName <|> return (FieldAccess lhs TPlaceholder fieldName)
+  p_methodCall lhs fieldName <|> return (FieldAccess lhs fieldName)
 
 p_methodCall :: Expr -> Name -> Parser Expr
 p_methodCall lhs name = do
