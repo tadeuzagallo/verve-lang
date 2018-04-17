@@ -22,13 +22,13 @@ i_expr :: U.Expr -> Tc (T.Expr, Type)
 i_expr (Literal lit) =
   return (Literal lit, i_lit lit)
 
-i_expr (Ident [i] _) = do
+i_expr (Ident [i]) = do
   ty <- lookupValue i
-  return (Ident [i] ty, ty)
+  return (Ident [i], ty)
 
 -- TODO: Clear this up - should be handled by the renamer now
-i_expr (Ident (_:_) _) = undefined
-i_expr (Ident [] _) = undefined
+i_expr (Ident (_:_)) = undefined
+i_expr (Ident []) = undefined
 
 i_expr (ParenthesizedExpr expr) =
   fmap (first ParenthesizedExpr) $ i_expr expr
@@ -39,7 +39,7 @@ i_expr (BinOp _ _ lhs op rhs) = do
   (rhs', rhsTy) <- i_expr rhs
   (retType', typeArgs)  <- inferTyArgs [lhsTy, rhsTy] tyOp
   constraintArgs <- inferConstraintArgs gen [] typeArgs
-  return (BinOp constraintArgs typeArgs lhs' (op, tyOp) rhs', retType')
+  return (BinOp constraintArgs [] lhs' (op, tyOp) rhs', retType')
 
 i_expr (Match expr cases) = do
   (expr', ty) <- i_expr expr
@@ -73,7 +73,7 @@ i_expr (Call fn _ types args) = do
             return (applySubst s retType, args', types')
           _ -> undefined
   constraintArgs <- inferConstraintArgs gen skippedVars typeArgs
-  return (Call fn' constraintArgs typeArgs args', retType')
+  return (Call fn' constraintArgs types args', retType')
 
 i_expr (Record fields) = do
   (exprs, types) <- mapM (i_expr . snd) fields >>= return . unzip
@@ -113,7 +113,7 @@ i_expr (List _ items) = do
                     x:xs ->
                       let ty = foldl (\/) x xs
                        in return (list ty, ty)
-  return (List itemTy items', ty)
+  return (List (Just itemTy) items', ty)
 
 i_expr (FnExpr fn) =
   first FnExpr <$> i_fn fn

@@ -98,7 +98,7 @@ matchRecord ((CA.Var v') : vs) eqs def =
       eqs' = [ ([maybe PatDefault id (lookup field f) | field <- fields] ++ ps, e)  | (PatRecord f : ps, e) <- eqs ]
       fields = nub . concat $ [ map fst f | (PatRecord f : _, _) <- eqs ]
       d_field k field =
-        \x -> d_expr (FieldAccess (Ident [v'] void) field) $ \y -> k (y ++ x)
+        \x -> d_expr (FieldAccess (Ident [v']) field) $ \y -> k (y ++ x)
 
 matchList :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
 matchList vs eqs =

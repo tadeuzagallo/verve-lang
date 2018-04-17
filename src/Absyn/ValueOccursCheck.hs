@@ -10,7 +10,7 @@ import Util.Error
 import Control.Monad (mapM_, when)
 
 class ValueOccursCheck b where
-  valueOccursCheck :: Name -> b Name c -> Tc Bool
+  valueOccursCheck :: Name -> b Name -> Tc Bool
 
 instance ValueOccursCheck BaseExpr where
   -- TRIVIAL
@@ -18,7 +18,7 @@ instance ValueOccursCheck BaseExpr where
     valueOccursCheckExpr var expr
     return False
 
-valueOccursCheckExpr :: Name -> BaseExpr Name a -> Tc ()
+valueOccursCheckExpr :: Name -> BaseExpr Name -> Tc ()
 valueOccursCheckExpr _ VoidExpr = return ()
 valueOccursCheckExpr _ (Literal _) = return ()
 valueOccursCheckExpr _ (FnExpr _) = return ()
@@ -26,7 +26,7 @@ valueOccursCheckExpr _ (FnExpr _) = return ()
 valueOccursCheckExpr var (ParenthesizedExpr x) =
   valueOccursCheckExpr var x
 
-valueOccursCheckExpr var (Ident names _) =
+valueOccursCheckExpr var (Ident names) =
   check var (last names)
 
 valueOccursCheckExpr var (Match { expr, cases }) = do
@@ -100,7 +100,7 @@ instance ValueOccursCheck BaseDecl where
   valueOccursCheck _ (TypeAlias {}) =
     return False
 
-valueOccursCheckCase :: Name -> BaseCase Name b -> Tc ()
+valueOccursCheckCase :: Name -> BaseCase Name -> Tc ()
 valueOccursCheckCase var (Case { pattern, caseBody }) = do
   shadowed <- valueOccursCheckPattern var pattern
   if not shadowed
@@ -132,7 +132,7 @@ valueOccursCheckPatternRest _ DiscardRest = return False
 valueOccursCheckPatternRest var (NamedRest rest) =
   return (var == rest)
 
-mapValueOccursCheck :: ValueOccursCheck e =>  Name -> [e Name a] -> Tc Bool
+mapValueOccursCheck :: ValueOccursCheck e =>  Name -> [e Name] -> Tc Bool
 mapValueOccursCheck _ [] =
   return False
 

@@ -32,12 +32,12 @@ p_lcid :: Parser Expr
 p_lcid = do
   prefix <- ucid `endBy` symbol "."
   var <- lcid
-  return $ Ident (prefix ++ [var]) TPlaceholder
+  return $ Ident (prefix ++ [var])
 
 p_ucid :: Bool -> Parser Expr
 p_ucid allowCtor = do
   parts <- ucid `sepBy1` symbol "."
-  let ident = Ident parts TPlaceholder
+  let ident = Ident parts
   if allowCtor
      then p_ctor ident <|> return ident
      else return ident
@@ -45,7 +45,7 @@ p_ucid allowCtor = do
 p_parenthesizedExpr :: Parser Expr
 p_parenthesizedExpr = do
   choice [ ParenthesizedExpr <$> p_expr True
-         , operator >>= return . flip Ident TPlaceholder . (:[])
+         , operator >>= return . Ident . (:[])
          ]
 
 p_negate :: Bool -> Parser Expr
@@ -69,7 +69,7 @@ p_record =
 
 p_list :: Parser Expr
 p_list =
-  List TPlaceholder <$> (brackets . commaSep $ p_expr True)
+  List Nothing <$> (brackets . commaSep $ p_expr True)
 
 p_call :: Expr -> Parser Expr
 p_call callee = do
@@ -91,7 +91,7 @@ p_fieldAccess lhs = do
 p_methodCall :: Expr -> Name -> Parser Expr
 p_methodCall lhs name = do
   (typeArgs, args) <- p_callArgs
-  return $ Call { callee = Ident [name] TPlaceholder, constraintArgs = [], typeArgs, args = lhs : args }
+  return $ Call { callee = Ident [name], constraintArgs = [], typeArgs, args = lhs : args }
 
 p_callArgs :: Parser ([Type], [Expr])
 p_callArgs = do

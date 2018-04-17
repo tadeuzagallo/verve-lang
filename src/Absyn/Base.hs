@@ -1,120 +1,122 @@
 module Absyn.Base where
 
 import Absyn.Meta
-import Typing.Types (ConstraintArg)
+import Absyn.Type
+import qualified Typing.Types as T
 
-data BaseModule a b = Module
+data BaseModule a = Module
   { imports :: [Import]
-  , stmts :: [BaseStmt a b]
+  , stmts :: [BaseStmt a]
   }
 
-data BaseStmt a b
-  = Decl (BaseDecl a b)
-  | Expr (BaseExpr a b)
+data BaseStmt a
+  = Decl (BaseDecl a)
+  | Expr (BaseExpr a)
   deriving (Show)
 
-data BaseDecl a b
-  = FnStmt (BaseFunction a b)
-  | Enum a [Name] [BaseDataCtor a b]
-  | Let (Name, b) (BaseExpr a b)
+data BaseDecl a
+  = FnStmt (BaseFunction a)
+  | Enum a [Name] [BaseDataCtor a]
+  | Let (Name, Type) (BaseExpr a)
   | Class { className :: a
-          , classVars :: [BaseParam b]
-          , classMethods :: [BaseFunction a b]
+          , classVars :: [BaseParam]
+          , classMethods :: [BaseFunction a]
           }
   | Operator { opAssoc :: Associativity
              , opPrec :: Precedence
              , opGenerics :: BaseGenerics
-             , opLhs :: BaseParam b
+             , opLhs :: BaseParam
              , opName :: a
-             , opRhs :: BaseParam b
-             , opRetType :: b
-             , opBody :: [BaseStmt a b]
+             , opRhs :: BaseParam
+             , opRetType :: Type
+             , opBody :: [BaseStmt a]
              }
   | Interface { intfName :: a
               , intfParam :: Name
-              , intfMethods :: [BaseInterfaceItem a b]}
+              , intfMethods :: [BaseInterfaceItem a]}
   | Implementation { implIntf :: a
                    , implGenerics :: BaseGenerics
-                   , implType :: b
-                   , implMethods :: [BaseImplementationItem a b]}
+                   , implType :: Type
+                   , implMethods :: [BaseImplementationItem a]}
   | TypeAlias { aliasName :: Name
               , aliasVars :: [Name]
-              , aliasType :: b
+              , aliasType :: Type
+              , resolvedType :: Maybe T.Type
               }
    deriving (Show)
 
-data BaseInterfaceItem a b
-  = IntfVar (Name, b)
+data BaseInterfaceItem a
+  = IntfVar (Name, Type)
   | IntfOperator { intfOpAssoc :: Associativity
                  , intfOpPrec :: Precedence
-                 , intfOpLhs :: b
+                 , intfOpLhs :: Type
                  , intfOpName :: a
-                 , intfOpRhs :: b
-                 , intfOpRetType :: b
+                 , intfOpRhs :: Type
+                 , intfOpRetType :: Type
                  }
 
   deriving (Show)
 
-data BaseImplementationItem a b
-  = ImplVar (a, BaseExpr a b)
+data BaseImplementationItem a
+  = ImplVar (a, BaseExpr a)
   | ImplFunction { implName :: a
                  , implParams :: [Name]
-                 , implBody :: [BaseStmt a b]
+                 , implBody :: [BaseStmt a]
                  }
   | ImplOperator { implOpLhs :: Name
                  , implOpName :: a
                  , implOpRhs :: Name
-                 , implOpBody :: [BaseStmt a b]
+                 , implOpBody :: [BaseStmt a]
                  }
  deriving (Show)
 
-type BaseDataCtor a b = (a, Maybe [b])
-type BaseParam b = (Name, b)
+type BaseDataCtor a = (a, Maybe [Type])
+type BaseParam = (Name, Type)
 type BaseGenerics = [(Name, [String])]
 
-data BaseFunction a b = Function
+data BaseFunction a = Function
   { name :: a
   , generics :: BaseGenerics
-  , params :: [BaseParam b]
-  , retType :: b
-  , body :: [BaseStmt a b]
+  , params :: [BaseParam]
+  , retType :: Type
+  , body :: [BaseStmt a]
   } deriving (Show)
 
-data BaseExpr a b
+data BaseExpr a
   = Literal Literal
-  | Ident [Name] b
-  | ParenthesizedExpr (BaseExpr a b)
-  | Match { expr :: BaseExpr a b
-          , cases :: [BaseCase a b]
+  | Ident [Name]
+  | ParenthesizedExpr (BaseExpr a)
+  | Match { expr :: BaseExpr a
+          , cases :: [BaseCase a]
           }
-  | If { ifCond :: BaseExpr a b
-       , ifBody :: [BaseStmt a b]
-       , ifElseBody :: [BaseStmt a b]
+  | If { ifCond :: BaseExpr a
+       , ifBody :: [BaseStmt a]
+       , ifElseBody :: [BaseStmt a]
        }
-  | Call { callee :: BaseExpr a b
-         , constraintArgs :: [ConstraintArg]
-         , typeArgs :: [b]
-         , args :: [BaseExpr a b]
+  | Call { callee :: BaseExpr a
+         , constraintArgs :: [T.ConstraintArg]
+         , typeArgs :: [Type]
+         , args :: [BaseExpr a]
          }
-  | BinOp { opConstraintArgs :: [ConstraintArg]
-          , opTypeArgs :: [b]
-          , lhs :: BaseExpr a b
+  | BinOp { opConstraintArgs :: [T.ConstraintArg]
+          , opTypeArgs :: [Type]
+          , lhs :: BaseExpr a
           , op :: a
-          , rhs :: BaseExpr a b
+          , rhs :: BaseExpr a
           }
-  | Record [(a, BaseExpr a b)]
-  | List b [BaseExpr a b]
-  | FieldAccess (BaseExpr a b) a
-  | FnExpr (BaseFunction a b)
-  | Negate [ConstraintArg] (BaseExpr a b)
+  | Record [(a, BaseExpr a)]
+  | List (Maybe T.Type) [BaseExpr a]
+  | FieldAccess (BaseExpr a) a
+  | FnExpr (BaseFunction a)
+  | Negate [T.ConstraintArg] (BaseExpr a)
 
   -- Expressions that can only be generated by the compiler
   | VoidExpr
-  | TypeCall (BaseExpr a b) [ConstraintArg]
+  | TypeCall (BaseExpr a) [T.ConstraintArg]
   deriving (Show)
 
-data BaseCase a b = Case { pattern :: BasePattern a
-                           , caseBody :: [BaseStmt a b]
+data BaseCase a = Case { pattern :: BasePattern a
+                           , caseBody :: [BaseStmt a]
                            } deriving (Show)
 
 data BasePattern a

@@ -11,6 +11,7 @@ import Core.State
 import {-# SOURCE #-} Core.Match
 
 import Absyn.Typed
+import qualified Absyn.Untyped as U
 import Typing.Types
 import qualified Core.Absyn as CA
 
@@ -74,9 +75,9 @@ d_decl enum@(Enum _ _ _) k = do
   addEnum enum
   k []
 
-d_decl (TypeAlias { aliasName, aliasType }) k =
+d_decl (TypeAlias { aliasName, resolvedType = Just ty }) k =
   let x = CA.Var aliasName
-   in CA.LetVal x (CA.Type aliasType) <$> k []
+   in CA.LetVal x (CA.Type ty) <$> k []
 
 d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
   d_decl (FnStmt $ Function { name = opName
@@ -112,8 +113,15 @@ d_decl (Implementation (name, _) generics ty methods) k =
   where
     dictVar = mkDictVar name ty
 
-mkDictVar :: String -> Type -> CA.Var
+mkDictVar :: String -> U.Type -> CA.Var
 mkDictVar name ty =
+  CA.Var $ "%" ++ name ++ print ty
+  where
+    print (U.TApp ty _) = print ty
+    print ty = show ty
+
+mkDictVar' :: String -> Type -> CA.Var
+mkDictVar' name ty =
   CA.Var $ "%" ++ name ++ print ty
   where
     print (TyApp ty _) = print ty
@@ -121,7 +129,7 @@ mkDictVar name ty =
 
 d_fn :: Function -> DsM CA.FunDef
 d_fn fn@(Function { params=[] }) =
-  d_fn (fn { params = [ignore void] })
+  d_fn (fn { params = [ignore] })
 
 d_fn fn = do
   let params' = map (CA.Var . fst) (params fn)
@@ -136,7 +144,7 @@ mkConstraints gen =
   concatMap aux gen
   where
     aux (varName, bounds) =
-      map (\bound -> mkDictVar bound (Con varName)) bounds ++ [CA.Var varName]
+      map (\bound -> mkDictVar bound (U.TName varName)) bounds ++ [CA.Var varName]
 
 mk_var :: String -> CA.Var
 mk_var v = CA.Var v
@@ -206,14 +214,14 @@ d_expr (Literal l) k = do
   x <- var
   CA.LetVal x (CA.Lit l) <$> k [x]
 
-d_expr (Ident ids _) k =
+d_expr (Ident ids) k =
   k [CA.Var $ last ids]
 
 d_expr (ParenthesizedExpr expr) k =
   d_expr expr k
 
-d_expr (BinOp constrArgs tyArgs lhs (name, ty) rhs) k =
-  d_expr (Call (Ident [name] ty) constrArgs tyArgs [lhs, rhs]) k
+d_expr (BinOp constrArgs tyArgs lhs (name, _) rhs) k =
+  d_expr (Call (Ident [name]) constrArgs tyArgs [lhs, rhs]) k
 
 d_expr (Call callee constraints types []) k =
   d_expr (Call callee constraints types [VoidExpr]) k
@@ -286,7 +294,7 @@ d_expr (If ifCond ifBody elseBody) k =
                               ]
                     }
 
-d_expr (List ty items) k =
+d_expr (List (Just ty) items) k =
   aux items (\x -> k [x])
     where
       aux :: [Expr] -> (CA.Var -> DsM CA.Term) -> DsM CA.Term
@@ -343,7 +351,7 @@ computeConstraints cs k =
       CA.LetVal x (CA.Type typeArg) <$> k (args ++ [x], holes)
 
     aux k (CDict typeArg typeBound) (args, holes) =
-      let constr = mkDictVar (show typeBound) typeArg
+      let constr = mkDictVar' (show typeBound) typeArg
        in k (args ++ [constr], holes)
 
     aux k (CApp typeArg nestedArgs) (args, holes) =
@@ -381,5 +389,5 @@ computeConstraints cs k =
     mkTypeBound (typeArg, _) | isHole typeArg = CHole
     mkTypeBound (typeArg, typeBound) = CDict typeArg typeBound
 
-ignore :: Type -> Id
-ignore ty = ("#ignore", ty)
+ignore :: U.Param
+ignore = ("#ignore", U.TPlaceholder)

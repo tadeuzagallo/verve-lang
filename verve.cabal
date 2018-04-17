@@ -39,6 +39,7 @@ library
 
   other-modules:       Absyn.Base
                        Absyn.Meta
+                       Absyn.Type
                        Absyn.ValueOccursCheck
                        Core.Match
                        Core.State

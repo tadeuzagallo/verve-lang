@@ -161,7 +161,7 @@ r_decl (Implementation name gen ty implMethods) = do
 
   return $ Implementation name' gen' ty' implMethods'
 
-r_decl (TypeAlias aliasName aliasVars aliasType) = do
+r_decl (TypeAlias aliasName aliasVars aliasType resolvedType) = do
   insertLocalType aliasName
 
   aliasName' <- local aliasName
@@ -174,7 +174,7 @@ r_decl (TypeAlias aliasName aliasVars aliasType) = do
 
   clearMarker m
 
-  return $ TypeAlias aliasName' aliasVars aliasType'
+  return $ TypeAlias aliasName' aliasVars aliasType' resolvedType
 
 
 r_implItem :: (String -> Rn String) -> ImplementationItem -> Rn ImplementationItem
@@ -220,10 +220,9 @@ r_expr (ParenthesizedExpr expr) =
 r_expr (FnExpr fn) = do
   FnExpr <$> r_fn fn
 
-r_expr (Ident name ty) = do
+r_expr (Ident name) = do
   name' <- renameIdentValue name
-  ty' <- r_type ty
-  return $ Ident [name'] ty'
+  return $ Ident [name']
 
 r_expr (Match expr cases) = do
   expr' <- r_expr expr

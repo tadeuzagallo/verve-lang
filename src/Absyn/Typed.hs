@@ -11,16 +11,16 @@ import Absyn.Base
 
 type Id = (Name, Type)
 
-type Module = BaseModule Id Type
-type Stmt = BaseStmt Id Type
-type Decl = BaseDecl Id Type
-type InterfaceItem = BaseInterfaceItem Id Type
-type ImplementationItem = BaseImplementationItem Id Type
-type DataCtor = BaseDataCtor Id Type
-type Param = BaseParam Type
+type Module = BaseModule Id
+type Stmt = BaseStmt Id
+type Decl = BaseDecl Id
+type InterfaceItem = BaseInterfaceItem Id
+type ImplementationItem = BaseImplementationItem Id
+type DataCtor = BaseDataCtor Id
+type Param = BaseParam
 type Generics = BaseGenerics
-type Function = BaseFunction Id Type
-type Expr = BaseExpr Id Type
-type Case = BaseCase Id Type
+type Function = BaseFunction Id
+type Expr = BaseExpr Id
+type Case = BaseCase Id
 type Pattern = BasePattern Id
 type PatternRest = BasePatternRest Id

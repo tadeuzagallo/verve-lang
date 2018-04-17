@@ -27,7 +27,7 @@ assertKindStar ty =
   let kind = kindOf ty
    in when (kind /= Star) (throwError $ KindError ty Star kind)
 
-resolveId :: U.Id -> Tc T.Id
+resolveId :: U.Param -> Tc T.Id
 resolveId (n, ty) = (,) n  <$> resolveType ty
 
 resolveType :: U.Type -> Tc Type
@@ -100,8 +100,6 @@ i_fn fn = do
   bodyTy <:! retType'
 
   let fn' = fn { name = (name fn, ty)
-               , params = tyArgs
-               , retType = retType'
                , body = body'
                }
   return (fn', ty)

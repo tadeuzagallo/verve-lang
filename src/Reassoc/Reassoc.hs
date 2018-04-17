@@ -99,7 +99,7 @@ n_expr env (BinOp _ _ ll lop (BinOp _ _ rl rop rr)) = do
       BinOp [] [] ll' lop (BinOp [] [] rl' rop rr')
 
 n_expr _ (Literal l) = return $ Literal l
-n_expr _ (Ident a b) = return $ Ident a b
+n_expr _ (Ident a) = return $ Ident a
 
 n_expr env (ParenthesizedExpr e) =
   ParenthesizedExpr <$> n_expr env e

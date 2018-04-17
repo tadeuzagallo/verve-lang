@@ -96,10 +96,10 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
   return $ Operator { opAssoc
                     , opPrec
                     , opGenerics
-                    , opLhs = opLhs'
+                    , opLhs
                     , opName = (opName, ty)
-                    , opRhs = opRhs'
-                    , opRetType = opRetType'
+                    , opRhs
+                    , opRetType
                     , opBody = opBody' }
 
 {-
@@ -113,20 +113,20 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
    Δ; Γ ⊢ let x = e ⊣ Δ; Γ, x : S
 -}
 c_decl (Let (var, ty) expr) = do
-  (expr', exprTy) <-
+  expr' <-
     case ty of
       U.TPlaceholder -> do
         (expr', exprTy) <- i_expr expr
         insertValue var exprTy
-        return (expr', exprTy)
+        return expr'
       _ -> do
         ty' <- resolveType ty
         insertValue var ty'
         _ <- valueOccursCheck var expr
         (expr', exprTy) <- i_expr expr
         exprTy <:! ty'
-        return (expr', ty')
-  return $ Let (var, exprTy) expr'
+        return expr'
+  return $ Let (var, ty) expr'
 
 c_decl cls@(Class {}) = do
   i_class cls
@@ -196,7 +196,7 @@ c_decl (Implementation implName generics ty methods) = do
   clearMarker m
 
   checkCompleteInterface intfMethods names
-  return $ Implementation (implName, void) generics ty' methods'
+  return $ Implementation (implName, void) generics ty methods'
 
   where
     extendCtx (TyApp ty args) genericVars@(_:_) | vars  `intersect` args == vars =
@@ -215,7 +215,7 @@ c_decl (Implementation implName generics ty methods) = do
   ------------------------------------------------- AliasTypeDecl
   Δ; Γ ⊢ type S<T1, ..., Tn> = U ⊣ Δ, ΛT1..Tn. U; Γ
 -}
-c_decl (TypeAlias aliasName aliasVars aliasType) = do
+c_decl (TypeAlias aliasName aliasVars aliasType _) = do
   aliasVars' <- resolveGenericVars (defaultBounds aliasVars)
 
   m <- startMarker
@@ -230,7 +230,7 @@ c_decl (TypeAlias aliasName aliasVars aliasType) = do
                 [] -> aliasType'
                 _  -> TyAbs (map fst aliasVars') aliasType'
   insertType aliasName aliasType''
-  return $ TypeAlias aliasName aliasVars aliasType''
+  return $ TypeAlias aliasName aliasVars aliasType (Just aliasType'')
 
 
 checkCompleteInterface :: [(Name, Type)] -> [Name] -> Tc ()
@@ -283,7 +283,7 @@ i_ctor mkEnumTy (name, types) = do
   types' <- sequence (mapM resolveType <$> types)
   let ty = mkEnumTy types'
   insertValue name ty
-  return ((name, ty), types')
+  return ((name, ty), types)
 
 i_class :: U.Decl -> Tc T.Decl
 i_class (Class name vars methods) = do
@@ -295,7 +295,7 @@ i_class (Class name vars methods) = do
   insertInstanceVars classTy vars'
   mapM_ (i_addMethodType classTy) methods
   methods' <- mapM (i_method classTy) methods
-  return $ Class (name, classTy) vars' methods'
+  return $ Class (name, classTy) vars methods'
 
 i_class _ = undefined
 
@@ -333,16 +333,12 @@ i_method classTy fn = do
 i_interfaceItem :: U.InterfaceItem -> Tc (T.InterfaceItem, T.Id)
 i_interfaceItem (IntfVar id) = do
   id' <- resolveId id
-  return (IntfVar id', id')
+  return (IntfVar id, id')
 
 i_interfaceItem op@(IntfOperator _ _ lhs name rhs retType) = do
   lhs' <- resolveType lhs
   rhs' <- resolveType rhs
   retType' <- resolveType retType
   let ty = Fun [] [lhs', rhs'] retType'
-  let op' = op { intfOpLhs = lhs'
-               , intfOpName = (name, ty)
-               , intfOpRhs = rhs'
-               , intfOpRetType = retType'
-               }
+  let op' = op { intfOpName = (name, ty) }
   return (op', (name, ty))

@@ -187,4 +187,4 @@ p_typeAlias = do
   aliasVars <- option [] (angles . commaSep $ ucid)
   symbol "="
   aliasType <- p_type
-  return TypeAlias { aliasName, aliasVars, aliasType }
+  return TypeAlias { aliasName, aliasVars, aliasType, resolvedType = Nothing }

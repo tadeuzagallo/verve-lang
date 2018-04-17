@@ -2,32 +2,22 @@ module Absyn.Untyped
   ( module Absyn.Meta
   , module Absyn.Untyped
   , module Absyn.Base
+  , module Absyn.Type
   ) where
 
-import Absyn.Meta
-
 import Absyn.Base
+import Absyn.Meta
+import Absyn.Type
 
-type Id = (Name, Type)
-
-data Type
-  = TName Name
-  | TApp Type [Type]
-  | TArrow [Type] Type
-  | TRecord [(Name, Type)]
-  | TVoid
-  | TPlaceholder
-  deriving (Show)
-
-type Module = BaseModule Name Type
-type Stmt = BaseStmt Name Type
-type Decl = BaseDecl Name Type
-type InterfaceItem = BaseInterfaceItem Name Type
-type ImplementationItem = BaseImplementationItem Name Type
-type DataCtor = BaseDataCtor Name Type
-type Param = BaseParam Type
+type Module = BaseModule Name
+type Stmt = BaseStmt Name
+type Decl = BaseDecl Name
+type InterfaceItem = BaseInterfaceItem Name
+type ImplementationItem = BaseImplementationItem Name
+type DataCtor = BaseDataCtor Name
+type Param = BaseParam
 type Generics = BaseGenerics
-type Function = BaseFunction Name Type
-type Expr = BaseExpr Name Type
-type Case = BaseCase Name Type
+type Function = BaseFunction Name
+type Expr = BaseExpr Name
+type Case = BaseCase Name
 type Pattern = BasePattern Name
