@@ -63,7 +63,7 @@ c_decl (Enum name generics ctors) = do
 
   -- cleanup before returning
   clearMarker m
-  return $ Enum (name, enumTy) generics ctors'
+  return $ Enum name generics ctors'
 
 {-
                    S :: *              T :: *              U :: *
@@ -97,7 +97,7 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
                     , opPrec
                     , opGenerics
                     , opLhs
-                    , opName = (opName, ty)
+                    , opName
                     , opRhs
                     , opRetType
                     , opBody = opBody' }
@@ -115,11 +115,11 @@ c_decl (Operator opAssoc opPrec opGenerics opLhs opName opRhs opRetType opBody) 
 c_decl (Let (var, ty) expr) = do
   expr' <-
     case ty of
-      U.TPlaceholder -> do
+      Nothing -> do
         (expr', exprTy) <- i_expr expr
         insertValue var exprTy
         return expr'
-      _ -> do
+      Just ty -> do
         ty' <- resolveType ty
         insertValue var ty'
         _ <- valueOccursCheck var expr
@@ -157,7 +157,7 @@ c_decl (Interface name param methods) = do
   let ty = Intf name param' methodsTy
   mapM_ (aux ty param') methodsTy
   insertInterface name ty
-  return $ Interface (name, void) param methods'
+  return $ Interface name param methods'
     where
       aux intf param (name, Fun gen params retType) =
         let ty = Fun ((param, [intf]) : gen) params retType
@@ -255,7 +255,7 @@ i_implItem subst intfTypes (ImplVar (name, expr)) = do
   (expr', exprTy) <- i_expr expr
   intfTy <- applySubst subst <$> getIntfType name intfTypes
   intfTy <:! exprTy
-  return (ImplVar ((name, intfTy), expr'), name)
+  return (ImplVar (name, expr'), name)
 
 i_implItem subst intfTypes (ImplFunction name params body) = do
   intfTy <- applySubst subst <$> getIntfType name intfTypes
@@ -265,7 +265,7 @@ i_implItem subst intfTypes (ImplFunction name params body) = do
   zipWithM_ insertValue params paramsTy
   (body', bodyTy) <- i_body body
   bodyTy <:! retTy
-  return (ImplFunction (name, intfTy) params body', name)
+  return (ImplFunction name params body', name)
 
 i_implItem subst intfTypes (ImplOperator lhs op rhs body) = do
   intfTy <- applySubst subst <$> getIntfType op intfTypes
@@ -275,7 +275,7 @@ i_implItem subst intfTypes (ImplOperator lhs op rhs body) = do
   zipWithM_ insertValue [lhs, rhs] paramsTy
   (body', bodyTy) <- i_body body
   bodyTy <:! retTy
-  return (ImplOperator lhs (op, intfTy) rhs body', op)
+  return (ImplOperator lhs op rhs body', op)
 
 
 i_ctor :: (Maybe [Type] -> Type) -> U.DataCtor -> Tc T.DataCtor
@@ -283,7 +283,7 @@ i_ctor mkEnumTy (name, types) = do
   types' <- sequence (mapM resolveType <$> types)
   let ty = mkEnumTy types'
   insertValue name ty
-  return ((name, ty), types)
+  return (name, types)
 
 i_class :: U.Decl -> Tc T.Decl
 i_class (Class name vars methods) = do
@@ -295,7 +295,7 @@ i_class (Class name vars methods) = do
   insertInstanceVars classTy vars'
   mapM_ (i_addMethodType classTy) methods
   methods' <- mapM (i_method classTy) methods
-  return $ Class (name, classTy) vars methods'
+  return $ Class name vars methods'
 
 i_class _ = undefined
 
@@ -340,5 +340,4 @@ i_interfaceItem op@(IntfOperator _ _ lhs name rhs retType) = do
   rhs' <- resolveType rhs
   retType' <- resolveType retType
   let ty = Fun [] [lhs', rhs'] retType'
-  let op' = op { intfOpName = (name, ty) }
-  return (op', (name, ty))
+  return (op, (name, ty))

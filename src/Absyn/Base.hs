@@ -16,41 +16,43 @@ data BaseStmt a
 
 data BaseDecl a
   = FnStmt (BaseFunction a)
-  | Enum a [Name] [BaseDataCtor a]
-  | Let (Name, Type) (BaseExpr a)
-  | Class { className :: a
-          , classVars :: [BaseParam]
+  | Enum String [String] [DataCtor]
+  | Let (String, Maybe Type) (BaseExpr a)
+  | Class { className :: String
+          , classVars :: [Param]
           , classMethods :: [BaseFunction a]
           }
   | Operator { opAssoc :: Associativity
              , opPrec :: Precedence
-             , opGenerics :: BaseGenerics
-             , opLhs :: BaseParam
-             , opName :: a
-             , opRhs :: BaseParam
+             , opGenerics :: Generics
+             , opLhs :: Param
+             , opName :: String
+             , opRhs :: Param
              , opRetType :: Type
              , opBody :: [BaseStmt a]
              }
-  | Interface { intfName :: a
-              , intfParam :: Name
-              , intfMethods :: [BaseInterfaceItem a]}
+  | Interface { intfName :: String
+              , intfParam :: String
+              , intfMethods :: [InterfaceItem]
+              }
   | Implementation { implIntf :: a
-                   , implGenerics :: BaseGenerics
+                   , implGenerics :: Generics
                    , implType :: Type
-                   , implMethods :: [BaseImplementationItem a]}
-  | TypeAlias { aliasName :: Name
-              , aliasVars :: [Name]
+                   , implMethods :: [BaseImplementationItem a]
+                   }
+  | TypeAlias { aliasName :: String
+              , aliasVars :: [String]
               , aliasType :: Type
               , resolvedType :: Maybe T.Type
               }
    deriving (Show)
 
-data BaseInterfaceItem a
-  = IntfVar (Name, Type)
+data InterfaceItem
+  = IntfVar (String, Type)
   | IntfOperator { intfOpAssoc :: Associativity
                  , intfOpPrec :: Precedence
                  , intfOpLhs :: Type
-                 , intfOpName :: a
+                 , intfOpName :: String
                  , intfOpRhs :: Type
                  , intfOpRetType :: Type
                  }
@@ -58,33 +60,33 @@ data BaseInterfaceItem a
   deriving (Show)
 
 data BaseImplementationItem a
-  = ImplVar (a, BaseExpr a)
-  | ImplFunction { implName :: a
-                 , implParams :: [Name]
+  = ImplVar (String, BaseExpr a)
+  | ImplFunction { implName :: String
+                 , implParams :: [String]
                  , implBody :: [BaseStmt a]
                  }
-  | ImplOperator { implOpLhs :: Name
-                 , implOpName :: a
-                 , implOpRhs :: Name
+  | ImplOperator { implOpLhs :: String
+                 , implOpName :: String
+                 , implOpRhs :: String
                  , implOpBody :: [BaseStmt a]
                  }
  deriving (Show)
 
-type BaseDataCtor a = (a, Maybe [Type])
-type BaseParam = (Name, Type)
-type BaseGenerics = [(Name, [String])]
+type DataCtor = (String, Maybe [Type])
+type Param = (String, Type)
+type Generics = [(String, [String])]
 
 data BaseFunction a = Function
-  { name :: a
-  , generics :: BaseGenerics
-  , params :: [BaseParam]
+  { name :: String
+  , generics :: Generics
+  , params :: [Param]
   , retType :: Type
   , body :: [BaseStmt a]
   } deriving (Show)
 
 data BaseExpr a
   = Literal Literal
-  | Ident [Name]
+  | Ident [String]
   | ParenthesizedExpr (BaseExpr a)
   | Match { expr :: BaseExpr a
           , cases :: [BaseCase a]
@@ -104,9 +106,9 @@ data BaseExpr a
           , op :: a
           , rhs :: BaseExpr a
           }
-  | Record [(a, BaseExpr a)]
+  | Record [(String, BaseExpr a)]
   | List (Maybe T.Type) [BaseExpr a]
-  | FieldAccess (BaseExpr a) a
+  | FieldAccess (BaseExpr a) String
   | FnExpr (BaseFunction a)
   | Negate [T.ConstraintArg] (BaseExpr a)
 
@@ -116,20 +118,20 @@ data BaseExpr a
   deriving (Show)
 
 data BaseCase a = Case { pattern :: BasePattern a
-                           , caseBody :: [BaseStmt a]
-                           } deriving (Show)
+                       , caseBody :: [BaseStmt a]
+                       } deriving (Show)
 
 data BasePattern a
   = PatDefault
   | PatLiteral Literal
-  | PatVar a
-  | PatRecord [(a, BasePattern a)]
-  | PatList [BasePattern a] (BasePatternRest a)
+  | PatVar String
+  | PatRecord [(String, BasePattern a)]
+  | PatList [BasePattern a] PatternRest
   | PatCtor a [BasePattern a]
   deriving (Show)
 
-data BasePatternRest a
+data PatternRest
   = NoRest
   | DiscardRest
-  | NamedRest a
+  | NamedRest String
   deriving (Show)

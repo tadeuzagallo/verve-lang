@@ -69,7 +69,7 @@ d_decl (Let (x, _) expr) k = do
 
 d_decl (FnStmt fn) k = do
   decl <- d_fn fn
-  CA.LetFun [decl] <$> k [CA.Var $ fst $ name fn]
+  CA.LetFun [decl] <$> k [CA.Var $ name fn]
 
 d_decl enum@(Enum _ _ _) k = do
   addEnum enum
@@ -87,7 +87,7 @@ d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
                             , body = opBody
                             }) k
 
-d_decl (Class (name, _) _ methods) k = do
+d_decl (Class name _ methods) k = do
   j <- contVar
   x <- var
   methods' <- mapM d_fn methods
@@ -133,7 +133,7 @@ d_fn fn@(Function { params=[] }) =
 
 d_fn fn = do
   let params' = map (CA.Var . fst) (params fn)
-  let f = CA.Var $ fst $ name fn
+  let f = CA.Var $ name fn
   j <- contVar
   body' <- d_stmts (body fn) $ \x -> return (CA.AppCont j x)
   let constrs = mkConstraints (generics fn)
@@ -156,10 +156,10 @@ d_intfMethod (IntfVar (name,  _)) next = do
   let def = CA.FunDef (CA.Var name) j [CA.Var "#dict", CA.Var "#_"] (CA.LetVal s_name (CA.Lit $ String name) (CA.App (mk_var "#fieldAccess") j [s_name, mk_var "#dict"]))
   return $ CA.LetFun [def] next
 
-d_intfMethod (IntfOperator { intfOpName = (name,  _) }) next = do
+d_intfMethod (IntfOperator { intfOpName }) next = do
   s_name <- var
   j <- contVar
-  let def = CA.FunDef (CA.Var name) j [CA.Var "#dict", CA.Var "#_"] (CA.LetVal s_name (CA.Lit $ String name) (CA.App (mk_var "#fieldAccess") j [s_name, mk_var "#dict"]))
+  let def = CA.FunDef (CA.Var intfOpName) j [CA.Var "#dict", CA.Var "#_"] (CA.LetVal s_name (CA.Lit $ String intfOpName) (CA.App (mk_var "#fieldAccess") j [s_name, mk_var "#dict"]))
   return $ CA.LetFun [def] next
 
 d_implItems :: [ImplementationItem] -> (CA.Value -> DsM CA.Term) -> DsM CA.Term
@@ -170,23 +170,23 @@ d_implItems items f = do
         f (CA.Record fields)
   foldl g init items $ []
 
-d_implItem :: ImplementationItem -> ((Id, CA.Var) -> DsM CA.Term) -> DsM CA.Term
+d_implItem :: ImplementationItem -> ((String, CA.Var) -> DsM CA.Term) -> DsM CA.Term
 d_implItem (ImplVar (name, expr)) k =
   d_expr expr $ \[x] -> k (name, x)
 
-d_implItem fn@(ImplFunction { implName=(name, _) }) k = do
+d_implItem fn@(ImplFunction { implName }) k = do
   j <- contVar
   body <- d_stmts (implBody fn) $ \x -> return $ CA.AppCont j x
-  let f = CA.Var ("#" ++ name)
+  let f = CA.Var ("#" ++ implName)
   let def = CA.FunDef f j (map CA.Var (implParams fn)) body
-  CA.LetFun [def] <$> k (implName fn, f)
+  CA.LetFun [def] <$> k (implName, f)
 
-d_implItem op@(ImplOperator {}) k = do
+d_implItem op@(ImplOperator { implOpName }) k = do
   j <- contVar
   body <- d_stmts (implOpBody op) $ \x -> return $ CA.AppCont j x
-  let name = CA.Var ("#" ++ (fst $ implOpName op))
+  let name = CA.Var ("#" ++ implOpName)
   let def = CA.FunDef name j [CA.Var (implOpLhs op), CA.Var (implOpRhs op)] body
-  CA.LetFun [def] <$> k (implOpName op, name)
+  CA.LetFun [def] <$> k (implOpName, name)
 
 data Constraint
   = CHole
@@ -271,7 +271,7 @@ d_expr (Record fields) k = do
         CA.LetVal x (CA.Record fields') <$> k [x]
   foldl f init fields []
 
-d_expr (FieldAccess expr (field, _)) k = do
+d_expr (FieldAccess expr field) k = do
   x <- var
   z <- var
   j <- contVar

@@ -80,7 +80,7 @@ i_expr (Record fields) = do
   let labels = map fst fields
   let fieldsTy = zip labels types
   let recordTy = Rec fieldsTy
-  let record = Record (zip fieldsTy exprs)
+  let record = Record (zip labels exprs)
   return (record, recordTy)
 
 i_expr (FieldAccess expr field) = do
@@ -89,7 +89,7 @@ i_expr (FieldAccess expr field) = do
       aux :: Type -> [(String, Type)] -> Tc (T.Expr, Type)
       aux ty r = case lookup field r of
                 Nothing -> throwError $ UnknownField ty field
-                Just t -> return (FieldAccess expr' (field, t), t)
+                Just t -> return (FieldAccess expr' field, t)
   case ty of
     Rec r -> aux ty r
     Cls _ -> do
@@ -249,7 +249,7 @@ c_pattern ty (PatLiteral l) = do
 
 c_pattern ty (PatVar v) = do
   insertValue v ty
-  return $ PatVar (v, ty)
+  return $ PatVar v
 
 c_pattern ty@(Rec tyFields) (PatRecord fields) = do
   fields' <- mapM aux fields
@@ -259,7 +259,7 @@ c_pattern ty@(Rec tyFields) (PatRecord fields) = do
         case lookup key tyFields of
           Just ty -> do
             pat' <- c_pattern ty pat
-            return ((key, ty), pat')
+            return (key, pat')
           Nothing ->
             throwError . GenericError $ "Matching against field `" ++ key ++ "`, which is not included in the type of the value being matched, `" ++ show ty ++ "`"
 
@@ -274,7 +274,7 @@ c_pattern ty (PatList pats rest) = do
              DiscardRest -> return DiscardRest
              NamedRest n -> do
                insertValue n ty
-               return (NamedRest (n, ty))
+               return (NamedRest n)
   return $ PatList pats' rest'
   where
     getItemTy (Forall _ (TyApp (Con "List") _)) =

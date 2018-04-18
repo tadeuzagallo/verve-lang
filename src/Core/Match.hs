@@ -87,7 +87,7 @@ matchLit (v:vs) eqs def = do
 
 matchVar :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
 matchVar (v:vs) eqs def =
-  match vs [(ps, CA.subst e v (CA.Var x)) | (PatVar (x, _) : ps, e) <- eqs ] def
+  match vs [(ps, CA.subst e v (CA.Var x)) | (PatVar x : ps, e) <- eqs ] def
 
 -- poor implementation, need a tuple or something better - maybe support records in core
 matchRecord :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term

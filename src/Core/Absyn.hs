@@ -2,7 +2,7 @@ module Core.Absyn where
 
 import Prelude hiding (concat)
 
-import Absyn.Typed (Id, Literal)
+import Absyn.Typed (Literal)
 import Typing.Types (Type)
 import Util.PrettyPrint
 
@@ -36,7 +36,7 @@ data Value
   | Lit Literal
   | In String [Var]
   | Lam Lambda
-  | Record [(Id, Var)]
+  | Record [(String, Var)]
   | Type Type
   deriving (Show)
 
@@ -118,7 +118,7 @@ instance PrettyPrint Value where
            , str "}"
            ]
       where
-        pprintField ((n, _), var) =
+        pprintField (n, var) =
           concat [str n, str ": ", pprint var]
 
   pprint (Type t) = pprint t

@@ -80,12 +80,12 @@ var = do
   return $ CA.Var ("#x" ++ show count)
 
 addEnum :: Decl -> DsM ()
-addEnum (Enum (name, _) _ ctors) =
+addEnum (Enum name _ ctors) =
   modify $ \s ->
     s { enums = DsEnum name ctors' : (enums s) }
   where
     ctors' = map mkCtor ctors
-    mkCtor ((name, _), args) = DsCtor { ctorName = name, arity = maybe 0 length args }
+    mkCtor (name, args) = DsCtor { ctorName = name, arity = maybe 0 length args }
 
 addEnum _ = error "addEnum called with a Decl that is not an enum"
 

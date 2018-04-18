@@ -125,7 +125,7 @@ valueOccursCheckPattern var (PatList items rest) = do
 valueOccursCheckPattern var (PatCtor _ args) =
   or <$> mapM (valueOccursCheckPattern var) args
 
-valueOccursCheckPatternRest :: Name -> BasePatternRest Name -> Tc Bool
+valueOccursCheckPatternRest :: Name -> PatternRest -> Tc Bool
 valueOccursCheckPatternRest _ NoRest = return False
 valueOccursCheckPatternRest _ DiscardRest = return False
 

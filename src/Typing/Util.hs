@@ -99,9 +99,7 @@ i_fn fn = do
 
   bodyTy <:! retType'
 
-  let fn' = fn { name = (name fn, ty)
-               , body = body'
-               }
+  let fn' = fn { body = body' }
   return (fn', ty)
 
 i_body :: [U.Stmt] -> Tc ([T.Stmt], Type)

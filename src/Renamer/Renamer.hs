@@ -90,7 +90,7 @@ r_decl (Let (name, ty) expr) = do
   insertLocalValue name
 
   name' <- local name
-  ty' <- r_type ty
+  ty' <- mapM r_type ty
   expr' <- r_expr expr
   return $ Let (name', ty') expr'
 

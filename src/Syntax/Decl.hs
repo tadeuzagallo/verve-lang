@@ -84,7 +84,7 @@ p_let :: Parser Decl
 p_let = do
   reserved "let"
   name <- lcid
-  ty <- option TPlaceholder (symbol ":" *> p_type)
+  ty <- optionMaybe (symbol ":" *> p_type)
   symbol "="
   expr <- p_expr True
   return $ Let (name, ty) expr

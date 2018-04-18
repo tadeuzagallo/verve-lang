@@ -112,7 +112,7 @@ evalValue env (In i args) =
 
 evalValue env (Record fields) =
   Rt.VRecord (map f fields)
-    where f ((name, _), var) =
+    where f (name, var) =
             (name, lookupVal var env)
 
 evalValue _ (Type t) =
