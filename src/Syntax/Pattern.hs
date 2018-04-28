@@ -3,21 +3,33 @@ module Syntax.Pattern (p_pattern) where
 import Absyn.Untyped
 import Syntax.Lexer
 import Syntax.Literal
+import Syntax.Shared
 
 import Text.Parsec ((<|>), choice, option)
 import Text.Parsec.String (Parser)
 
 p_pattern :: Parser Pattern
-p_pattern = choice [ symbol "_" >> return PatDefault
-                   , p_literal >>= return . PatLiteral
-                   , p_patRecord
-                   , p_patList
-                   , p_patCtor >>= return . uncurry PatCtor
-                   , lcid >>= return . PatVar
-                   ]
+p_pattern =
+  choice [ p_patDefault
+         , p_patLiteral
+         , p_patRecord
+         , p_patList
+         , p_patCtor
+         , p_patVar
+         ]
+
+p_patDefault :: Parser Pattern
+p_patDefault = liftParser $ do
+  symbol "_"
+  return PatDefault
+
+p_patLiteral :: Parser Pattern
+p_patLiteral = liftParser $ do
+  l <- p_literal
+  return $ PatLiteral l
 
 p_patRecord :: Parser Pattern
-p_patRecord =
+p_patRecord = liftParser $
   let field = do
         key <- lcid
         symbol ":"
@@ -26,7 +38,7 @@ p_patRecord =
    in PatRecord <$> braces (commaSep field)
 
 p_patList :: Parser Pattern
-p_patList = do
+p_patList = liftParser $
   let fields =
         option ([], NoRest) (field <|> rest)
 
@@ -42,8 +54,12 @@ p_patList = do
 
    in uncurry PatList <$> brackets fields
 
-p_patCtor :: Parser (Name, [Pattern])
-p_patCtor = do
+p_patCtor :: Parser Pattern
+p_patCtor = liftParser $ do
   ctorName <- ucid
   vars <- option [] . parens . commaSep $ p_pattern
-  return (ctorName, vars)
+  return $ PatCtor ctorName vars
+
+p_patVar :: Parser Pattern
+p_patVar = liftParser $ do
+  PatVar <$> lcid

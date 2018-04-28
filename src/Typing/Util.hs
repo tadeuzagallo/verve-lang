@@ -52,7 +52,7 @@ resolveType (U.TApp t1 t2) = do
 resolveType U.TVoid = return void
 resolveType U.TPlaceholder = undefined
 
-resolveGenericBounds :: [(Name, [String])] -> Tc [(Name, [Intf])]
+resolveGenericBounds :: [(String, [String])] -> Tc [(String, [Intf])]
 resolveGenericBounds gen =
   mapM resolve gen
     where
@@ -63,7 +63,7 @@ resolveGenericBounds gen =
       resolveConstraint intf = do
         lookupInterface intf
 
-resolveGenericVars :: [(Name, [Intf])] -> Tc [BoundVar]
+resolveGenericVars :: [(String, [Intf])] -> Tc [BoundVar]
 resolveGenericVars generics =
   mapM aux generics
     where
@@ -82,7 +82,7 @@ defaultBounds :: [a] -> [(a, [b])]
 defaultBounds = map (flip (,) [])
 
 i_fn :: U.Function -> Tc (T.Function, Type)
-i_fn fn = do
+i_fn (meta :< fn) = do
   gen' <- resolveGenericBounds (generics fn)
   genericVars <- resolveGenericVars gen'
 
@@ -100,7 +100,7 @@ i_fn fn = do
   bodyTy <:! retType'
 
   let fn' = fn { body = body' }
-  return (fn', ty)
+  return (meta :< fn', ty)
 
 i_body :: [U.Stmt] -> Tc ([T.Stmt], Type)
 i_body stmts = do
@@ -110,7 +110,7 @@ i_body stmts = do
   clearMarker m
   return (stmts', fromMaybe void ty)
 
-fnTy :: ([BoundVar], [(Name, U.Type)], U.Type) -> Tc (Type, [(Name, Type)], Type)
+fnTy :: ([BoundVar], [(String, U.Type)], U.Type) -> Tc (Type, [(String, Type)], Type)
 fnTy (generics, params, retType) = do
   tyArgs <- mapM resolveId params
   mapM_ (assertKindStar . snd) tyArgs

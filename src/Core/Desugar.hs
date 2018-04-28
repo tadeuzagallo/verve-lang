@@ -27,25 +27,25 @@ d_stmts stmts k =
   let stmts' = groupBy f stmts
    in g stmts' k
     where
-      f (Decl _) (Decl _) = True
-      f (Expr _) (Expr _) = True
+      f (_ :< Decl _) (_ :< Decl _) = True
+      f (_ :< Expr _) (_ :< Expr _) = True
       f _ _ = False
 
-      g (ds@(Decl _: _) : rest) k = do
+      g (ds@(_ :< Decl _: _) : rest) k = do
         let r =
               case rest of
                 [] -> k
                 r -> \_ -> g r k
-        d_decls (map (\(Decl d) -> d) ds) r
+        d_decls (map (\(_ :< Decl d) -> d) ds) r
 
-      g (es@(Expr _ : _) : rest) k = do
+      g (es@(_ :< Expr _ : _) : rest) k = do
         let init = case rest of
                      [] -> \x -> k x
                      r -> \_ -> g r k
-        foldr (\e k _ -> d_expr e k) init [e | Expr e <- es] []
+        foldr (\e k _ -> d_expr e k) init [e | _ :< Expr e <- es] []
 
       g [] k =
-        d_expr VoidExpr k
+        d_expr (() :< VoidExpr) k
 
 
 d_decls :: [Decl] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
@@ -56,7 +56,7 @@ d_decls (d:ds) k = do
   d_decl d (\_ -> d_decls ds k)
 
 d_decl :: Decl -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-d_decl (Let (x, _) expr) k = do
+d_decl (_ :< Let (x, _) expr) k = do
   j <- contVar
   l <- contVar
   y <- var
@@ -67,38 +67,38 @@ d_decl (Let (x, _) expr) k = do
       CA.LetVal y (CA.Lam $ CA.Lambda l [CA.Var x] expr') $
         CA.App (CA.Var "#fix") j [y]
 
-d_decl (FnStmt fn) k = do
+d_decl (_ :< FnStmt fn) k = do
   decl <- d_fn fn
-  CA.LetFun [decl] <$> k [CA.Var $ name fn]
+  CA.LetFun [decl] <$> k [CA.Var $ name $ getNode fn]
 
-d_decl enum@(Enum _ _ _) k = do
+d_decl (_ :< enum@(Enum _ _ _)) k = do
   addEnum enum
   k []
 
-d_decl (TypeAlias { aliasName, resolvedType = Just ty }) k =
+d_decl (_ :< TypeAlias { aliasName, resolvedType = Just ty }) k =
   let x = CA.Var aliasName
    in CA.LetVal x (CA.Type ty) <$> k []
 
-d_decl (Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
-  d_decl (FnStmt $ Function { name = opName
-                            , generics = opGenerics
-                            , params = [opLhs, opRhs]
-                            , retType = opRetType
-                            , body = opBody
-                            }) k
+d_decl (m :< Operator _ _ opGenerics opLhs opName opRhs opRetType opBody) k =
+  d_decl (m :< (FnStmt $ m :< Function { name = opName
+                                       , generics = opGenerics
+                                       , params = [opLhs, opRhs]
+                                       , retType = opRetType
+                                       , body = opBody
+                                       })) k
 
-d_decl (Class name _ methods) k = do
+d_decl (_ :< Class name _ methods) k = do
   j <- contVar
   x <- var
   methods' <- mapM d_fn methods
   let ctor = CA.FunDef (CA.Var name) j [x] (CA.AppCont j [x])
   CA.LetFun (ctor : methods') <$> k []
 
-d_decl (Interface _ _ methods) k = do
+d_decl (_ :< Interface _ _ methods) k = do
   next <- k []
   foldM (flip d_intfMethod) next methods
 
-d_decl (Implementation (name, _) generics ty methods) k =
+d_decl (_ :< Implementation (name, _) generics ty methods) k =
   case mkConstraints generics of
     [] ->
       d_implItems methods $ \dict ->
@@ -128,10 +128,10 @@ mkDictVar' name ty =
     print ty = show ty
 
 d_fn :: Function -> DsM CA.FunDef
-d_fn fn@(Function { params=[] }) =
-  d_fn (fn { params = [ignore] })
+d_fn (m :< fn@(Function { params=[] })) =
+  d_fn (m :< fn { params = [ignore] })
 
-d_fn fn = do
+d_fn (_ :< fn) = do
   let params' = map (CA.Var . fst) (params fn)
   let f = CA.Var $ name fn
   j <- contVar
@@ -171,17 +171,17 @@ d_implItems items f = do
   foldl g init items $ []
 
 d_implItem :: ImplementationItem -> ((String, CA.Var) -> DsM CA.Term) -> DsM CA.Term
-d_implItem (ImplVar (name, expr)) k =
+d_implItem (_ :< ImplVar (name, expr)) k =
   d_expr expr $ \[x] -> k (name, x)
 
-d_implItem fn@(ImplFunction { implName }) k = do
+d_implItem (_ :< fn@(ImplFunction { implName })) k = do
   j <- contVar
   body <- d_stmts (implBody fn) $ \x -> return $ CA.AppCont j x
   let f = CA.Var ("#" ++ implName)
   let def = CA.FunDef f j (map CA.Var (implParams fn)) body
   CA.LetFun [def] <$> k (implName, f)
 
-d_implItem op@(ImplOperator { implOpName }) k = do
+d_implItem (_ :< op@(ImplOperator { implOpName })) k = do
   j <- contVar
   body <- d_stmts (implOpBody op) $ \x -> return $ CA.AppCont j x
   let name = CA.Var ("#" ++ implOpName)
@@ -195,12 +195,12 @@ data Constraint
   | CApp Constraint [Constraint]
 
 d_expr :: Expr -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
-d_expr VoidExpr k = do
+d_expr (_ :< VoidExpr) k = do
   x <- var
   CA.LetVal x CA.Unit <$> k [x]
 
 --
-d_expr (TypeCall callee constraints) k = do
+d_expr (_ :< TypeCall callee constraints) k = do
   j <- contVar
   l <- contVar
   x <- var
@@ -210,23 +210,23 @@ d_expr (TypeCall callee constraints) k = do
     contDef <- CA.ContDef j [x] <$> CA.LetVal x lambda <$> k [x]
     return $ CA.LetCont [contDef] callee'
 
-d_expr (Literal l) k = do
+d_expr (_ :< Literal l) k = do
   x <- var
   CA.LetVal x (CA.Lit l) <$> k [x]
 
-d_expr (Ident ids) k =
+d_expr (_ :< Ident ids) k =
   k [CA.Var $ last ids]
 
-d_expr (ParenthesizedExpr expr) k =
+d_expr (_ :< ParenthesizedExpr expr) k =
   d_expr expr k
 
-d_expr (BinOp constrArgs tyArgs lhs (name, _) rhs) k =
-  d_expr (Call (Ident [name]) constrArgs tyArgs [lhs, rhs]) k
+d_expr (m :< BinOp constrArgs tyArgs lhs (name, _) rhs) k =
+  d_expr (m :< Call (() :< Ident [name]) constrArgs tyArgs [lhs, rhs]) k
 
-d_expr (Call callee constraints types []) k =
-  d_expr (Call callee constraints types [VoidExpr]) k
+d_expr (m :< Call callee constraints types []) k =
+  d_expr (m :< Call callee constraints types [() :< VoidExpr]) k
 
-d_expr (Call callee constraints _ args) k =
+d_expr (_ :< Call callee constraints _ args) k =
   computeConstraints constraints $ \(constraints', constraintHoles) -> do
     j <- contVar
     x <- var
@@ -247,7 +247,7 @@ d_expr (Call callee constraints _ args) k =
 
     d_expr callee $ \x -> foldl f init (reverse args) x
 
-d_expr (Match expr cases) k = do
+d_expr (_ :< Match expr cases) k = do
   j <- contVar
   x <- var
   cases' <- mapM (d_case j) cases
@@ -256,12 +256,12 @@ d_expr (Match expr cases) k = do
   def <- CA.ContDef j [x] <$> k [x]
   return $ CA.LetCont [def] expr'
   where
-    d_case j (Case pat body) = do
+    d_case j (_ :< Case (_ :< pat) body) = do
       body' <- d_stmts body $ \y ->
         return $ CA.AppCont j y
       return ([pat], body')
 
-d_expr (Record fields) k = do
+d_expr (_ :< Record fields) k = do
   x <- var
   let
       f k (id, expr) =
@@ -271,7 +271,7 @@ d_expr (Record fields) k = do
         CA.LetVal x (CA.Record fields') <$> k [x]
   foldl f init fields []
 
-d_expr (FieldAccess expr field) k = do
+d_expr (_ :< FieldAccess expr field) k = do
   x <- var
   z <- var
   j <- contVar
@@ -281,20 +281,20 @@ d_expr (FieldAccess expr field) k = do
       CA.LetVal x (CA.Lit $ String field) $
           CA.App (CA.Var "#fieldAccess") j [x, y]
 
-d_expr (If ifCond ifBody elseBody) k =
+d_expr (m :< If ifCond ifBody elseBody) k =
   d_expr match k
     where
-      match = Match { expr = ifCond
-                    , cases = [ Case { pattern = PatCtor ("True", bool) []
-                                     , caseBody = ifBody
-                                     }
-                              , Case { pattern = PatCtor ("False", bool) []
-                                     , caseBody = elseBody
-                                     }
-                              ]
-                    }
+      match = m :< Match { expr = ifCond
+                         , cases = [ () :< Case { pattern = () :< PatCtor ("True", bool) []
+                                                , caseBody = ifBody
+                                                }
+                                   , () :< Case { pattern = () :< PatCtor ("False", bool) []
+                                                , caseBody = elseBody
+                                                }
+                                   ]
+                         }
 
-d_expr (List (Just ty) items) k =
+d_expr (_ :< List (Just ty) items) k =
   aux items (\x -> k [x])
     where
       aux :: [Expr] -> (CA.Var -> DsM CA.Term) -> DsM CA.Term
@@ -318,7 +318,7 @@ d_expr (List (Just ty) items) k =
             CA.LetVal t (CA.Type ty) $
               CA.App (CA.Var "Cons") j [t, head, tail]
 
-d_expr (FnExpr fn) k = do
+d_expr (_ :< FnExpr fn) k = do
   -- replace the name of the function with a fresh variable
   --  to avoid shadowing as the expressions should not add
   --  values to the scope
@@ -326,7 +326,7 @@ d_expr (FnExpr fn) k = do
   (CA.FunDef y j ps e) <- d_fn fn
   CA.LetFun [CA.FunDef x j ps (CA.subst e x y)] <$> k [x]
 
-d_expr (Negate constrArgs expr) k =
+d_expr (_ :< Negate constrArgs expr) k =
   computeConstraints constrArgs $ \(constraints', _) ->
     d_expr expr $ \x -> do
       y <- var

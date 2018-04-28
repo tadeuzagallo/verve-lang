@@ -1,16 +1,14 @@
 module Absyn.Type where
   
-import Absyn.Meta
-
 import Util.PrettyPrint
 
 import Prelude hiding (concat)
 
 data Type
-  = TName Name
+  = TName String
   | TApp Type [Type]
   | TArrow [Type] Type
-  | TRecord [(Name, Type)]
+  | TRecord [(String, Type)]
   | TVoid
   | TPlaceholder
 

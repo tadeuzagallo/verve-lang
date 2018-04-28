@@ -17,7 +17,7 @@ A CPS version of Wadler's pattern matching compiler from the from
 `The Implementation of Functional Programming Languages`
 -}
 
-type Equation = ([Pattern], CA.Term)
+type Equation = ([ASTNode BasePattern Id ()], CA.Term)
 
 match :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
 match [] [] def = return def
@@ -95,10 +95,10 @@ matchRecord ((CA.Var v') : vs) eqs def =
   foldl d_field match' fields []
     where
       match' vs' = match (vs' ++ vs) eqs' def
-      eqs' = [ ([maybe PatDefault id (lookup field f) | field <- fields] ++ ps, e)  | (PatRecord f : ps, e) <- eqs ]
+      eqs' = [ ([maybe PatDefault getNode (lookup field f) | field <- fields] ++ ps, e)  | (PatRecord f : ps, e) <- eqs ]
       fields = nub . concat $ [ map fst f | (PatRecord f : _, _) <- eqs ]
       d_field k field =
-        \x -> d_expr (FieldAccess (Ident [v']) field) $ \y -> k (y ++ x)
+        \x -> d_expr (() :< FieldAccess (() :< Ident [v']) field) $ \y -> k (y ++ x)
 
 matchList :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term
 matchList vs eqs =
@@ -109,11 +109,11 @@ matchList vs eqs =
       desugar :: Equation -> Equation
       desugar (p : ps, e) = (desugarCons p : ps, e)
 
-      desugarCons :: Pattern -> Pattern
+      desugarCons :: ASTNode BasePattern Id () -> ASTNode BasePattern Id ()
       desugarCons (PatList ps rest) =
-        foldl (\rest p -> PatCtor ("Cons", void) [p, rest]) (desugarRest rest) ps
+        foldl (\rest p -> PatCtor ("Cons", void) [p, () :< rest]) (desugarRest rest) ps
 
-      desugarRest :: PatternRest -> Pattern
+      desugarRest :: PatternRest -> ASTNode BasePattern Id ()
       desugarRest NoRest = PatCtor ("Nil", void) []
       desugarRest DiscardRest = PatDefault
       desugarRest (NamedRest a) = PatVar a
@@ -140,4 +140,4 @@ matchClause c vs eqs def = do
   return (def, clause)
     where
       n = arity c
-      eqs' = [ (ps' ++ ps, e) | (PatCtor _ ps' : ps, e) <- eqs]
+      eqs' = [ (map getNode ps' ++ ps, e) | (PatCtor _ ps' : ps, e) <- eqs]

@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 module Absyn.Typed
   ( module Absyn.Meta
   , module Absyn.Typed
@@ -5,17 +7,12 @@ module Absyn.Typed
   ) where
 
 import Absyn.Meta
-import Typing.Types (Type)
-
 import Absyn.Base
 
-type Id = (Name, Type)
+import Typing.Types (Type)
 
-type Module = BaseModule Id
-type Stmt = BaseStmt Id
-type Decl = BaseDecl Id
-type ImplementationItem = BaseImplementationItem Id
-type Function = BaseFunction Id
-type Expr = BaseExpr Id
-type Case = BaseCase Id
-type Pattern = BasePattern Id
+type Id = (String, Type)
+
+#define METADATA ()
+#define NAME Id
+#include "./Base.h"

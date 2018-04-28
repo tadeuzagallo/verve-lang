@@ -17,25 +17,25 @@ p_decl = choice [ p_enum
                 , p_interface
                 , p_implementation
                 , p_typeAlias
-                , p_function >>= return . FnStmt
+                , liftParser $ FnStmt <$> p_function
                 ]
 
 p_enum :: Parser Decl
-p_enum = do
+p_enum = liftParser $ do
   reserved "enum"
   name <- ucid
   generics <- option [] (angles . commaSep $ ucid)
   ctors <- block p_constructor
   return $ Enum name generics ctors
 
-p_constructor :: Parser (DataCtor)
+p_constructor :: Parser DataCtor
 p_constructor = do
   name <- ucid
   args <- optionMaybe . parens . commaSep $ p_type
   return $ (name, args)
 
 p_operator :: Parser Decl
-p_operator = do
+p_operator = liftParser $ do
   maybeOpAssoc <- optionMaybe p_opAssoc
   opPrec <- option defaultPrec p_opPrec
   opAssoc <- case maybeOpAssoc of
@@ -81,7 +81,7 @@ p_opAssoc = do
       assoc a = try (reserved $ show a) *> return a
 
 p_let :: Parser Decl
-p_let = do
+p_let = liftParser $ do
   reserved "let"
   name <- lcid
   ty <- optionMaybe (symbol ":" *> p_type)
@@ -90,7 +90,7 @@ p_let = do
   return $ Let (name, ty) expr
 
 p_class :: Parser Decl
-p_class = do
+p_class = liftParser $ do
   reserved "class"
   className <- ucid
   (classVars, classMethods) <- braces $ do
@@ -101,13 +101,13 @@ p_class = do
     return (vars, fns)
   return $ Class { className, classVars, classMethods }
 
-p_varDecl :: Parser (Name, Type)
+p_varDecl :: Parser (String, Type)
 p_varDecl = do
   reserved "let"
   p_typedName
 
 p_interface :: Parser Decl
-p_interface = do
+p_interface = liftParser $ do
   reserved "interface"
   intfName <- ucid
   intfParam <- angles ucid
@@ -141,7 +141,7 @@ p_intfOperator = do
                         }
 
 p_implementation :: Parser Decl
-p_implementation = do
+p_implementation = liftParser $ do
   reserved "implementation"
   implGenerics <- option [] p_generics
   implIntf <- ucid
@@ -156,7 +156,7 @@ p_implementationItem = choice [ p_implFn
                               ]
 
 p_implFn :: Parser ImplementationItem
-p_implFn = do
+p_implFn = liftParser $ do
   reserved "fn"
   implName <- lcid
   implParams <- parens $ commaSep lcid
@@ -164,7 +164,7 @@ p_implFn = do
   return $ ImplFunction { implName, implParams, implBody }
 
 p_implOperator :: Parser ImplementationItem
-p_implOperator = do
+p_implOperator = liftParser $ do
   reserved "operator"
   implOpLhs <- lcid
   implOpName <- operator
@@ -173,7 +173,7 @@ p_implOperator = do
   return $ ImplOperator { implOpLhs, implOpName, implOpRhs, implOpBody }
 
 p_implVar :: Parser ImplementationItem
-p_implVar = do
+p_implVar = liftParser $ do
   reserved "let"
   name <- lcid
   symbol "="
@@ -181,7 +181,7 @@ p_implVar = do
   return $ ImplVar (name, expr)
 
 p_typeAlias :: Parser Decl
-p_typeAlias = do
+p_typeAlias = liftParser $ do
   reserved "type"
   aliasName <- ucid
   aliasVars <- option [] (angles . commaSep $ ucid)

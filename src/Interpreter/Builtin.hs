@@ -2,7 +2,7 @@
 
 module Interpreter.Builtin where
 
-import Absyn.Meta
+import Absyn.Base
 import Interpreter.Value
 
 import Data.Char (ord)

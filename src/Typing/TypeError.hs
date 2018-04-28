@@ -4,7 +4,6 @@ module Typing.TypeError
 
 import Prelude hiding (print)
 
-import Absyn.Meta
 import Typing.Kinds
 import Typing.Types
 import Util.Error
@@ -19,14 +18,14 @@ data TypeError
   | InferenceFailure
   | TypeError Type Type
   | UnknownField Type String
-  | ImplementationMissingMethod Name
-  | ExtraneousImplementation Name
+  | ImplementationMissingMethod String
+  | ExtraneousImplementation String
   | InterfaceExpected Type
   | MissingImplementation String Type
   | ImplementationError String Type
   | ImplementingNonInterface String Type
   | KindError Type Kind Kind
-  | VariableUsedDuringInitialization Name
+  | VariableUsedDuringInitialization String
 
 instance ErrorT TypeError where
   kind _ = "TypeError"

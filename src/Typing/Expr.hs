@@ -15,44 +15,44 @@ import qualified Absyn.Typed as T
 import Util.Error
 
 import Control.Monad (when, zipWithM)
-import Data.Bifunctor (first)
 import Data.List (union)
 
 i_expr :: U.Expr -> Tc (T.Expr, Type)
-i_expr (Literal lit) =
-  return (Literal lit, i_lit lit)
+i_expr (meta :< Literal lit) =
+  return (meta :< Literal lit, i_lit lit)
 
-i_expr (Ident [i]) = do
+i_expr (meta :< Ident [i]) = do
   ty <- lookupValue i
-  return (Ident [i], ty)
+  return (meta :< Ident [i], ty)
 
 -- TODO: Clear this up - should be handled by the renamer now
-i_expr (Ident (_:_)) = undefined
-i_expr (Ident []) = undefined
+i_expr (_ :< Ident (_:_)) = undefined
+i_expr (_ :< Ident []) = undefined
 
-i_expr (ParenthesizedExpr expr) =
-  fmap (first ParenthesizedExpr) $ i_expr expr
+i_expr (meta :< ParenthesizedExpr expr) = do
+  (expr', ty) <- i_expr expr
+  return (meta :< ParenthesizedExpr expr', ty)
 
-i_expr (BinOp _ _ lhs op rhs) = do
+i_expr (meta :< BinOp _ _ lhs op rhs) = do
   tyOp@(Fun gen _ _) <- lookupValue op
   (lhs', lhsTy) <- i_expr lhs
   (rhs', rhsTy) <- i_expr rhs
   (retType', typeArgs)  <- inferTyArgs [lhsTy, rhsTy] tyOp
   constraintArgs <- inferConstraintArgs gen [] typeArgs
-  return (BinOp constraintArgs [] lhs' (op, tyOp) rhs', retType')
+  return (meta :< BinOp constraintArgs [] lhs' (op, tyOp) rhs', retType')
 
-i_expr (Match expr cases) = do
+i_expr (meta :< Match expr cases) = do
   (expr', ty) <- i_expr expr
   (cases', casesTy) <- unzip <$> mapM (i_case ty) cases
   let retTy = case casesTy of
                 [] -> void
                 x:xs -> foldl (\/) x xs
-  return (Match expr' cases', retTy)
+  return (meta :< Match expr' cases', retTy)
 
-i_expr (Call fn constraintArgs types []) =
-  i_expr (Call fn constraintArgs types [VoidExpr])
+i_expr (meta :< Call fn constraintArgs types []) =
+  i_expr (meta :< Call fn constraintArgs types [() :< VoidExpr])
 
-i_expr (Call fn _ types args) = do
+i_expr (meta :< Call fn _ types args) = do
   (fn', tyFn) <- i_expr fn
   let tyFn' = normalizeFnType tyFn
   (tyFn''@(Fun gen _ retType), skippedVars) <- adjustFnType (null types) args tyFn'
@@ -73,23 +73,23 @@ i_expr (Call fn _ types args) = do
             return (applySubst s retType, args', types')
           _ -> undefined
   constraintArgs <- inferConstraintArgs gen skippedVars typeArgs
-  return (Call fn' constraintArgs types args', retType')
+  return (meta :< Call fn' constraintArgs types args', retType')
 
-i_expr (Record fields) = do
+i_expr (meta :< Record fields) = do
   (exprs, types) <- mapM (i_expr . snd) fields >>= return . unzip
   let labels = map fst fields
   let fieldsTy = zip labels types
   let recordTy = Rec fieldsTy
   let record = Record (zip labels exprs)
-  return (record, recordTy)
+  return (meta :< record, recordTy)
 
-i_expr (FieldAccess expr field) = do
+i_expr (meta :< FieldAccess expr field) = do
   (expr', ty) <- i_expr expr
   let
       aux :: Type -> [(String, Type)] -> Tc (T.Expr, Type)
       aux ty r = case lookup field r of
                 Nothing -> throwError $ UnknownField ty field
-                Just t -> return (FieldAccess expr' field, t)
+                Just t -> return (meta :< FieldAccess expr' field, t)
   case ty of
     Rec r -> aux ty r
     Cls _ -> do
@@ -97,14 +97,14 @@ i_expr (FieldAccess expr field) = do
       aux ty vars
     _ -> throwError . GenericError $ "Expected a record, but found value of type " ++ show ty
 
-i_expr (If ifCond ifBody elseBody) = do
+i_expr (meta :< If ifCond ifBody elseBody) = do
   (ifCond', ty) <- i_expr ifCond
   ty <:! bool
   (ifBody', ifTy) <- i_body ifBody
   (elseBody', elseTy) <- i_body elseBody
-  return (If ifCond' ifBody' elseBody', ifTy \/ elseTy)
+  return (meta :< If ifCond' ifBody' elseBody', ifTy \/ elseTy)
 
-i_expr (List _ items) = do
+i_expr (meta :< List _ items) = do
   (items', itemsTy) <- unzip <$> mapM i_expr items
   (ty, itemTy) <- case itemsTy of
                     [] -> do
@@ -113,30 +113,31 @@ i_expr (List _ items) = do
                     x:xs ->
                       let ty = foldl (\/) x xs
                        in return (list ty, ty)
-  return (List (Just itemTy) items', ty)
+  return (meta :< List (Just itemTy) items', ty)
 
-i_expr (FnExpr fn) =
-  first FnExpr <$> i_fn fn
+i_expr (meta :< FnExpr fn) = do
+  (fn', ty) <- i_fn fn
+  return $ (meta :< FnExpr fn', ty)
 
-i_expr (Negate _ expr) = do
+i_expr (meta :< Negate _ expr) = do
   (expr', ty) <- i_expr expr
   intf <- lookupInterface "Std.Number"
   constrArgs <- boundsCheck ty intf
-  return (Negate constrArgs expr', ty)
+  return (meta :< Negate constrArgs expr', ty)
 
 -- Expressions generated during type checking
-i_expr VoidExpr = return (VoidExpr, void)
+i_expr (meta :< VoidExpr) = return (meta :< VoidExpr, void)
 
-i_expr (TypeCall {}) = undefined
+i_expr (_ :< TypeCall {}) = undefined
 
 instSubtype :: U.Expr -> Type -> Tc T.Expr
-instSubtype arg ty = do
+instSubtype arg@(meta :< _) ty = do
   (arg', argTy) <- i_expr arg
   arg'' <- case (argTy, ty) of
              (Fun gen@(_:_) _ _, Fun [] _ _) -> do
                typeArgs <- inferTyAbs argTy ty
                constraintArgs <- inferConstraintArgs gen [] typeArgs
-               return $ TypeCall arg' constraintArgs
+               return $ meta :< TypeCall arg' constraintArgs
              _ -> do
                argTy <:! ty
                return arg'
@@ -227,7 +228,7 @@ i_lit (Char _) = char
 i_lit (String _) = string
 
 i_case :: Type -> U.Case -> Tc (T.Case, Type)
-i_case ty (Case pattern caseBody) = do
+i_case ty (meta :< Case pattern caseBody) = do
   m <- startMarker
   pattern' <- c_pattern ty pattern
   endMarker m
@@ -236,24 +237,24 @@ i_case ty (Case pattern caseBody) = do
 
   clearMarker m
 
-  return (Case pattern' caseBody', ty)
+  return (meta :< Case pattern' caseBody', ty)
 
 c_pattern :: Type -> U.Pattern -> Tc T.Pattern
-c_pattern _ PatDefault =
-  return PatDefault
+c_pattern _ (meta :< PatDefault) =
+  return $ meta :< PatDefault
 
-c_pattern ty (PatLiteral l) = do
+c_pattern ty (meta :< PatLiteral l) = do
   let litTy = i_lit l
   litTy <:! ty
-  return $ PatLiteral l
+  return $ meta :< PatLiteral l
 
-c_pattern ty (PatVar v) = do
+c_pattern ty (meta :< PatVar v) = do
   insertValue v ty
-  return $ PatVar v
+  return $ meta :< PatVar v
 
-c_pattern ty@(Rec tyFields) (PatRecord fields) = do
+c_pattern ty@(Rec tyFields) (meta :< PatRecord fields) = do
   fields' <- mapM aux fields
-  return $ PatRecord fields'
+  return $ meta :< PatRecord fields'
     where
       aux (key, pat) = do
         case lookup key tyFields of
@@ -263,10 +264,10 @@ c_pattern ty@(Rec tyFields) (PatRecord fields) = do
           Nothing ->
             throwError . GenericError $ "Matching against field `" ++ key ++ "`, which is not included in the type of the value being matched, `" ++ show ty ++ "`"
 
-c_pattern ty (PatRecord _) = do
+c_pattern ty (_ :< PatRecord _) = do
   throwError . GenericError $ "Using a record pattern, but value being matched has type `" ++ show ty ++ "`"
 
-c_pattern ty (PatList pats rest) = do
+c_pattern ty (meta :< PatList pats rest) = do
   itemTy <- getItemTy ty
   pats' <- mapM (c_pattern itemTy) pats
   rest' <- case rest of
@@ -275,7 +276,7 @@ c_pattern ty (PatList pats rest) = do
              NamedRest n -> do
                insertValue n ty
                return (NamedRest n)
-  return $ PatList pats' rest'
+  return $ meta :< PatList pats' rest'
   where
     getItemTy (Forall _ (TyApp (Con "List") _)) =
       return Top
@@ -286,7 +287,7 @@ c_pattern ty (PatList pats rest) = do
     getItemTy _ =
       throwError . GenericError $ "Using a list pattern, but value being matched has type `" ++ show ty ++ "`"
 
-c_pattern ty (PatCtor name vars) = do
+c_pattern ty (meta :< PatCtor name vars) = do
   ctorTy <- lookupValue name
   let (fnTy, params, retTy) = case ctorTy of
                             fn@(Fun [] params retTy) -> (fn, params, retTy)
@@ -299,4 +300,4 @@ c_pattern ty (PatCtor name vars) = do
                  _ -> emptySubst
   let params' = map (applySubst substs) params
   vars' <- zipWithM c_pattern params' vars
-  return $ PatCtor (name, fnTy) vars'
+  return $ meta :< PatCtor (name, fnTy) vars'

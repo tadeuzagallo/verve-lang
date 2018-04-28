@@ -8,10 +8,16 @@ import {-# SOURCE #-} Syntax.Stmt
 import Text.Parsec (choice, option)
 import Text.Parsec.String (Parser)
 
+-- TODO: add source location
+liftParser :: (Visit node) => Parser (ASTNode node name ()) -> Parser (AST node name ())
+liftParser f = do
+  node <- f
+  return $ () :< node
+
 -- Parsers shared across Decl and Expr
 
 p_function :: Parser Function
-p_function = do
+p_function = liftParser $ do
   reserved "fn"
   name <- lcid
   generics <- option [] p_generics
@@ -23,10 +29,10 @@ p_function = do
 p_codeBlock :: Parser [Stmt]
 p_codeBlock = block p_stmt
 
-p_generics :: Parser [(Name, [String])]
+p_generics :: Parser [(String, [String])]
 p_generics = angles $ commaSep p_genericParam
 
-p_genericParam :: Parser (Name, [String])
+p_genericParam :: Parser (String, [String])
 p_genericParam = do
   var <- ucid
   bounds <- option [] p_genericBounds

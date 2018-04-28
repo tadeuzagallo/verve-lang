@@ -1,26 +1,36 @@
 module Absyn.Base where
 
-import Absyn.Meta
 import Absyn.Type
 import qualified Typing.Types as T
 
-data BaseModule a = Module
+data BaseModule name w
+  = Module
   { imports :: [Import]
-  , stmts :: [BaseStmt a]
+  , stmts :: [w (BaseStmt name w)]
   }
 
-data BaseStmt a
-  = Decl (BaseDecl a)
-  | Expr (BaseExpr a)
-  deriving (Show)
+data Import = Import
+  { iGlobal :: Bool
+  , iModule :: [String]
+  , iAlias :: Maybe String
+  , iItems :: Maybe [ImportItem]
+  }
 
-data BaseDecl a
-  = FnStmt (BaseFunction a)
+data ImportItem
+  = ImportValue String
+  | ImportType String [String]
+
+data BaseStmt name w
+  = Decl (w (BaseDecl name w))
+  | Expr (w (BaseExpr name w))
+
+data BaseDecl name w
+  = FnStmt (w (BaseFunction name w))
   | Enum String [String] [DataCtor]
-  | Let (String, Maybe Type) (BaseExpr a)
+  | Let (String, Maybe Type) (w (BaseExpr name w))
   | Class { className :: String
           , classVars :: [Param]
-          , classMethods :: [BaseFunction a]
+          , classMethods :: [w (BaseFunction name w)]
           }
   | Operator { opAssoc :: Associativity
              , opPrec :: Precedence
@@ -29,23 +39,22 @@ data BaseDecl a
              , opName :: String
              , opRhs :: Param
              , opRetType :: Type
-             , opBody :: [BaseStmt a]
+             , opBody :: [w (BaseStmt name w)]
              }
   | Interface { intfName :: String
               , intfParam :: String
               , intfMethods :: [InterfaceItem]
               }
-  | Implementation { implIntf :: a
+  | Implementation { implIntf :: name
                    , implGenerics :: Generics
                    , implType :: Type
-                   , implMethods :: [BaseImplementationItem a]
+                   , implMethods :: [w (BaseImplementationItem name w)]
                    }
   | TypeAlias { aliasName :: String
               , aliasVars :: [String]
               , aliasType :: Type
               , resolvedType :: Maybe T.Type
               }
-   deriving (Show)
 
 data InterfaceItem
   = IntfVar (String, Type)
@@ -57,81 +66,107 @@ data InterfaceItem
                  , intfOpRetType :: Type
                  }
 
-  deriving (Show)
-
-data BaseImplementationItem a
-  = ImplVar (String, BaseExpr a)
+data BaseImplementationItem name w
+  = ImplVar (String, w (BaseExpr name w))
   | ImplFunction { implName :: String
                  , implParams :: [String]
-                 , implBody :: [BaseStmt a]
+                 , implBody :: [w (BaseStmt name w)]
                  }
   | ImplOperator { implOpLhs :: String
                  , implOpName :: String
                  , implOpRhs :: String
-                 , implOpBody :: [BaseStmt a]
+                 , implOpBody :: [w (BaseStmt name w)]
                  }
- deriving (Show)
+
+data Associativity
+  = AssocNone
+  | AssocLeft
+  | AssocRight
+
+instance Show Associativity where
+  show AssocNone = "none"
+  show AssocLeft = "left"
+  show AssocRight = "right"
+
+data Precedence
+  = PrecHigher String
+  | PrecLower String
+  | PrecEqual String
+  | PrecValue Integer
 
 type DataCtor = (String, Maybe [Type])
 type Param = (String, Type)
 type Generics = [(String, [String])]
 
-data BaseFunction a = Function
+data BaseFunction name w
+  = Function
   { name :: String
   , generics :: Generics
   , params :: [Param]
   , retType :: Type
-  , body :: [BaseStmt a]
-  } deriving (Show)
+  , body :: [w (BaseStmt name w)]
+  }
 
-data BaseExpr a
+data BaseExpr name w
   = Literal Literal
   | Ident [String]
-  | ParenthesizedExpr (BaseExpr a)
-  | Match { expr :: BaseExpr a
-          , cases :: [BaseCase a]
+  | ParenthesizedExpr (w (BaseExpr name w))
+  | Match { expr :: w (BaseExpr name w)
+          , cases :: [w (BaseCase name w)]
           }
-  | If { ifCond :: BaseExpr a
-       , ifBody :: [BaseStmt a]
-       , ifElseBody :: [BaseStmt a]
+  | If { ifCond :: w (BaseExpr name w)
+       , ifBody :: [w (BaseStmt name w)]
+       , ifElseBody :: [w (BaseStmt name w)]
        }
-  | Call { callee :: BaseExpr a
+  | Call { callee :: w (BaseExpr name w)
          , constraintArgs :: [T.ConstraintArg]
          , typeArgs :: [Type]
-         , args :: [BaseExpr a]
+         , args :: [w (BaseExpr name w)]
          }
   | BinOp { opConstraintArgs :: [T.ConstraintArg]
           , opTypeArgs :: [Type]
-          , lhs :: BaseExpr a
-          , op :: a
-          , rhs :: BaseExpr a
+          , lhs :: w (BaseExpr name w)
+          , op :: name
+          , rhs :: w (BaseExpr name w)
           }
-  | Record [(String, BaseExpr a)]
-  | List (Maybe T.Type) [BaseExpr a]
-  | FieldAccess (BaseExpr a) String
-  | FnExpr (BaseFunction a)
-  | Negate [T.ConstraintArg] (BaseExpr a)
+  | Record [(String, w (BaseExpr name w))]
+  | List (Maybe T.Type) [w (BaseExpr name w)]
+  | FieldAccess (w (BaseExpr name w)) String
+  | FnExpr (w (BaseFunction name w))
+  | Negate [T.ConstraintArg] (w (BaseExpr name w))
 
   -- Expressions that can only be generated by the compiler
   | VoidExpr
-  | TypeCall (BaseExpr a) [T.ConstraintArg]
-  deriving (Show)
+  | TypeCall (w (BaseExpr name w)) [T.ConstraintArg]
 
-data BaseCase a = Case { pattern :: BasePattern a
-                       , caseBody :: [BaseStmt a]
-                       } deriving (Show)
+data BaseCase name w
+  = Case
+    { pattern :: w (BasePattern name w)
+    , caseBody :: [w (BaseStmt name w)]
+    }
 
-data BasePattern a
+data BasePattern name w
   = PatDefault
   | PatLiteral Literal
   | PatVar String
-  | PatRecord [(String, BasePattern a)]
-  | PatList [BasePattern a] PatternRest
-  | PatCtor a [BasePattern a]
-  deriving (Show)
+  | PatRecord [(String, w (BasePattern name w))]
+  | PatList [w (BasePattern name w)] PatternRest
+  | PatCtor name [w (BasePattern name w)]
 
 data PatternRest
   = NoRest
   | DiscardRest
   | NamedRest String
-  deriving (Show)
+
+data Literal
+  = Integer Integer
+  | Float Double
+  | Char Char
+  | String String
+  deriving (Eq)
+
+instance Show Literal where
+  show (Integer i) = show i
+  show (Float i) = show i
+  show (Char i) = show i
+  show (String i) = show i

@@ -13,6 +13,10 @@ import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 
 
+wrapFn :: (ASTNode node name () -> Rn (ASTNode node name ())) -> AST node name () -> Rn (AST node name ())
+wrapFn f (() :< e) =
+  (() :<) <$> f e
+
 -- ENTRY POINT
 
 renameStmts :: String -> [Stmt] -> RnEnv -> Result (RnEnv, [Stmt])
@@ -59,254 +63,267 @@ r_body stmts = do
   return stmts'
 
 r_stmt :: Stmt -> Rn Stmt
-r_stmt (Expr expr) =
-  Expr <$> r_expr expr
+r_stmt = wrapFn r_stmt
+  where
+    r_stmt (Expr expr) =
+      Expr <$> r_expr expr
 
-r_stmt (Decl decl) =
-  Decl <$> r_decl decl
+    r_stmt (Decl decl) =
+      Decl <$> r_decl decl
 
 r_decl :: Decl -> Rn Decl
-r_decl (Enum name gen ctors) = do
-  insertLocalType name
+r_decl = wrapFn r_decl
+  where
+    r_decl (Enum name gen ctors) = do
+      insertLocalType name
 
-  name' <- local name
+      name' <- local name
 
-  m <- startMarker
-  mapM_ insertInternalType gen
-  endMarker m
+      m <- startMarker
+      mapM_ insertInternalType gen
+      endMarker m
 
-  ctors' <- r_ctors ctors
+      ctors' <- r_ctors ctors
 
-  clearMarker m
+      clearMarker m
 
-  return $ Enum name' gen ctors'
+      return $ Enum name' gen ctors'
 
-r_decl (FnStmt fn) = do
-  insertLocalValue (name fn)
+    r_decl (FnStmt fn) = do
+      insertLocalValue (name $ getNode fn)
 
-  FnStmt <$> r_fn fn
+      FnStmt <$> r_fn fn
 
-r_decl (Let (name, ty) expr) = do
-  insertLocalValue name
+    r_decl (Let (name, ty) expr) = do
+      insertLocalValue name
 
-  name' <- local name
-  ty' <- mapM r_type ty
-  expr' <- r_expr expr
-  return $ Let (name', ty') expr'
+      name' <- local name
+      ty' <- mapM r_type ty
+      expr' <- r_expr expr
+      return $ Let (name', ty') expr'
 
-r_decl (Class name vars methods) = do
-  insertLocalType name
-  insertLocalValue name
+    r_decl (Class name vars methods) = do
+      insertLocalType name
+      insertLocalValue name
 
-  name' <- local name
+      name' <- local name
 
-  m <- startMarker
-  vars' <- r_fnParams vars
-  endMarker m
+      m <- startMarker
+      vars' <- r_fnParams vars
+      endMarker m
 
-  names' <- mapM r_methodSig methods
-  methods' <- zipWithM r_methodImp names' methods
+      names' <- mapM r_methodSig methods
+      methods' <- zipWithM r_methodImp names' methods
 
-  clearMarker m
+      clearMarker m
 
-  return $ Class name' vars' methods'
+      return $ Class name' vars' methods'
 
-r_decl (Operator assoc prec gen lhs op rhs retType body) = do
-  insertLocalValue op
+    r_decl (Operator assoc prec gen lhs op rhs retType body) = do
+      insertLocalValue op
 
-  prec' <- r_prec prec
-  op' <- local op
+      prec' <- r_prec prec
+      op' <- local op
 
-  m <- startMarker
-  gen' <- r_generics gen
-  [lhs', rhs'] <- r_fnParams [lhs, rhs]
-  endMarker m
+      m <- startMarker
+      gen' <- r_generics gen
+      [lhs', rhs'] <- r_fnParams [lhs, rhs]
+      endMarker m
 
-  retType' <- r_type retType
+      retType' <- r_type retType
 
-  body' <- r_body body
+      body' <- r_body body
 
-  clearMarker m
+      clearMarker m
 
-  return $ Operator assoc prec' gen' lhs' op' rhs' retType' body'
+      return $ Operator assoc prec' gen' lhs' op' rhs' retType' body'
 
-r_decl (Interface name param methods) = do
-  methodNames <- mapM r_intfFieldName methods
+    r_decl (Interface name param methods) = do
+      methodNames <- mapM r_intfFieldName methods
 
-  insertLocalInterface name methodNames
+      insertLocalInterface name methodNames
 
-  name' <- local name
+      name' <- local name
 
-  m <- startMarker
-  insertInternalType param
-  endMarker m
+      m <- startMarker
+      insertInternalType param
+      endMarker m
 
-  methods' <- mapM r_intfField methods
+      methods' <- mapM r_intfField methods
 
-  clearMarker m
+      clearMarker m
 
-  return $ Interface name' param methods'
+      return $ Interface name' param methods'
 
-r_decl (Implementation name gen ty implMethods) = do
-  (name', renameIntfMethod) <- renameInterface name
+    r_decl (Implementation name gen ty implMethods) = do
+      (name', renameIntfMethod) <- renameInterface name
 
-  m <- startMarker
-  gen' <- r_generics gen
-  endMarker m
+      m <- startMarker
+      gen' <- r_generics gen
+      endMarker m
 
-  ty' <- r_type ty
-  implMethods' <- mapM (r_implItem renameIntfMethod) implMethods
+      ty' <- r_type ty
+      implMethods' <- mapM (r_implItem renameIntfMethod) implMethods
 
-  clearMarker m
+      clearMarker m
 
-  return $ Implementation name' gen' ty' implMethods'
+      return $ Implementation name' gen' ty' implMethods'
 
-r_decl (TypeAlias aliasName aliasVars aliasType resolvedType) = do
-  insertLocalType aliasName
+    r_decl (TypeAlias aliasName aliasVars aliasType resolvedType) = do
+      insertLocalType aliasName
 
-  aliasName' <- local aliasName
+      aliasName' <- local aliasName
 
-  m <- startMarker
-  mapM_ insertInternalType aliasVars
-  endMarker m
+      m <- startMarker
+      mapM_ insertInternalType aliasVars
+      endMarker m
 
-  aliasType' <- r_type aliasType
+      aliasType' <- r_type aliasType
 
-  clearMarker m
+      clearMarker m
 
-  return $ TypeAlias aliasName' aliasVars aliasType' resolvedType
+      return $ TypeAlias aliasName' aliasVars aliasType' resolvedType
 
 
 r_implItem :: (String -> Rn String) -> ImplementationItem -> Rn ImplementationItem
-r_implItem renameIntfMethod (ImplVar (name, expr)) = do
-  name' <- renameIntfMethod name
-  expr' <- r_expr expr
-  return $ ImplVar (name', expr')
+r_implItem renameIntfMethod = wrapFn r_implItem
+  where
+    r_implItem (ImplVar (name, expr)) = do
+      name' <- renameIntfMethod name
+      expr' <- r_expr expr
+      return $ ImplVar (name', expr')
 
-r_implItem renameIntfMethod (ImplFunction implName implParams implBody) = do
-  implName' <- renameIntfMethod implName
+    r_implItem (ImplFunction implName implParams implBody) = do
+      implName' <- renameIntfMethod implName
 
-  m <- startMarker
-  mapM_ insertInternalValue implParams
-  endMarker m
+      m <- startMarker
+      mapM_ insertInternalValue implParams
+      endMarker m
 
-  implBody' <- r_body implBody
+      implBody' <- r_body implBody
 
-  clearMarker m
+      clearMarker m
 
-  return $ ImplFunction implName' implParams implBody'
+      return $ ImplFunction implName' implParams implBody'
 
-r_implItem renameIntfMethod (ImplOperator lhs op rhs body) = do
-  op' <- renameIntfMethod op
+    r_implItem (ImplOperator lhs op rhs body) = do
+      op' <- renameIntfMethod op
 
-  m <- startMarker
-  insertInternalValue lhs
-  insertInternalValue rhs
-  endMarker m
+      m <- startMarker
+      insertInternalValue lhs
+      insertInternalValue rhs
+      endMarker m
 
-  body' <- r_body body
+      body' <- r_body body
 
-  clearMarker m
+      clearMarker m
 
-  return $ ImplOperator lhs op' rhs body'
+      return $ ImplOperator lhs op' rhs body'
 
 r_expr :: Expr -> Rn Expr
-r_expr (Literal l) =
-  return $ Literal l
+r_expr = wrapFn r_expr'
+  where
+    r_expr' :: ASTNode BaseExpr String () -> Rn (ASTNode BaseExpr String ())
+    r_expr' (Literal l) =
+      return $ Literal l
 
-r_expr (ParenthesizedExpr expr) =
-  ParenthesizedExpr <$> r_expr expr
+    r_expr' (ParenthesizedExpr expr) =
+      ParenthesizedExpr <$> r_expr expr
 
-r_expr (FnExpr fn) = do
-  FnExpr <$> r_fn fn
+    r_expr' (FnExpr fn) = do
+      FnExpr <$> r_fn fn
 
-r_expr (Ident name) = do
-  name' <- renameIdentValue name
-  return $ Ident [name']
+    r_expr' (Ident name) = do
+      name' <- renameIdentValue name
+      return $ Ident [name']
 
-r_expr (Match expr cases) = do
-  expr' <- r_expr expr
-  cases' <- mapM r_case cases
-  return $ Match expr' cases'
+    r_expr' (Match expr cases) = do
+      expr' <- r_expr expr
+      cases' <- mapM r_case cases
+      return $ Match expr' cases'
 
-r_expr (If cond conseq alt) = do
-  cond' <- r_expr cond
-  conseq' <- r_body conseq
-  alt' <- r_body alt
-  return $ If cond' conseq' alt'
+    r_expr' (If cond conseq alt) = do
+      cond' <- r_expr cond
+      conseq' <- r_body conseq
+      alt' <- r_body alt
+      return $ If cond' conseq' alt'
 
-r_expr (Call callee _ tyArgs vArgs) = do
-  callee' <- r_expr callee
-  tyArgs' <- mapM r_type tyArgs
-  vArgs' <- mapM r_expr vArgs
-  return $ Call callee' [] tyArgs' vArgs'
+    r_expr' (Call callee _ tyArgs vArgs) = do
+      callee' <- r_expr callee
+      tyArgs' <- mapM r_type tyArgs
+      vArgs' <- mapM r_expr vArgs
+      return $ Call callee' [] tyArgs' vArgs'
 
-r_expr (BinOp _ _ lhs op rhs) = do
-  lhs' <- r_expr lhs
-  op' <- renameValue op
-  rhs' <- r_expr rhs
-  return $ BinOp [] [] lhs' op' rhs'
+    r_expr' (BinOp _ _ lhs op rhs) = do
+      lhs' <- r_expr lhs
+      op' <- renameValue op
+      rhs' <- r_expr rhs
+      return $ BinOp [] [] lhs' op' rhs'
 
-r_expr (Record fields) = do
-  fields' <- mapM (sequence . fmap r_expr) fields
-  return $ Record fields'
+    r_expr' (Record fields) = do
+      fields' <- mapM (sequence . fmap r_expr) fields
+      return $ Record fields'
 
-r_expr (List ty items) = do
-  items' <- mapM r_expr items
-  return $ List ty items'
+    r_expr' (List ty items) = do
+      items' <- mapM r_expr items
+      return $ List ty items'
 
-r_expr (FieldAccess expr field) = do
-  expr' <- r_expr expr
-  return $ FieldAccess expr' field
+    r_expr' (FieldAccess expr field) = do
+      expr' <- r_expr expr
+      return $ FieldAccess expr' field
 
-r_expr (Negate constrArgs expr) =
-  Negate constrArgs <$> r_expr expr
+    r_expr' (Negate constrArgs expr) =
+      Negate constrArgs <$> r_expr expr
 
--- Expressions that can only be generated by the compiler after Type Checking
-r_expr VoidExpr = undefined
-r_expr (TypeCall {}) = undefined
+    -- Expressions that can only be generated by the compiler after Type Checking
+    r_expr' VoidExpr = undefined
+    r_expr' (TypeCall {}) = undefined
 
 
 r_case :: Case -> Rn Case
-r_case (Case pat body) = do
-  m <- startMarker
-  pat' <- r_pat pat
-  endMarker m
+r_case = wrapFn r_case
+  where
+    r_case (Case pat body) = do
+      m <- startMarker
+      pat' <- r_pat pat
+      endMarker m
 
-  body' <- r_body body
+      body' <- r_body body
 
-  clearMarker m
+      clearMarker m
 
-  return $ Case pat' body'
+      return $ Case pat' body'
 
 
 r_pat :: Pattern -> Rn Pattern
-r_pat PatDefault =
-  return PatDefault
+r_pat = wrapFn r_pat'
+  where
+    r_pat' PatDefault =
+      return PatDefault
 
-r_pat (PatLiteral l) =
-  return $ PatLiteral l
+    r_pat' (PatLiteral l) =
+      return $ PatLiteral l
 
-r_pat (PatVar v) = do
-  insertInternalValue v
-  return $ PatVar v
+    r_pat' (PatVar v) = do
+      insertInternalValue v
+      return $ PatVar v
 
-r_pat (PatRecord fields) = do
-  fields' <- mapM (sequence . fmap r_pat) fields
-  return $ PatRecord fields'
+    r_pat' (PatRecord fields) = do
+      fields' <- mapM (sequence . fmap r_pat) fields
+      return $ PatRecord fields'
 
-r_pat (PatList pats rest) = do
-  pats' <- mapM r_pat pats
-  case rest of
-    NamedRest n -> insertInternalValue n
-    _ -> return ()
-  -- TODO: This is a bug, it had reverse order at some point as is being re-reversed somewhere else
-  return $ PatList (reverse pats') rest
+    r_pat' (PatList pats rest) = do
+      pats' <- mapM r_pat pats
+      case rest of
+        NamedRest n -> insertInternalValue n
+        _ -> return ()
+      -- TODO: This is a bug, it had reverse order at some point as is being re-reversed somewhere else
+      return $ PatList (reverse pats') rest
 
-r_pat (PatCtor name args) = do
-  name' <- renameValue name
-  args' <- mapM r_pat args
-  return $ PatCtor name' args'
+    r_pat' (PatCtor name args) = do
+      name' <- renameValue name
+      args' <- mapM r_pat args
+      return $ PatCtor name' args'
 
 r_type :: Type -> Rn Type
 r_type TVoid =
@@ -335,10 +352,10 @@ r_type (TRecord fields) = do
 r_fn :: Function -> Rn Function
 r_fn fn = do
   m <- startMarker
-  insertLocalValue (name fn)
+  insertLocalValue (name $ getNode fn)
   endMarker m
 
-  name' <- local (name fn)
+  name' <- local (name $ getNode fn)
   fn' <- r_fnBase name' fn
 
   clearMarker m
@@ -346,18 +363,20 @@ r_fn fn = do
   return fn'
 
 r_fnBase :: String -> Function -> Rn Function
-r_fnBase name' (Function _ gen params retType body) = do
-  m <- startMarker
-  gen' <- r_generics gen
-  params' <- r_fnParams params
-  endMarker m
+r_fnBase name' = wrapFn r_fnBase
+  where
+    r_fnBase (Function _ gen params retType body) = do
+      m <- startMarker
+      gen' <- r_generics gen
+      params' <- r_fnParams params
+      endMarker m
 
-  retType' <- r_type retType
-  body' <- r_body body
+      retType' <- r_type retType
+      body' <- r_body body
 
-  clearMarker m
+      clearMarker m
 
-  return $ Function name' gen' params' retType' body'
+      return $ Function name' gen' params' retType' body'
 
 
 r_fnParams :: [Param] -> Rn [Param]
@@ -375,7 +394,7 @@ r_generics :: Generics -> Rn Generics
 r_generics = mapM r_generic
 
 
-r_generic :: (Name, [Name]) -> Rn (Name, [Name])
+r_generic :: (String, [String]) -> Rn (String, [String])
 r_generic (name, bounds) = do
   bounds' <- mapM (fmap fst . renameInterface) bounds
   insertInternalType name
@@ -410,15 +429,16 @@ r_prec (PrecEqual name) = do
 
 r_methodSig :: Function -> Rn String
 r_methodSig fn = do
-  insertLocalValue (name fn)
-  local (name fn)
+  let fnName = name $ getNode fn
+  insertLocalValue fnName
+  local fnName
 
 r_methodImp :: String -> Function -> Rn Function
 r_methodImp name' fn = do
   insertInternalValue "self"
   r_fnBase name' fn
 
-r_intfFieldName :: InterfaceItem -> Rn Name
+r_intfFieldName :: InterfaceItem -> Rn String
 r_intfFieldName (IntfVar (name, _)) = return name
 r_intfFieldName (IntfOperator { intfOpName }) = return intfOpName
 

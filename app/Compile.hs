@@ -42,7 +42,7 @@ execFile processStmts moduleName file = do
   result |> runModule processStmts file' moduleName
 
 runModule :: StmtsFn -> FilePath -> String -> Module -> Pipeline ()
-runModule processStmts file modName (Module imports stmts) = do
+runModule processStmts file modName (_ :< Module imports stmts) = do
   resolveImports file imports
   processStmts modName stmts
 

@@ -3,7 +3,7 @@ module Interpreter.Value
   , ContValue(..)
   ) where
 
-import Absyn.Meta (Literal)
+import Absyn.Base (Literal)
 import Core.Absyn (Lambda, Var, Term)
 import {-# SOURCE #-} Interpreter.Env (Env)
 import Typing.Types (Type)

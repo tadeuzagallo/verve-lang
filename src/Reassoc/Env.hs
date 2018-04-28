@@ -15,21 +15,21 @@ import Util.Error
 type PrecInt = Integer
 type OpInfo = (Associativity, PrecInt)
 
-newtype Env = Env [(Name, OpInfo)]
+newtype Env = Env [(String, OpInfo)]
 
 defaultEnv :: Env
 defaultEnv = Env []
 
-addOpInfo :: Env -> (Name, OpInfo) -> Env
+addOpInfo :: Env -> (String, OpInfo) -> Env
 addOpInfo (Env env) info = Env (info : env)
 
-getOpInfo :: Name -> Env -> Result OpInfo
+getOpInfo :: String -> Env -> Result OpInfo
 getOpInfo name (Env env) =
   case lookup name env of
     Just info -> return info
     Nothing -> mkError $ UnknownOperator name
 
-getPrec :: Name -> Env -> Result PrecInt
+getPrec :: String -> Env -> Result PrecInt
 getPrec name env = snd <$> getOpInfo name env
 
 importReassocEnv :: [String] -> Env -> Env -> Env

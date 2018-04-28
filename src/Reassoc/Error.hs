@@ -2,13 +2,12 @@ module Reassoc.Error
   ( ReassocError(..)
   ) where
 
-import Absyn.Untyped
 import Util.Error
 import Util.PrettyPrint
 
 data ReassocError
-  = UnknownOperator Name
-  | PrecedenceError Name Name
+  = UnknownOperator String
+  | PrecedenceError String String
 
 instance Show ReassocError where
   show (PrecedenceError p1 p2) =

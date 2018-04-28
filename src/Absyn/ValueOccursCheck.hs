@@ -1,53 +1,56 @@
 module Absyn.ValueOccursCheck where
 
-import Typing.Env
-import Typing.TypeError
-
 import Absyn.Base
 import Absyn.Meta
+import Absyn.Untyped
+
+import Typing.Env
+import Typing.TypeError
 import Util.Error
 
 import Control.Monad (mapM_, when)
 
 class ValueOccursCheck b where
-  valueOccursCheck :: Name -> b Name -> Tc Bool
+  valueOccursCheck :: String -> AST b String () -> Tc Bool
 
 instance ValueOccursCheck BaseExpr where
   -- TRIVIAL
-  valueOccursCheck var expr = do
+  valueOccursCheck var (_ :< expr) = do
     valueOccursCheckExpr var expr
     return False
 
-valueOccursCheckExpr :: Name -> BaseExpr Name -> Tc ()
+valueOccursCheckExpr :: String -> ASTNode BaseExpr String () -> Tc ()
 valueOccursCheckExpr _ VoidExpr = return ()
 valueOccursCheckExpr _ (Literal _) = return ()
 valueOccursCheckExpr _ (FnExpr _) = return ()
 
-valueOccursCheckExpr var (ParenthesizedExpr x) =
-  valueOccursCheckExpr var x
+valueOccursCheckExpr var (ParenthesizedExpr x) = do
+  valueOccursCheck var x
+  return ()
 
 valueOccursCheckExpr var (Ident names) =
   check var (last names)
 
 valueOccursCheckExpr var (Match { expr, cases }) = do
-  valueOccursCheckExpr var expr
+  valueOccursCheck var expr
   mapM_ (valueOccursCheckCase var) cases
 
 valueOccursCheckExpr var (If { ifCond, ifBody, ifElseBody }) = do
-  valueOccursCheckExpr var ifCond
+  valueOccursCheck var ifCond
   _ <- mapValueOccursCheck var ifBody
   _ <- mapValueOccursCheck var ifElseBody
   return ()
 
 valueOccursCheckExpr var (Call { callee, args }) = do
-  valueOccursCheckExpr var callee
+  valueOccursCheck var callee
   _ <- mapValueOccursCheck var args
   return ()
 
 valueOccursCheckExpr var (BinOp { lhs, op, rhs }) = do
   check op var
-  valueOccursCheckExpr var lhs
-  valueOccursCheckExpr var rhs
+  valueOccursCheck var lhs
+  valueOccursCheck var rhs
+  return ()
 
 valueOccursCheckExpr var (Record x) = do
   _ <- mapValueOccursCheck var $ map snd x
@@ -57,82 +60,85 @@ valueOccursCheckExpr var (List _ items) = do
   _ <- mapValueOccursCheck var items
   return ()
 
-valueOccursCheckExpr var (FieldAccess obj _) =
-  valueOccursCheckExpr var obj
+valueOccursCheckExpr var (FieldAccess obj _) = do
+  valueOccursCheck var obj
+  return ()
 
-valueOccursCheckExpr var (TypeCall callee _) =
-  valueOccursCheckExpr var callee
+valueOccursCheckExpr var (TypeCall callee _) = do
+  valueOccursCheck var callee
+  return ()
 
-valueOccursCheckExpr var (Negate _ expr) =
-  valueOccursCheckExpr var expr
+valueOccursCheckExpr var (Negate _ expr) = do
+  valueOccursCheck var expr
+  return ()
 
 instance ValueOccursCheck BaseStmt where
-  valueOccursCheck var (Decl x) =
+  valueOccursCheck var (() :< Decl x) =
     valueOccursCheck var x
 
-  valueOccursCheck var (Expr x) =
+  valueOccursCheck var (() :< Expr x) =
     valueOccursCheck var x
 
 instance ValueOccursCheck BaseDecl where
-  valueOccursCheck var (FnStmt (Function { name })) =
+  valueOccursCheck var (() :< FnStmt (() :< Function { name })) =
     return (var == name)
 
-  valueOccursCheck var (Enum name _ _ ) =
+  valueOccursCheck var (() :< Enum name _ _ ) =
     return (var == name)
 
-  valueOccursCheck var (Class { className }) =
+  valueOccursCheck var (() :< Class { className }) =
     return (var == className)
 
-  valueOccursCheck var (Operator { opName }) =
+  valueOccursCheck var (() :< Operator { opName }) =
     return (var == opName)
 
-  valueOccursCheck var (Interface { intfName }) =
+  valueOccursCheck var (() :< Interface { intfName }) =
     return (var == intfName)
 
-  valueOccursCheck var (Let (name, _) expr) =
+  valueOccursCheck var (() :< Let (name, _) expr) =
     if var == name
        then return True
        else valueOccursCheck var expr
 
-  valueOccursCheck _ (Implementation {}) =
+  valueOccursCheck _ (() :< Implementation {}) =
     return False
 
-  valueOccursCheck _ (TypeAlias {}) =
+  valueOccursCheck _ (() :< TypeAlias {}) =
     return False
 
-valueOccursCheckCase :: Name -> BaseCase Name -> Tc ()
-valueOccursCheckCase var (Case { pattern, caseBody }) = do
+valueOccursCheckCase :: String -> Case -> Tc ()
+valueOccursCheckCase var (() :< Case { pattern, caseBody }) = do
   shadowed <- valueOccursCheckPattern var pattern
   if not shadowed
      then mapValueOccursCheck var caseBody >> return ()
      else return ()
 
-valueOccursCheckPattern :: Name -> BasePattern Name -> Tc Bool
-valueOccursCheckPattern _ PatDefault = return False
-valueOccursCheckPattern _ (PatLiteral _) = return False
+valueOccursCheckPattern :: String -> Pattern -> Tc Bool
+valueOccursCheckPattern _ (_ :< PatDefault) = return False
+valueOccursCheckPattern _ (_ :< PatLiteral _) = return False
 
-valueOccursCheckPattern var (PatVar x) =
+valueOccursCheckPattern var (_ :< PatVar x) =
   return (var == x)
 
-valueOccursCheckPattern var (PatRecord x) =
+valueOccursCheckPattern var (_ :< PatRecord x) =
   or <$> mapM (valueOccursCheckPattern var . snd) x
 
-valueOccursCheckPattern var (PatList items rest) = do
+valueOccursCheckPattern var (_ :< PatList items rest) = do
   sItems <- or <$> mapM (valueOccursCheckPattern var) items
   sRest <- valueOccursCheckPatternRest var rest
   return (sItems || sRest)
 
-valueOccursCheckPattern var (PatCtor _ args) =
+valueOccursCheckPattern var (_ :< PatCtor _ args) =
   or <$> mapM (valueOccursCheckPattern var) args
 
-valueOccursCheckPatternRest :: Name -> PatternRest -> Tc Bool
+valueOccursCheckPatternRest :: String -> PatternRest -> Tc Bool
 valueOccursCheckPatternRest _ NoRest = return False
 valueOccursCheckPatternRest _ DiscardRest = return False
 
 valueOccursCheckPatternRest var (NamedRest rest) =
   return (var == rest)
 
-mapValueOccursCheck :: ValueOccursCheck e =>  Name -> [e Name] -> Tc Bool
+mapValueOccursCheck :: ValueOccursCheck e =>  String -> [AST e String ()] -> Tc Bool
 mapValueOccursCheck _ [] =
   return False
 
@@ -142,6 +148,6 @@ mapValueOccursCheck var (x : xs) = do
      then return True
      else mapValueOccursCheck var xs
 
-check :: Name -> Name -> Tc ()
+check :: String -> String -> Tc ()
 check v1 v2 =
   when (v1 == v2) $ throwError (VariableUsedDuringInitialization v1)
