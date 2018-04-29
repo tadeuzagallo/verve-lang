@@ -1,5 +1,6 @@
 module Reassoc.Env
-  ( Env
+  ( Reassoc
+  , ReassocEnv
   , PrecInt
   , defaultEnv
   , addOpInfo
@@ -8,30 +9,54 @@ module Reassoc.Env
   , importReassocEnv
   ) where
 
-import Absyn.Untyped
 import Reassoc.Error
+
+import Absyn.Untyped
 import Util.Error
+import qualified Util.Scope as S
 
 type PrecInt = Integer
 type OpInfo = (Associativity, PrecInt)
 
-newtype Env = Env [(String, OpInfo)]
+newtype Env = Env { getEnv :: [(String, OpInfo)] }
+  deriving (Show)
 
-defaultEnv :: Env
-defaultEnv = Env []
+type Reassoc a = S.Scoped Env a
+type ReassocEnv = S.Scope Env
 
-addOpInfo :: Env -> (String, OpInfo) -> Env
-addOpInfo (Env env) info = Env (info : env)
+instance S.Env Env where
+  type KeyType Env = String
+  type ValueType Env = OpInfo
+  type InterfaceType Env = ()
 
-getOpInfo :: String -> Env -> Result OpInfo
-getOpInfo name (Env env) =
-  case lookup name env of
+  deleteBetween from to current = Env $
+    S.deleteBetweenField (getEnv from) (getEnv to) (getEnv current)
+
+defaultEnv :: ReassocEnv
+defaultEnv =
+  S.createScope
+    []
+    []
+    []
+    (Env [])
+
+addOpInfo :: String -> OpInfo -> Reassoc ()
+addOpInfo op info =
+  S.updateEnv $ \e -> Env { getEnv = (op, info) : getEnv e }
+
+getOpInfo :: String -> Reassoc OpInfo
+getOpInfo op = do
+  info <- S.lookupEnv getEnv op
+  case info of
     Just info -> return info
-    Nothing -> mkError $ UnknownOperator name
+    Nothing -> throwError $ UnknownOperator op
 
-getPrec :: String -> Env -> Result PrecInt
-getPrec name env = snd <$> getOpInfo name env
+getPrec :: String -> Reassoc PrecInt
+getPrec name = snd <$> getOpInfo name
 
-importReassocEnv :: [String] -> Env -> Env -> Env
-importReassocEnv imports (Env targetEnv) (Env importEnv) =
-  Env (filter ((`elem` imports) . fst) importEnv ++ targetEnv)
+importReassocEnv :: [String] -> ReassocEnv -> ReassocEnv -> ReassocEnv
+importReassocEnv imports targetScope importScope =
+  S.importEnv importer targetScope importScope
+    where
+      importer (Env targetEnv) (Env importEnv) =
+        Env $ filter ((`elem` imports) . fst) importEnv ++ targetEnv

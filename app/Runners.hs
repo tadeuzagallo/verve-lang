@@ -44,7 +44,7 @@ runAll verbose modName stmts = do
   (nenv, rnEnv, tcState, dsState, env) <- getEnv
   dumpIR <- option dump_ir
   renameStmts modName stmts rnEnv \> \(rnEnv', renamed) ->
-    reassocStmts nenv renamed \> \(nenv', rebalanced) ->
+    reassocStmts renamed nenv \> \(nenv', rebalanced) ->
       inferStmts tcState rebalanced \> \(tcState', (typed, ty)) ->
         let (dsState', core) = desugarStmts dsState typed
             (env', val) = evalWithEnv env core

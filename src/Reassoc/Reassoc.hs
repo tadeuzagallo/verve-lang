@@ -7,187 +7,173 @@ import Reassoc.Error
 
 import Absyn.Untyped
 import Util.Error
+import Util.Scope (runScoped)
 
-import Control.Monad (foldM)
+reassocStmts :: [Stmt] -> ReassocEnv -> Result (ReassocEnv, [Stmt])
+reassocStmts stmts state =
+  runScoped (n_stmts stmts) state
 
-reassocStmts :: Env -> [Stmt] -> Result (Env, [Stmt])
-reassocStmts = n_stmts
+wrapFn :: (ASTNode node name () -> Reassoc (ASTNode node name ())) -> AST node name () -> Reassoc (AST node name ())
+wrapFn f (() :< e) =
+  (() :<) <$> f e
 
-wrapFnWithEnv :: (Env -> ASTNode node name () -> Result (Env, ASTNode node name ())) -> Env -> AST node name () -> Result (Env, AST node name ())
-wrapFnWithEnv fn env (() :< e) =
-  fmap (() :<) <$> fn env e
+n_stmts :: [Stmt] -> Reassoc [Stmt]
+n_stmts = mapM n_stmt
 
-wrapFn :: (Env -> ASTNode node name () -> Result (ASTNode node name ())) -> Env -> AST node name () -> Result (AST node name ())
-wrapFn f env  (() :< e) =
-  (() :<) <$> f env e
-
-n_stmts :: Env -> [Stmt] -> Result (Env, [Stmt])
-n_stmts env stmts = do
-  (env', stmts') <- foldM aux (env, []) stmts
-  return (env', reverse stmts')
-    where
-      aux (env, stmts) stmt = do
-        (env', stmt') <- n_stmt env stmt
-        return (env', stmt' : stmts)
-
-n_stmt :: Env -> Stmt -> Result (Env, Stmt)
-n_stmt = wrapFnWithEnv n_stmt
+n_stmt :: Stmt -> Reassoc Stmt
+n_stmt = wrapFn n_stmt
   where
-    n_stmt env (Expr expr) = do
-      expr' <- n_expr env expr
-      return (env, Expr expr')
-    n_stmt env (Decl decl) = do
-      (env', decl') <- n_decl env decl
-      return (env', Decl decl')
+    n_stmt (Expr expr) = do
+      Expr <$> n_expr expr
+    n_stmt (Decl decl) = do
+      Decl <$> n_decl decl
 
-n_decl :: Env -> Decl -> Result (Env, Decl)
-n_decl = wrapFnWithEnv n_decl
+n_decl :: Decl -> Reassoc Decl
+n_decl = wrapFn n_decl
   where
-    n_decl env op@(Operator { opAssoc, opPrec, opName, opBody }) = do
-      opPrec' <- prec env opPrec
-      let env' = addOpInfo env (opName, (opAssoc, opPrec'))
-      (_, opBody') <- n_stmts env' opBody
-      return (env', op { opBody = opBody' })
-    n_decl env (FnStmt fn) = do
-      fn' <- n_fn env fn
-      return (env, FnStmt fn')
-    n_decl env (Let x expr) = do
-      expr' <- n_expr env expr
-      return (env, Let x expr')
-    n_decl env (Class name vars methods) = do
-      methods' <- mapM (n_fn env) methods
-      return (env, Class name vars methods')
-    n_decl env intf@(Interface _ _ methods) = do
-      env' <- foldM n_intfItem env methods
-      return (env', intf)
-    n_decl env enum@(Enum {}) = return (env, enum)
-    n_decl env ta@(TypeAlias {}) = return (env, ta)
-    n_decl env impl@(Implementation { implMethods }) = do
-      implMethods' <- mapM (n_implItem env) implMethods
-      return (env, impl { implMethods = implMethods' })
+    n_decl op@(Operator { opAssoc, opPrec, opName, opBody }) = do
+      opPrec' <- prec opPrec
+      addOpInfo opName (opAssoc, opPrec')
+      opBody' <- n_stmts opBody
+      return op { opBody = opBody' }
+    n_decl (FnStmt fn) = do
+      FnStmt <$> n_fn fn
+    n_decl (Let x expr) = do
+      expr' <- n_expr expr
+      return $ Let x expr'
+    n_decl (Class name vars methods) = do
+      methods' <- mapM n_fn methods
+      return $ Class name vars methods'
+    n_decl intf@(Interface _ _ methods) = do
+      mapM_ n_intfItem methods
+      return intf
+    n_decl enum@(Enum {}) = return enum
+    n_decl ta@(TypeAlias {}) = return ta
+    n_decl impl@(Implementation { implMethods }) = do
+      implMethods' <- mapM n_implItem implMethods
+      return impl { implMethods = implMethods' }
 
-n_intfItem :: Env -> InterfaceItem -> Result Env
-n_intfItem env (IntfOperator { intfOpName, intfOpPrec, intfOpAssoc }) = do
-  intfOpPrec' <- prec env intfOpPrec
-  let env' = addOpInfo env (intfOpName, (intfOpAssoc, intfOpPrec'))
-  return env'
+n_intfItem :: InterfaceItem -> Reassoc ()
+n_intfItem (IntfOperator { intfOpName, intfOpPrec, intfOpAssoc }) = do
+  intfOpPrec' <- prec intfOpPrec
+  addOpInfo intfOpName (intfOpAssoc, intfOpPrec')
 
-n_intfItem env _ =
-  return env
+n_intfItem _ =
+  return ()
 
-n_implItem :: Env -> ImplementationItem -> Result ImplementationItem
+n_implItem :: ImplementationItem -> Reassoc ImplementationItem
 n_implItem = wrapFn n_implItem
   where
-    n_implItem env (ImplVar (a, e)) = do
-      e' <- n_expr env e
+    n_implItem (ImplVar (a, e)) = do
+      e' <- n_expr e
       return $ ImplVar (a, e')
 
-    n_implItem env fn@(ImplFunction { implBody }) = do
-      implBody' <- snd <$> n_stmts env implBody
+    n_implItem fn@(ImplFunction { implBody }) = do
+      implBody' <- n_stmts implBody
       return $ fn { implBody = implBody' }
 
-    n_implItem env op@(ImplOperator { implOpBody }) = do
-      implOpBody' <- snd <$> n_stmts env implOpBody
+    n_implItem op@(ImplOperator { implOpBody }) = do
+      implOpBody' <- n_stmts implOpBody
       return $ op { implOpBody = implOpBody' }
 
-prec :: Env -> Precedence -> Result PrecInt
-prec _ (PrecValue n) = return n
-prec env (PrecEqual n) =  getPrec n env
-prec env (PrecHigher n) =  (+) 1 <$> getPrec n env
-prec env (PrecLower n) =  (-) 1 <$> getPrec n env
+prec :: Precedence -> Reassoc PrecInt
+prec (PrecValue n) = return n
+prec (PrecEqual n) =  getPrec n
+prec (PrecHigher n) =  (+) 1 <$> getPrec n
+prec (PrecLower n) =  (-) 1 <$> getPrec n
 
-n_fn :: Env -> Function -> Result Function
+n_fn :: Function -> Reassoc Function
 n_fn = wrapFn n_fn
   where
-    n_fn env fn = do
-      (_, body') <- n_stmts env (body fn)
+    n_fn fn = do
+      body' <- n_stmts (body fn)
       return fn { body = body' }
 
-n_expr :: Env -> Expr -> Result Expr
+n_expr :: Expr -> Reassoc Expr
 n_expr = wrapFn n_expr'
   where
-    n_expr' :: Env -> ASTNode BaseExpr String () -> Result (ASTNode BaseExpr String ())
-    n_expr' env (BinOp _ _ ll lop (() :< BinOp _ _ rl rop rr)) = do
-      ll' <- n_expr env ll
-      rl' <- n_expr env rl
-      rr' <- n_expr env rr
-      c <- comparePrec env lop rop
+    n_expr' :: ASTNode BaseExpr String () -> Reassoc (ASTNode BaseExpr String ())
+    n_expr' (BinOp _ _ ll lop (() :< BinOp _ _ rl rop rr)) = do
+      ll' <- n_expr ll
+      rl' <- n_expr rl
+      rr' <- n_expr rr
+      c <- comparePrec lop rop
       return $ case c of
         PLeft ->
           BinOp [] [] (() :< BinOp [] [] ll' lop rl') rop rr'
         PRight ->
           BinOp [] [] ll' lop (() :< BinOp [] [] rl' rop rr')
 
-    n_expr' _ (Literal l) = return $ Literal l
-    n_expr' _ (Ident a) = return $ Ident a
+    n_expr' (Literal l) = return $ Literal l
+    n_expr' (Ident a) = return $ Ident a
 
-    n_expr' env (ParenthesizedExpr e) =
-      ParenthesizedExpr <$> n_expr env e
+    n_expr' (ParenthesizedExpr e) =
+      ParenthesizedExpr <$> n_expr e
 
-    n_expr' env (Match e cs) = do
-      e' <- n_expr env e
-      cs' <- mapM (n_case env) cs
+    n_expr' (Match e cs) = do
+      e' <- n_expr e
+      cs' <- mapM n_case cs
       return $ Match e' cs'
 
-    n_expr' env (If cond conseq alt) = do
-      cond' <- n_expr env cond
-      conseq' <- snd <$> n_stmts env conseq
-      alt' <- snd <$> n_stmts env alt
+    n_expr' (If cond conseq alt) = do
+      cond' <- n_expr cond
+      conseq' <- n_stmts conseq
+      alt' <- n_stmts alt
       return $ If cond' conseq' alt'
 
-    n_expr' env call@(Call { callee, args }) = do
-      callee' <- n_expr env callee
-      args' <- mapM (n_expr env) args
+    n_expr' call@(Call { callee, args }) = do
+      callee' <- n_expr callee
+      args' <- mapM n_expr args
       return $ call { callee = callee', args = args' }
 
-    n_expr' env op@(BinOp { lhs, rhs }) = do
-      lhs' <- n_expr env lhs
-      rhs' <- n_expr env rhs
+    n_expr' op@(BinOp { lhs, rhs }) = do
+      lhs' <- n_expr lhs
+      rhs' <- n_expr rhs
       return $ op { lhs = lhs', rhs = rhs' }
 
-    n_expr' env (Record fields) = do
-      fields' <- mapM (mapM $ n_expr env) fields
+    n_expr' (Record fields) = do
+      fields' <- mapM (mapM n_expr) fields
       return $ Record fields'
 
-    n_expr' env (List t items) = do
-      items' <- mapM (n_expr env) items
+    n_expr' (List t items) = do
+      items' <- mapM n_expr items
       return $ List t items'
 
-    n_expr' env (FieldAccess obj field) = do
-      obj' <- n_expr env obj
+    n_expr' (FieldAccess obj field) = do
+      obj' <- n_expr obj
       return $ FieldAccess obj' field
 
-    n_expr' env (FnExpr fn) =
-      FnExpr <$> n_fn env fn
+    n_expr' (FnExpr fn) =
+      FnExpr <$> n_fn fn
 
-    n_expr' env (Negate cArgs e) = do
-      e' <- n_expr env e
+    n_expr' (Negate cArgs e) = do
+      e' <- n_expr e
       return $ Negate cArgs e'
 
-    n_expr' _ VoidExpr = return VoidExpr
+    n_expr' VoidExpr = return VoidExpr
 
-    n_expr' env (TypeCall e cArgs) = do
-      e' <- n_expr env e
+    n_expr' (TypeCall e cArgs) = do
+      e' <- n_expr e
       return $ TypeCall e' cArgs
 
-n_case :: Env -> Case -> Result Case
+n_case :: Case -> Reassoc Case
 n_case = wrapFn n_case
   where
-    n_case env (Case pattern body) = do
-      body' <- snd <$> n_stmts env body
+    n_case (Case pattern body) = do
+      body' <- n_stmts body
       return $ Case pattern body'
 
 data Prec
   = PLeft
   | PRight
 
-comparePrec :: Env -> String -> String -> Result Prec
-comparePrec env l r = do
-  (lAssoc, lPrec) <- getOpInfo l env
-  (rAssoc, rPrec) <- getOpInfo r env
+comparePrec :: String -> String -> Reassoc Prec
+comparePrec l r = do
+  (lAssoc, lPrec) <- getOpInfo l
+  (rAssoc, rPrec) <- getOpInfo r
   case (compare lPrec rPrec, lAssoc, rAssoc) of
     (LT, _, _) -> return PRight
     (GT, _, _) -> return PLeft
     (EQ, AssocLeft, AssocLeft) -> return PLeft
     (EQ, AssocRight, AssocRight) -> return PRight
-    (EQ, _, _) -> mkError $ PrecedenceError l r
+    (EQ, _, _) -> throwError $ PrecedenceError l r

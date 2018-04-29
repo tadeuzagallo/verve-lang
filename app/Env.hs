@@ -31,7 +31,7 @@ import Data.Either (either)
 import System.Console.Haskeline.MonadException (MonadException, RunIO(..), controlIO)
 import System.Exit (exitFailure)
 
-type Env = (Reassoc.Env, Renamer.RnEnv, Typing.TcEnv, DsState, Interpreter.Env)
+type Env = (Reassoc.ReassocEnv, Renamer.RnEnv, Typing.TcEnv, DsState, Interpreter.Env)
 
 defaultEnv :: Env
 defaultEnv =
