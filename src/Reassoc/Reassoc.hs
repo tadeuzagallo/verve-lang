@@ -28,13 +28,17 @@ n_stmt = wrapFn n_stmt
     n_stmt (Decl decl) = do
       Decl <$> n_decl decl
 
+n_codeBlock :: CodeBlock -> Reassoc CodeBlock
+n_codeBlock (() :< CodeBlock stmts) =
+  (() :<) . CodeBlock <$> n_stmts stmts
+
 n_decl :: Decl -> Reassoc Decl
 n_decl = wrapFn n_decl
   where
     n_decl op@(Operator { opAssoc, opPrec, opName, opBody }) = do
       opPrec' <- prec opPrec
       addOpInfo opName (opAssoc, opPrec')
-      opBody' <- n_stmts opBody
+      opBody' <- n_codeBlock opBody
       return op { opBody = opBody' }
     n_decl (FnStmt fn) = do
       FnStmt <$> n_fn fn
@@ -69,11 +73,11 @@ n_implItem = wrapFn n_implItem
       return $ ImplVar (a, e')
 
     n_implItem fn@(ImplFunction { implBody }) = do
-      implBody' <- n_stmts implBody
+      implBody' <- n_codeBlock implBody
       return $ fn { implBody = implBody' }
 
     n_implItem op@(ImplOperator { implOpBody }) = do
-      implOpBody' <- n_stmts implOpBody
+      implOpBody' <- n_codeBlock implOpBody
       return $ op { implOpBody = implOpBody' }
 
 prec :: Precedence -> Reassoc PrecInt
@@ -86,7 +90,7 @@ n_fn :: Function -> Reassoc Function
 n_fn = wrapFn n_fn
   where
     n_fn fn = do
-      body' <- n_stmts (body fn)
+      body' <- n_codeBlock (body fn)
       return fn { body = body' }
 
 n_expr :: Expr -> Reassoc Expr
@@ -117,8 +121,8 @@ n_expr = wrapFn n_expr'
 
     n_expr' (If cond conseq alt) = do
       cond' <- n_expr cond
-      conseq' <- n_stmts conseq
-      alt' <- n_stmts alt
+      conseq' <- n_codeBlock conseq
+      alt' <- n_codeBlock alt
       return $ If cond' conseq' alt'
 
     n_expr' call@(Call { callee, args }) = do
@@ -160,7 +164,7 @@ n_case :: Case -> Reassoc Case
 n_case = wrapFn n_case
   where
     n_case (Case pattern body) = do
-      body' <- n_stmts body
+      body' <- n_codeBlock body
       return $ Case pattern body'
 
 data Prec

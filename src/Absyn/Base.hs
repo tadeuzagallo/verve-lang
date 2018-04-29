@@ -24,6 +24,8 @@ data BaseStmt name w
   = Decl (w (BaseDecl name w))
   | Expr (w (BaseExpr name w))
 
+newtype BaseCodeBlock name w = CodeBlock [w (BaseStmt name w)]
+
 data BaseDecl name w
   = FnStmt (w (BaseFunction name w))
   | Enum String [String] [DataCtor]
@@ -39,7 +41,7 @@ data BaseDecl name w
              , opName :: String
              , opRhs :: Param
              , opRetType :: Type
-             , opBody :: [w (BaseStmt name w)]
+             , opBody :: w (BaseCodeBlock name w)
              }
   | Interface { intfName :: String
               , intfParam :: String
@@ -70,12 +72,12 @@ data BaseImplementationItem name w
   = ImplVar (String, w (BaseExpr name w))
   | ImplFunction { implName :: String
                  , implParams :: [String]
-                 , implBody :: [w (BaseStmt name w)]
+                 , implBody :: w (BaseCodeBlock name w)
                  }
   | ImplOperator { implOpLhs :: String
                  , implOpName :: String
                  , implOpRhs :: String
-                 , implOpBody :: [w (BaseStmt name w)]
+                 , implOpBody :: w (BaseCodeBlock name w)
                  }
 
 data Associativity
@@ -104,7 +106,7 @@ data BaseFunction name w
   , generics :: Generics
   , params :: [Param]
   , retType :: Type
-  , body :: [w (BaseStmt name w)]
+  , body :: w (BaseCodeBlock name w)
   }
 
 data BaseExpr name w
@@ -115,8 +117,8 @@ data BaseExpr name w
           , cases :: [w (BaseCase name w)]
           }
   | If { ifCond :: w (BaseExpr name w)
-       , ifBody :: [w (BaseStmt name w)]
-       , ifElseBody :: [w (BaseStmt name w)]
+       , ifBody :: w (BaseCodeBlock name w)
+       , ifElseBody :: w (BaseCodeBlock name w)
        }
   | Call { callee :: w (BaseExpr name w)
          , constraintArgs :: [T.ConstraintArg]
@@ -142,7 +144,7 @@ data BaseExpr name w
 data BaseCase name w
   = Case
     { pattern :: w (BasePattern name w)
-    , caseBody :: [w (BaseStmt name w)]
+    , caseBody :: w (BaseCodeBlock name w)
     }
 
 data BasePattern name w

@@ -37,8 +37,8 @@ valueOccursCheckExpr var (Match { expr, cases }) = do
 
 valueOccursCheckExpr var (If { ifCond, ifBody, ifElseBody }) = do
   valueOccursCheck var ifCond
-  _ <- mapValueOccursCheck var ifBody
-  _ <- mapValueOccursCheck var ifElseBody
+  _ <- valueOccursCheck var ifBody
+  _ <- valueOccursCheck var ifElseBody
   return ()
 
 valueOccursCheckExpr var (Call { callee, args }) = do
@@ -79,6 +79,10 @@ instance ValueOccursCheck BaseStmt where
   valueOccursCheck var (() :< Expr x) =
     valueOccursCheck var x
 
+instance ValueOccursCheck BaseCodeBlock where
+  valueOccursCheck v (() :< CodeBlock stmts) =
+    mapValueOccursCheck v stmts
+
 instance ValueOccursCheck BaseDecl where
   valueOccursCheck var (() :< FnStmt (() :< Function { name })) =
     return (var == name)
@@ -110,7 +114,7 @@ valueOccursCheckCase :: String -> Case -> Tc ()
 valueOccursCheckCase var (() :< Case { pattern, caseBody }) = do
   shadowed <- valueOccursCheckPattern var pattern
   if not shadowed
-     then mapValueOccursCheck var caseBody >> return ()
+     then valueOccursCheck var caseBody >> return ()
      else return ()
 
 valueOccursCheckPattern :: String -> Pattern -> Tc Bool

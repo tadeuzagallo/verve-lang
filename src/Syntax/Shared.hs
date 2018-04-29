@@ -26,8 +26,8 @@ p_function = liftParser $ do
   body <- p_codeBlock
   return $ Function {name, generics, params, retType, body}
 
-p_codeBlock :: Parser [Stmt]
-p_codeBlock = block p_stmt
+p_codeBlock :: Parser CodeBlock
+p_codeBlock = liftParser $ CodeBlock <$> block p_stmt
 
 p_generics :: Parser [(String, [String])]
 p_generics = angles $ commaSep p_genericParam

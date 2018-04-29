@@ -54,13 +54,17 @@ renameImport targetEnv importEnv (Import isGlobal mod alias items) =
 r_stmts :: [Stmt] -> Rn [Stmt]
 r_stmts stmts = mapM r_stmt stmts
 
-r_body :: [Stmt] -> Rn [Stmt]
-r_body stmts = do
+r_codeBlock :: CodeBlock -> Rn CodeBlock
+r_codeBlock (m :< CodeBlock stmts) =
+  (m :<) . CodeBlock <$> r_stmts stmts
+
+r_body :: CodeBlock -> Rn CodeBlock
+r_body (meta :< CodeBlock stmts) = do
   m <- startMarker
   stmts' <- r_stmts stmts
   endMarker m
   clearMarker m
-  return stmts'
+  return $ meta :< CodeBlock stmts'
 
 r_stmt :: Stmt -> Rn Stmt
 r_stmt = wrapFn r_stmt
@@ -132,7 +136,7 @@ r_decl = wrapFn r_decl
 
       retType' <- r_type retType
 
-      body' <- r_body body
+      body' <- r_codeBlock body
 
       clearMarker m
 

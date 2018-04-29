@@ -44,6 +44,7 @@ data Visitor m fromName toName fromMeta toMeta =
   Visitor
     { visitModule :: Transform BaseExpr m fromName toName fromMeta toMeta
     , visitStmt :: Transform BaseStmt m fromName toName fromMeta toMeta
+    , visitCodeBlock :: Transform BaseCodeBlock m fromName toName fromMeta toMeta
     , visitDecl :: Transform BaseDecl m fromName toName fromMeta toMeta
     , visitImplementationItem :: Transform BaseImplementationItem m fromName toName fromMeta toMeta
     , visitFunction :: Transform BaseFunction m fromName toName fromMeta toMeta
@@ -61,6 +62,7 @@ data NodeVisitor m fromName toName =
   NodeVisitor
     { visitModuleNode :: TransformNode BaseExpr m fromName toName
     , visitStmtNode :: TransformNode BaseStmt m fromName toName
+    , visitCodeBlockNode :: TransformNode BaseCodeBlock m fromName toName
     , visitDeclNode :: TransformNode BaseDecl m fromName toName
     , visitImplementationItemNode :: TransformNode BaseImplementationItem m fromName toName
     , visitFunctionNode :: TransformNode BaseFunction m fromName toName
@@ -77,6 +79,7 @@ promoteNodeVisitor :: Monad m => NodeVisitor m fromName toName -> Visitor m from
 promoteNodeVisitor nodeVisitor =
   Visitor { visitModule = wrap $ visitModuleNode nodeVisitor
           , visitStmt = wrap $ visitStmtNode nodeVisitor
+          , visitCodeBlock = wrap $ visitCodeBlockNode nodeVisitor
           , visitDecl = wrap $ visitDeclNode nodeVisitor
           , visitImplementationItem = wrap $ visitImplementationItemNode nodeVisitor
           , visitFunction = wrap $ visitFunctionNode nodeVisitor
@@ -109,6 +112,12 @@ instance Visit BaseStmt where
     e' <- visitExpr v e
     return $ m' :< Expr e'
 
+instance Visit BaseCodeBlock where
+  visit v (m :< CodeBlock stmts) = do
+    m' <- visitMetaData v m
+    stmts' <- mapM (visitStmt v) stmts
+    return $ m' :< CodeBlock stmts'
+
 instance Visit BaseDecl where
   visit v (m :< FnStmt fn) = do
     m' <- visitMetaData v m
@@ -131,7 +140,7 @@ instance Visit BaseDecl where
 
   visit v (m :< op@(Operator { opBody })) = do
     m' <- visitMetaData v m
-    opBody <- mapM (visitStmt v) opBody
+    opBody <- visitCodeBlock v opBody
     return $ m' :< op { opBody }
 
   visit v (m :< intf@(Interface { intfName })) = do
@@ -158,18 +167,18 @@ instance Visit BaseImplementationItem where
 
   visit v (m :< fn@(ImplFunction { implBody })) = do
     m' <- visitMetaData v m
-    implBody <- mapM (visitStmt v) implBody
+    implBody <- visitCodeBlock v implBody
     return $ m' :< fn { implBody }
 
   visit v (m :< op@(ImplOperator { implOpBody })) = do
     m' <- visitMetaData v m
-    implOpBody <-  mapM (visitStmt v) implOpBody
+    implOpBody <-  visitCodeBlock v implOpBody
     return $ m' :< op { implOpBody }
 
 instance Visit BaseFunction where
   visit v (m :< fn@(Function { body })) = do
     m' <- visitMetaData v m
-    body <- mapM (visitStmt v) body
+    body <- visitCodeBlock v body
     return $ m' :< fn { body }
 
 instance Visit BaseExpr where
@@ -195,8 +204,8 @@ instance Visit BaseExpr where
   visit v (m :< If cond conseq alt) = do
     m' <- visitMetaData v m
     cond' <- visitExpr v cond
-    conseq' <- mapM (visitStmt v) conseq
-    alt' <- mapM (visitStmt v) alt
+    conseq' <- visitCodeBlock v conseq
+    alt' <- visitCodeBlock v alt
     return $ m' :< If cond' conseq' alt'
 
   visit v (m :< call@(Call { callee, args })) = do
@@ -250,7 +259,7 @@ instance Visit BaseCase where
   visit v (m :< Case pat body) = do
     m' <- visitMetaData v m
     pat' <- visitPattern v pat
-    body' <- mapM (visitStmt v) body
+    body' <- visitCodeBlock v body
     return $ m' :< Case pat' body'
 
 instance Visit BasePattern where

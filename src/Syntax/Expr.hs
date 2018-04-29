@@ -116,7 +116,7 @@ p_case = liftParser $ do
   reserved "case"
   pattern <- p_pattern
   symbol ":"
-  caseBody <- p_caseBody True
+  caseBody <- liftParser $ CodeBlock <$> p_caseBody True
   return $ Case { pattern, caseBody }
 
 p_caseBody :: Bool -> Parser [Stmt]
@@ -136,10 +136,10 @@ p_if = liftParser $ do
   reserved "if"
   ifCond <- p_expr False
   ifBody <- p_codeBlock
-  ifElseBody <- option [] p_else
+  ifElseBody <- option (() :< CodeBlock []) p_else
   return $ If { ifCond, ifBody, ifElseBody }
 
-p_else :: Parser [Stmt]
+p_else :: Parser CodeBlock
 p_else = do
   reserved "else"
-  p_codeBlock <|> ((:[]) <$> (liftParser $ Expr <$> p_if))
+  p_codeBlock <|> (liftParser $ CodeBlock . (:[]) <$> (liftParser $ Expr <$> p_if))

@@ -102,13 +102,13 @@ i_fn (meta :< fn) = do
   let fn' = fn { body = body' }
   return (meta :< fn', ty)
 
-i_body :: [U.Stmt] -> Tc ([T.Stmt], Type)
-i_body stmts = do
+i_body :: U.CodeBlock -> Tc (T.CodeBlock, Type)
+i_body (meta :< CodeBlock stmts) = do
   m <- startMarker
   (stmts', ty) <- i_stmts stmts
   endMarker m
   clearMarker m
-  return (stmts', fromMaybe void ty)
+  return (meta :< CodeBlock stmts', fromMaybe void ty)
 
 fnTy :: ([BoundVar], [(String, U.Type)], U.Type) -> Tc (Type, [(String, Type)], Type)
 fnTy (generics, params, retType) = do

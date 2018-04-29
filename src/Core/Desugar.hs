@@ -47,6 +47,9 @@ d_stmts stmts k =
       g [] k =
         d_expr (() :< VoidExpr) k
 
+d_codeBlock :: CodeBlock -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
+d_codeBlock (_ :< CodeBlock stmts) k =
+  d_stmts stmts k
 
 d_decls :: [Decl] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_decls [d] k =
@@ -135,7 +138,7 @@ d_fn (_ :< fn) = do
   let params' = map (CA.Var . fst) (params fn)
   let f = CA.Var $ name fn
   j <- contVar
-  body' <- d_stmts (body fn) $ \x -> return (CA.AppCont j x)
+  body' <- d_codeBlock (body fn) $ \x -> return (CA.AppCont j x)
   let constrs = mkConstraints (generics fn)
   return $ CA.FunDef f j (constrs ++ params') body'
 
@@ -176,14 +179,14 @@ d_implItem (_ :< ImplVar (name, expr)) k =
 
 d_implItem (_ :< fn@(ImplFunction { implName })) k = do
   j <- contVar
-  body <- d_stmts (implBody fn) $ \x -> return $ CA.AppCont j x
+  body <- d_codeBlock (implBody fn) $ \x -> return $ CA.AppCont j x
   let f = CA.Var ("#" ++ implName)
   let def = CA.FunDef f j (map CA.Var (implParams fn)) body
   CA.LetFun [def] <$> k (implName, f)
 
 d_implItem (_ :< op@(ImplOperator { implOpName })) k = do
   j <- contVar
-  body <- d_stmts (implOpBody op) $ \x -> return $ CA.AppCont j x
+  body <- d_codeBlock (implOpBody op) $ \x -> return $ CA.AppCont j x
   let name = CA.Var ("#" ++ implOpName)
   let def = CA.FunDef name j [CA.Var (implOpLhs op), CA.Var (implOpRhs op)] body
   CA.LetFun [def] <$> k (implOpName, name)
@@ -257,7 +260,7 @@ d_expr (_ :< Match expr cases) k = do
   return $ CA.LetCont [def] expr'
   where
     d_case j (_ :< Case (_ :< pat) body) = do
-      body' <- d_stmts body $ \y ->
+      body' <- d_codeBlock body $ \y ->
         return $ CA.AppCont j y
       return ([pat], body')
 
