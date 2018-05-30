@@ -38,6 +38,7 @@ library
                        Util.PrettyPrint
 
   other-modules:       Absyn.Base
+                       Absyn.Loc
                        Absyn.Meta
                        Absyn.Type
                        Absyn.ValueOccursCheck

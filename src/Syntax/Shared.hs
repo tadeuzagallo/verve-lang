@@ -5,14 +5,15 @@ import Syntax.Lexer
 import Syntax.Type
 import {-# SOURCE #-} Syntax.Stmt
 
-import Text.Parsec (choice, option)
+import Text.Parsec (choice, getPosition, option)
 import Text.Parsec.String (Parser)
 
--- TODO: add source location
-liftParser :: (Visit node) => Parser (ASTNode node name ()) -> Parser (AST node name ())
-liftParser f = do
-  node <- f
-  return $ () :< node
+liftParser :: Parser (ASTNode node name SourceSpan) -> Parser (AST node name SourceSpan)
+liftParser p = do
+  spanStart <- getPosition
+  node <- p
+  spanEnd <- getPosition
+  return $ SourceSpan { spanStart, spanEnd } :< node
 
 -- Parsers shared across Decl and Expr
 

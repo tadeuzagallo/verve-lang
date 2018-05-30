@@ -2,7 +2,6 @@ module Absyn.ValueOccursCheck where
 
 import Absyn.Base
 import Absyn.Meta
-import Absyn.Untyped
 
 import Typing.Env
 import Typing.TypeError
@@ -11,7 +10,7 @@ import Util.Error
 import Control.Monad (mapM_, when)
 
 class ValueOccursCheck b where
-  valueOccursCheck :: String -> AST b String () -> Tc Bool
+  valueOccursCheck :: String -> AST b String c -> Tc Bool
 
 instance ValueOccursCheck BaseExpr where
   -- TRIVIAL
@@ -19,7 +18,7 @@ instance ValueOccursCheck BaseExpr where
     valueOccursCheckExpr var expr
     return False
 
-valueOccursCheckExpr :: String -> ASTNode BaseExpr String () -> Tc ()
+valueOccursCheckExpr :: String -> ASTNode BaseExpr String c -> Tc ()
 valueOccursCheckExpr _ VoidExpr = return ()
 valueOccursCheckExpr _ (Literal _) = return ()
 valueOccursCheckExpr _ (FnExpr _) = return ()
@@ -73,51 +72,51 @@ valueOccursCheckExpr var (Negate _ expr) = do
   return ()
 
 instance ValueOccursCheck BaseStmt where
-  valueOccursCheck var (() :< Decl x) =
+  valueOccursCheck var (_ :< Decl x) =
     valueOccursCheck var x
 
-  valueOccursCheck var (() :< Expr x) =
+  valueOccursCheck var (_ :< Expr x) =
     valueOccursCheck var x
 
 instance ValueOccursCheck BaseCodeBlock where
-  valueOccursCheck v (() :< CodeBlock stmts) =
+  valueOccursCheck v (_ :< CodeBlock stmts) =
     mapValueOccursCheck v stmts
 
 instance ValueOccursCheck BaseDecl where
-  valueOccursCheck var (() :< FnStmt (() :< Function { name })) =
+  valueOccursCheck var (_ :< FnStmt (_ :< Function { name })) =
     return (var == name)
 
-  valueOccursCheck var (() :< Enum name _ _ ) =
+  valueOccursCheck var (_ :< Enum name _ _ ) =
     return (var == name)
 
-  valueOccursCheck var (() :< Class { className }) =
+  valueOccursCheck var (_ :< Class { className }) =
     return (var == className)
 
-  valueOccursCheck var (() :< Operator { opName }) =
+  valueOccursCheck var (_ :< Operator { opName }) =
     return (var == opName)
 
-  valueOccursCheck var (() :< Interface { intfName }) =
+  valueOccursCheck var (_ :< Interface { intfName }) =
     return (var == intfName)
 
-  valueOccursCheck var (() :< Let (name, _) expr) =
+  valueOccursCheck var (_ :< Let (name, _) expr) =
     if var == name
        then return True
        else valueOccursCheck var expr
 
-  valueOccursCheck _ (() :< Implementation {}) =
+  valueOccursCheck _ (_ :< Implementation {}) =
     return False
 
-  valueOccursCheck _ (() :< TypeAlias {}) =
+  valueOccursCheck _ (_ :< TypeAlias {}) =
     return False
 
-valueOccursCheckCase :: String -> Case -> Tc ()
-valueOccursCheckCase var (() :< Case { pattern, caseBody }) = do
+valueOccursCheckCase :: String -> AST BaseCase String c -> Tc ()
+valueOccursCheckCase var (_ :< Case { pattern, caseBody }) = do
   shadowed <- valueOccursCheckPattern var pattern
   if not shadowed
      then valueOccursCheck var caseBody >> return ()
      else return ()
 
-valueOccursCheckPattern :: String -> Pattern -> Tc Bool
+valueOccursCheckPattern :: String -> AST BasePattern String c -> Tc Bool
 valueOccursCheckPattern _ (_ :< PatDefault) = return False
 valueOccursCheckPattern _ (_ :< PatLiteral _) = return False
 
@@ -142,7 +141,7 @@ valueOccursCheckPatternRest _ DiscardRest = return False
 valueOccursCheckPatternRest var (NamedRest rest) =
   return (var == rest)
 
-mapValueOccursCheck :: ValueOccursCheck e =>  String -> [AST e String ()] -> Tc Bool
+mapValueOccursCheck :: ValueOccursCheck e => String -> [AST e String c] -> Tc Bool
 mapValueOccursCheck _ [] =
   return False
 

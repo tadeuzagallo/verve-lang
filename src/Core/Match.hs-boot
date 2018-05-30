@@ -4,6 +4,6 @@ import qualified Core.Absyn as CA
 import Core.State
 import Absyn.Typed
 
-type Equation = ([ASTNode BasePattern Id ()], CA.Term)
+type Equation = ([ASTNode BasePattern Id SourceSpan], CA.Term)
 
 match :: [CA.Var] -> [Equation] -> CA.Term -> DsM CA.Term

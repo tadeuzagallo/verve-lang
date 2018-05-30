@@ -22,6 +22,11 @@ desugarStmts :: DsState -> [Stmt] -> (DsState, CA.Term)
 desugarStmts state stmts =
   runDesugar (d_stmts stmts) state
 
+dummySpan :: SourceSpan
+dummySpan = SourceSpan { spanStart = error "unknown span start"
+                       , spanEnd = error "unknown span end"
+                       }
+
 d_stmts :: [Stmt] -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_stmts stmts k =
   let stmts' = groupBy f stmts
@@ -45,7 +50,7 @@ d_stmts stmts k =
         foldr (\e k _ -> d_expr e k) init [e | _ :< Expr e <- es] []
 
       g [] k =
-        d_expr (() :< VoidExpr) k
+        d_expr (dummySpan :< VoidExpr) k
 
 d_codeBlock :: CodeBlock -> ([CA.Var] -> DsM CA.Term) -> DsM CA.Term
 d_codeBlock (_ :< CodeBlock stmts) k =
@@ -224,10 +229,10 @@ d_expr (_ :< ParenthesizedExpr expr) k =
   d_expr expr k
 
 d_expr (m :< BinOp constrArgs tyArgs lhs (name, _) rhs) k =
-  d_expr (m :< Call (() :< Ident [name]) constrArgs tyArgs [lhs, rhs]) k
+  d_expr (m :< Call (m :< Ident [name]) constrArgs tyArgs [lhs, rhs]) k
 
 d_expr (m :< Call callee constraints types []) k =
-  d_expr (m :< Call callee constraints types [() :< VoidExpr]) k
+  d_expr (m :< Call callee constraints types [dummySpan :< VoidExpr]) k
 
 d_expr (_ :< Call callee constraints _ args) k =
   computeConstraints constraints $ \(constraints', constraintHoles) -> do
@@ -288,11 +293,11 @@ d_expr (m :< If ifCond ifBody elseBody) k =
   d_expr match k
     where
       match = m :< Match { expr = ifCond
-                         , cases = [ () :< Case { pattern = () :< PatCtor ("True", bool) []
-                                                , caseBody = ifBody
+                         , cases = [ dummySpan :< Case { pattern = dummySpan :< PatCtor ("True", bool) []
+                                                      , caseBody = ifBody
                                                 }
-                                   , () :< Case { pattern = () :< PatCtor ("False", bool) []
-                                                , caseBody = elseBody
+                                   , dummySpan :< Case { pattern = dummySpan :< PatCtor ("False", bool) []
+                                                      , caseBody = elseBody
                                                 }
                                    ]
                          }

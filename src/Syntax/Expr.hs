@@ -136,7 +136,8 @@ p_if = liftParser $ do
   reserved "if"
   ifCond <- p_expr False
   ifBody <- p_codeBlock
-  ifElseBody <- option (() :< CodeBlock []) p_else
+  emptyBlock <- liftParser $ return $ CodeBlock []
+  ifElseBody <- option emptyBlock p_else
   return $ If { ifCond, ifBody, ifElseBody }
 
 p_else :: Parser CodeBlock

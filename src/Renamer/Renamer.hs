@@ -13,9 +13,9 @@ import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
 
 
-wrapFn :: (ASTNode node name () -> Rn (ASTNode node name ())) -> AST node name () -> Rn (AST node name ())
-wrapFn f (() :< e) =
-  (() :<) <$> f e
+wrapFn :: (ASTNode node name SourceSpan -> Rn (ASTNode node name SourceSpan)) -> AST node name SourceSpan -> Rn (AST node name SourceSpan)
+wrapFn f (span :< e) =
+  (span :<) <$> f e
 
 -- ENTRY POINT
 
@@ -227,7 +227,7 @@ r_implItem renameIntfMethod = wrapFn r_implItem
 r_expr :: Expr -> Rn Expr
 r_expr = wrapFn r_expr'
   where
-    r_expr' :: ASTNode BaseExpr String () -> Rn (ASTNode BaseExpr String ())
+    r_expr' :: ASTNode BaseExpr String SourceSpan -> Rn (ASTNode BaseExpr String SourceSpan)
     r_expr' (Literal l) =
       return $ Literal l
 

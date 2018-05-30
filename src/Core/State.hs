@@ -79,7 +79,7 @@ var = do
   modify $ \s -> s { varCount = count + 1 }
   return $ CA.Var ("#x" ++ show count)
 
-addEnum :: ASTNode BaseDecl Id () -> DsM ()
+addEnum :: ASTNode BaseDecl Id c -> DsM ()
 addEnum (Enum name _ ctors) =
   modify $ \s ->
     s { enums = DsEnum name ctors' : (enums s) }

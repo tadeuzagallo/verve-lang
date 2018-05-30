@@ -13,9 +13,9 @@ reassocStmts :: [Stmt] -> ReassocEnv -> Result (ReassocEnv, [Stmt])
 reassocStmts stmts state =
   runScoped (n_stmts stmts) state
 
-wrapFn :: (ASTNode node name () -> Reassoc (ASTNode node name ())) -> AST node name () -> Reassoc (AST node name ())
-wrapFn f (() :< e) =
-  (() :<) <$> f e
+wrapFn :: (ASTNode node name SourceSpan -> Reassoc (ASTNode node name SourceSpan)) -> AST node name SourceSpan -> Reassoc (AST node name SourceSpan)
+wrapFn f (span :< e) =
+  (span :<) <$> f e
 
 n_stmts :: [Stmt] -> Reassoc [Stmt]
 n_stmts = mapM n_stmt
@@ -29,8 +29,8 @@ n_stmt = wrapFn n_stmt
       Decl <$> n_decl decl
 
 n_codeBlock :: CodeBlock -> Reassoc CodeBlock
-n_codeBlock (() :< CodeBlock stmts) =
-  (() :<) . CodeBlock <$> n_stmts stmts
+n_codeBlock (span :< CodeBlock stmts) =
+  (span :<) . CodeBlock <$> n_stmts stmts
 
 n_decl :: Decl -> Reassoc Decl
 n_decl = wrapFn n_decl
@@ -96,17 +96,18 @@ n_fn = wrapFn n_fn
 n_expr :: Expr -> Reassoc Expr
 n_expr = wrapFn n_expr'
   where
-    n_expr' :: ASTNode BaseExpr String () -> Reassoc (ASTNode BaseExpr String ())
-    n_expr' (BinOp _ _ ll lop (() :< BinOp _ _ rl rop rr)) = do
+    n_expr' :: ASTNode BaseExpr String SourceSpan -> Reassoc (ASTNode BaseExpr String SourceSpan)
+    n_expr' (BinOp _ _ ll lop (span :< BinOp _ _ rl rop rr)) = do
       ll' <- n_expr ll
       rl' <- n_expr rl
       rr' <- n_expr rr
       c <- comparePrec lop rop
       return $ case c of
         PLeft ->
-          BinOp [] [] (() :< BinOp [] [] ll' lop rl') rop rr'
+          -- TODO: this span is incorrect
+          BinOp [] [] (span :< BinOp [] [] ll' lop rl') rop rr'
         PRight ->
-          BinOp [] [] ll' lop (() :< BinOp [] [] rl' rop rr')
+          BinOp [] [] ll' lop (span :< BinOp [] [] rl' rop rr')
 
     n_expr' (Literal l) = return $ Literal l
     n_expr' (Ident a) = return $ Ident a

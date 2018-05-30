@@ -11,6 +11,6 @@ import Absyn.Base
 import Absyn.Meta
 import Absyn.Type
 
-#define METADATA ()
+#define METADATA SourceSpan
 #define NAME String
 #include "./Base.h"

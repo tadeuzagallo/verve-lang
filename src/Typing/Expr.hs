@@ -50,7 +50,9 @@ i_expr (meta :< Match expr cases) = do
   return (meta :< Match expr' cases', retTy)
 
 i_expr (meta :< Call fn constraintArgs types []) =
-  i_expr (meta :< Call fn constraintArgs types [() :< VoidExpr])
+  i_expr (meta :< Call fn constraintArgs types [emptySpanFromPos (spanEnd meta) :< VoidExpr])
+    where
+      emptySpanFromPos pos = SourceSpan { spanStart = pos, spanEnd = pos }
 
 i_expr (meta :< Call fn _ types args) = do
   (fn', tyFn) <- i_expr fn

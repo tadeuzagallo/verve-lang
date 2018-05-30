@@ -13,6 +13,6 @@ import Typing.Types (Type)
 
 type Id = (String, Type)
 
-#define METADATA ()
+#define METADATA SourceSpan
 #define NAME Id
 #include "./Base.h"
