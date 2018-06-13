@@ -1,9 +1,8 @@
 module Interpreter.RuntimeError
   ( RuntimeError(..)
-  , mkError
   ) where
 
-import Util.Error (ErrorT(kind), mkError)
+import Util.Error (ErrorT(kind))
 
 data RuntimeError
   = Unsupported

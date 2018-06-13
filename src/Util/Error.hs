@@ -4,8 +4,7 @@ module Util.Error
   , ErrorT(..)
   , GenericError(..)
   , Result
-  , mkError
-  , liftError
+  , liftParseError
   , throwError
   ) where
 
@@ -46,12 +45,10 @@ instance Show GenericError where
 instance ErrorT GenericError where
   kind _ = "Error"
 
-mkError :: (ErrorT a) => a -> Either Error b
-mkError a = Left (Error a)
-
-liftError :: (ErrorT a) => Either a b -> Either Error b
-liftError (Left a) = Left (Error a)
-liftError (Right b) = Right b
+liftParseError :: Either ParseError b -> Either Error b
+liftParseError (Left err) =
+   Left (Error err)
+liftParseError (Right b) = Right b
 
 throwError :: (Except.MonadError Error m, ErrorT a) => a -> m b
 throwError = Except.throwError . Error

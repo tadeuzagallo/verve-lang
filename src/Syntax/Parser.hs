@@ -20,7 +20,7 @@ parseFile file = do
   return $ either (Left . (:[]) . Error) Right result
 
 parseStmt :: String -> String -> Result Stmt
-parseStmt file source = liftError $ parse (anySpace *> p_stmt <* eof) file source
+parseStmt file source = liftParseError $ parse (anySpace *> p_stmt <* eof) file source
 
 p_module :: Parser Module
 p_module = liftParser $ do
