@@ -1,6 +1,7 @@
 module Util.PrettyPrint
   ( PrettyPrint(..)
   , Util.PrettyPrint.print
+  , Out
   , pprName
 
   , nil

@@ -10,6 +10,8 @@ import System.Console.CmdArgs
 options :: Options
 options
   = Options { dump_ir = def &= help "Dump the intermediate representation of the program"
+            , dump_bytecode = def &= help "Dump the bytecode representation of the program"
+            , dump_serialized_bytecode = def &= help "Dump the binary representation of the bytecode for program"
             , dump_statements = def &= help "Dump the value and type of each statement in the program"
             , files = def &= args &= typFile
             }

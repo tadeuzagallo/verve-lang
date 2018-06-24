@@ -77,12 +77,12 @@ data Type
   | TyApp Type [Type]
   | Top
   | Bot
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 type BoundVar = (Var, [Intf])
 
 data Intf = Intf String Var [(String, Type)]
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show Intf where
   show (Intf name _ _) = name
