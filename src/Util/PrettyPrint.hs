@@ -57,6 +57,10 @@ class PrettyPrint a where
 instance Show Out where
   show out = flatten 0 [(out, 0)]
 
+-- Idempotent
+instance PrettyPrint Out where
+  pprint a = a
+
 print :: PrettyPrint a => a -> String
 print = show . pprint
 

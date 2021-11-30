@@ -5,32 +5,32 @@ import Prelude hiding (concat)
 import Absyn.Base (Literal(..))
 import Util.PrettyPrint
 
-data Operand
+data Register
   = Local Int
   | Parameter Int
-  | Constant Int
-  | BlockRef Int
   deriving (Show)
 
+newtype Const = Constant Int
+newtype BlockRef = BlockRef Int
+
 data Opcode
-  = OpReturn { opReturnResult :: Operand }
-  | OpCall { opCallCallee :: Operand
-           , opCallNumArgs :: Operand }
-  | OpPush { opPushValue :: Operand }
-  | OpJump { opJumpTarget :: Operand }
-  | OpMove { opMoveSrc :: Operand
-           , opMoveDst :: Operand }
+  = OpCall { opCallCallee :: Register
+           , opCallNumArgs :: Const }
+  | OpPushReg { opPushReg :: Register }
+  | OpPushConst { opPushConst :: Const }
+  | OpLoadConst { opLoadConst :: Const
+                 , opLoadConstDst :: Register }
   | OpError
-  | OpJumpCase { opJumpCaseValue :: Operand }
-  | OpMakeTaggedValue { opMakeTaggedValueDst :: Operand
-                      , opMakeTaggedValueKey :: Operand
-                      , opMakeTaggedValueNumArgs :: Operand }
-  | OpMakeClosure { opMakeClosureDst :: Operand
-                  , opMakeClosureBlockId :: Operand }
-  | OpMakeRecord { opMakeRecordDst :: Operand
-                 , opMakeRecordNumFields :: Operand }
-  | OpMakeType { opMakeTypeDst :: Operand
-               , opMakeTypeId :: Operand }
+  | OpJumpCase { opJumpCaseValue :: Register }
+  | OpMakeTaggedValue { opMakeTaggedValueDst :: Register
+                      , opMakeTaggedValueKey :: Const
+                      , opMakeTaggedValueNumArgs :: Const }
+  | OpMakeClosure { opMakeClosureDst :: Register
+                  , opMakeClosureBlockId :: BlockRef }
+  | OpMakeRecord { opMakeRecordDst :: Register
+                 , opMakeRecordNumFields :: Const }
+  | OpMakeType { opMakeTypeDst :: Register
+               , opMakeTypeId :: Const }
 
 data Block =
   Block { label :: String
@@ -63,42 +63,44 @@ instance PrettyPrint Block where
            ]
 
 instance PrettyPrint Opcode where
-  pprint (OpReturn r) =
-    pprintInstruction "return" [r]
   pprint (OpCall callee numArgs) =
-    concat [ str "call ", pprint callee, str " (", str (show numArgs), str ")" ]
-  pprint (OpPush r) =
+    concat [ str "call ", pprint callee, str " (", pprint numArgs, str ")" ]
+  pprint (OpPushReg r) =
     pprintInstruction "push" [r]
-  pprint (OpJump r) =
-    concat [ str "jump ", pprint r ]
-  pprint (OpMove src dst) =
-    pprintInstruction "move" [src, dst]
+  pprint (OpPushConst r) =
+    pprintInstruction "push" [r]
+  pprint (OpLoadConst src dst) =
+    pprintInstruction "move" [pprint src, pprint dst]
   pprint OpError =
-    pprintInstruction "error" []
+    str "error"
   pprint (OpJumpCase val) =
     concat [str "jump_case ", pprint val ]
   pprint (OpMakeTaggedValue dst tag numArgs) =
-    concat [pprint dst, str " = make_tagged_value ", pprint tag, str " ", str (show numArgs)]
+    concat [pprint dst, str " = make_tagged_value ", pprint tag, str " ", pprint numArgs]
   pprint (OpMakeClosure dst block) =
     concat [pprint dst, str " = make_closure ", pprint block]
   pprint (OpMakeRecord dst numFields) =
-    concat [pprint dst, str " = make_record ", str (show numFields)]
+    concat [pprint dst, str " = make_record ", pprint numFields]
   pprint (OpMakeType dst typeId) =
     concat [pprint dst, str " = make_type ", pprint typeId]
 
-pprintInstruction :: String -> [Operand] -> Out
+pprintInstruction :: PrettyPrint a => String -> [a] -> Out
 pprintInstruction name operands =
   concat [str name, str " ", interleave (str ", ") $ map pprint operands]
 
-instance PrettyPrint Operand where
+instance PrettyPrint Register where
   pprint (Local i) =
-    concat [str "l", str $ show i]
+    concat [str "l(", str $ show i, str ")"]
   pprint (Parameter i) =
-    concat [str "p", str $ show i]
+    concat [str "p(", str $ show i, str ")"]
+
+instance PrettyPrint Const where
   pprint (Constant i) =
-    concat [str "c", str $ show i]
+    concat [str "c(", str $ show i, str ")"]
+
+instance PrettyPrint BlockRef where
   pprint (BlockRef i) =
-    concat [str "b", str $ show i]
+    concat [str "b(", str $ show i, str ")"]
 
 instance PrettyPrint Constant where
   pprint (Unit) =

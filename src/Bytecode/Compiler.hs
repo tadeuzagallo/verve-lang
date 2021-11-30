@@ -20,7 +20,7 @@ data CompilerState
        , typeId :: Int
        , typeMap :: Map.Map Type Int
        -- Local
-       , varMap :: Map.Map String Operand
+       , varMap :: Map.Map String Register
        }
 
 type BC a = State CompilerState a
@@ -62,7 +62,7 @@ compileTerm (AppCont k args) = do
 compileTerm (App f k args) = do
   pushArgs args
   kAddress <- lookupVar (show k)
-  emitOpcode (OpPush kAddress)
+  emitOpcode (OpPushReg kAddress)
   fAddress <- lookupVar (show f)
   numArgs <- addIntConstant (length args + 1)
   emitOpcode (OpCall fAddress numArgs)
@@ -75,20 +75,20 @@ compileTerm (Case x cases) = do
 compileTerm Error =
   emitOpcode OpError
 
-addLocal :: String -> (Operand -> BC a) -> BC a
+addLocal :: String -> (Register -> BC a) -> BC a
 addLocal x cont = do
   x' <- newLocal
   modify $ \s -> s { varMap = Map.insert x x' (varMap s) }
   cont x'
 
-loadValue :: Value -> Operand -> BC ()
+loadValue :: Value -> Register -> BC ()
 loadValue Core.Absyn.Unit dst = do
   const <- addConstant Bytecode.Opcodes.Unit
-  emitOpcode (OpMove const dst)
+  emitOpcode (OpLoadConst const dst)
 
 loadValue (Lit l) dst = do
   const <- addConstant (Literal l)
-  emitOpcode (OpMove const dst)
+  emitOpcode (OpLoadConst const dst)
 
 loadValue (In key args) dst = do
   pushArgs args
@@ -109,9 +109,9 @@ loadValue (Record fields) dst = do
     where
       pushField (key, var) = do
         key' <- addConstant (Literal (String key))
-        emitOpcode (OpPush key')
+        emitOpcode (OpPushConst key')
         reg <- lookupVar (show var)
-        emitOpcode (OpPush reg)
+        emitOpcode (OpPushReg reg)
 
 loadValue (Type ty) dst = do
   typeTag <- makeTypeTag ty
@@ -136,7 +136,7 @@ makeLambdaName = do
   modify $ \s -> s { lambdaId = id + 1 }
   return $ "lambda#" ++ show id
 
-addConstant :: Constant -> BC Operand
+addConstant :: Constant -> BC Register
 addConstant v = do
   consts <- constants <$> gets currentBlock
   updateCurrentBlock $ \block -> block { constants = consts ++ [v] }
@@ -195,7 +195,7 @@ addParameters (p : ps) cont = do
   modify $ \s -> s { varMap = Map.insert p p' (varMap s) }
   addParameters ps cont
 
-lookupVar :: String -> BC Operand
+lookupVar :: String -> BC Register
 lookupVar v = do
   m <- gets varMap
   return . fromJust m . Map.lookup v $ m
@@ -213,15 +213,15 @@ pushArgs = mapM_ pushArg . reverse
   where
     pushArg arg = do
       var <- lookupVar (show arg)
-      emitOpcode (OpPush var)
+      emitOpcode (OpPushReg var)
 
-newLocal :: BC Operand
+newLocal :: BC Register
 newLocal = do
   id <- locals <$> gets currentBlock
   updateCurrentBlock $ \b -> b { locals = id + 1 }
   return $ Local id
 
-newParameter :: BC Operand
+newParameter :: BC Register
 newParameter = do
   id <- parameters <$> gets currentBlock
   updateCurrentBlock $ \b -> b { parameters = id + 1 }
@@ -235,6 +235,6 @@ emitCaseClause :: Clause -> BC ()
 emitCaseClause _clause = do
   return ()
 
-addIntConstant :: Int -> BC Operand
+addIntConstant :: Int -> BC Register
 addIntConstant i =
   addConstant (Literal (Integer $ toInteger i))

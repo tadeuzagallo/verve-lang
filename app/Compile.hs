@@ -25,7 +25,7 @@ import System.FilePath.Posix ((</>), (<.>), takeDirectory, takeFileName, dropExt
 
 evalProgram :: (Verbosity -> StmtsFn) -> Pipeline ()
 evalProgram processStmts = do
-  loadPrelude
+  {-loadPrelude-}
   inputFiles <- option files
   mapM_ (\f -> execFile (processStmts Verbose) (modNameFromFile f) f) inputFiles
 

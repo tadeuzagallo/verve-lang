@@ -39,55 +39,56 @@ instance Encoder Block where
     encode constants
 
 instance Encoder Opcode where
-  encode (OpReturn r) =
-    int8 0 `mappend`
-    encode r
   encode (OpCall callee numArgs) =
-    int8 1 `mappend`
+    int8 0 `mappend`
     encode callee `mappend`
     encode numArgs
-  encode (OpPush r) =
+  encode (OpPushReg r) =
+    int8 1 `mappend`
+    encode r
+  encode (OpPushConst r) =
     int8 2 `mappend`
     encode r
-  encode (OpJump r) =
+  encode (OpLoadConst src dst) =
     int8 3 `mappend`
-    encode r
-  encode (OpMove src dst) =
-    int8 4 `mappend`
     encode src `mappend`
     encode dst
   encode OpError =
-    int8 5
+    int8 4
   encode (OpJumpCase val) =
-    int8 6 `mappend`
+    int8 5 `mappend`
     encode val
   encode (OpMakeTaggedValue dst tag numArgs) =
-    int8 7 `mappend`
+    int8 6 `mappend`
     encode dst `mappend`
     encode tag `mappend`
     encode numArgs
   encode (OpMakeClosure dst block) =
-    int8 8 `mappend`
+    int8 7 `mappend`
     encode dst `mappend`
     encode block
   encode (OpMakeRecord dst numFields) =
-    int8 9 `mappend`
+    int8 8 `mappend`
     encode dst `mappend`
     encode numFields
   encode (OpMakeType dst typeId) =
-    int8 10 `mappend`
+    int8 9 `mappend`
     encode dst `mappend`
     encode typeId
 
-instance Encoder Operand where
-  encode (Parameter p) = -- 0b0...00
-    int8 (p `shiftL` 2)
-  encode (Local l) =     -- 0b0...01
-    int8 ((l `shiftL` 2) .|. 1)
+instance Encoder Register where
+  encode (Parameter p) = -- 0b0...0
+    int8 (p `shiftL` 1)
+  encode (Local l) =     -- 0b0...1
+    int8 ((l `shiftL` 1) .|. 1)
+
+instance Encoder Const where
   encode (Constant c) =  -- 0b0...10
-    int8 ((c `shiftL` 2) .|. 2)
+    int8 c
+
+instance Encoder BlockRef where
   encode (BlockRef b) =  -- 0b0...11
-    int8 ((b `shiftL` 1) .|. 3)
+    int8 b
 
 instance Encoder Constant where
   encode (Unit) =
